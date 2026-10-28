@@ -1,0 +1,382 @@
+---
+product: AutoPulse
+brief: product-brief.md
+---
+
+# AutoPulse backlog
+
+Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → SL-08 → SL-09 → {SL-10, SL-11, SL-12} → SL-13 → SL-14 → SL-15 → {SL-16, SL-17} → {SL-18, SL-19} → SL-20 → SL-21 → SL-22 → {SL-23, SL-24, SL-26, SL-27} → SL-25 → SL-28
+
+## Slices
+
+### SL-01 · Walking skeleton: seeded marketplace on nginx-fpm
+
+- **Outcome:** A visitor calls the ping and health endpoints, searches 50 000 seeded listings with filters and pagination, and opens a listing detail page with CSS, JS and a hero image, on nginx-fpm over PostgreSQL 16 and Redis, covered by Pest tests.
+- **Entry point:** `GET /up`, `GET /api/ping`, `GET /listings`, `GET /listings/{id}`
+- **Size:** M
+- **BRs:** BR-01, BR-03, BR-04, BR-05, BR-10, BR-11
+- **Depends on:** none
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief
+- **Run:** `/sdd "New app — AutoPulse, first slice SL-01: on nginx-fpm, GET /up and GET /api/ping return fixed JSON, GET /listings searches 50 000 seeded listings (500 dealers, fixed seed) with make/model/fuel/city/min year/max price filters and pagination, GET /listings/{id} renders a detail page with Vite CSS/JS and a hero image. Switch DDEV DB to PostgreSQL 16 + pgvector, Redis for cache/sessions, Pest instead of PHPUnit. Laravel 13. Conventions from CLAUDE.md and product-brief.md (BR-01, BR-03, BR-04, BR-05, BR-10, BR-11)."`
+
+### SL-02 · Apache-fpm overlay, switching guide and parity check
+
+- **Outcome:** The developer switches to apache-fpm with one documented command, and a parity script confirms ping, search and detail return identical status and body on both servers; versions are recorded in BENCHMARKS.md.
+- **Entry point:** `.ddev/` overlay + README switching section + parity script
+- **Size:** S
+- **BRs:** BR-02, BR-25
+- **Depends on:** SL-01
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 0)
+- **Run:** `/sdd "SL-02: add an apache-fpm DDEV overlay, a README section on switching servers, a parity script comparing ping/search/detail responses across servers, and a versions table in BENCHMARKS.md; OPcache confirmed on (BR-02, BR-25). Rules in product-brief.md."`
+
+### SL-03 · FrankenPHP classic overlay
+
+- **Outcome:** The app runs unchanged on FrankenPHP classic mode via the DDEV add-on with thread-safe extensions, passing the parity check, with OPcache on and versions recorded.
+- **Entry point:** `.ddev/` FrankenPHP overlay, Caddyfile
+- **Size:** S
+- **BRs:** BR-02, BR-25
+- **Depends on:** SL-02
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 0)
+- **Run:** `/sdd "SL-03: add a FrankenPHP classic-mode DDEV overlay (ddev-frankenphp add-on, ZTS pgsql/redis extensions) that passes the parity check, with OPcache confirmed and versions recorded (BR-02, BR-25). Rules in product-brief.md."`
+
+### SL-05 · OpenLiteSpeed overlay
+
+- **Outcome:** The app runs unchanged on OpenLiteSpeed with LSAPI as an extra DDEV service, passing the parity check, with OPcache on and versions recorded.
+- **Entry point:** `.ddev/docker-compose.ols.yaml`, OLS vhost config
+- **Size:** M
+- **BRs:** BR-02, BR-25
+- **Depends on:** SL-02
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 0)
+- **Run:** `/sdd "SL-05: run the app on OpenLiteSpeed + LSAPI (lsphp84 with pgsql/redis) as an extra DDEV service with a vhost on public/, passing the parity check, OPcache confirmed, versions recorded (BR-02, BR-25). Rules in product-brief.md."`
+
+### SL-04 · FrankenPHP worker mode via Octane overlay
+
+- **Outcome:** The app runs in worker mode both as an Octane daemon and via the add-on's worker directive, passing the parity check, with a README comparison of who owns config, restarts and logs, and which Octane features are server-specific.
+- **Entry point:** `.ddev/config.octane.yaml`, add-on worker config
+- **Size:** M
+- **BRs:** BR-02, BR-25
+- **Depends on:** SL-03
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 0, Phase 2)
+- **Run:** `/sdd "SL-04: run the app in FrankenPHP worker mode via Laravel Octane two ways (Octane daemon overlay; add-on worker directive), both passing the parity check, plus README notes comparing config/restart/log ownership and listing server-specific Octane features (BR-02, BR-25). Rules in product-brief.md."`
+
+### SL-06 · Benchmark harness and process-vs-thread comparison
+
+- **Outcome:** The developer runs one command per scenario that warms up, measures and repeats per the rules, and BENCHMARKS.md gets ping and search tables (RPS, latency percentiles, memory idle and at 50 users) for nginx-fpm, apache-fpm, OpenLiteSpeed and FrankenPHP classic, plus a recorded request-timeout comparison.
+- **Entry point:** `bench/` scripts, BENCHMARKS.md
+- **Size:** M
+- **BRs:** BR-20, BR-21, BR-22, BR-23, BR-24, BR-26
+- **Depends on:** SL-03, SL-05
+- **Blocked by:** Q-02
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Benchmarks, Phase 1)
+- **Run:** `/sdd "SL-06: bench/ harness (k6 + oha) running outside the web container with 30 s warm-up, 60 s measure, 3 repeats, median; fill BENCHMARKS.md ping and search tables (fair + tuned) for nginx-fpm, apache-fpm, OLS, FrankenPHP classic with idle and 50-user memory, and a long-request timeout comparison (BR-20…BR-24, BR-26). Rules in product-brief.md."`
+
+### SL-07 · Octane state-leak lab
+
+- **Outcome:** The developer toggles four leak routes (request-bound singleton, static price cache, config locale mutation, request captured at boot) between leak and fixed modes, sees one visitor's data bleed into another's under Octane, and a worker-inspection endpoint shows the worker persisting; each leak has a test that fails in leak mode and passes when fixed.
+- **Entry point:** leak-lab routes, `/debug/worker`
+- **Size:** M
+- **BRs:** BR-30, BR-31, BR-32
+- **Depends on:** SL-04
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 2)
+- **Run:** `/sdd "SL-07: Octane state-leak lab — four routes with leak/fixed toggles (singleton vs scoped current dealer, static price-formatter cache, config locale mutation, service built with the request at boot) and /debug/worker (pid, app instance id, memory, request counter); Pest tests per leak; no leak on classic servers (BR-30, BR-31, BR-32). Rules in product-brief.md."`
+
+### SL-08 · Classic vs worker benchmark
+
+- **Outcome:** BENCHMARKS.md shows ping and search for FrankenPHP classic vs Octane worker with an explanation of why the bootstrap-bound endpoint gains more than the DB-bound one, plus memory growth across 10 000 requests with and without the static cache and the effect of max-requests.
+- **Entry point:** `bench/` scenarios, BENCHMARKS.md
+- **Size:** S
+- **BRs:** BR-21, BR-24, BR-26
+- **Depends on:** SL-06, SL-07
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 2)
+- **Run:** `/sdd "SL-08: benchmark FrankenPHP classic vs Octane worker on ping and search, record memory growth over 10 000 requests with/without the static cache and with max-requests, and explain the gap in BENCHMARKS.md (BR-21, BR-24, BR-26). Rules in product-brief.md."`
+
+### SL-09 · Slow I/O, thread autoscaling and healthz
+
+- **Outcome:** Under 100 concurrent users on the slow listing endpoint, the developer records health-endpoint p95 and error rate for FPM (two max_children settings) and FrankenPHP (fixed vs autoscaled threads with a max wait time) as a chart in BENCHMARKS.md.
+- **Entry point:** `GET /listings/{id}/slow`, stub VIN API, `GET /healthz`
+- **Size:** M
+- **BRs:** BR-40, BR-41, BR-26
+- **Depends on:** SL-06
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 3)
+- **Run:** `/sdd "SL-09: GET /listings/{id}/slow calling a 300 ms stub VIN API, a fast GET /healthz, and a bench scenario measuring healthz p95 and 502/504 rate under 100-user slow load for FPM (2 max_children settings) and FrankenPHP (fixed vs max_threads + max_wait_time) (BR-40, BR-41, BR-26). Rules in product-brief.md."`
+
+### SL-10 · Early Hints and compression
+
+- **Outcome:** The detail page sends preload links and, on FrankenPHP, a 103 response before the main work; FrankenPHP negotiates zstd/brotli/gzip; BENCHMARKS.md records LCP with and without hints and bytes per encoding.
+- **Entry point:** `GET /listings/{id}`, Caddyfile
+- **Size:** M
+- **BRs:** BR-50, BR-52, BR-26
+- **Depends on:** SL-06
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 4)
+- **Run:** `/sdd "SL-10: detail page sends Vite preload Link headers and a guarded 103 Early Hint on FrankenPHP (identical final response elsewhere), Caddyfile encode zstd br gzip, and BENCHMARKS.md LCP with/without hints and bytes per encoding (BR-50, BR-52, BR-26). Rules in product-brief.md."`
+
+### SL-11 · Large CSV export offloaded to the web server
+
+- **Outcome:** A visitor downloads a ~50 MB CSV export served by the web server's file offload on FrankenPHP, nginx and Apache, and BENCHMARKS.md compares PHP memory and CPU against a PHP-streaming variant.
+- **Entry point:** `GET /exports/{id}`
+- **Size:** M
+- **BRs:** BR-51, BR-26
+- **Depends on:** SL-06
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 4)
+- **Run:** `/sdd "SL-11: GET /exports/{id} generates a ~50 MB CSV to disk and serves it via X-Sendfile (FrankenPHP), X-Accel-Redirect (nginx) and mod_xsendfile (Apache), with a PHP-streaming variant for comparison of PHP memory/CPU (BR-51, BR-26). Rules in product-brief.md."`
+
+### SL-12 · One HTTP/3 request
+
+- **Outcome:** The developer runs FrankenPHP directly with UDP 443 exposed and serves one verified HTTP/3 request, recording h2 vs h3 latency on a throttled profile.
+- **Entry point:** direct container run, `curl --http3`
+- **Size:** S
+- **BRs:** BR-26
+- **Depends on:** SL-03
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 4)
+- **Run:** `/sdd "SL-12: run FrankenPHP outside the DDEV router with UDP 443 exposed, verify one HTTP/3 request and Alt-Svc, and record h2 vs h3 latency on a throttled profile (BR-26). Rules in product-brief.md."`
+
+### SL-13 · Live price updates via built-in Mercure
+
+- **Outcome:** When a listing's price changes, every open detail page for it on FrankenPHP shows the new price without reload through the built-in Mercure hub, and private updates reach only authorized subscribers.
+- **Entry point:** `/.well-known/mercure`, detail page
+- **Size:** M
+- **BRs:** BR-60, BR-61
+- **Depends on:** SL-03
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 5)
+- **Run:** `/sdd "SL-13: enable FrankenPHP's built-in Mercure hub, publish a per-listing update when a price changes, and update the detail page price live via EventSource, including a private-update variant with subscriber JWT topic claims (BR-60, BR-61). Rules in product-brief.md."`
+
+### SL-14 · Same live updates via Reverb, and subscriber load test
+
+- **Outcome:** The same live price update works on nginx-fpm via Reverb and Echo, and BENCHMARKS.md compares publish-to-receive latency, memory per 1 000 subscribers and moving parts for Mercure vs Reverb under 500 subscribers.
+- **Entry point:** detail page on nginx-fpm, Reverb service, `bench/` subscriber script
+- **Size:** M
+- **BRs:** BR-60, BR-26
+- **Depends on:** SL-13
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 5)
+- **Run:** `/sdd "SL-14: live price updates on nginx-fpm via Laravel Reverb + Echo, and a 500-subscriber load test comparing publish-to-receive latency, memory per 1 000 subscribers and moving parts for Mercure vs Reverb (BR-60, BR-26). Rules in product-brief.md."`
+
+### SL-15 · Metrics dashboard
+
+- **Outcome:** Grafana shows FrankenPHP thread/worker metrics (busy vs total threads, busy workers, queue depth, durations) next to FPM pool metrics, and the slow-I/O scenarios are re-run with screenshots in BENCHMARKS.md.
+- **Entry point:** Prometheus + Grafana DDEV services, dashboard
+- **Size:** M
+- **BRs:** BR-26
+- **Depends on:** SL-09
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 6)
+- **Run:** `/sdd "SL-15: Prometheus + Grafana as DDEV services scraping FrankenPHP/Caddy metrics and php-fpm_exporter, a dashboard (RPS, p95, busy vs total threads, busy workers, queue depth, memory), and SL-09 scenarios re-run with screenshots (BR-26). Rules in product-brief.md."`
+
+### SL-16 · Structured logs and worker restart
+
+- **Outcome:** Logs written from PHP appear as structured JSON with request fields in the server log stream, and one Artisan command restarts workers through the admin API; a restart under load drops zero requests, compared with Octane's reload.
+- **Entry point:** log channel, `frankenphp:workers:restart` command
+- **Size:** S
+- **BRs:** BR-70, BR-71, BR-26
+- **Depends on:** SL-15
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 6)
+- **Run:** `/sdd "SL-16: a Monolog handler using frankenphp_log() with stderr-JSON fallback, and an Artisan command restarting FrankenPHP workers via the Caddy admin API, verified to drop zero requests under load and compared with octane:reload (BR-70, BR-71, BR-26). Rules in product-brief.md."`
+
+### SL-17 · Worker-mode developer experience
+
+- **Outcome:** In worker mode, a code edit takes effect in under 2 s via watch or hot reload, and an Xdebug breakpoint hits inside an Octane request; edit-to-reload times for classic, Octane without/with watch, and hot reload are recorded.
+- **Entry point:** worker watch / hot reload config, Xdebug
+- **Size:** S
+- **BRs:** BR-26
+- **Depends on:** SL-04
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 7)
+- **Run:** `/sdd "SL-17: worker watch patterns and FrankenPHP hot reload, Xdebug on the Octane overlay, and recorded edit-to-reload times for classic, Octane without watch, Octane with watch, and hot reload (BR-26). Rules in product-brief.md."`
+
+### SL-18 · VIN validation in Go (optional)
+
+- **Outcome:** A custom FrankenPHP build provides a Go VIN check-digit function used by a validation rule with a PHP fallback that gives identical results, and BENCHMARKS.md records a 1M-validation micro-benchmark (Go, PHP, PHP+JIT) and request-level impact.
+- **Entry point:** custom FrankenPHP binary, VIN validation rule
+- **Size:** M
+- **BRs:** BR-80, BR-26
+- **Depends on:** SL-06
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 8)
+- **Run:** `/sdd "SL-18: a Go extension autopulse_vin_valid built into a custom FrankenPHP via xcaddy, used by a Laravel validation rule with a pure-PHP fallback giving identical results, with micro (1M, Go vs PHP vs JIT) and request-level benchmarks (BR-80, BR-26). Rules in product-brief.md."`
+
+### SL-19 · App as a single binary (optional)
+
+- **Outcome:** The app runs from one embedded FrankenPHP binary on a machine with no PHP, and BENCHMARKS.md compares its size and cold start with a Docker image.
+- **Entry point:** `./autopulse php-server`
+- **Size:** M
+- **BRs:** BR-26
+- **Depends on:** SL-03
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 9)
+- **Run:** `/sdd "SL-19: build AutoPulse as an embedded FrankenPHP binary, run it on a clean container without PHP, and compare size and cold start with a Docker image (BR-26). Rules in product-brief.md."`
+
+### SL-20 · Streamed car description with a fake provider
+
+- **Outcome:** A visitor opens a listing's "describe" endpoint and receives a description streamed as server-sent events from an AI agent; a fake streaming provider (a token every 50 ms for 10 s) serves tests and load runs, and every run is logged.
+- **Entry point:** `GET /listings/{id}/describe`
+- **Size:** M
+- **BRs:** BR-90, BR-91, BR-95
+- **Depends on:** SL-01
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 10)
+- **Run:** `/sdd "SL-20: Laravel AI SDK agent that describes a car from its specs, streamed as SSE from GET /listings/{id}/describe, a fake streaming provider (token every 50 ms for 10 s) for tests and load, and an AI-run log (provider, model, prompt version, tokens, latency) (BR-90, BR-91, BR-95). Rules in product-brief.md."`
+
+### SL-21 · Queued AI streaming via Mercure, and AI load test (optional)
+
+- **Outcome:** The describe request can instead return immediately while a queued job pushes chunks to a Mercure topic the page subscribes to, and BENCHMARKS.md records search p95, completed streams and errors under 200 concurrent describes for nginx-fpm, FrankenPHP classic (autoscaled), Octane, and FrankenPHP + Mercure.
+- **Entry point:** describe endpoint (queued variant), `bench/` AI scenario
+- **Size:** M
+- **BRs:** BR-95, BR-26
+- **Depends on:** SL-20, SL-13, SL-09
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 10)
+- **Run:** `/sdd "SL-21: queued describe variant that returns immediately and streams chunks to a per-request Mercure topic, plus a 200-concurrent-describe load test measuring search p95, completed streams and errors on nginx-fpm, FrankenPHP classic, Octane and FrankenPHP + Mercure (BR-95, BR-26). Rules in product-brief.md."`
+
+### SL-22 · Local model wiring
+
+- **Outcome:** The describe agent runs against the chosen local text model on the Mac host, reachable from DDEV, with provider and model switched only via `.env`, and both streaming variants work on it.
+- **Entry point:** AI provider config, `GET /listings/{id}/describe`
+- **Size:** S
+- **BRs:** BR-91
+- **Depends on:** SL-20
+- **Blocked by:** Q-01, decision "Which local models (text, vision, embeddings) and local server fit an M3 Max 36 GB?"
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 11), user 2026-10-28 (Hugging Face models, M3 Max 36 GB)
+- **Run:** `/sdd "SL-22: wire the chosen local model server (per the Q-01 ADR) as an openai-compatible provider reachable from DDEV via host.docker.internal; the describe agent and both streaming variants run on it, switched only via .env (BR-91). Rules in product-brief.md."`
+
+### SL-23 · Natural-language search to filters
+
+- **Outcome:** A visitor types a free-text query ("diesel estate under 20k in Lviv") and gets listing results from filters the local model extracts, validated by the same rules as normal search.
+- **Entry point:** NL search endpoint → `/listings` filters
+- **Size:** S
+- **BRs:** BR-92, BR-90
+- **Depends on:** SL-22
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 11)
+- **Run:** `/sdd "SL-23: NL search — a structured-output agent turns free text into the /listings filters, validated by the same rules (422 on invalid), never producing queries (BR-92, BR-90). Rules in product-brief.md."`
+
+### SL-24 · Semantic search over listing embeddings
+
+- **Outcome:** A visitor searches by meaning ("family car with a big boot") and gets the 10 most similar listings from embeddings of all listings; embedding throughput and index size are recorded.
+- **Entry point:** semantic search endpoint, embedding job
+- **Size:** M
+- **BRs:** BR-90
+- **Depends on:** SL-22
+- **Blocked by:** Q-03
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 11)
+- **Run:** `/sdd "SL-24: pgvector semantic search — queued batch embedding of all 50 000 listing descriptions with the local embedding model, HNSW index, top-10 similarity search, recording embeddings/s, total time and index size (BR-90). Rules in product-brief.md."`
+
+### SL-25 · Tool-calling buyer assistant
+
+- **Outcome:** A visitor asks the buyer assistant a question and it answers using a listing-search tool within at most 4 tool steps; the tool-call success rate of the local model is recorded.
+- **Entry point:** assistant endpoint
+- **Size:** S
+- **BRs:** BR-94, BR-90
+- **Depends on:** SL-23
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 11)
+- **Run:** `/sdd "SL-25: buyer-assistant agent with a SearchListings tool (schema = NL-search filters), max 4 steps and tool-call repair, recording tool-call success rate on the local model (BR-94, BR-90). Rules in product-brief.md."`
+
+### SL-26 · Moderation classifier and eval set
+
+- **Outcome:** The developer runs a moderation classifier over 100 hand-labelled listings (including scam-like ones) and gets risk scores with reasons plus an accuracy score for the local model.
+- **Entry point:** moderation classifier, eval command
+- **Size:** M
+- **BRs:** BR-93, BR-90
+- **Depends on:** SL-22
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 11)
+- **Run:** `/sdd "SL-26: moderation classifier with structured output {risk 0..1, reasons[]}, a 100-listing hand-labelled eval set including scam-like listings, and an eval command reporting accuracy and JSON-valid rate (BR-93, BR-90). Rules in product-brief.md."`
+
+### SL-27 · Car-photo vision extraction
+
+- **Outcome:** The developer sends a stored car photo to the local vision model and gets body type, colour and visible damage back as structured data for that listing.
+- **Entry point:** vision extraction command or endpoint
+- **Size:** M
+- **BRs:** BR-90
+- **Depends on:** SL-22
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 11), user 2026-10-28 (images)
+- **Run:** `/sdd "SL-27: attach a stored car photo to the local vision model and extract body type, colour and visible damage as structured output (BR-90). Rules in product-brief.md."`
+
+### SL-28 · Local LLM comparison and limits
+
+- **Outcome:** BENCHMARKS.md has a per-model table (tokens/s, TTFT, JSON-valid %, eval accuracy, RAM), latency at 1/4/16 parallel describes, a context-truncation check, failover behaviour, and search p95 per server mode while local AI requests run; an optional tiny-model smoke test group exists.
+- **Entry point:** `bench/` AI scenarios, smoke test group
+- **Size:** M
+- **BRs:** BR-91, BR-26
+- **Depends on:** SL-23, SL-24, SL-25, SL-26, SL-27
+- **Blocked by:** Q-04
+- **Status:** approved
+- **Spec:** —
+- **Source:** brief (Phase 11)
+- **Run:** `/sdd "SL-28: compare local models (tokens/s, TTFT, JSON-valid %, eval accuracy, RAM), concurrency at 1/4/16, context truncation, failover, and search p95 per server mode under local AI load; add an optional local-llm smoke test group on a tiny model (BR-91, BR-26). Rules in product-brief.md."`
+
+## Intake log
+
+| Date | Source | Item | Class | Went to |
+|------|--------|------|-------|---------|
+| 2026-10-28 | roadmap doc (Stanislav Markov) | Phases 0–11 | New slices | SL-01…SL-28 |
+| 2026-10-28 | elicitation | "Local LLM from Hugging Face on M3 Max 36 GB, text + images" | Question | Q-01, SL-22, SL-27 |
+| 2026-10-28 | elicitation | No cloud LLM comparison | Non-goal | brief Non-goals |
