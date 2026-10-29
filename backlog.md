@@ -5,7 +5,7 @@ brief: product-brief.md
 
 # AutoPulse backlog
 
-Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → SL-08 → SL-09 → {SL-10, SL-11, SL-12} → SL-13 → SL-14 → SL-15 → {SL-16, SL-17} → {SL-18, SL-19} → SL-20 → SL-21 → SL-22 → {SL-23, SL-24, SL-26, SL-27} → SL-25 → SL-28
+Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → SL-08 → SL-09 → {SL-10, SL-11, SL-12} → SL-13 → SL-14 → SL-15 → {SL-16, SL-17} → {SL-18, SL-19} → SL-20 → SL-21 → SL-22 → {SL-23, SL-24, SL-26, SL-27} → SL-25 → SL-28 → {SL-29, SL-30, SL-31}
 
 ## Slices
 
@@ -17,8 +17,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-01, BR-03, BR-04, BR-05, BR-10, BR-11
 - **Depends on:** none
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** shipped
+- **Spec:** greenfield-build
 - **Source:** brief
 - **Run:** `/sdd "New app — AutoPulse, first slice SL-01: on nginx-fpm, GET /up and GET /api/ping return fixed JSON, GET /listings searches 50 000 seeded listings (500 dealers, fixed seed) with make/model/fuel/city/min year/max price filters and pagination, GET /listings/{id} renders a detail page with Vite CSS/JS and a hero image. Switch DDEV DB to PostgreSQL 16 + pgvector, Redis for cache/sessions, Pest instead of PHPUnit. Laravel 13. Conventions from CLAUDE.md and product-brief.md (BR-01, BR-03, BR-04, BR-05, BR-10, BR-11)."`
 
@@ -372,6 +372,45 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Spec:** —
 - **Source:** brief (Phase 11)
 - **Run:** `/sdd "SL-28: compare local models (tokens/s, TTFT, JSON-valid %, eval accuracy, RAM), concurrency at 1/4/16, context truncation, failover, and search p95 per server mode under local AI load; add an optional local-llm smoke test group on a tiny model (BR-91, BR-26). Rules in product-brief.md."`
+
+### SL-29 · Uniform JSON errors and cache-safe production run
+
+- **Outcome:** A client calling search or detail with bad input and no Accept header always gets the same 422/404/500 JSON envelope, and the app serves all SL-01 endpoints unchanged with config, route and view caches built and APP_DEBUG=false.
+- **Entry point:** `GET /listings` (422), `GET /listings/{id}` (404), `ddev artisan optimize`
+- **Size:** S
+- **BRs:** BR-03, BR-04, BR-20
+- **Depends on:** SL-01
+- **Blocked by:** none
+- **Status:** proposed
+- **Spec:** —
+- **Source:** greenfield-build
+- **Run:** `/sdd "SL-29: JsonErrorRenderer envelope for 422/404/500 with and without Accept, no stack traces with APP_DEBUG=false, and Pest checks that config:cache, route:cache and view:cache succeed with identical responses (BR-03, BR-04, BR-20). Rules in product-brief.md."`
+
+### SL-30 · Search index proof on the 50k seed
+
+- **Outcome:** The developer runs one command that prints EXPLAIN for the default, make, make+model and city searches on the 50 000-row seed and confirms each uses its index and meets the p95 targets (search < 100 ms, ping < 20 ms), recorded in docs/schemas/listings.md.
+- **Entry point:** `GET /listings` plus an EXPLAIN check command
+- **Size:** S
+- **BRs:** BR-03, BR-05
+- **Depends on:** SL-01
+- **Blocked by:** none
+- **Status:** proposed
+- **Spec:** —
+- **Source:** greenfield-build
+- **Run:** `/sdd "SL-30: EXPLAIN-backed index verification for the newest-first, make, make+model and city searches on the seeded data, p95 targets recorded in docs/schemas/listings.md, and a Pest guard on query count per request (BR-03, BR-05). Rules in product-brief.md."`
+
+### SL-31 · Dealer inventory listing
+
+- **Outcome:** A visitor opens a dealer's inventory and sees that dealer's listings newest first with pagination, using the same envelope, DTOs and per_page rules as search.
+- **Entry point:** `GET /dealers/{id}/listings`
+- **Size:** S
+- **BRs:** BR-03, BR-04, BR-10
+- **Depends on:** SL-01
+- **Blocked by:** none
+- **Status:** proposed
+- **Spec:** —
+- **Source:** greenfield-build
+- **Run:** `/sdd "SL-31: GET /dealers/{id}/listings through DealerInventoryController, service and repository using listings_dealer_id_idx, 404 for unknown dealer ids, per_page 1-50 default 20 (BR-03, BR-04, BR-10). Rules in product-brief.md."`
 
 ## Intake log
 
