@@ -26,7 +26,7 @@ while [[ \$# -gt 0 ]]; do
 done
 if [[ "\$url" == */debug/runtime ]]; then
   if [[ "$runtimeStatus" == "200" ]]; then
-    printf '{"data":{"sapi":"fpm-fcgi","php_version":"8.4.1","opcache_enabled":true,"server_software":"nginx/1.28"}}' > "\$out"
+    printf '{"data":{"sapi":"%s","php_version":"8.4.1","opcache_enabled":true,"server_software":"nginx/1.28"}}' "\${STUB_SAPI-fpm-fcgi}" > "\$out"
   else
     printf '{"message":"nope"}' > "\$out"
   fi
@@ -34,7 +34,15 @@ if [[ "\$url" == */debug/runtime ]]; then
   exit 0
 fi
 printf 'body:%s$suffix' "\$url" > "\$out"
-printf '200\t%s\t%s' "\${STUB_CONTENT_TYPE-application/json}" "\${STUB_SERVER_HEADER-}"
+header="\${STUB_SERVER_HEADER-auto}"
+if [[ "\$header" == "auto" ]]; then
+  case "\$(sed -n 's/^webserver_type: *//p' "\$DDEV_APPROOT/.ddev/config.zz-server.yaml" 2>/dev/null)" in
+    apache-fpm) header="Apache/2.4.68" ;;
+    frankenphp) header="Caddy" ;;
+    *) header="nginx" ;;
+  esac
+fi
+printf '200\t%s\t%s' "\${STUB_CONTENT_TYPE-application/json}" "\$header"
 BASH;
         file_put_contents($this->root.'/bin/curl', $script);
         chmod($this->root.'/bin/curl', 0755);
@@ -46,7 +54,11 @@ case "\$1" in
   server) echo "$server" ;;
   version) printf ' ITEM              VALUE \\n DDEV version      v1.25.4 \\n architecture      arm64 \\n' ;;
   exec)
-    if [[ "\$2" == "nginx" ]]; then echo "nginx version: nginx/1.26.3" >&2; else echo "Server version: Apache/2.4.68 (Debian)"; fi ;;
+    case "\$2" in
+      nginx) echo "nginx version: nginx/1.26.3" >&2 ;;
+      frankenphp) echo "FrankenPHP v1.12.1 PHP 8.4.13 Caddy v2.10.2 h1:abc123=" ;;
+      *) echo "Server version: Apache/2.4.68 (Debian)" ;;
+    esac ;;
 esac
 BASH;
         file_put_contents($this->root.'/bin/ddev', $script);
@@ -141,6 +153,32 @@ it('AC-11 versions exits 1 with a hint when the endpoint is 404', function (): v
     expect($process->getExitCode())->toBe(1)
         ->and($process->getErrorOutput())->toContain('DEBUG_ROUTES')
         ->and($process->getErrorOutput())->toContain('optimize:clear');
+});
+
+it('AC-7 frankenphp capture expects a Caddy server header', function (): void {
+    ($this->writeCurl)();
+    ($this->setServer)('frankenphp');
+    $accepted = ($this->runWith)(['STUB_SERVER_HEADER' => 'Caddy'], 'parity.sh', 'capture');
+
+    expect($accepted->getExitCode())->toBe(0)
+        ->and(file_exists($this->root.'/parity/frankenphp.txt'))->toBeTrue();
+
+    unlink($this->root.'/parity/frankenphp.txt');
+    $rejected = ($this->runWith)(['STUB_SERVER_HEADER' => 'nginx/1.26.3'], 'parity.sh', 'capture');
+
+    expect($rejected->getExitCode())->toBe(4)
+        ->and($rejected->getErrorOutput())->toContain('Snapshot not written')
+        ->and(file_exists($this->root.'/parity/frankenphp.txt'))->toBeFalse();
+});
+
+it('AC-9 versions parses the FrankenPHP version', function (): void {
+    ($this->writeCurl)();
+    ($this->writeDdev)('frankenphp');
+    ($this->setServer)('frankenphp');
+    $process = ($this->runWith)(['STUB_SAPI' => 'frankenphp'], 'versions.sh');
+
+    expect($process->getExitCode())->toBe(0)
+        ->and(trim($process->getOutput()))->toMatch('/^\| frankenphp \| 1\.12\.1 \| 1\.25\.4 \| 8\.4\.1 \| frankenphp \| true \| \d{4}-\d\d-\d\d \|$/');
 });
 
 it('AC-9 render time is masked in the /up body only', function (): void {
@@ -354,4 +392,48 @@ it('AC-10 committed snapshots use the spec format and cover the seven requests',
 
         expect($rows[4][1])->toBe('422')->and($rows[6][1])->toBe('404');
     }
+});
+
+it('AC-8 committed frankenphp snapshot matches both FPM snapshots', function (): void {
+    $rows = fn (string $server): array => array_values(array_filter(
+        file(base_path("bench/parity/{$server}.txt"), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES),
+        fn (string $line): bool => ! str_starts_with($line, '#'),
+    ));
+
+    expect(file_exists(base_path('bench/parity/frankenphp.txt')))->toBeTrue()
+        ->and(file(base_path('bench/parity/frankenphp.txt'))[0])->toStartWith('# server=frankenphp base=https://interview.ddev.site captured=')
+        ->and($rows('frankenphp'))->toHaveCount(7)
+        ->and($rows('frankenphp'))->toBe($rows('nginx-fpm'))
+        ->and($rows('frankenphp'))->toBe($rows('apache-fpm'));
+});
+
+it('AC-7 capture refuses a server missing from the token map', function (): void {
+    ($this->writeCurl)();
+    ($this->setServer)('octane-frankenphp');
+    $process = ($this->runWith)(['STUB_SERVER_HEADER' => 'Caddy'], 'parity.sh', 'capture');
+
+    expect($process->getExitCode())->toBe(2)
+        ->and($process->getErrorOutput())->toContain('header_token')
+        ->and(file_exists($this->root.'/parity/octane-frankenphp.txt'))->toBeFalse();
+});
+
+it('AC-7 capture refuses a response without a Server header', function (): void {
+    ($this->writeCurl)();
+    ($this->setServer)('nginx-fpm');
+    $process = ($this->runWith)(['STUB_SERVER_HEADER' => ''], 'parity.sh', 'capture');
+
+    expect($process->getExitCode())->toBe(4)
+        ->and($process->getErrorOutput())->toContain('<missing>')
+        ->and(file_exists($this->root.'/parity/nginx-fpm.txt'))->toBeFalse();
+});
+
+it('AC-9 versions refuses a server it has no version command for', function (): void {
+    ($this->writeCurl)();
+    ($this->writeDdev)('octane-frankenphp');
+    ($this->setServer)('octane-frankenphp');
+    $process = ($this->run)('versions.sh');
+
+    expect($process->getExitCode())->toBe(1)
+        ->and($process->getErrorOutput())->toContain('No web server version command')
+        ->and($process->getOutput())->toBe('');
 });

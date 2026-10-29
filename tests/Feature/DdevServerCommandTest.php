@@ -12,6 +12,19 @@ beforeEach(function (): void {
     file_put_contents($this->root.'/bin/ddev', "#!/usr/bin/env bash\necho \"\$@\" >> \"\$DDEV_APPROOT/ddev-calls.log\"\n[[ -f \"\$DDEV_APPROOT/ddev-fail\" ]] && exit 7\nexit 0\n");
     chmod($this->root.'/bin/ddev', 0755);
     $this->overlay = $this->root.'/.ddev/config.zz-server.yaml';
+    $this->stash = $this->root.'/.ddev/servers/frankenphp';
+    $this->activated = [
+        'docker-compose.frankenphp.yaml',
+        'web-build/Caddyfile.frankenphp',
+        'web-build/Dockerfile.frankenphp',
+        'web-build/pre.Dockerfile.frankenphp',
+    ];
+    mkdir($this->stash.'/web-build', 0777, true);
+    file_put_contents($this->stash.'/config.frankenphp.yaml', "#ddev-generated\nwebserver_type: generic\n");
+    file_put_contents($this->stash.'/VERSION', "ddev/ddev-frankenphp v1.3.0\n");
+    foreach ($this->activated as $file) {
+        file_put_contents($this->stash.'/'.$file, 'stash '.$file."\n");
+    }
     $this->configBefore = file_get_contents($this->root.'/.ddev/config.yaml');
 
     $this->server = function (string ...$args): Process {
@@ -163,4 +176,199 @@ it('AC-1 restart failure restores the previous overlay', function (): void {
 
     expect($process->getExitCode())->toBe(1)
         ->and(file_get_contents($this->overlay))->toBe($previous);
+});
+
+it('AC-5 frankenphp activated files are gitignored', function (): void {
+    $stash = base_path('.ddev/servers/frankenphp');
+    $ignored = file(base_path('.gitignore'), FILE_IGNORE_NEW_LINES);
+
+    foreach ([
+        'config.frankenphp.yaml',
+        'docker-compose.frankenphp.yaml',
+        'web-build/Caddyfile.frankenphp',
+        'web-build/Dockerfile.frankenphp',
+        'web-build/pre.Dockerfile.frankenphp',
+    ] as $file) {
+        expect(is_file($stash.'/'.$file))->toBeTrue();
+    }
+
+    foreach ([
+        '.ddev/docker-compose.frankenphp.yaml',
+        '.ddev/web-build/Caddyfile.frankenphp',
+        '.ddev/web-build/Dockerfile.frankenphp',
+        '.ddev/web-build/pre.Dockerfile.frankenphp',
+    ] as $activated) {
+        expect($ignored)->toContain($activated);
+    }
+
+    expect(trim(file_get_contents($stash.'/VERSION')))->toBe('ddev/ddev-frankenphp v1.3.0')
+        ->and(file_exists(base_path('.ddev/addon-metadata/frankenphp')))->toBeFalse();
+});
+
+it('AC-1 frankenphp activates the stash and writes its overlay', function (): void {
+    $process = ($this->server)('frankenphp');
+
+    expect($process->getExitCode())->toBe(0)
+        ->and(file_get_contents($this->overlay))->toBe("# server: frankenphp\n#ddev-generated\nwebserver_type: generic\n")
+        ->and(file_get_contents($this->root.'/ddev-calls.log'))->toContain('restart')
+        ->and(trim(($this->server)('--current')->getOutput()))->toBe('frankenphp');
+
+    foreach ($this->activated as $file) {
+        expect(file_get_contents($this->root.'/.ddev/'.$file))->toBe('stash '.$file."\n");
+    }
+
+    expect(file_exists($this->root.'/.ddev/config.frankenphp.yaml'))->toBeFalse()
+        ->and(file_exists($this->root.'/.ddev/VERSION'))->toBeFalse();
+});
+
+it('AC-2 switching away from frankenphp removes the activated files', function (): void {
+    ($this->server)('frankenphp');
+    $process = ($this->server)('apache-fpm');
+
+    expect($process->getExitCode())->toBe(0)
+        ->and(file_get_contents($this->overlay))->toContain('webserver_type: apache-fpm');
+
+    foreach ($this->activated as $file) {
+        expect(file_exists($this->root.'/.ddev/'.$file))->toBeFalse();
+    }
+
+    expect(file_exists($this->stash.'/config.frankenphp.yaml'))->toBeTrue();
+});
+
+it('AC-3 frankenphp is a supported server', function (): void {
+    $listed = ($this->server)();
+
+    expect($listed->getOutput())->toContain('Supported: nginx-fpm apache-fpm frankenphp');
+
+    ($this->server)('frankenphp');
+
+    expect(trim(($this->server)('--current')->getOutput()))->toBe('frankenphp')
+        ->and(($this->server)()->getOutput())->toContain('Active: frankenphp');
+});
+
+it('AC-4 failed switch to frankenphp restores the previous file set', function (): void {
+    touch($this->root.'/ddev-fail');
+
+    $process = ($this->server)('frankenphp');
+
+    expect($process->getExitCode())->toBe(1)
+        ->and(file_exists($this->overlay))->toBeFalse();
+
+    foreach ($this->activated as $file) {
+        expect(file_exists($this->root.'/.ddev/'.$file))->toBeFalse();
+    }
+});
+
+it('AC-4 failed switch away from frankenphp puts the activated files back', function (): void {
+    ($this->server)('frankenphp');
+    $previous = file_get_contents($this->overlay);
+    touch($this->root.'/ddev-fail');
+
+    $process = ($this->server)('nginx-fpm');
+
+    expect($process->getExitCode())->toBe(1)
+        ->and(file_get_contents($this->overlay))->toBe($previous);
+
+    foreach ($this->activated as $file) {
+        expect(file_get_contents($this->root.'/.ddev/'.$file))->toBe('stash '.$file."\n");
+    }
+});
+
+it('AC-4 frankenphp without its stash changes nothing', function (): void {
+    (new Process(['rm', '-rf', $this->root.'/.ddev/servers']))->run();
+
+    $process = ($this->server)('frankenphp');
+
+    expect($process->getExitCode())->toBe(1)
+        ->and($process->getErrorOutput())->toContain('stash is incomplete')
+        ->and($process->getErrorOutput())->toContain('.ddev/servers/frankenphp/config.frankenphp.yaml')
+        ->and($process->getErrorOutput())->not->toContain('Unknown server')
+        ->and(file_exists($this->overlay))->toBeFalse()
+        ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
+});
+
+it('AC-4 an incomplete frankenphp stash names the missing file and changes nothing', function (): void {
+    unlink($this->stash.'/web-build/Caddyfile.frankenphp');
+
+    $process = ($this->server)('frankenphp');
+
+    expect($process->getExitCode())->toBe(1)
+        ->and($process->getErrorOutput())->toContain('web-build/Caddyfile.frankenphp is missing')
+        ->and(file_exists($this->overlay))->toBeFalse()
+        ->and(file_exists($this->root.'/.ddev/docker-compose.frankenphp.yaml'))->toBeFalse()
+        ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
+});
+
+it('AC-4 a failed copy during activation restores the previous state without restarting', function (): void {
+    file_put_contents($this->root.'/.ddev/web-build', 'not a directory');
+
+    $process = ($this->server)('frankenphp');
+
+    expect($process->getExitCode())->toBe(1)
+        ->and($process->getErrorOutput())->toContain('aborted')
+        ->and(file_exists($this->overlay))->toBeFalse()
+        ->and(file_exists($this->root.'/.ddev/docker-compose.frankenphp.yaml'))->toBeFalse()
+        ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
+});
+
+it('AC-3 frankenphp active with a missing activated file is re-applied, not skipped', function (): void {
+    ($this->server)('frankenphp');
+    unlink($this->root.'/.ddev/web-build/Dockerfile.frankenphp');
+    unlink($this->root.'/ddev-calls.log');
+
+    $process = ($this->server)('frankenphp');
+
+    expect($process->getExitCode())->toBe(0)
+        ->and($process->getOutput())->toContain('re-applying')
+        ->and($process->getOutput())->not->toContain('already active')
+        ->and(file_get_contents($this->root.'/.ddev/web-build/Dockerfile.frankenphp'))->toBe("stash web-build/Dockerfile.frankenphp\n")
+        ->and(file_get_contents($this->root.'/ddev-calls.log'))->toContain('restart');
+});
+
+it('AC-3 frankenphp active with an outdated stash is re-applied', function (): void {
+    ($this->server)('frankenphp');
+    file_put_contents($this->stash.'/config.frankenphp.yaml', "#ddev-generated\nwebserver_type: generic\nwebimage_extra_packages: [php-zts-opcache]\n");
+
+    $process = ($this->server)('frankenphp');
+
+    expect($process->getExitCode())->toBe(0)
+        ->and($process->getOutput())->toContain('re-applying')
+        ->and(file_get_contents($this->overlay))->toContain('php-zts-opcache');
+});
+
+it('MNC-1 frankenphp switches never modify config.yaml', function (): void {
+    ($this->server)('frankenphp');
+    ($this->server)('nginx-fpm');
+    touch($this->root.'/ddev-fail');
+    ($this->server)('frankenphp');
+
+    expect(file_get_contents($this->root.'/.ddev/config.yaml'))->toBe($this->configBefore);
+});
+
+it('AC-2 AC-3 frankenphp already active is a no-op and switching back to nginx-fpm succeeds', function (): void {
+    ($this->server)('frankenphp');
+    unlink($this->root.'/ddev-calls.log');
+    $overlay = file_get_contents($this->overlay);
+
+    $again = ($this->server)('frankenphp');
+
+    expect($again->getExitCode())->toBe(0)
+        ->and($again->getOutput())->toContain('frankenphp already active')
+        ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse()
+        ->and(file_get_contents($this->overlay))->toBe($overlay);
+
+    foreach ($this->activated as $file) {
+        expect(file_get_contents($this->root.'/.ddev/'.$file))->toBe('stash '.$file."\n");
+    }
+
+    $back = ($this->server)('nginx-fpm');
+
+    expect($back->getExitCode())->toBe(0)
+        ->and($back->getOutput())->toContain('Active: nginx-fpm')
+        ->and(file_get_contents($this->root.'/ddev-calls.log'))->toContain('restart')
+        ->and(file_get_contents($this->overlay))->toContain('# server: nginx-fpm');
+
+    foreach ($this->activated as $file) {
+        expect(file_exists($this->root.'/.ddev/'.$file))->toBeFalse();
+    }
 });

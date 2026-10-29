@@ -1,23 +1,119 @@
 #!/usr/bin/env bash
 
-## Description: Show or switch the web server (nginx-fpm or apache-fpm)
-## Usage: server [--current|nginx-fpm|apache-fpm]
-## Example: ddev server apache-fpm
+## Description: Show or switch the web server (nginx-fpm, apache-fpm or frankenphp)
+## Usage: server [--current|nginx-fpm|apache-fpm|frankenphp]
+## Example: ddev server frankenphp
 
-set -euo pipefail
+set -Eeuo pipefail
 
-# Supported servers. To add one, append it here and give it a case in overlay_for.
-SUPPORTED=(nginx-fpm apache-fpm)
+# Supported servers. To add one, append it here and give it a case in overlay_for. A server
+# that needs extra files in .ddev/ keeps them in .ddev/servers/<name>/ and lists the ones to
+# activate in activated_files.
+SUPPORTED=(nginx-fpm apache-fpm frankenphp)
 APPROOT="${DDEV_APPROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
 OVERLAY="$APPROOT/.ddev/config.zz-server.yaml"
+STASH="$APPROOT/.ddev/servers"
 
 # Prints the overlay content for a server. The "# server:" marker names the server even
 # when several servers share a webserver_type (e.g. generic for FrankenPHP and Octane).
 overlay_for() {
   case "$1" in
     nginx-fpm | apache-fpm) printf '# server: %s\nwebserver_type: %s\n' "$1" "$1" ;;
+    frankenphp)
+      printf '# server: frankenphp\n'
+      cat "$STASH/frankenphp/config.frankenphp.yaml"
+      ;;
     *) return 1 ;;
   esac
+}
+
+# Prints the stash files (relative to .ddev/servers/<name>/ and to .ddev/) a server activates.
+activated_files() {
+  case "$1" in
+    frankenphp)
+      printf '%s\n' docker-compose.frankenphp.yaml web-build/Caddyfile.frankenphp \
+        web-build/Dockerfile.frankenphp web-build/pre.Dockerfile.frankenphp
+      ;;
+  esac
+}
+
+# Deletes the activated files of every server except the given one.
+deactivate_others() {
+  local server file
+  for server in "${SUPPORTED[@]}"; do
+    [[ "$server" == "$1" ]] && continue
+    while IFS= read -r file; do
+      [[ -z "$file" ]] || rm -f "$APPROOT/.ddev/$file"
+    done < <(activated_files "$server")
+  done
+}
+
+# Copies the server's activated files from the stash into .ddev/.
+activate() {
+  local file
+  while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    mkdir -p "$(dirname "$APPROOT/.ddev/$file")"
+    cp "$STASH/$1/$file" "$APPROOT/.ddev/$file"
+  done < <(activated_files "$1")
+}
+
+# Copies every activated file that currently exists into the backup directory.
+backup_files() {
+  local server file
+  for server in "${SUPPORTED[@]}"; do
+    while IFS= read -r file; do
+      [[ -z "$file" || ! -f "$APPROOT/.ddev/$file" ]] && continue
+      mkdir -p "$(dirname "$1/$file")"
+      cp "$APPROOT/.ddev/$file" "$1/$file"
+    done < <(activated_files "$server")
+  done
+}
+
+# Removes all activated files, then puts back the ones saved in the backup directory.
+restore_files() {
+  local server file
+  deactivate_others ""
+  for server in "${SUPPORTED[@]}"; do
+    while IFS= read -r file; do
+      [[ -z "$file" || ! -f "$1/$file" ]] && continue
+      mkdir -p "$(dirname "$APPROOT/.ddev/$file")"
+      cp "$1/$file" "$APPROOT/.ddev/$file"
+    done < <(activated_files "$server")
+  done
+}
+
+# Prints the stash files a server needs (its overlay source plus its activated files).
+stash_files() {
+  case "$1" in
+    frankenphp) echo config.frankenphp.yaml ;;
+  esac
+  activated_files "$1"
+}
+
+# Prints the first stash file the server needs that is missing; prints nothing when complete.
+missing_stash_file() {
+  local file
+  while IFS= read -r file; do
+    [[ -z "$file" || -f "$STASH/$1/$file" ]] && continue
+    printf '%s\n' "$file"
+    return
+  done < <(stash_files "$1")
+}
+
+# True when the overlay and every activated file already match what the server would write.
+is_current() {
+  local file
+  if [[ ! -f "$OVERLAY" ]]; then
+    # Active through config.yaml alone: current only for a server with no activated files.
+    [[ -z "$(activated_files "$1")" ]]
+    return
+  fi
+  [[ "$(cat "$OVERLAY")" == "$2" ]] || return 1
+  while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    cmp -s "$STASH/$1/$file" "$APPROOT/.ddev/$file" || return 1
+  done < <(activated_files "$1")
 }
 
 active_server() {
@@ -46,31 +142,66 @@ if [[ "$1" == "--current" ]]; then
 fi
 
 target="$1"
-if ! content="$(overlay_for "$target")"; then
+known=0
+for server in "${SUPPORTED[@]}"; do
+  [[ "$server" == "$target" ]] && known=1
+done
+if [[ $known -ne 1 ]]; then
   echo "Unknown server '$target'. Supported: ${SUPPORTED[*]}" >&2
   exit 1
 fi
 
+missing="$(missing_stash_file "$target")"
+if [[ -n "$missing" ]]; then
+  echo "The $target stash is incomplete: .ddev/servers/$target/$missing is missing. Restore it with 'git checkout -- .ddev/servers/$target'. Nothing was changed." >&2
+  exit 1
+fi
+content="$(overlay_for "$target")"
+
 if [[ "$target" == "$(active_server)" ]]; then
-  echo "$target already active"
-  exit 0
+  if is_current "$target" "$content"; then
+    echo "$target already active"
+    exit 0
+  fi
+  echo "$target is active but its files are missing or out of date; re-applying them."
 fi
 
+FILES_BACKUP="$(mktemp -d)"
+backup_files "$FILES_BACKUP"
 BACKUP=""
 if [[ -f "$OVERLAY" ]]; then
   BACKUP="$(mktemp)"
   cp "$OVERLAY" "$BACKUP"
 fi
 
-printf '%s\n' "$content" > "$OVERLAY"
-
-if ! ddev restart; then
+# Puts back the overlay and activated files saved above, then removes the temp copies.
+restore_previous() {
   if [[ -n "$BACKUP" ]]; then
     cp "$BACKUP" "$OVERLAY"
-    rm -f "$BACKUP"
   else
     rm -f "$OVERLAY"
   fi
+  restore_files "$FILES_BACKUP"
+  [[ -z "$BACKUP" ]] || rm -f "$BACKUP"
+  rm -rf "$FILES_BACKUP"
+}
+
+# Any failure or interrupt before the switch completes restores the previous files.
+abort_switch() {
+  trap - ERR INT TERM
+  restore_previous
+  echo "Switch to $target aborted; restored the $(active_server) files. Run 'ddev restart' if the project is not running." >&2
+  exit 1
+}
+trap abort_switch ERR INT TERM
+
+deactivate_others "$target"
+activate "$target"
+printf '%s\n' "$content" > "$OVERLAY"
+
+if ! ddev restart; then
+  trap - ERR INT TERM
+  restore_previous
   previous="$(active_server)"
   if ddev restart; then
     echo "ddev restart failed; restored and restarted $previous" >&2
@@ -80,5 +211,7 @@ if ! ddev restart; then
   exit 1
 fi
 
+trap - ERR INT TERM
 [[ -z "$BACKUP" ]] || rm -f "$BACKUP"
+rm -rf "$FILES_BACKUP"
 echo "Active: $(active_server)"

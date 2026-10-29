@@ -42,3 +42,15 @@ test('AC-13 README switching section documents enabling debug runtime', function
 test('AC-13 README switching section notes Apache reads public/.htaccess on every request', function (): void {
     expect(switchingServersSection())->toContain('public/.htaccess')->toContain('every request');
 });
+
+test('AC-11 README documents frankenphp, ZTS and logs', function (): void {
+    $section = switchingServersSection();
+
+    expect($section)->toContain('ddev server frankenphp')
+        ->toContain('builds the web image')
+        ->toContain('several minutes')
+        ->toContain('ZTS')
+        ->toContain('NTS')
+        ->toContain('threads')
+        ->toContain('ddev logs -f');
+});

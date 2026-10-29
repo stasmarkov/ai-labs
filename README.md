@@ -48,12 +48,17 @@ The project runs on nginx-fpm by default (`.ddev/config.yaml` is never modified)
 ```sh
 ddev server                 # show the active and supported servers
 ddev server apache-fpm      # write the gitignored overlay .ddev/config.zz-server.yaml and restart
+ddev server frankenphp      # FrankenPHP in classic mode (no worker), Caddy in front
 ddev server nginx-fpm       # switch back
 ```
 
+The first switch to `frankenphp` builds the web image and can take several minutes; later switches reuse it. FrankenPHP runs PHP inside its own process as threads, so it needs the thread-safe (ZTS) build of PHP. nginx-fpm and apache-fpm run PHP-FPM worker processes on the non-thread-safe (NTS) build. Switching away from `frankenphp` removes the copied add-on files, so `php -v` shows the NTS build again. FrankenPHP logs are in `ddev logs -f`.
+
+FrankenPHP is not a DDEV `webserver_type`, so its files come from the `ddev/ddev-frankenphp` add-on (version in `.ddev/servers/frankenphp/VERSION`), committed unchanged under `.ddev/servers/frankenphp/` rather than installed with `ddev add-on get`. `ddev server frankenphp` copies `docker-compose.frankenphp.yaml` and `web-build/{Caddyfile,Dockerfile,pre.Dockerfile}.frankenphp` from there into `.ddev/` (all four are gitignored) and writes the add-on's `config.frankenphp.yaml` into the overlay. If `ddev restart` fails, the command puts back the previous overlay and add-on files and restarts the previous server.
+
 Apache reads `public/.htaccess` on every request, so rewrite and header rules in that file apply to Apache only and are not cached between requests; nginx ignores it.
 
-Check that both servers answer identically. Seed once so both captures see the same data, then capture on each server and compare:
+Check that the servers answer identically. Seed once so every capture sees the same data, then capture on each server and compare:
 
 ```sh
 ddev artisan migrate:fresh --seed
@@ -62,9 +67,12 @@ bench/parity.sh capture                       # reads the active server, writes 
 ddev server apache-fpm
 bench/parity.sh capture                       # writes bench/parity/apache-fpm.txt
 bench/parity.sh compare nginx-fpm apache-fpm  # prints "identical" (exit 0) or the differing requests (exit 1)
+ddev server frankenphp
+bench/parity.sh capture                       # writes bench/parity/frankenphp.txt
+bench/parity.sh compare nginx-fpm frankenphp
 ```
 
-Each snapshot line holds the path, status, media type (charset and other parameters dropped) and body SHA-256. Only the `/up` page has its render time masked before hashing. `capture` writes nothing if a request fails (exit 3) or the `Server` header does not match the active server (exit 4); set `PARITY_INSECURE=1` if the DDEV certificate is not trusted.
+Each snapshot line holds the path, status, media type (charset and other parameters dropped) and body SHA-256. Only the `/up` page has its render time masked before hashing. `capture` writes nothing if a request fails (exit 3) or the `Server` header does not match the active server (exit 4); set `PARITY_INSECURE=1` if the DDEV certificate is not trusted. The header must contain `nginx` on nginx-fpm, `apache` on apache-fpm and `caddy` on frankenphp (case-insensitive); any other server name is matched by the part before its first `-`.
 
 To record versions in `BENCHMARKS.md`, enable `/debug/runtime` and run `bench/versions.sh` on each server:
 

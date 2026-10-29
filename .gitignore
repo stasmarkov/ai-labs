@@ -27,3 +27,7 @@ Homestead.yaml
 Thumbs.db
 /.playwright-mcp
 .ddev/config.zz-server.yaml
+.ddev/docker-compose.frankenphp.yaml
+.ddev/web-build/Caddyfile.frankenphp
+.ddev/web-build/Dockerfile.frankenphp
+.ddev/web-build/pre.Dockerfile.frankenphp

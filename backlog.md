@@ -43,8 +43,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-02, BR-25
 - **Depends on:** SL-02
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** shipped
+- **Spec:** spec-20261029-1221-frankenphp-classic
 - **Source:** brief (Phase 0)
 - **Run:** `/sdd "SL-03: add a FrankenPHP classic-mode DDEV overlay (ddev-frankenphp add-on, ZTS pgsql/redis extensions) that passes the parity check, with OPcache confirmed and versions recorded (BR-02, BR-25). Rules in product-brief.md."`
 

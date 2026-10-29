@@ -5,7 +5,7 @@
 ## bench/parity/<active server>.txt. Only the /up body has its render time
 ## ("rendered in Nms") masked, because Laravel prints it and it differs per request.
 ## The snapshot is written only when every request succeeds and the Server header
-## matches the active server.
+## matches the active server's token (nginx-fpm: nginx, apache-fpm: apache, frankenphp: caddy).
 ## Env: PARITY_BASE_URL (default https://interview.ddev.site), PARITY_INSECURE=1 adds -k.
 
 set -euo pipefail
@@ -14,6 +14,16 @@ BASE_URL="${PARITY_BASE_URL:-https://interview.ddev.site}"
 SERVER_COMMAND="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.ddev/commands/host/server"
 DIR="${BENCH_PARITY_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/parity}"
 REQUESTS=(/up /api/ping /listings "/listings?make=BMW&fuel=diesel&per_page=5" "/listings?per_page=99" /listings/1 /listings/999999)
+
+# Expected Server header token per server. A new server must be added here explicitly.
+header_token() {
+  case "$1" in
+    nginx-fpm) echo nginx ;;
+    apache-fpm) echo apache ;;
+    frankenphp) echo caddy ;;
+    *) return 1 ;;
+  esac
+}
 
 sha256() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -35,9 +45,12 @@ media_type() {
 }
 
 capture() {
-  local server family meta rest path status type server_header hash curl_flags=(-sS --max-time 30)
+  local server token meta rest path status type server_header hash curl_flags=(-sS --max-time 30)
   server="$(bash "$SERVER_COMMAND" --current)"
-  family="${server%%-*}"
+  if ! token="$(header_token "$server")"; then
+    echo "No Server header token for '$server'. Add it to header_token in bench/parity.sh." >&2
+    exit 2
+  fi
   [[ "${PARITY_INSECURE:-0}" == "1" ]] && curl_flags+=(-k)
   mkdir -p "$DIR"
   CAPTURE_BODY="$(mktemp)"
@@ -55,8 +68,8 @@ capture() {
     rest="${meta#*$'\t'}"
     type="$(media_type "${rest%%$'\t'*}")"
     server_header="$(printf '%s' "${rest#*$'\t'}" | tr '[:upper:]' '[:lower:]')"
-    if [[ -n "$server_header" && "$server_header" != *"$family"* ]]; then
-      echo "Server header '$server_header' does not match the active server '$server'. Snapshot not written. Run 'ddev restart' or 'ddev server $server'." >&2
+    if [[ -z "$server_header" || "$server_header" != *"$token"* ]]; then
+      echo "Server header '${server_header:-<missing>}' on $path does not match the active server '$server'. Snapshot not written. Run 'ddev restart' or 'ddev server $server'." >&2
       exit 4
     fi
     if [[ "$path" == "/up" ]]; then

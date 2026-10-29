@@ -37,7 +37,12 @@ php_field() {
 server="$(bash "$SERVER_COMMAND" --current)"
 case "$server" in
   apache-fpm) web_version="$(ddev exec apache2 -v 2>&1 | sed -nE 's#.*Apache/([0-9]+(\.[0-9]+)*).*#\1#p' | head -n 1)" ;;
-  *) web_version="$(ddev exec nginx -v 2>&1 | sed -nE 's#.*nginx/([0-9]+(\.[0-9]+)*).*#\1#p' | head -n 1)" ;;
+  frankenphp) web_version="$(ddev exec frankenphp -v 2>&1 | sed -nE 's/.*FrankenPHP v?([0-9]+(\.[0-9]+)*).*/\1/p' | head -n 1)" ;;
+  nginx-fpm) web_version="$(ddev exec nginx -v 2>&1 | sed -nE 's#.*nginx/([0-9]+(\.[0-9]+)*).*#\1#p' | head -n 1)" ;;
+  *)
+    echo "No web server version command for '$server'. Add it to bench/versions.sh." >&2
+    exit 1
+    ;;
 esac
 ddev_version="$(ddev version 2>&1 | sed -nE 's/.*DDEV version[^v0-9]*v?([0-9]+(\.[0-9]+)*).*/\1/p' | head -n 1)"
 
