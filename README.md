@@ -41,6 +41,41 @@ php artisan boost:install
 
 Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
 
+## Switching servers
+
+The project runs on nginx-fpm by default (`.ddev/config.yaml` is never modified). Switch the web server with the DDEV host command:
+
+```sh
+ddev server                 # show the active and supported servers
+ddev server apache-fpm      # write the gitignored overlay .ddev/config.zz-server.yaml and restart
+ddev server nginx-fpm       # switch back
+```
+
+Apache reads `public/.htaccess` on every request, so rewrite and header rules in that file apply to Apache only and are not cached between requests; nginx ignores it.
+
+Check that both servers answer identically. Seed once so both captures see the same data, then capture on each server and compare:
+
+```sh
+ddev artisan migrate:fresh --seed
+ddev server nginx-fpm
+bench/parity.sh capture                       # reads the active server, writes bench/parity/nginx-fpm.txt
+ddev server apache-fpm
+bench/parity.sh capture                       # writes bench/parity/apache-fpm.txt
+bench/parity.sh compare nginx-fpm apache-fpm  # prints "identical" (exit 0) or the differing requests (exit 1)
+```
+
+Each snapshot line holds the path, status, media type (charset and other parameters dropped) and body SHA-256. Only the `/up` page has its render time masked before hashing. `capture` writes nothing if a request fails (exit 3) or the `Server` header does not match the active server (exit 4); set `PARITY_INSECURE=1` if the DDEV certificate is not trusted.
+
+To record versions in `BENCHMARKS.md`, enable `/debug/runtime` and run `bench/versions.sh` on each server:
+
+```sh
+# set DEBUG_ROUTES=true in .env, then
+ddev artisan optimize:clear
+bench/versions.sh                             # one markdown row for BENCHMARKS.md
+```
+
+The scripts never change `.env`. Set `DEBUG_ROUTES` back to `false` afterwards; it stays `false` in `.env.example` and for benchmarks.
+
 ## Contributing
 
 Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).

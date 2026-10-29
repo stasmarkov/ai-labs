@@ -43,6 +43,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Debug Routes
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, diagnostic routes such as /debug/runtime respond normally.
+    | When disabled they answer 404 exactly like any unknown path.
+    |
+    */
+
+    'debug_routes' => (bool) env('DEBUG_ROUTES', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application URL
     |--------------------------------------------------------------------------
     |

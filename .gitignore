@@ -26,3 +26,4 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /.playwright-mcp
+.ddev/config.zz-server.yaml

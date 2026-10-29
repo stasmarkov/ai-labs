@@ -30,8 +30,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-02, BR-25
 - **Depends on:** SL-01
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** shipped
+- **Spec:** spec-20261029-1013-apache-fpm-parity
 - **Source:** brief (Phase 0)
 - **Run:** `/sdd "SL-02: add an apache-fpm DDEV overlay, a README section on switching servers, a parity script comparing ping/search/detail responses across servers, and a versions table in BENCHMARKS.md; OPcache confirmed on (BR-02, BR-25). Rules in product-brief.md."`
 

@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+
+## Description: Show or switch the web server (nginx-fpm or apache-fpm)
+## Usage: server [--current|nginx-fpm|apache-fpm]
+## Example: ddev server apache-fpm
+
+set -euo pipefail
+
+# Supported servers. To add one, append it here and give it a case in overlay_for.
+SUPPORTED=(nginx-fpm apache-fpm)
+APPROOT="${DDEV_APPROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
+OVERLAY="$APPROOT/.ddev/config.zz-server.yaml"
+
+# Prints the overlay content for a server. The "# server:" marker names the server even
+# when several servers share a webserver_type (e.g. generic for FrankenPHP and Octane).
+overlay_for() {
+  case "$1" in
+    nginx-fpm | apache-fpm) printf '# server: %s\nwebserver_type: %s\n' "$1" "$1" ;;
+    *) return 1 ;;
+  esac
+}
+
+active_server() {
+  local file="$OVERLAY" name
+  if [[ -f "$file" ]]; then
+    name="$(sed -n 's/^# server:[[:space:]]*//p' "$file" | head -n 1 | tr -d '[:space:]')"
+    if [[ -n "$name" ]]; then
+      printf '%s\n' "$name"
+      return
+    fi
+  else
+    file="$APPROOT/.ddev/config.yaml"
+  fi
+  sed -n 's/^webserver_type:[[:space:]]*//p' "$file" | head -n 1 | tr -d '[:space:]"'
+}
+
+if [[ $# -eq 0 ]]; then
+  echo "Active: $(active_server)"
+  echo "Supported: ${SUPPORTED[*]}"
+  exit 0
+fi
+
+if [[ "$1" == "--current" ]]; then
+  active_server
+  exit 0
+fi
+
+target="$1"
+if ! content="$(overlay_for "$target")"; then
+  echo "Unknown server '$target'. Supported: ${SUPPORTED[*]}" >&2
+  exit 1
+fi
+
+if [[ "$target" == "$(active_server)" ]]; then
+  echo "$target already active"
+  exit 0
+fi
+
+BACKUP=""
+if [[ -f "$OVERLAY" ]]; then
+  BACKUP="$(mktemp)"
+  cp "$OVERLAY" "$BACKUP"
+fi
+
+printf '%s\n' "$content" > "$OVERLAY"
+
+if ! ddev restart; then
+  if [[ -n "$BACKUP" ]]; then
+    cp "$BACKUP" "$OVERLAY"
+    rm -f "$BACKUP"
+  else
+    rm -f "$OVERLAY"
+  fi
+  previous="$(active_server)"
+  if ddev restart; then
+    echo "ddev restart failed; restored and restarted $previous" >&2
+  else
+    echo "ddev restart failed; restored the $previous overlay, but the project did not restart. Fix the error above, then run 'ddev restart'." >&2
+  fi
+  exit 1
+fi
+
+[[ -z "$BACKUP" ]] || rm -f "$BACKUP"
+echo "Active: $(active_server)"
