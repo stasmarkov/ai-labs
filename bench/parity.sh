@@ -5,12 +5,15 @@
 ## bench/parity/<active server>.txt. Only the /up body has its render time
 ## ("rendered in Nms") masked, because Laravel prints it and it differs per request.
 ## The snapshot is written only when every request succeeds and the Server header
-## matches the active server's token (nginx-fpm: nginx, apache-fpm: apache, frankenphp: caddy).
-## Env: PARITY_BASE_URL (default https://interview.ddev.site), PARITY_INSECURE=1 adds -k.
+## matches the active server's token (nginx-fpm: nginx, apache-fpm: apache, frankenphp: caddy,
+## openlitespeed: litespeed).
+## Env: PARITY_BASE_URL (default: `ddev server --url`, e.g. https://interview.ddev.site, :8091 for openlitespeed),
+##      PARITY_INSECURE=1 adds -k.
+## Absolute URLs of the base URL in response bodies are rewritten to https://interview.ddev.site before hashing.
 
 set -euo pipefail
 
-BASE_URL="${PARITY_BASE_URL:-https://interview.ddev.site}"
+DEFAULT_URL="https://interview.ddev.site"
 SERVER_COMMAND="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.ddev/commands/host/server"
 DIR="${BENCH_PARITY_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/parity}"
 REQUESTS=(/up /api/ping /listings "/listings?make=BMW&fuel=diesel&per_page=5" "/listings?per_page=99" /listings/1 /listings/999999)
@@ -21,6 +24,7 @@ header_token() {
     nginx-fpm) echo nginx ;;
     apache-fpm) echo apache ;;
     frankenphp) echo caddy ;;
+    openlitespeed) echo litespeed ;;
     *) return 1 ;;
   esac
 }
@@ -38,6 +42,15 @@ usage() {
   exit 2
 }
 
+# Absolute links built from the request host must compare equal across base URLs.
+normalize_body() {
+  if [[ "$BASE_URL" == "$DEFAULT_URL" ]]; then
+    cat
+  else
+    BASE="$BASE_URL" TARGET="$DEFAULT_URL" perl -0pe 's/\Q$ENV{BASE}\E/$ENV{TARGET}/g'
+  fi
+}
+
 # Media type only: lowercased, parameters such as charset dropped.
 media_type() {
   local type="${1%%;*}"
@@ -51,6 +64,7 @@ capture() {
     echo "No Server header token for '$server'. Add it to header_token in bench/parity.sh." >&2
     exit 2
   fi
+  BASE_URL="${PARITY_BASE_URL:-$(bash "$SERVER_COMMAND" --url)}"
   [[ "${PARITY_INSECURE:-0}" == "1" ]] && curl_flags+=(-k)
   mkdir -p "$DIR"
   CAPTURE_BODY="$(mktemp)"
@@ -73,9 +87,9 @@ capture() {
       exit 4
     fi
     if [[ "$path" == "/up" ]]; then
-      hash="$(sed -E 's/rendered in [0-9]+ms/rendered in Nms/' "$body" | sha256)"
+      hash="$(normalize_body < "$body" | sed -E 's/rendered in [0-9]+ms/rendered in Nms/' | sha256)"
     else
-      hash="$(sha256 < "$body")"
+      hash="$(normalize_body < "$body" | sha256)"
     fi
     printf '%s\t%s\t%s\t%s\n' "$path" "$status" "$type" "$hash" >> "$tmp"
   done

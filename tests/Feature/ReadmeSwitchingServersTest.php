@@ -54,3 +54,14 @@ test('AC-11 README documents frankenphp, ZTS and logs', function (): void {
         ->toContain('threads')
         ->toContain('ddev logs -f');
 });
+
+test('AC-11 README documents openlitespeed URL and htaccess restart', function (): void {
+    $section = switchingServersSection();
+
+    expect($section)->toContain('ddev server openlitespeed')
+        ->toContain('https://interview.ddev.site:8091')
+        ->toContain('builds the image')
+        ->toContain('.htaccess')
+        ->toContain('start-up')
+        ->toContain('ddev restart');
+});

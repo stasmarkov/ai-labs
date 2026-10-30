@@ -372,3 +372,127 @@ it('AC-2 AC-3 frankenphp already active is a no-op and switching back to nginx-f
         expect(file_exists($this->root.'/.ddev/'.$file))->toBeFalse();
     }
 });
+
+describe('openlitespeed', function (): void {
+    beforeEach(function (): void {
+        $this->olsStash = $this->root.'/.ddev/servers/openlitespeed';
+        $this->olsCompose = $this->root.'/.ddev/docker-compose.openlitespeed.yaml';
+        $this->olsStashFiles = [
+            'docker-compose.openlitespeed.yaml',
+            'Dockerfile',
+            'conf/httpd_config.conf',
+            'conf/vhosts/interview/vhconf.conf',
+            'conf/zz-opcache.ini',
+            'VERSION',
+        ];
+        mkdir($this->olsStash.'/conf/vhosts/interview', 0777, true);
+        foreach ($this->olsStashFiles as $file) {
+            file_put_contents($this->olsStash.'/'.$file, 'stash '.$file."\n");
+        }
+    });
+
+    it('AC-1 openlitespeed activates its compose file and keeps web on nginx-fpm', function (): void {
+        $process = ($this->server)('openlitespeed');
+
+        expect($process->getExitCode())->toBe(0)
+            ->and($process->getOutput())->toContain('Active: openlitespeed')
+            ->and(file_get_contents($this->overlay))->toBe("# server: openlitespeed\nwebserver_type: nginx-fpm\n")
+            ->and(file_get_contents($this->olsCompose))->toBe("stash docker-compose.openlitespeed.yaml\n")
+            ->and(file_exists($this->root.'/.ddev/Dockerfile'))->toBeFalse()
+            ->and(file_get_contents($this->root.'/ddev-calls.log'))->toContain('restart')
+            ->and(trim(($this->server)('--current')->getOutput()))->toBe('openlitespeed');
+    });
+
+    it('AC-2 switching away from openlitespeed removes its compose file', function (): void {
+        ($this->server)('openlitespeed');
+        $process = ($this->server)('nginx-fpm');
+
+        expect($process->getExitCode())->toBe(0)
+            ->and(file_exists($this->olsCompose))->toBeFalse()
+            ->and(file_get_contents($this->overlay))->toContain('# server: nginx-fpm')
+            ->and(file_exists($this->olsStash.'/docker-compose.openlitespeed.yaml'))->toBeTrue();
+    });
+
+    it('AC-2 switching from frankenphp to openlitespeed swaps the activated files', function (): void {
+        ($this->server)('frankenphp');
+        ($this->server)('openlitespeed');
+
+        expect(file_exists($this->olsCompose))->toBeTrue()
+            ->and(file_exists($this->root.'/.ddev/docker-compose.frankenphp.yaml'))->toBeFalse();
+    });
+
+    it('AC-3 openlitespeed is a supported server', function (): void {
+        expect(($this->server)()->getOutput())->toContain('Supported: nginx-fpm apache-fpm frankenphp openlitespeed');
+    });
+
+    it('AC-3 openlitespeed already active is a no-op, a missing compose file is re-applied', function (): void {
+        ($this->server)('openlitespeed');
+        unlink($this->root.'/ddev-calls.log');
+
+        $again = ($this->server)('openlitespeed');
+
+        expect($again->getExitCode())->toBe(0)
+            ->and($again->getOutput())->toContain('openlitespeed already active')
+            ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
+
+        unlink($this->olsCompose);
+        $reapplied = ($this->server)('openlitespeed');
+
+        expect($reapplied->getOutput())->toContain('re-applying')
+            ->and(file_exists($this->olsCompose))->toBeTrue();
+    });
+
+    it('AC-3 an incomplete openlitespeed stash names the missing file and changes nothing', function (): void {
+        unlink($this->olsStash.'/conf/httpd_config.conf');
+
+        $process = ($this->server)('openlitespeed');
+
+        expect($process->getExitCode())->toBe(1)
+            ->and($process->getErrorOutput())->toContain('conf/httpd_config.conf is missing')
+            ->and(file_exists($this->overlay))->toBeFalse()
+            ->and(file_exists($this->olsCompose))->toBeFalse()
+            ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
+    });
+
+    it('AC-3 an openlitespeed stash without VERSION is incomplete and changes nothing', function (): void {
+        unlink($this->olsStash.'/VERSION');
+
+        $process = ($this->server)('openlitespeed');
+
+        expect($process->getExitCode())->toBe(1)
+            ->and($process->getErrorOutput())->toContain('VERSION is missing')
+            ->and(file_exists($this->overlay))->toBeFalse()
+            ->and(file_exists($this->olsCompose))->toBeFalse()
+            ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
+    });
+
+    it('AC-3 failed restart rolls back the openlitespeed switch', function (): void {
+        touch($this->root.'/ddev-fail');
+
+        $process = ($this->server)('openlitespeed');
+
+        expect($process->getExitCode())->toBe(1)
+            ->and(file_exists($this->overlay))->toBeFalse()
+            ->and(file_exists($this->olsCompose))->toBeFalse();
+    });
+
+    it('MNC-1 openlitespeed switches never modify config.yaml', function (): void {
+        ($this->server)('openlitespeed');
+        ($this->server)('nginx-fpm');
+
+        expect(file_get_contents($this->root.'/.ddev/config.yaml'))->toBe($this->configBefore);
+    });
+
+    it('AC-1 openlitespeed compose path is gitignored', function (): void {
+        expect(file(base_path('.gitignore'), FILE_IGNORE_NEW_LINES))->toContain('.ddev/docker-compose.openlitespeed.yaml');
+    });
+});
+
+it('AC-7 --url prints the URL the active server answers on', function (): void {
+    expect(trim(($this->server)('--url')->getOutput()))->toBe('https://interview.ddev.site');
+
+    file_put_contents($this->overlay, "# server: openlitespeed\nwebserver_type: nginx-fpm\n");
+
+    expect(trim(($this->server)('--url')->getOutput()))->toBe('https://interview.ddev.site:8091')
+        ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
+});

@@ -35,3 +35,21 @@ test('AC-10 BENCHMARKS.md has a frankenphp row and the add-on version', function
         ->toContain('`bench/parity.sh compare apache-fpm frankenphp`')
         ->toContain('`identical`');
 });
+
+test('AC-10 BENCHMARKS.md has an openlitespeed row and pinning note', function (): void {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+
+    expect(preg_match_all('/^\| openlitespeed \| \d+(\.\d+)+ \| \d+(\.\d+)+ \| \d+(\.\d+)+ \| litespeed \| true \| \d{4}-\d{2}-\d{2} \|$/m', $doc))
+        ->toBe(1);
+    expect($doc)->toContain('1.9.4-lsphp84')
+        ->toContain('lsphp84-pgsql')
+        ->toContain('point-in-time');
+
+    preg_match('/^## Response parity\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $parity = $matches[1] ?? '';
+    expect($parity)->toContain('bench/parity/openlitespeed.txt')
+        ->toContain('`bench/parity.sh compare nginx-fpm openlitespeed`')
+        ->toContain('`identical`')
+        ->toContain('8091')
+        ->toContain('idle');
+});

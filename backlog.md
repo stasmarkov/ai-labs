@@ -51,13 +51,13 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 ### SL-05 · OpenLiteSpeed overlay
 
 - **Outcome:** The app runs unchanged on OpenLiteSpeed with LSAPI as an extra DDEV service, passing the parity check, with OPcache on and versions recorded.
-- **Entry point:** `.ddev/docker-compose.ols.yaml`, OLS vhost config
+- **Entry point:** `ddev server openlitespeed`, `.ddev/servers/openlitespeed/` (compose file, Dockerfile, OLS server and vhost config)
 - **Size:** M
 - **BRs:** BR-02, BR-25
 - **Depends on:** SL-02
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** shipped
+- **Spec:** spec-20261029-2027-openlitespeed
 - **Source:** brief (Phase 0)
 - **Run:** `/sdd "SL-05: run the app on OpenLiteSpeed + LSAPI (lsphp84 with pgsql/redis) as an extra DDEV service with a vhost on public/, passing the parity check, OPcache confirmed, versions recorded (BR-02, BR-25). Rules in product-brief.md."`
 

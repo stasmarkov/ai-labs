@@ -36,9 +36,10 @@ fi
 printf 'body:%s$suffix' "\$url" > "\$out"
 header="\${STUB_SERVER_HEADER-auto}"
 if [[ "\$header" == "auto" ]]; then
-  case "\$(sed -n 's/^webserver_type: *//p' "\$DDEV_APPROOT/.ddev/config.zz-server.yaml" 2>/dev/null)" in
+  case "\$(sed -n 's/^# server: *//p' "\$DDEV_APPROOT/.ddev/config.zz-server.yaml" 2>/dev/null)" in
     apache-fpm) header="Apache/2.4.68" ;;
     frankenphp) header="Caddy" ;;
+    openlitespeed) header="LiteSpeed" ;;
     *) header="nginx" ;;
   esac
 fi
@@ -55,6 +56,7 @@ case "\$1" in
   version) printf ' ITEM              VALUE \\n DDEV version      v1.25.4 \\n architecture      arm64 \\n' ;;
   exec)
     case "\$2" in
+      -s) echo "LiteSpeed V1.9.4 Open" ;;
       nginx) echo "nginx version: nginx/1.26.3" >&2 ;;
       frankenphp) echo "FrankenPHP v1.12.1 PHP 8.4.13 Caddy v2.10.2 h1:abc123=" ;;
       *) echo "Server version: Apache/2.4.68 (Debian)" ;;
@@ -66,7 +68,12 @@ BASH;
     };
     $this->setServer = function (string $server): void {
         file_put_contents($this->root.'/ddev/.ddev/config.yaml', "webserver_type: nginx-fpm\n");
-        file_put_contents($this->root.'/ddev/.ddev/config.zz-server.yaml', "webserver_type: {$server}\n");
+        $webserverType = match ($server) {
+            'frankenphp' => 'generic',
+            'openlitespeed' => 'nginx-fpm',
+            default => $server,
+        };
+        file_put_contents($this->root.'/ddev/.ddev/config.zz-server.yaml', "# server: {$server}\nwebserver_type: {$webserverType}\n");
     };
     $this->run = function (string $script, string ...$args): Process {
         return ($this->runWith)([], $script, ...$args);
@@ -436,4 +443,81 @@ it('AC-9 versions refuses a server it has no version command for', function (): 
     expect($process->getExitCode())->toBe(1)
         ->and($process->getErrorOutput())->toContain('No web server version command')
         ->and($process->getOutput())->toBe('');
+});
+
+it('AC-7 openlitespeed capture defaults to port 8091 and expects a LiteSpeed header', function (): void {
+    ($this->writeCurl)();
+    ($this->setServer)('openlitespeed');
+    $env = ['PARITY_BASE_URL' => false, 'BASE_URL' => false];
+    $accepted = ($this->runWith)($env + ['STUB_SERVER_HEADER' => 'LiteSpeed'], 'parity.sh', 'capture');
+
+    expect($accepted->getExitCode())->toBe(0)
+        ->and(file_get_contents($this->root.'/curl.log'))->toContain('https://interview.ddev.site:8091/up')
+        ->and(file_get_contents($this->root.'/parity/openlitespeed.txt'))->toContain('base=https://interview.ddev.site:8091');
+
+    unlink($this->root.'/parity/openlitespeed.txt');
+    $rejected = ($this->runWith)($env + ['STUB_SERVER_HEADER' => 'nginx/1.26.3'], 'parity.sh', 'capture');
+
+    expect($rejected->getExitCode())->toBe(4)
+        ->and(file_exists($this->root.'/parity/openlitespeed.txt'))->toBeFalse();
+});
+
+it('AC-7 PARITY_BASE_URL overrides the openlitespeed default', function (): void {
+    ($this->writeCurl)();
+    ($this->setServer)('openlitespeed');
+    $process = ($this->runWith)(['PARITY_BASE_URL' => 'http://other.test'], 'parity.sh', 'capture');
+
+    expect($process->getExitCode())->toBe(0)
+        ->and(file_get_contents($this->root.'/curl.log'))->toContain('http://other.test/up')
+        ->and(file_get_contents($this->root.'/curl.log'))->not->toContain(':8091');
+});
+
+it('AC-7 other servers keep the plain DDEV default URL', function (): void {
+    ($this->writeCurl)();
+    ($this->setServer)('frankenphp');
+    ($this->runWith)(['PARITY_BASE_URL' => false, 'BASE_URL' => false, 'STUB_SERVER_HEADER' => 'Caddy'], 'parity.sh', 'capture');
+
+    expect(file_get_contents($this->root.'/curl.log'))->toContain('https://interview.ddev.site/up')
+        ->and(file_get_contents($this->root.'/curl.log'))->not->toContain(':8091');
+});
+
+it('AC-7 capture rewrites the base URL in the body before hashing', function (): void {
+    ($this->writeCurl)();
+    ($this->setServer)('openlitespeed');
+    ($this->runWith)(['PARITY_BASE_URL' => 'http://other.test'], 'parity.sh', 'capture');
+    $line = collect(file($this->root.'/parity/openlitespeed.txt', FILE_IGNORE_NEW_LINES))
+        ->first(fn (string $row): bool => str_starts_with($row, "/api/ping\t"));
+
+    expect(explode("\t", $line)[3])->toBe(hash('sha256', 'body:https://interview.ddev.site/api/ping'));
+});
+
+it('AC-9 versions parses the OpenLiteSpeed version', function (): void {
+    ($this->writeCurl)();
+    ($this->writeDdev)('openlitespeed');
+    ($this->setServer)('openlitespeed');
+    $process = ($this->runWith)(['STUB_SAPI' => 'litespeed'], 'versions.sh');
+
+    expect($process->getExitCode())->toBe(0)
+        ->and(trim($process->getOutput()))->toMatch('/^\| openlitespeed \| 1\.9\.4 \| 1\.25\.4 \| 8\.4\.1 \| litespeed \| true \| \d{4}-\d\d-\d\d \|$/');
+});
+
+it('AC-7 versions requests /debug/runtime on the openlitespeed port by default', function (): void {
+    ($this->writeCurl)();
+    ($this->writeDdev)('openlitespeed');
+    ($this->setServer)('openlitespeed');
+    ($this->runWith)(['PARITY_BASE_URL' => false, 'BASE_URL' => false], 'versions.sh');
+
+    expect(file_get_contents($this->root.'/curl.log'))->toContain('https://interview.ddev.site:8091/debug/runtime');
+});
+
+it('AC-8 committed openlitespeed snapshot matches nginx-fpm', function (): void {
+    $rows = fn (string $server): array => array_values(array_filter(
+        file(base_path("bench/parity/{$server}.txt"), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES),
+        fn (string $line): bool => ! str_starts_with($line, '#'),
+    ));
+
+    expect(file_exists(base_path('bench/parity/openlitespeed.txt')))->toBeTrue()
+        ->and(file(base_path('bench/parity/openlitespeed.txt'))[0])->toStartWith('# server=openlitespeed base=https://interview.ddev.site:8091 captured=')
+        ->and($rows('openlitespeed'))->toHaveCount(7)
+        ->and($rows('openlitespeed'))->toBe($rows('nginx-fpm'));
 });

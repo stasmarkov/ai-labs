@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-## Description: Show or switch the web server (nginx-fpm, apache-fpm or frankenphp)
-## Usage: server [--current|nginx-fpm|apache-fpm|frankenphp]
+## Description: Show or switch the web server (nginx-fpm, apache-fpm, frankenphp or openlitespeed)
+## Usage: server [--current|--url|nginx-fpm|apache-fpm|frankenphp|openlitespeed]
 ## Example: ddev server frankenphp
 
 set -Eeuo pipefail
@@ -9,7 +9,7 @@ set -Eeuo pipefail
 # Supported servers. To add one, append it here and give it a case in overlay_for. A server
 # that needs extra files in .ddev/ keeps them in .ddev/servers/<name>/ and lists the ones to
 # activate in activated_files.
-SUPPORTED=(nginx-fpm apache-fpm frankenphp)
+SUPPORTED=(nginx-fpm apache-fpm frankenphp openlitespeed)
 APPROOT="${DDEV_APPROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
 OVERLAY="$APPROOT/.ddev/config.zz-server.yaml"
 STASH="$APPROOT/.ddev/servers"
@@ -23,7 +23,18 @@ overlay_for() {
       printf '# server: frankenphp\n'
       cat "$STASH/frankenphp/config.frankenphp.yaml"
       ;;
+    openlitespeed) printf '# server: openlitespeed\nwebserver_type: nginx-fpm\n' ;;
     *) return 1 ;;
+  esac
+}
+
+# Prints the URL the active server answers on. Servers that run beside the web container
+# (openlitespeed) have their own router port; the others answer on the project URL.
+base_url_for() {
+  local host="https://${DDEV_HOSTNAME:-interview.ddev.site}"
+  case "$1" in
+    openlitespeed) echo "$host:8091" ;;
+    *) echo "$host" ;;
   esac
 }
 
@@ -34,6 +45,7 @@ activated_files() {
       printf '%s\n' docker-compose.frankenphp.yaml web-build/Caddyfile.frankenphp \
         web-build/Dockerfile.frankenphp web-build/pre.Dockerfile.frankenphp
       ;;
+    openlitespeed) echo docker-compose.openlitespeed.yaml ;;
   esac
 }
 
@@ -87,6 +99,7 @@ restore_files() {
 stash_files() {
   case "$1" in
     frankenphp) echo config.frankenphp.yaml ;;
+    openlitespeed) printf '%s\n' VERSION Dockerfile conf/httpd_config.conf conf/vhosts/interview/vhconf.conf conf/zz-opcache.ini ;;
   esac
   activated_files "$1"
 }
@@ -138,6 +151,11 @@ fi
 
 if [[ "$1" == "--current" ]]; then
   active_server
+  exit 0
+fi
+
+if [[ "$1" == "--url" ]]; then
+  base_url_for "$(active_server)"
   exit 0
 fi
 
