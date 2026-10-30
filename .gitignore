@@ -32,3 +32,6 @@ Thumbs.db
 .ddev/web-build/Caddyfile.frankenphp
 .ddev/web-build/Dockerfile.frankenphp
 .ddev/web-build/pre.Dockerfile.frankenphp
+
+**/caddy
+/frankenphp

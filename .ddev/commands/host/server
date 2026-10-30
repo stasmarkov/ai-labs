@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 
-## Description: Show or switch the web server (nginx-fpm, apache-fpm, frankenphp or openlitespeed)
-## Usage: server [--current|--url|nginx-fpm|apache-fpm|frankenphp|openlitespeed]
+## Description: Show or switch the web server (nginx-fpm, apache-fpm, frankenphp, openlitespeed, frankenphp-octane or frankenphp-worker)
+## Usage: server [--current|--url|nginx-fpm|apache-fpm|frankenphp|openlitespeed|frankenphp-octane|frankenphp-worker]
 ## Example: ddev server frankenphp
 
 set -Eeuo pipefail
 
 # Supported servers. To add one, append it here and give it a case in overlay_for. A server
 # that needs extra files in .ddev/ keeps them in .ddev/servers/<name>/ and lists the ones to
-# activate in activated_files.
-SUPPORTED=(nginx-fpm apache-fpm frankenphp openlitespeed)
+# activate in activated_files. A server may reuse another stash's file or override one of them;
+# activated_owner says which stash a file comes from.
+SUPPORTED=(nginx-fpm apache-fpm frankenphp openlitespeed frankenphp-octane frankenphp-worker)
 APPROOT="${DDEV_APPROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
 OVERLAY="$APPROOT/.ddev/config.zz-server.yaml"
 STASH="$APPROOT/.ddev/servers"
@@ -24,6 +25,14 @@ overlay_for() {
       cat "$STASH/frankenphp/config.frankenphp.yaml"
       ;;
     openlitespeed) printf '# server: openlitespeed\nwebserver_type: nginx-fpm\n' ;;
+    frankenphp-octane)
+      printf '# server: frankenphp-octane\n'
+      cat "$STASH/frankenphp-octane/config.frankenphp-octane.yaml"
+      ;;
+    frankenphp-worker)
+      printf '# server: frankenphp-worker\n'
+      cat "$STASH/frankenphp/config.frankenphp.yaml"
+      ;;
     *) return 1 ;;
   esac
 }
@@ -41,11 +50,21 @@ base_url_for() {
 # Prints the stash files (relative to .ddev/servers/<name>/ and to .ddev/) a server activates.
 activated_files() {
   case "$1" in
-    frankenphp)
+    frankenphp | frankenphp-octane | frankenphp-worker)
       printf '%s\n' docker-compose.frankenphp.yaml web-build/Caddyfile.frankenphp \
         web-build/Dockerfile.frankenphp web-build/pre.Dockerfile.frankenphp
       ;;
     openlitespeed) echo docker-compose.openlitespeed.yaml ;;
+  esac
+}
+
+# Prints the stash a server's activated file comes from: its own, unless it reuses the
+# frankenphp files (frankenphp-worker overrides only the Caddyfile).
+activated_owner() {
+  case "$1:$2" in
+    frankenphp-worker:web-build/Caddyfile.frankenphp) echo frankenphp-worker ;;
+    frankenphp-octane:* | frankenphp-worker:*) echo frankenphp ;;
+    *) echo "$1" ;;
   esac
 }
 
@@ -66,7 +85,7 @@ activate() {
   while IFS= read -r file; do
     [[ -z "$file" ]] && continue
     mkdir -p "$(dirname "$APPROOT/.ddev/$file")"
-    cp "$STASH/$1/$file" "$APPROOT/.ddev/$file"
+    cp "$STASH/$(activated_owner "$1" "$file")/$file" "$APPROOT/.ddev/$file"
   done < <(activated_files "$1")
 }
 
@@ -95,20 +114,26 @@ restore_files() {
   done
 }
 
-# Prints the stash files a server needs (its overlay source plus its activated files).
+# Prints the stash files a server needs as <stash>/<file> (overlay source plus activated files).
 stash_files() {
+  local file
   case "$1" in
-    frankenphp) echo config.frankenphp.yaml ;;
-    openlitespeed) printf '%s\n' VERSION Dockerfile conf/httpd_config.conf conf/vhosts/interview/vhconf.conf conf/zz-opcache.ini ;;
+    frankenphp | frankenphp-worker) echo frankenphp/config.frankenphp.yaml ;;
+    frankenphp-octane) echo frankenphp-octane/config.frankenphp-octane.yaml ;;
+    openlitespeed)
+      printf 'openlitespeed/%s\n' VERSION Dockerfile conf/httpd_config.conf conf/vhosts/interview/vhconf.conf conf/zz-opcache.ini
+      ;;
   esac
-  activated_files "$1"
+  while IFS= read -r file; do
+    [[ -z "$file" ]] || printf '%s/%s\n' "$(activated_owner "$1" "$file")" "$file"
+  done < <(activated_files "$1")
 }
 
-# Prints the first stash file the server needs that is missing; prints nothing when complete.
+# Prints the first <stash>/<file> the server needs that is missing; prints nothing when complete.
 missing_stash_file() {
   local file
   while IFS= read -r file; do
-    [[ -z "$file" || -f "$STASH/$1/$file" ]] && continue
+    [[ -z "$file" || -f "$STASH/$file" ]] && continue
     printf '%s\n' "$file"
     return
   done < <(stash_files "$1")
@@ -125,7 +150,7 @@ is_current() {
   [[ "$(cat "$OVERLAY")" == "$2" ]] || return 1
   while IFS= read -r file; do
     [[ -z "$file" ]] && continue
-    cmp -s "$STASH/$1/$file" "$APPROOT/.ddev/$file" || return 1
+    cmp -s "$STASH/$(activated_owner "$1" "$file")/$file" "$APPROOT/.ddev/$file" || return 1
   done < <(activated_files "$1")
 }
 
@@ -171,7 +196,7 @@ fi
 
 missing="$(missing_stash_file "$target")"
 if [[ -n "$missing" ]]; then
-  echo "The $target stash is incomplete: .ddev/servers/$target/$missing is missing. Restore it with 'git checkout -- .ddev/servers/$target'. Nothing was changed." >&2
+  echo "The $target stash is incomplete: .ddev/servers/$missing is missing. Restore it with 'git checkout -- .ddev/servers/${missing%%/*}'. Nothing was changed." >&2
   exit 1
 fi
 content="$(overlay_for "$target")"

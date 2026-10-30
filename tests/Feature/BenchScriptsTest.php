@@ -38,7 +38,7 @@ header="\${STUB_SERVER_HEADER-auto}"
 if [[ "\$header" == "auto" ]]; then
   case "\$(sed -n 's/^# server: *//p' "\$DDEV_APPROOT/.ddev/config.zz-server.yaml" 2>/dev/null)" in
     apache-fpm) header="Apache/2.4.68" ;;
-    frankenphp) header="Caddy" ;;
+    frankenphp|frankenphp-octane|frankenphp-worker) header="Caddy" ;;
     openlitespeed) header="LiteSpeed" ;;
     *) header="nginx" ;;
   esac
@@ -69,7 +69,7 @@ BASH;
     $this->setServer = function (string $server): void {
         file_put_contents($this->root.'/ddev/.ddev/config.yaml', "webserver_type: nginx-fpm\n");
         $webserverType = match ($server) {
-            'frankenphp' => 'generic',
+            'frankenphp', 'frankenphp-octane', 'frankenphp-worker' => 'generic',
             'openlitespeed' => 'nginx-fpm',
             default => $server,
         };
@@ -521,3 +521,53 @@ it('AC-8 committed openlitespeed snapshot matches nginx-fpm', function (): void 
         ->and($rows('openlitespeed'))->toHaveCount(7)
         ->and($rows('openlitespeed'))->toBe($rows('nginx-fpm'));
 });
+
+it('AC-6 worker servers accept a Caddy server header and reject others', function (string $server): void {
+    ($this->writeCurl)();
+    ($this->setServer)($server);
+    $accepted = ($this->runWith)(['STUB_SERVER_HEADER' => 'Caddy'], 'parity.sh', 'capture');
+
+    expect($accepted->getExitCode())->toBe(0)
+        ->and(file_exists($this->root."/parity/{$server}.txt"))->toBeTrue();
+
+    unlink($this->root."/parity/{$server}.txt");
+    $rejected = ($this->runWith)(['STUB_SERVER_HEADER' => 'nginx/1.26.3'], 'parity.sh', 'capture');
+
+    expect($rejected->getExitCode())->toBe(4)
+        ->and(file_exists($this->root."/parity/{$server}.txt"))->toBeFalse();
+})->with(['frankenphp-octane', 'frankenphp-worker']);
+
+it('AC-7 versions prints FrankenPHP rows for both worker servers', function (string $server): void {
+    ($this->writeCurl)();
+    ($this->writeDdev)($server);
+    ($this->setServer)($server);
+    $process = ($this->runWith)(['STUB_SAPI' => 'frankenphp'], 'versions.sh');
+
+    expect($process->getExitCode())->toBe(0)
+        ->and(trim($process->getOutput()))->toMatch('/^\| '.$server.' \| 1\.12\.1 \| 1\.25\.4 \| 8\.4\.1 \| frankenphp \| true \| \d{4}-\d\d-\d\d \|$/');
+})->with(['frankenphp-octane', 'frankenphp-worker']);
+
+it('AC-10 versions 404 hint mentions restarting workers', function (): void {
+    ($this->writeCurl)('', '404');
+    ($this->writeDdev)('frankenphp-octane');
+    ($this->setServer)('frankenphp-octane');
+    $process = ($this->run)('versions.sh');
+
+    expect($process->getExitCode())->toBe(1)
+        ->and($process->getErrorOutput())->toContain('DEBUG_ROUTES')
+        ->and($process->getErrorOutput())->toContain('restart the workers')
+        ->and($process->getErrorOutput())->toContain('ddev restart')
+        ->and($process->getErrorOutput())->toContain('octane:reload');
+});
+
+it('AC-6 committed worker-mode snapshots match nginx-fpm', function (string $server): void {
+    $rows = fn (string $name): array => array_values(array_filter(
+        file(base_path("bench/parity/{$name}.txt"), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES),
+        fn (string $line): bool => ! str_starts_with($line, '#'),
+    ));
+
+    expect(file_exists(base_path("bench/parity/{$server}.txt")))->toBeTrue()
+        ->and(file(base_path("bench/parity/{$server}.txt"))[0])->toStartWith("# server={$server} base=https://interview.ddev.site captured=")
+        ->and($rows($server))->toHaveCount(7)
+        ->and($rows($server))->toBe($rows('nginx-fpm'));
+})->with(['frankenphp-octane', 'frankenphp-worker']);

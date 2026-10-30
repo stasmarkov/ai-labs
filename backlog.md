@@ -5,7 +5,7 @@ brief: product-brief.md
 
 # AutoPulse backlog
 
-Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → SL-08 → SL-09 → {SL-10, SL-11, SL-12} → SL-13 → SL-14 → SL-15 → {SL-16, SL-17} → {SL-18, SL-19} → SL-20 → SL-21 → SL-22 → {SL-23, SL-24, SL-26, SL-27} → SL-25 → SL-28 → {SL-29, SL-30, SL-31}
+Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → SL-08 → SL-09 → {SL-10, SL-11, SL-12} → SL-13 → SL-14 → SL-15 → {SL-16, SL-17} → {SL-18, SL-19} → SL-20 → SL-21 → SL-22 → {SL-23, SL-24, SL-26, SL-27} → SL-25 → SL-28 → {SL-29, SL-30, SL-31} → SL-32 → {SL-33, SL-40, SL-41, SL-42} → SL-34 → SL-35 → SL-36 → {SL-37, SL-38, SL-39} → SL-43 → SL-44
 
 ## Slices
 
@@ -69,8 +69,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-02, BR-25
 - **Depends on:** SL-03
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** shipped
+- **Spec:** spec-20261030-1437-octane-worker-mode
 - **Source:** brief (Phase 0, Phase 2)
 - **Run:** `/sdd "SL-04: run the app in FrankenPHP worker mode via Laravel Octane two ways (Octane daemon overlay; add-on worker directive), both passing the parity check, plus README notes comparing config/restart/log ownership and listing server-specific Octane features (BR-02, BR-25). Rules in product-brief.md."`
 
@@ -349,16 +349,16 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 
 ### SL-27 · Car-photo vision extraction
 
-- **Outcome:** The developer sends a stored car photo to the local vision model and gets body type, colour and visible damage back as structured data for that listing.
+- **Outcome:** The developer runs a queued batch that sends every stored car photo to the local vision model and stores, per photo, a caption, tags, dominant colours, body type, visible damage and people count as schema-validated structured data, retrying when the model returns invalid JSON.
 - **Entry point:** vision extraction command or endpoint
 - **Size:** M
-- **BRs:** BR-90
+- **BRs:** BR-90, BR-27
 - **Depends on:** SL-22
 - **Blocked by:** none
 - **Status:** approved
 - **Spec:** —
-- **Source:** brief (Phase 11), user 2026-10-28 (images)
-- **Run:** `/sdd "SL-27: attach a stored car photo to the local vision model and extract body type, colour and visible damage as structured output (BR-90). Rules in product-brief.md."`
+- **Source:** brief (Phase 11), user 2026-10-28 (images), widened by intake 2026-10-30 (auto-tagging pipeline)
+- **Run:** `/sdd "SL-27: queued batch sends each stored car photo to the local vision model and stores a schema-validated {caption, tags, dominant colours, body type, visible damage, people count}, retrying on invalid JSON (BR-90, BR-27). Rules in product-brief.md."`
 
 ### SL-28 · Local LLM comparison and limits
 
@@ -412,6 +412,175 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Source:** greenfield-build
 - **Run:** `/sdd "SL-31: GET /dealers/{id}/listings through DealerInventoryController, service and repository using listings_dealer_id_idx, 404 for unknown dealer ids, per_page 1-50 default 20 (BR-03, BR-04, BR-10). Rules in product-brief.md."`
 
+### SL-32 · Docs chatbot with RAG and citations
+
+- **Outcome:** The developer asks questions about this repo's docs (README, BENCHMARKS.md, specs) and gets answers from the local model that cite the chunks they came from, or "I don't know" when nothing relevant is retrieved.
+- **Entry point:** docs chat endpoint, `docs:index` command
+- **Size:** M
+- **BRs:** BR-98, BR-90, BR-27
+- **Depends on:** SL-22, SL-24
+- **Blocked by:** none
+- **Status:** proposed
+- **Spec:** —
+- **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
+- **Run:** `/sdd "SL-32: chunk and embed this repo's markdown docs with the local text embedding model into pgvector, retrieve top-k for a question, answer with citations to the chunks, and say "I don't know" below the relevance threshold (BR-98, BR-90, BR-27). Rules in product-brief.md."`
+
+### SL-33 · RAG evaluation harness
+
+- **Outcome:** The developer runs one command over 30 hand-written question/answer pairs and gets correctness and groundedness scores per run, graded by a second model call, so chunk size, top-k and model can be compared.
+- **Entry point:** `rag:eval` command
+- **Size:** S
+- **BRs:** BR-26, BR-27
+- **Depends on:** SL-32
+- **Blocked by:** none
+- **Status:** proposed
+- **Spec:** —
+- **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
+- **Run:** `/sdd "SL-33: RAG eval harness — 30 labelled Q/A pairs, an Artisan command that runs them through the docs chatbot and grades correctness and groundedness with a second model call, results table per chunk size / k / model (BR-26, BR-27). Rules in product-brief.md."`
+
+### SL-34 · Admin assistant with a hand-written agent loop
+
+- **Outcome:** The developer chats with an assistant that calls listing tools (search, get, update title, add tag) through an agent loop written by hand, confirms every write before it runs, and sees each step logged.
+- **Entry point:** admin assistant endpoint
+- **Size:** M
+- **BRs:** BR-97, BR-94, BR-90, BR-27
+- **Depends on:** SL-25
+- **Blocked by:** none
+- **Status:** proposed
+- **Spec:** —
+- **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
+- **Run:** `/sdd "SL-34: admin assistant with a hand-written tool-calling loop over the local model's OpenAI-compatible API — tools searchListings, getListing, updateTitle, addTag, countByTag; confirmation before writes, BR-94 step limit, every step logged (BR-97, BR-94, BR-90, BR-27). Rules in product-brief.md."`
+
+### SL-35 · MCP server for the listing tools
+
+- **Outcome:** The developer connects Claude Code or Claude Desktop to a Laravel MCP server and uses the same listing tools as the admin assistant from that client.
+- **Entry point:** MCP server (local transport)
+- **Size:** S
+- **BRs:** BR-97, BR-27
+- **Depends on:** SL-34
+- **Blocked by:** none
+- **Status:** proposed
+- **Spec:** —
+- **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
+- **Run:** `/sdd "SL-35: expose the admin assistant's listing tools as an MCP server in Laravel and use them from Claude Code, with writes still confirmed (BR-97, BR-27). Rules in product-brief.md."`
+
+### SL-36 · Similar car photos block
+
+- **Outcome:** A visitor on a listing page sees up to 8 visually similar photos of other listings next to the hero image, found by nearest-neighbour search over image embeddings from a local image encoder.
+- **Entry point:** `GET /listings/{id}` (block), photo embedding job
+- **Size:** M
+- **BRs:** BR-96, BR-90, BR-27
+- **Depends on:** SL-22, SL-27
+- **Blocked by:** Q-06
+- **Status:** proposed
+- **Spec:** —
+- **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
+- **Run:** `/sdd "SL-36: similar car photos — embed every photo with a local CLIP/SigLIP image encoder (sidecar service), store vectors in pgvector, show up to 8 nearest photos of other listings next to the hero image, threshold and near-duplicate cutoff, cached in Redis (BR-96, BR-90, BR-27). Rules in product-brief.md."`
+
+### SL-37 · Search car photos by text
+
+- **Outcome:** The developer types a description ("red estate with a roof box") and gets the best-matching car photos, using the same image encoder's text side.
+- **Entry point:** photo search endpoint
+- **Size:** S
+- **BRs:** BR-90, BR-27
+- **Depends on:** SL-36
+- **Blocked by:** Q-06
+- **Status:** proposed
+- **Spec:** —
+- **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
+- **Run:** `/sdd "SL-37: text-to-photo search using the CLIP/SigLIP text encoder against the SL-36 photo vectors (BR-90, BR-27). Rules in product-brief.md."`
+
+### SL-38 · Hybrid image and text similarity
+
+- **Outcome:** The similar-photos block can combine image similarity with similarity of the listing titles or SL-27 captions, with configurable weights, and the developer compares the two result sets on a few listings.
+- **Entry point:** `GET /listings/{id}` (block)
+- **Size:** S
+- **BRs:** BR-96, BR-27
+- **Depends on:** SL-36, SL-27
+- **Blocked by:** Q-06
+- **Status:** proposed
+- **Spec:** —
+- **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
+- **Run:** `/sdd "SL-38: hybrid similarity — add a text vector (title or SL-27 caption), combine with the image vector by weights (default 0.7/0.3), compare against image-only results (BR-96, BR-27). Rules in product-brief.md."`
+
+### SL-39 · Duplicate and quality detector
+
+- **Outcome:** The developer opens a review page that groups near-duplicate photos by image embedding and shows which photo of each group the vision model judges best, with the others marked for removal.
+- **Entry point:** photo review page, clustering command
+- **Size:** M
+- **BRs:** BR-90, BR-27
+- **Depends on:** SL-36, SL-27
+- **Blocked by:** Q-06
+- **Status:** proposed
+- **Spec:** —
+- **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
+- **Run:** `/sdd "SL-39: cluster near-duplicate photos by image vector and ask the local vision model which photo per cluster is best; review page "keep this one, remove N" (BR-90, BR-27). Rules in product-brief.md."`
+
+### SL-40 · Semantic cache for the chatbot
+
+- **Outcome:** When the developer asks the docs chatbot a question nearly identical to an earlier one, the cached answer comes back at once, marked as cached, and hit rate and saved latency are recorded.
+- **Entry point:** docs chat endpoint
+- **Size:** S
+- **BRs:** BR-99, BR-90, BR-27
+- **Depends on:** SL-32
+- **Blocked by:** none
+- **Status:** proposed
+- **Spec:** —
+- **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
+- **Run:** `/sdd "SL-40: semantic cache in front of the docs chatbot — embed the question, return a stored answer above a similarity threshold, mark it cached, record hit rate and latency saved (BR-99, BR-90, BR-27). Rules in product-brief.md."`
+
+### SL-41 · Streaming chat UI with stop
+
+- **Outcome:** The developer chats with the docs chatbot in a page that shows the answer token by token and has a stop button that cancels generation on the server.
+- **Entry point:** docs chat page
+- **Size:** S
+- **BRs:** BR-95, BR-27
+- **Depends on:** SL-32, SL-20
+- **Blocked by:** none
+- **Status:** proposed
+- **Spec:** —
+- **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
+- **Run:** `/sdd "SL-41: chat page streaming the docs chatbot's tokens over SSE into a Livewire/Alpine component, with a stop button that cancels generation server-side (BR-95, BR-27). Rules in product-brief.md."`
+
+### SL-42 · Multi-step research agent
+
+- **Outcome:** The developer gives a topic and the agent plans sub-questions, searches the docs index, keeps notes, and writes a report; every step is stored and can be replayed.
+- **Entry point:** `agent:research` command
+- **Size:** M
+- **BRs:** BR-90, BR-27
+- **Depends on:** SL-32
+- **Blocked by:** none
+- **Status:** proposed
+- **Spec:** —
+- **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
+- **Run:** `/sdd "SL-42: research agent — plan sub-questions, search the SL-32 docs index, keep notes in Redis, write a report; store and replay every step (BR-90, BR-27). Rules in product-brief.md."`
+
+### SL-43 · Prompt playground with versions
+
+- **Outcome:** The developer saves versioned prompts, runs one input against two or three local models side by side, and sees output, tokens and latency for each run.
+- **Entry point:** playground page
+- **Size:** M
+- **BRs:** BR-90, BR-91, BR-27
+- **Depends on:** SL-22
+- **Blocked by:** none
+- **Status:** proposed
+- **Spec:** —
+- **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
+- **Run:** `/sdd "SL-43: prompt playground — versioned prompts, the same input run across 2–3 local models side by side, output, tokens and latency logged per run (BR-90, BR-91, BR-27). Rules in product-brief.md."`
+
+### SL-44 · Learning guide to everything built
+
+- **Outcome:** The developer opens one guide that walks through every mechanism the project implemented, in learning order, each with a short explanation, a step-by-step walkthrough of one request or job, links to the code and specs in this repo, the measured numbers from BENCHMARKS.md, and links to the official docs to read next. Server part: PHP execution models (FPM, LSAPI, FrankenPHP classic, worker mode via Octane and the add-on), state leaks, threads and slow I/O, HTTP features, real-time, observability, DX, Go extension, single binary. AI part, covering every AI feature built (SL-20…SL-28, SL-32…SL-43) and the concepts behind it: the five LLM layers (weights, engine, server, SDK, app), tokens, quantization, context window, TTFT vs tokens/s, local model serving; streaming over SSE vs queued + Mercure; structured output and validation/retries; natural-language search to filters; text embeddings, vector similarity and pgvector/HNSW; image embeddings (CLIP/SigLIP) for similar photos, text-to-photo and hybrid search; vision models for tagging and duplicate detection; RAG (chunking, retrieval, citations, "I don't know"); evals and LLM-as-judge; tool calling with the SDK's loop vs a hand-written agent loop, confirmations and step limits; MCP; multi-step agents with memory and replay; semantic caching; prompt versioning and model comparison; logging tokens/latency per call.
+- **Entry point:** `docs/learning-guide.md`
+- **Size:** M
+- **BRs:** BR-27
+- **Depends on:** SL-43
+- **Blocked by:** none
+- **Status:** proposed
+- **Spec:** —
+- **Source:** intake 2026-10-30 (Stanislav Markov: "a guide with links that teaches me how everything we implemented works", after all planned slices)
+- **Run:** `/sdd "SL-44: write docs/learning-guide.md — server part and AI part (every AI slice SL-20…SL-28, SL-32…SL-43 and its concepts), one section per mechanism in learning order, each assembled from the slice's How-it-works note (BR-27): what it is, what happens per request or job, links to repo code/specs, BENCHMARKS.md numbers, and official docs to read next; every link checked (BR-27). Rules in product-brief.md."`
+
 ## Intake log
 
 | Date | Source | Item | Class | Went to |
@@ -419,3 +588,21 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 | 2026-10-28 | roadmap doc (Stanislav Markov) | Phases 0–11 | New slices | SL-01…SL-28 |
 | 2026-10-28 | elicitation | "Local LLM from Hugging Face on M3 Max 36 GB, text + images" | Question | Q-01, SL-22, SL-27 |
 | 2026-10-28 | elicitation | No cloud LLM comparison | Non-goal | brief Non-goals |
+| 2026-10-30 | AI ideas chat (Stanislav Markov) | Similar car photos block (CLIP/SigLIP, vector kNN) | New slice | SL-36, BR-96 |
+| 2026-10-30 | AI ideas chat | Search photos by text (CLIP text encoder) | New slice | SL-37 |
+| 2026-10-30 | AI ideas chat | Hybrid image + text similarity | New slice | SL-38 |
+| 2026-10-30 | AI ideas chat | Auto-tagging and captioning pipeline | Duplicate | SL-27 widened (batch, caption, tags, retry on invalid JSON) |
+| 2026-10-30 | AI ideas chat | Duplicate and quality detector | New slice | SL-39 |
+| 2026-10-30 | AI ideas chat | Docs chatbot with RAG and citations | New slice | SL-32, BR-98 |
+| 2026-10-30 | AI ideas chat | RAG evaluation harness | New slice | SL-33 |
+| 2026-10-30 | AI ideas chat | Admin assistant with tool calling | New slice | SL-34, BR-97 (SL-25 stays the read-only buyer assistant) |
+| 2026-10-30 | AI ideas chat | MCP server in Laravel | New slice | SL-35 |
+| 2026-10-30 | AI ideas chat | Multi-step research agent | New slice | SL-42 |
+| 2026-10-30 | AI ideas chat | Semantic cache | New slice | SL-40, BR-99 |
+| 2026-10-30 | AI ideas chat | Streaming chat UI with stop | New slice | SL-41 |
+| 2026-10-30 | AI ideas chat | Prompt playground with versioning | New slice | SL-43 |
+| 2026-10-30 | AI ideas chat | Single LLM client abstraction | Duplicate | BR-91 (Laravel AI SDK); hand-writing a thin client to learn the HTTP calls stays an option inside SL-34 |
+| 2026-10-30 | AI ideas chat | Every slice explains how its mechanism works | BR change | BR-27 (cross-cutting) |
+| 2026-10-30 | AI ideas chat | Which car photos; pgvector vs Elasticsearch; image encoder choice | Question | Q-06, Q-07, Q-01 widened |
+| 2026-10-30 | Stanislav Markov | Final guide with links teaching how everything implemented works | New slice | SL-44 (last; built from the BR-27 notes) |
+| 2026-10-30 | Stanislav Markov | Guide must explain all AI features built | New slice (scope) | SL-44 outcome lists every AI slice and its concepts |

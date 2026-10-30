@@ -373,6 +373,172 @@ it('AC-2 AC-3 frankenphp already active is a no-op and switching back to nginx-f
     }
 });
 
+describe('worker servers', function (): void {
+    beforeEach(function (): void {
+        $this->octaneStash = $this->root.'/.ddev/servers/frankenphp-octane';
+        $this->workerStash = $this->root.'/.ddev/servers/frankenphp-worker';
+        mkdir($this->octaneStash, 0777, true);
+        mkdir($this->workerStash.'/web-build', 0777, true);
+        file_put_contents($this->octaneStash.'/config.frankenphp-octane.yaml', "webserver_type: generic\nweb_extra_daemons: octane\n");
+        file_put_contents($this->workerStash.'/web-build/Caddyfile.frankenphp', "worker caddyfile\n");
+        $this->caddyfile = $this->root.'/.ddev/web-build/Caddyfile.frankenphp';
+    });
+
+    it('AC-1 frankenphp-octane and frankenphp-worker activate their files and overlays', function (): void {
+        $octane = ($this->server)('frankenphp-octane');
+
+        expect($octane->getExitCode())->toBe(0)
+            ->and($octane->getOutput())->toContain('Active: frankenphp-octane')
+            ->and(file_get_contents($this->overlay))->toBe("# server: frankenphp-octane\nwebserver_type: generic\nweb_extra_daemons: octane\n")
+            ->and(file_get_contents($this->root.'/ddev-calls.log'))->toContain('restart')
+            ->and(trim(($this->server)('--current')->getOutput()))->toBe('frankenphp-octane');
+
+        foreach ($this->activated as $file) {
+            expect(file_get_contents($this->root.'/.ddev/'.$file))->toBe('stash '.$file."\n");
+        }
+
+        $worker = ($this->server)('frankenphp-worker');
+
+        expect($worker->getExitCode())->toBe(0)
+            ->and($worker->getOutput())->toContain('Active: frankenphp-worker')
+            ->and(file_get_contents($this->overlay))->toBe("# server: frankenphp-worker\n#ddev-generated\nwebserver_type: generic\n")
+            ->and(trim(($this->server)('--current')->getOutput()))->toBe('frankenphp-worker')
+            ->and(file_get_contents($this->caddyfile))->toBe("worker caddyfile\n")
+            ->and(file_get_contents($this->root.'/.ddev/docker-compose.frankenphp.yaml'))->toBe("stash docker-compose.frankenphp.yaml\n")
+            ->and(file_get_contents($this->root.'/.ddev/web-build/Dockerfile.frankenphp'))->toBe("stash web-build/Dockerfile.frankenphp\n")
+            ->and(file_get_contents($this->root.'/.ddev/web-build/pre.Dockerfile.frankenphp'))->toBe("stash web-build/pre.Dockerfile.frankenphp\n");
+    });
+
+    it('AC-2 switching from frankenphp-worker to frankenphp restores the unedited Caddyfile', function (): void {
+        ($this->server)('frankenphp-worker');
+        $process = ($this->server)('frankenphp');
+
+        expect($process->getExitCode())->toBe(0)
+            ->and(file_get_contents($this->caddyfile))->toBe("stash web-build/Caddyfile.frankenphp\n")
+            ->and(file_get_contents($this->overlay))->toContain('# server: frankenphp');
+
+        ($this->server)('frankenphp-worker');
+        expect(file_get_contents($this->caddyfile))->toBe("worker caddyfile\n");
+
+        ($this->server)('frankenphp-octane');
+        expect(file_get_contents($this->caddyfile))->toBe("stash web-build/Caddyfile.frankenphp\n")
+            ->and(file_get_contents($this->overlay))->toContain('# server: frankenphp-octane');
+
+        ($this->server)('frankenphp-worker');
+        expect(file_get_contents($this->caddyfile))->toBe("worker caddyfile\n");
+
+        $away = ($this->server)('nginx-fpm');
+
+        expect($away->getExitCode())->toBe(0);
+        foreach ($this->activated as $file) {
+            expect(file_exists($this->root.'/.ddev/'.$file))->toBeFalse();
+        }
+    });
+
+    it('AC-3 worker servers are supported and answer on the project URL', function (): void {
+        expect(($this->server)()->getOutput())->toContain('Supported: nginx-fpm apache-fpm frankenphp openlitespeed frankenphp-octane frankenphp-worker');
+
+        foreach (['frankenphp-octane', 'frankenphp-worker'] as $server) {
+            ($this->server)($server);
+            unlink($this->root.'/ddev-calls.log');
+
+            expect(trim(($this->server)('--url')->getOutput()))->toBe('https://interview.ddev.site');
+
+            $again = ($this->server)($server);
+
+            expect($again->getOutput())->toContain($server.' already active')
+                ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
+        }
+    });
+
+    it('AC-3 an outdated or missing file re-applies the active worker server', function (): void {
+        ($this->server)('frankenphp-worker');
+        file_put_contents($this->caddyfile, "edited\n");
+
+        $process = ($this->server)('frankenphp-worker');
+
+        expect($process->getOutput())->toContain('re-applying')
+            ->and(file_get_contents($this->caddyfile))->toBe("worker caddyfile\n");
+    });
+
+    it('AC-3 an incomplete worker stash names the missing file and changes nothing', function (): void {
+        unlink($this->workerStash.'/web-build/Caddyfile.frankenphp');
+        $worker = ($this->server)('frankenphp-worker');
+
+        unlink($this->octaneStash.'/config.frankenphp-octane.yaml');
+        $octane = ($this->server)('frankenphp-octane');
+
+        file_put_contents($this->octaneStash.'/config.frankenphp-octane.yaml', "webserver_type: generic\n");
+        unlink($this->stash.'/web-build/Dockerfile.frankenphp');
+        $reused = ($this->server)('frankenphp-octane');
+
+        expect($worker->getExitCode())->toBe(1)
+            ->and($worker->getErrorOutput())->toContain('.ddev/servers/frankenphp-worker/web-build/Caddyfile.frankenphp is missing')
+            ->and($octane->getExitCode())->toBe(1)
+            ->and($octane->getErrorOutput())->toContain('.ddev/servers/frankenphp-octane/config.frankenphp-octane.yaml is missing')
+            ->and($reused->getErrorOutput())->toContain('.ddev/servers/frankenphp/web-build/Dockerfile.frankenphp is missing')
+            ->and(file_exists($this->overlay))->toBeFalse()
+            ->and(file_exists($this->caddyfile))->toBeFalse()
+            ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
+    });
+
+    it('AC-3 failed restart rolls back a switch between the worker servers', function (): void {
+        ($this->server)('frankenphp-octane');
+        $overlay = file_get_contents($this->overlay);
+        touch($this->root.'/ddev-fail');
+
+        $process = ($this->server)('frankenphp-worker');
+
+        expect($process->getExitCode())->toBe(1)
+            ->and(file_get_contents($this->overlay))->toBe($overlay)
+            ->and(file_get_contents($this->caddyfile))->toBe("stash web-build/Caddyfile.frankenphp\n");
+
+        unlink($this->root.'/ddev-fail');
+        ($this->server)('frankenphp-worker');
+        touch($this->root.'/ddev-fail');
+        ($this->server)('frankenphp-octane');
+
+        expect(file_get_contents($this->caddyfile))->toBe("worker caddyfile\n");
+    });
+
+    it('MNC-1 never modifies config.yaml when switching worker servers', function (): void {
+        ($this->server)('frankenphp-octane');
+        ($this->server)('frankenphp-worker');
+        ($this->server)('nginx-fpm');
+
+        expect(file_get_contents($this->root.'/.ddev/config.yaml'))->toBe($this->configBefore);
+    });
+
+    it('AC-1 the committed worker stashes carry the overlay, Caddyfile and change list', function (): void {
+        $octane = file_get_contents(base_path('.ddev/servers/frankenphp-octane/config.frankenphp-octane.yaml'));
+        $classic = file_get_contents(base_path('.ddev/servers/frankenphp/config.frankenphp.yaml'));
+        $caddyfile = file_get_contents(base_path('.ddev/servers/frankenphp-worker/web-build/Caddyfile.frankenphp'));
+
+        expect($octane)->toContain('webserver_type: generic')
+            ->and($octane)->toContain('env OCTANE_HTTPS=true php artisan octane:frankenphp --host=0.0.0.0 --port=8000 --workers=4 --max-requests=500 --log-level=warn')
+            ->and($octane)->toContain('directory: /var/www/html')
+            ->and($octane)->toContain('container_port: 8000')
+            ->and($octane)->toContain('http_port: 80')
+            ->and($octane)->toContain('https_port: 443')
+            ->and($octane)->not->toContain('frankenphp run')
+            ->and(substr($octane, strpos($octane, 'webimage_extra_packages')))->toBe(substr($classic, strpos($classic, 'webimage_extra_packages')))
+            ->and($caddyfile)->toContain('frankenphp-worker.php')
+            ->and($caddyfile)->toContain('num 4')
+            ->and($caddyfile)->toContain('MAX_REQUESTS 500')
+            ->and($caddyfile)->toContain('REQUEST_MAX_EXECUTION_TIME 30')
+            ->and($caddyfile)->toContain('try_files {path} frankenphp-worker.php')
+            ->and(substr_count($caddyfile, 'worker {'))->toBe(1)
+            ->and($caddyfile)->not->toContain('match *')
+            ->and($caddyfile)->toContain('env FRANKENPHP_WORKER 1')
+            ->and($caddyfile)->toContain('env APP_BASE_PATH /var/www/html')
+            ->and($caddyfile)->toContain('env APP_PUBLIC_PATH /var/www/html/public')
+            ->and($caddyfile)->toContain('env LARAVEL_OCTANE 1')
+            ->and($caddyfile)->toContain('map {header.X-Forwarded-Proto} {forwarded_https}')
+            ->and($caddyfile)->toContain('env HTTPS {forwarded_https}')
+            ->and(is_file(base_path('.ddev/servers/frankenphp-worker/CHANGES.md')))->toBeTrue();
+    });
+});
+
 describe('openlitespeed', function (): void {
     beforeEach(function (): void {
         $this->olsStash = $this->root.'/.ddev/servers/openlitespeed';

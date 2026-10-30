@@ -23,7 +23,7 @@ fi
 case "$status" in
   200) ;;
   404)
-    echo "GET /debug/runtime returned 404. Set DEBUG_ROUTES=true in .env and run 'ddev artisan optimize:clear'." >&2
+    echo "GET /debug/runtime returned 404. Set DEBUG_ROUTES=true in .env, run 'ddev artisan optimize:clear' and restart the workers on worker servers, which keep the old .env: 'ddev restart', or 'ddev artisan octane:reload --server=frankenphp' on frankenphp-octane." >&2
     exit 1
     ;;
   *)
@@ -38,7 +38,7 @@ php_field() {
 
 case "$server" in
   apache-fpm) web_version="$(ddev exec apache2 -v 2>&1 | sed -nE 's#.*Apache/([0-9]+(\.[0-9]+)*).*#\1#p' | head -n 1)" ;;
-  frankenphp) web_version="$(ddev exec frankenphp -v 2>&1 | sed -nE 's/.*FrankenPHP v?([0-9]+(\.[0-9]+)*).*/\1/p' | head -n 1)" ;;
+  frankenphp | frankenphp-octane | frankenphp-worker) web_version="$(ddev exec frankenphp -v 2>&1 | sed -nE 's/.*FrankenPHP v?([0-9]+(\.[0-9]+)*).*/\1/p' | head -n 1)" ;;
   openlitespeed) web_version="$(ddev exec -s openlitespeed /usr/local/lsws/bin/lshttpd -v 2>&1 | sed -nE 's/.*LiteSpeed[ \/Vv]*([0-9]+(\.[0-9]+)*).*/\1/p' | head -n 1)" ;;
   nginx-fpm) web_version="$(ddev exec nginx -v 2>&1 | sed -nE 's#.*nginx/([0-9]+(\.[0-9]+)*).*#\1#p' | head -n 1)" ;;
   *)

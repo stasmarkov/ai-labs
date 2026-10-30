@@ -5,7 +5,7 @@
 ## bench/parity/<active server>.txt. Only the /up body has its render time
 ## ("rendered in Nms") masked, because Laravel prints it and it differs per request.
 ## The snapshot is written only when every request succeeds and the Server header
-## matches the active server's token (nginx-fpm: nginx, apache-fpm: apache, frankenphp: caddy,
+## matches the active server's token (nginx-fpm: nginx, apache-fpm: apache, frankenphp, frankenphp-octane, frankenphp-worker: caddy,
 ## openlitespeed: litespeed).
 ## Env: PARITY_BASE_URL (default: `ddev server --url`, e.g. https://interview.ddev.site, :8091 for openlitespeed),
 ##      PARITY_INSECURE=1 adds -k.
@@ -23,7 +23,7 @@ header_token() {
   case "$1" in
     nginx-fpm) echo nginx ;;
     apache-fpm) echo apache ;;
-    frankenphp) echo caddy ;;
+    frankenphp | frankenphp-octane | frankenphp-worker) echo caddy ;;
     openlitespeed) echo litespeed ;;
     *) return 1 ;;
   esac

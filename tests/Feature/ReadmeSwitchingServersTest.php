@@ -65,3 +65,58 @@ test('AC-11 README documents openlitespeed URL and htaccess restart', function (
         ->toContain('start-up')
         ->toContain('ddev restart');
 });
+
+test('AC-9 README explains how worker mode works', function (): void {
+    $readme = file_get_contents(base_path('README.md'));
+    preg_match('/^## How worker mode works\n(.*?)(?=^## |\z)/ms', $readme, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->not->toBe('')
+        ->toContain('ddev server frankenphp-octane')
+        ->toContain('ddev server frankenphp-worker')
+        ->toContain('frankenphp-worker.php')
+        ->toContain('boots')
+        ->toContain('| Octane daemon |')
+        ->toContain('octane:reload')
+        ->toContain('Swoole')
+        ->toContain('Octane::tick')
+        ->toContain('Octane::concurrently')
+        ->toContain('Octane::table')
+        ->toContain('ddev logs')
+        ->toContain('MAX_REQUESTS')
+        ->toContain('--max-requests')
+        ->toContain('max_requests')
+        ->toContain('vendor/laravel/octane')
+        ->toContain('fresh clone of the container')
+        ->toContain('needs a restart');
+});
+
+test('AC-10 README tells to restart workers after changing .env', function (): void {
+    $readme = file_get_contents(base_path('README.md'));
+    preg_match('/^## How worker mode works\n(.*?)(?=^## |\z)/ms', $readme, $matches);
+
+    expect($matches[1] ?? '')->toContain('ddev restart')->toContain('.env')->toContain('DEBUG_ROUTES');
+});
+
+test('AC-9 README names the right worker restart for each way', function (): void {
+    $readme = file_get_contents(base_path('README.md'));
+    preg_match('/^## How worker mode works\n(.*?)(?=^## |\z)/ms', $readme, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->toContain('octane:reload --server=frankenphp')
+        ->toContain('frankenphp/workers/restart')
+        ->toContain('octane-server-state.json')
+        ->toContain('OperationTerminated')
+        ->toContain('FrankenPHP\'s own worker `max_requests` option is not used')
+        ->toContain('OCTANE_HTTPS')
+        ->not->toContain('octane:reload` is a quicker alternative on both servers');
+});
+
+test('AC-10 manual test documents the octane:reload and logs steps', function (): void {
+    $manual = file_get_contents(base_path('.ai/specs/spec-20261030-1437-octane-worker-mode/manual-test.md'));
+
+    expect($manual)->toContain('## Step 7')
+        ->toContain('ddev artisan octane:reload')
+        ->toContain('Reloading workers')
+        ->toContain('ddev logs');
+});

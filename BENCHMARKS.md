@@ -14,14 +14,20 @@ Rows come from `bench/versions.sh` (needs `/debug/runtime` enabled with `DEBUG_R
 | apache-fpm | 2.4.68 | 1.25.4 | 8.4.24 | fpm-fcgi | true | 2026-10-29 |
 | frankenphp | 1.13.4 | 1.25.4 | 8.4.27 | frankenphp | true | 2026-10-29 |
 | openlitespeed | 1.9.4 | 1.25.4 | 8.4.27 | litespeed | true | 2026-10-30 |
+| frankenphp-octane | 1.13.4 | 1.25.4 | 8.4.27 | frankenphp | true | 2026-10-30 |
+| frankenphp-worker | 1.13.4 | 1.25.4 | 8.4.27 | frankenphp | true | 2026-10-30 |
 
 FrankenPHP row: ddev/ddev-frankenphp v1.3.0, Caddy v2.11.7
+
+Worker rows: laravel/octane v2.22.0, FrankenPHP worker mode with 4 workers and max requests 500 (a worker restarts after 500 requests). frankenphp-octane runs `octane:frankenphp` on port 8000 behind the DDEV router; frankenphp-worker runs the add-on's `frankenphp run` with one `worker` block (`num 4`) on Octane's `public/frankenphp-worker.php`. Both reuse the frankenphp web image, so the FrankenPHP, Caddy and PHP versions match the frankenphp row and carry the same point-in-time caveat.
 
 The FrankenPHP row runs classic mode (no worker) on thread-safe PHP, so its PHP patch version differs from the FPM rows.
 
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.
+
+`bench/parity/frankenphp-octane.txt` and `bench/parity/frankenphp-worker.txt` were captured on 2026-10-30 from the same seeded database. `bench/parity.sh compare nginx-fpm frankenphp-octane` and `bench/parity.sh compare nginx-fpm frankenphp-worker` both report `identical`. Getting there needed two things that only matter in a long-lived worker. The worker must know the client used HTTPS, or asset URLs come out as `http://`: frankenphp-worker sets `HTTPS=on` from `X-Forwarded-Proto` in its Caddyfile and frankenphp-octane uses `OCTANE_HTTPS=true`, with no proxy trust in app code. And `public/frankenphp-worker.php` defines `LARAVEL_START` so `/up` has the same shape; in worker mode that number is the worker's uptime, not the request time, and parity masks it. Octane runs with `--log-level=warn` and the worker Caddyfile has no access log, so neither way logs each request.
 
 OpenLiteSpeed answers on its own port, `https://interview.ddev.site:8091`, while the `web` container stays idle on nginx-fpm. `capture` rewrites that base URL to the plain site URL before hashing, so the snapshot compares directly with the others.
 

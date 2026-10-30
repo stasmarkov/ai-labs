@@ -53,3 +53,23 @@ test('AC-10 BENCHMARKS.md has an openlitespeed row and pinning note', function (
         ->toContain('8091')
         ->toContain('idle');
 });
+
+test('AC-8 BENCHMARKS.md has both worker-mode rows and the Octane version', function (): void {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+
+    foreach (['frankenphp-octane', 'frankenphp-worker'] as $server) {
+        expect(preg_match_all("/^\| $server \| \d+(\.\d+)+ \| \d+(\.\d+)+ \| \d+(\.\d+)+ \| frankenphp \| true \| \d{4}-\d{2}-\d{2} \|$/m", $doc))
+            ->toBe(1);
+    }
+    expect($doc)->toMatch('/^Worker rows: laravel\/octane v\d+(\.\d+)+/m')
+        ->toContain('4 workers')
+        ->toContain('max requests 500');
+
+    preg_match('/^## Response parity\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $parity = $matches[1] ?? '';
+    expect($parity)->toContain('bench/parity/frankenphp-octane.txt')
+        ->toContain('bench/parity/frankenphp-worker.txt')
+        ->toContain('`bench/parity.sh compare nginx-fpm frankenphp-octane`')
+        ->toContain('`bench/parity.sh compare nginx-fpm frankenphp-worker`')
+        ->toContain('`identical`');
+});

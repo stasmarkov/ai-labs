@@ -1,0 +1,84 @@
+# Adapted from https://github.com/php/frankenphp/blob/main/caddy/frankenphp/Caddyfile
+#
+# The Caddyfile is an easy way to configure FrankenPHP and the Caddy web server.
+#
+# https://frankenphp.dev/docs/config
+# https://caddyserver.com/docs/caddyfile
+{
+	skip_install_trust
+
+	servers {
+		trusted_proxies static private_ranges
+	}
+
+	{$CADDY_GLOBAL_OPTIONS}
+
+	frankenphp {
+		{$FRANKENPHP_CONFIG}
+	}
+}
+
+{$CADDY_EXTRA_CONFIG}
+
+(common_config) {
+	root {$DDEV_APPROOT}/{$DDEV_DOCROOT}
+	encode zstd br gzip
+	{$CADDY_SERVER_EXTRA_DIRECTIVES}
+
+	# DDEV error pages (v1.25.4+) for 403/404 from Caddy itself, PHP responses pass through
+	handle_errors 403 404 {
+		@ddevErrorPage file {
+			root /usr/local/share
+			try_files /ddev-webserver-{err.status_code}-error.html
+		}
+		handle @ddevErrorPage {
+			root * /usr/local/share
+			rewrite * {file_match.relative}
+			header X-Ddev-{err.status_code}-Source "ddev-webserver (frankenphp)"
+			file_server
+		}
+	}
+}
+
+:80 {
+	import common_config
+
+	map {header.X-Forwarded-Proto} {forwarded_https} {
+		https on
+		default off
+	}
+
+	php_server {
+		root {$DDEV_APPROOT}/{$DDEV_DOCROOT}
+		# The router ends TLS and forwards plain HTTP with X-Forwarded-Proto; tell PHP the
+		# client used HTTPS (the classic add-on file does this with a separate @secure block).
+		env HTTPS {forwarded_https}
+		index frankenphp-worker.php
+		try_files {path} frankenphp-worker.php
+		resolve_root_symlink
+
+		worker {
+			file {$DDEV_APPROOT}/{$DDEV_DOCROOT}/frankenphp-worker.php
+			num 4
+			env FRANKENPHP_WORKER 1
+			env APP_BASE_PATH /var/www/html
+			env APP_PUBLIC_PATH /var/www/html/public
+			env LARAVEL_OCTANE 1
+			env MAX_REQUESTS 500
+			env REQUEST_MAX_EXECUTION_TIME 30
+		}
+	}
+}
+
+:443 {
+	import common_config
+	tls /etc/ssl/certs/master.crt /etc/ssl/certs/master.key
+
+	reverse_proxy localhost:80
+}
+
+# As an alternative to editing the above site block, you can add your own site
+# block files in the Caddyfile.d directory, and they will be included as long
+# as they use the .caddyfile extension.
+
+import Caddyfile.d/*.caddyfile
