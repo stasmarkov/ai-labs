@@ -73,3 +73,19 @@ test('AC-8 BENCHMARKS.md has both worker-mode rows and the Octane version', func
         ->toContain('`bench/parity.sh compare nginx-fpm frankenphp-worker`')
         ->toContain('`identical`');
 });
+
+test('AC-10 BENCHMARKS.md has expectations written before results', function (): void {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+
+    expect($doc)->toContain("\n## Expectations\n");
+
+    preg_match('/^## Expectations\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $expectations = $matches[1] ?? '';
+
+    expect($expectations)->toContain('ping')
+        ->toContain('search')
+        ->toContain('memory')
+        ->toContain('timeout')
+        ->toContain('worker')
+        ->toContain('Surprises');
+});

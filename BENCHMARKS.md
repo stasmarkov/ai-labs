@@ -23,6 +23,17 @@ Worker rows: laravel/octane v2.22.0, FrankenPHP worker mode with 4 workers and m
 
 The FrankenPHP row runs classic mode (no worker) on thread-safe PHP, so its PHP patch version differs from the FPM rows.
 
+## Expectations
+
+Written before any full run and committed first, so the results can be judged against a prediction made without them. After the runs, a "Surprises" section explains every result that differs from what is written here.
+
+- **ping (no database, tiny JSON).** At fair settings (8 workers each) nginx-fpm, apache-fpm, frankenphp (classic) and openlitespeed should land close together, as DDEV's own benchmark found, because the PHP work per request is small and the same app boots on every request. The worker-mode servers (frankenphp-octane, frankenphp-worker) boot the app once and should be clearly ahead, plausibly 2 to 5 times the RPS and a lower p95.
+- **search (database-bound).** The query dominates, so server differences should shrink. Classic servers should sit within about 10 percent of each other, and worker mode should gain less than on ping. Past 8 workers throughput should stop rising because MariaDB becomes the limit.
+- **Concurrency sweep (8, 16, 32).** FPM and lsphp are process-based, so more workers should help only while CPU is free. FrankenPHP threads are cheaper, so it should scale a little further. Tuned results should not change the ranking much.
+- **memory.** Process models pay per worker, so nginx-fpm and apache-fpm should use the most memory at 32 workers. FrankenPHP threads share one process and should use less per worker. Worker mode keeps the booted app in memory, so it should have a larger baseline but grow less with load.
+- **timeout behaviour.** `max_execution_time` counts CPU time under PHP-FPM on Linux, so `/debug/sleep` should not be stopped by it there. Under thread-safe PHP (FrankenPHP) it uses wall-clock timers and should stop the request. With 10 s limits, a sleep above the limit should fail on the servers whose own timeout applies and succeed elsewhere.
+- **noise.** Runs with spread above 5 percent are rerun once and marked noisy if they stay above it. Anything within 5 percent of the baseline is reported as `~`, not as a win.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.
