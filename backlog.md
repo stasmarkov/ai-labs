@@ -81,9 +81,9 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Size:** M
 - **BRs:** BR-20, BR-21, BR-22, BR-23, BR-24, BR-26
 - **Depends on:** SL-03, SL-05
-- **Blocked by:** Q-02
-- **Status:** approved
-- **Spec:** —
+- **Blocked by:** none
+- **Status:** specced
+- **Spec:** spec-20261030-1806-bench-harness
 - **Source:** brief (Benchmarks, Phase 1)
 - **Run:** `/sdd "SL-06: bench/ harness (k6 + oha) running outside the web container with 30 s warm-up, 60 s measure, 3 repeats, median; fill BENCHMARKS.md ping and search tables (fair + tuned) for nginx-fpm, apache-fpm, OLS, FrankenPHP classic with idle and 50-user memory, and a long-request timeout comparison (BR-20…BR-24, BR-26). Rules in product-brief.md."`
 

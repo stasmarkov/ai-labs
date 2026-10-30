@@ -155,7 +155,7 @@ moves to `docs/context/business-rules.md` with the same ids.
 ## Open questions
 
 - [ ] **Q-01** Which local open-weight models (text + tool calling, vision for car photos, text embeddings, and an image encoder such as CLIP or SigLIP) and which local server (Ollama, LM Studio, MLX, vLLM-metal, or a small sidecar for the image encoder, since LM Studio's embeddings endpoint serves text models) fit a MacBook Pro M3 Max with 36 GB? Decides: tech-research ADR. Blocks: SL-22 (and through it every AI slice). Source: widened by intake 2026-10-30.
-- [ ] **Q-02** Is a result valid only when RPS varies less than 5 % across the 3 repeats? Decides: Stanislav Markov. Blocks: SL-06.
+- [x] **Q-02** Is a result valid only when RPS varies less than 5 % across the 3 repeats? — **Answered** (Stanislav Markov, 2026-10-30): yes; spread = (max − min) / median of the 3 runs' RPS. Above 5 %, rerun the scenario once; still above, record the median marked `noisy` with its spread. Blocks: nothing now.
 - [ ] **Q-03** Embedding vector size follows the embedding model chosen in Q-01. Decides: Q-01 ADR. Blocks: SL-24.
 - [ ] **Q-04** Without cloud providers, what is the failover target: a second local server (e.g. LM Studio behind Ollama) or none? Decides: Stanislav Markov. Blocks: SL-28.
 - [ ] **Q-05** Hostnames: keep DDEV project name `interview` (interview.ddev.site) or rename to `autopulse`? Decides: Stanislav Markov. Blocks: none (default: keep `interview`).
