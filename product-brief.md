@@ -55,6 +55,7 @@ There is no authentication; every endpoint is public on the local DDEV network.
 12. **Standalone binary** *(optional deep dive)*. The whole app as one executable, compared to a Docker image.
 13. **AI streaming under load** *(optional deep dive)*. Streamed car descriptions held open vs queued and pushed via Mercure.
 14. **Local LLM features.** Local model wiring, NL search to filters, semantic search, tool-calling assistant, moderation classifier with an eval set, car-photo vision, and a model/concurrency comparison.
+15. **AI integration lab.** Docs chatbot with RAG and citations, a RAG eval harness, an admin assistant with a hand-written agent loop and an MCP server, similar-car-photos by image embeddings (plus text-to-photo search, hybrid similarity, duplicate detection), a semantic cache, a streaming chat UI, a multi-step research agent and a prompt playground. Each one exists to show how its mechanism works.
 
 ## Non-goals
 
@@ -91,6 +92,7 @@ moves to `docs/context/business-rules.md` with the same ids.
 - **BR-24** Results are reported as ratios against the nginx-fpm baseline plus trade-offs (memory, leak risk, moving parts); the expected outcome is written down before each run and any surprise explained after.
 - **BR-25** Server, PHP, DDEV and add-on versions are pinned in config and recorded in BENCHMARKS.md for every result table.
 - **BR-26** A slice that produces measurements is done only with passing tests, a committed result table following BR-21, and a short interview story containing at least one measured number. *(cross-cutting)*
+- **BR-27** Every shipped slice includes a short "How it works" note that names the concepts involved and walks through what happens, step by step, for one request or job (e.g. which process handles it, what is cached, which model call is made). *(cross-cutting)* Source: intake 2026-10-30 (Stanislav Markov).
 
 ### Worker mode lab
 
@@ -131,6 +133,10 @@ moves to `docs/context/business-rules.md` with the same ids.
 - **BR-93** The moderation classifier returns a risk between 0 and 1 and a list of reasons; output not matching that shape is rejected and logged.
 - **BR-94** The buyer assistant takes at most 4 tool steps per question.
 - **BR-95** The direct streaming variant sends the answer as server-sent events while it generates; the queued variant returns at once and the answer arrives as chunks on a per-request Mercure topic.
+- **BR-96** The similar-photos block on a listing page shows at most 8 photos of other listings, never a photo of the current listing, omits near-duplicates above a similarity cutoff (default 0.98) and anything below a minimum score; when nothing qualifies the block is not shown. Source: intake 2026-10-30.
+- **BR-97** An AI assistant never performs a write action (changing a title, adding a tag) without the developer's explicit confirmation in the same conversation; every tool step is logged, and a question takes at most the BR-94 step limit. Source: intake 2026-10-30.
+- **BR-98** A RAG answer cites the source chunks it used; when retrieval returns nothing above the relevance threshold, the chatbot says it does not know instead of answering. Source: intake 2026-10-30.
+- **BR-99** The semantic cache returns a stored answer only when the new question's similarity to a cached question is above its threshold, and the response is marked as cached. Source: intake 2026-10-30.
 
 ## Success metrics
 
@@ -143,11 +149,15 @@ moves to `docs/context/business-rules.md` with the same ids.
 | Edit-to-reload in worker mode | under 2 s | stopwatch over 5 edits |
 | Interview stories | one per slice with measurements, each with a number | BENCHMARKS.md / notes |
 | Local LLM comparison | tokens/s, TTFT, JSON-valid %, eval accuracy recorded per chosen model | comparison table |
+| How-it-works notes | one per shipped slice (BR-27), collected in `docs/learning-guide.md` at the end (SL-44) | slice docs review |
+| RAG quality | correctness and groundedness scores recorded for at least two chunking settings | RAG eval harness (SL-33) |
 
 ## Open questions
 
-- [ ] **Q-01** Which local open-weight models (text + tool calling, vision for car photos, embeddings) and which local server (Ollama, LM Studio, MLX, vLLM-metal) fit a MacBook Pro M3 Max with 36 GB? Decides: tech-research ADR. Blocks: SL-22.
+- [ ] **Q-01** Which local open-weight models (text + tool calling, vision for car photos, text embeddings, and an image encoder such as CLIP or SigLIP) and which local server (Ollama, LM Studio, MLX, vLLM-metal, or a small sidecar for the image encoder, since LM Studio's embeddings endpoint serves text models) fit a MacBook Pro M3 Max with 36 GB? Decides: tech-research ADR. Blocks: SL-22 (and through it every AI slice). Source: widened by intake 2026-10-30.
 - [ ] **Q-02** Is a result valid only when RPS varies less than 5 % across the 3 repeats? Decides: Stanislav Markov. Blocks: SL-06.
 - [ ] **Q-03** Embedding vector size follows the embedding model chosen in Q-01. Decides: Q-01 ADR. Blocks: SL-24.
 - [ ] **Q-04** Without cloud providers, what is the failover target: a second local server (e.g. LM Studio behind Ollama) or none? Decides: Stanislav Markov. Blocks: SL-28.
 - [ ] **Q-05** Hostnames: keep DDEV project name `interview` (interview.ddev.site) or rename to `autopulse`? Decides: Stanislav Markov. Blocks: none (default: keep `interview`).
+- [ ] **Q-06** Which car photo set do the photo slices use? The seed has only a few static hero images; similarity needs many real car photos whose licence allows local use. Decides: Stanislav Markov (external). Blocks: SL-36, SL-37, SL-38, SL-39.
+- [ ] **Q-07** Vector search in pgvector only, or also compare Elasticsearch `dense_vector` kNN on the same data? Decides: Stanislav Markov. Blocks: none (default: pgvector only).
