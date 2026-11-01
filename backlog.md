@@ -108,8 +108,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-21, BR-24, BR-26
 - **Depends on:** SL-06, SL-07
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261101-2126-classic-vs-worker
 - **Source:** brief (Phase 2)
 - **Run:** `/sdd "SL-08: benchmark FrankenPHP classic vs Octane worker on ping and search, record memory growth over 10 000 requests with/without the static cache and with max-requests, and explain the gap in BENCHMARKS.md (BR-21, BR-24, BR-26). Rules in product-brief.md."`
 
