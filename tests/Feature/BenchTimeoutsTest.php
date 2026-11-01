@@ -190,3 +190,13 @@ it('AC-9 a timeout seen only in Laravel\'s own log is attributed to max_executio
     expect($result['runs'][0]['ending_layer'])->toBe('PHP max_execution_time')
         ->and($result['runs'][0]['log_excerpt'])->toContain('Maximum execution time');
 });
+
+it('AC-9 an OpenLiteSpeed 500 without a PHP fatal is attributed to the external app timeout', function (): void {
+    $this->extraEnv = ['STUB_NO_SERVER_LOG' => '1', 'STUB_CURL_RESULT' => '500 10.9 LiteSpeed'];
+
+    $run = ($this->timeouts)('openlitespeed', 'run');
+    $result = json_decode(file_get_contents(glob($this->root.'/results/*/timeouts-openlitespeed.json')[0]), true);
+
+    expect($run->getExitCode())->toBe(0, $run->getErrorOutput())
+        ->and($result['runs'][3]['ending_layer'])->toBe('OpenLiteSpeed external app timeout');
+});

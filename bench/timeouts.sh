@@ -153,7 +153,8 @@ classify() {
   if grep -qiE 'execution timed out|exited on signal 15' <<< "$logs"; then echo "PHP-FPM request_terminate_timeout"; return; fi
   if grep -qiE 'upstream timed out' <<< "$logs" || { [[ "$status" == "504" ]] && grep -qi '^nginx' <<< "$header"; }; then echo "nginx fastcgi_read_timeout"; return; fi
   if grep -qiE 'AH01102|AH00957|proxy.*timeout' <<< "$logs" || { grep -qi '^apache' <<< "$header" && [[ "$status" =~ ^50[234]$ ]]; }; then echo "Apache ProxyTimeout"; return; fi
-  if grep -qi 'litespeed' <<< "$header" && [[ "$status" =~ ^50[234]$ ]]; then echo "OpenLiteSpeed external app timeout"; return; fi
+  # OLS answers 500 itself when the lsphp external app does not respond in time (no PHP fatal is logged).
+  if grep -qi 'litespeed' <<< "$header" && [[ "$status" =~ ^50[0234]$ ]]; then echo "OpenLiteSpeed external app timeout"; return; fi
   if grep -qi 'caddy' <<< "$header" && [[ "$status" =~ ^50[0234]$ ]]; then echo "FrankenPHP max_execution_time"; return; fi
   if [[ "$status" == "404" ]]; then echo "route not found (DEBUG_ROUTES off)"; return; fi
   if [[ "$status" == "504" ]]; then echo "DDEV router timeout"; return; fi
@@ -162,7 +163,7 @@ classify() {
 
 ## measure <label> appends one JSON line per request to $WORK/runs.jsonl.
 measure() {
-  local label="${1:-adhoc}" base server service status seconds header body logs layer i started
+  local label="${1:-adhoc}" base server service status seconds header body logs layer i started ols_size
   [[ -n "$WORK" ]] || { WORK="$(mktemp -d)"; }
   server="$(cd "$APPROOT" && ddev server --current)"
   service="$(service_name "$server")"
@@ -173,6 +174,12 @@ measure() {
     # Laravel's own log is read inside the serving container: the Mac's copy lags behind (Mutagen).
     log_size="$(docker exec "ddev-$SITE-$service" sh -c "wc -c < $app_log 2>/dev/null || echo 0" 2>/dev/null | tr -dc '0-9')"
     log_size="${log_size:-0}"
+    # OpenLiteSpeed writes its own error log to a file inside its container, not to stdout.
+    ols_size=0
+    if [[ "$service" == "openlitespeed" ]]; then
+      ols_size="$(docker exec "ddev-$SITE-$service" sh -c "wc -c < /usr/local/lsws/logs/error.log 2>/dev/null || echo 0" 2>/dev/null | tr -dc '0-9')"
+      ols_size="${ols_size:-0}"
+    fi
     read -r status seconds header < <(curl -ksS -o "$WORK/body" --max-time $((SLEEP_SECONDS + 30)) \
       -w '%{http_code} %{time_total} %header{server}\n' "$base/debug/sleep/$SLEEP_SECONDS" || echo "000 0 none")
     body="$(head -c 400 "$WORK/body" 2>/dev/null | tr '\n' ' ' || true)"
@@ -182,6 +189,11 @@ measure() {
     app_lines="$(docker exec "ddev-$SITE-$service" sh -c "tail -c +$((log_size + 1)) $app_log 2>/dev/null" 2>/dev/null | grep -iE 'Maximum execution' | cut -c1-200 | tail -n 2 || true)"
     [[ -z "$app_lines" ]] || logs="${logs:+$logs
 }$app_lines"
+    if [[ "$service" == "openlitespeed" ]]; then
+      app_lines="$(docker exec "ddev-$SITE-$service" sh -c "tail -c +$((ols_size + 1)) /usr/local/lsws/logs/error.log 2>/dev/null" 2>/dev/null | grep -iE 'timeout|timed out|abort|lsphp|ExtConn|retry' | cut -c1-200 | tail -n 3 || true)"
+      [[ -z "$app_lines" ]] || logs="${logs:+$logs
+}$app_lines"
+    fi
     layer="$(classify "$status" "$header" "$body" "$logs")"
     printf '%s\t%s\trequest %s\tstatus=%s\tseconds=%s\tserver=%s\tlayer=%s\n' "$server" "$label" "$i" "$status" "$seconds" "$header" "$layer"
     jq -nc --arg label "$label" --argjson request "$i" --arg status "$status" --arg seconds "$seconds" \
