@@ -174,3 +174,24 @@ test('AC-12 BENCHMARKS.md has an interview story with a measured number', functi
     expect(count($sentences))->toBeGreaterThanOrEqual(3)->toBeLessThanOrEqual(6)
         ->and($story)->toMatch('/\\d{3,} RPS/');
 });
+
+test('AC-9 BENCHMARKS.md has the leak table', function (): void {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+
+    preg_match('/^## State leaks\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->toContain('bench/leaks.sh')
+        ->toContain('| Scenario | Mode | nginx-fpm | frankenphp-octane (max-requests 500) | frankenphp-octane (max-requests 1) | frankenphp-worker |');
+
+    foreach (['dealer-scope', 'price-cache', 'number-locale', 'request-at-boot'] as $scenario) {
+        foreach (['leak', 'fixed'] as $mode) {
+            expect(preg_match_all("/^\| $scenario \| $mode \| \d+\/20 \| \d+\/20 \| \d+\/20 \| \d+\/20 \|$/m", $section))
+                ->toBe(1);
+        }
+    }
+
+    expect(preg_match_all('/^\| \S+ \| fixed \| 0\/20 \| 0\/20 \| 0\/20 \| 0\/20 \|$/m', $section))->toBe(4);
+    expect(preg_match_all('/^\| \S+ \| leak \| 0\/20 \|/m', $section))->toBe(4);
+    expect($section)->toContain('request-at-boot');
+});

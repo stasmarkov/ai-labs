@@ -4,7 +4,7 @@ This guide explains how everything in this project works, in the order it was bu
 
 It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan and its order are in [`backlog.md`](../backlog.md).
 
-**Status (2026-11-01):** sections 1–6 cover the shipped slices SL-01 to SL-06. Planned sections are listed at the end.
+**Status (2026-11-01):** sections 1–7 cover the shipped slices SL-01 to SL-07. Planned sections are listed at the end.
 
 ---
 
@@ -144,11 +144,47 @@ Full tables, the Expectations written before the runs and the Surprises are in [
 
 **Read next.** [PHP `max_execution_time`](https://www.php.net/manual/en/info.configuration.php#ini.max-execution-time) · [FPM `request_terminate_timeout`](https://www.php.net/manual/en/install.fpm.configuration.php) · [nginx `fastcgi_read_timeout`](https://nginx.org/en/docs/http/ngx_http_fastcgi_module.html#fastcgi_read_timeout) · [Apache `ProxyTimeout`](https://httpd.apache.org/docs/2.4/mod/mod_proxy.html#proxytimeout)
 
+## 7. State leaks in worker mode
+
+**What it is.** A classic server boots the app for every request and throws everything away afterwards. A worker boots once and serves many requests, so whatever outlives a request can be seen by the next one, possibly from another user. The lab in this repo makes each kind of leak visible and shows its fix.
+
+**What lives across requests.**
+- The booted (base) application and everything resolved while it booted, such as a `singleton()` resolved in a service provider's `boot()`.
+- PHP statics (`static` properties and variables), for the whole worker process.
+- Global state of libraries that Octane does not know about, such as Laravel's `Number::useLocale()`.
+
+A `singleton()` first resolved *during* a request does not leak: Octane clones the application for every request and the clone dies with it.
+
+**What Octane resets.** `CreateConfigurationSandbox` gives each request a clone of the config repository, so `config(['app.locale' => ...])` does not carry over. `FlushLocaleState` resets the translator and Carbon locales. `GiveNewRequestInstanceToApplication` (and its siblings) put the new request into the container and first-party services. `flush` bindings and scoped instances are dropped after each request. The list is in `config/octane.php` under `listeners`.
+
+**The four leaks and their fixes** (`GET /debug/leaks/{scenario}?dealer=<id>&locale=<uk|de|en>&mode=leak|fixed`):
+
+| Scenario | Leak | Fix |
+|---|---|---|
+| `dealer-scope` | A holder that remembers its first dealer, bound with `singleton()` and resolved at boot, keeps the first request's dealer for the worker's life. | Bind it with `scoped()` so every request gets a fresh holder. |
+| `price-cache` | A `static` array keyed by amount only: a later request in another locale gets the first locale's entry, and the array grows forever. | `Cache::remember` keyed by amount and locale, with a TTL. |
+| `number-locale` | `Number::useLocale()` changes a process-wide locale; a later request without a locale formats with the previous one. The response also reports `config_locale` and `app_locale`, which come back as `en`: Octane protects those, not `Number`. | Pass the locale explicitly to `Number::currency()` and never change the global. |
+| `request-at-boot` | A service built with the `Request` in its constructor and resolved at boot holds the request that existed when the worker booted, which has no `dealer`. | Read `request()` inside the method, at call time. |
+
+Each response has `requested`, `observed` and `leaked` (true when they differ). One caveat: a leak-mode `number-locale` request changes the `Number` locale for that worker until it restarts. No app code uses `Number`, but it is the lesson.
+
+**Why `--max-requests` hides leaks without fixing them.** Octane's FrankenPHP daemon restarts a worker after N requests (500 here). At 1, no worker serves A and then B, so three of the four leaks read `0/20`, at the price of booting the app on every request. `request-at-boot` still leaks, because a fresh boot is exactly where it captures the wrong request. A low limit trims memory growth; it does not make code correct.
+
+**How to read `/debug/worker`.** It returns `pid`, `worker_id`, `app_id`, `memory_bytes`, `peak_memory_bytes`, `worker_hits`, `first_seen_at` (when this process first served the endpoint) and `octane`. Call it a few times: on a worker server `pid` stays the same and `worker_hits` climbs (one counter per worker process, so with several workers you see several pids); on a classic server every call is a fresh boot and `worker_hits` is 1. `app_id` is informational, since PHP reuses object ids.
+
+**In this repo.**
+- Lab code: [`app/Debug/Leaks/`](../app/Debug/Leaks/) and [`routes/debug.php`](../routes/debug.php).
+- Tests: [`tests/Feature/LeakLabTest.php`](../tests/Feature/LeakLabTest.php) runs Octane's real worker in a separate PHP process (leak mode leaks, fixed mode does not) and fresh boots per request (never leaks); [`tests/Feature/DebugWorkerTest.php`](../tests/Feature/DebugWorkerTest.php) covers `/debug/worker`.
+- Live counts: [`bench/leaks.sh`](../bench/leaks.sh) and the [leak table](../BENCHMARKS.md#state-leaks).
+- Spec: [`.ai/specs/spec-20261101-1822-octane-leak-lab/`](../.ai/specs/spec-20261101-1822-octane-leak-lab/).
+
+**Read next.** [Laravel Octane: dependency injection and Octane](https://laravel.com/docs/13.x/octane#dependency-injection-and-octane) · [Laravel Octane](https://laravel.com/docs/13.x/octane) · [FrankenPHP worker mode](https://frankenphp.dev/docs/worker/)
+
 ---
 
 ## Planned sections
 
 Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):
 
-- **Server track:** state leaks in worker mode (SL-07), classic vs worker numbers (SL-08), slow I/O and thread autoscaling (SL-09), Early Hints and compression (SL-10), file downloads offloaded to the web server (SL-11), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
+- **Server track:** classic vs worker numbers (SL-08), slow I/O and thread autoscaling (SL-09), Early Hints and compression (SL-10), file downloads offloaded to the web server (SL-11), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
 - **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; streaming over SSE (SL-20); running models locally (SL-22); structured output (SL-23); embeddings and vector search (SL-24); tool calling (SL-25); evals (SL-26, SL-33); vision (SL-27); model comparison (SL-28); RAG with citations (SL-32); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39); semantic caching (SL-40); streaming chat UI (SL-41); a research agent (SL-42); a prompt playground (SL-43).

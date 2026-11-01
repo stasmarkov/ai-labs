@@ -109,6 +109,25 @@ The memory table comes from the ping run, which never touches the database, so `
 
 I ran the same Laravel app behind nginx-fpm, Apache, OpenLiteSpeed and FrankenPHP on DDEV and measured them with a harness that warms up, repeats each run three times and refuses to run unless OPcache is on and debug mode is off. Once each server was tuned, `/api/ping` landed within 7 % across all four (nginx-fpm 6205 RPS, FrankenPHP 6254), and on the database-bound search FrankenPHP classic was actually 14 % slower (537 vs 625 RPS). So swapping the web server alone does not buy speed; the gains, if any, come from worker mode. The most useful lesson was timeouts: with `max_execution_time=10`, a 30-second `sleep()` was not stopped under PHP-FPM, because on Linux that limit counts CPU time, while FrankenPHP's thread-safe PHP stopped it at 10 s. Under FPM, the real guard is the web server's timeout or `request_terminate_timeout`.
 
+## State leaks
+
+`bench/leaks.sh` counts, per scenario and mode, how many of 20 "B" requests (dealer 2, locale de; no locale for number-locale) saw something other than their own data after 20 "A" requests (dealer 1, locale uk). It restarts the workers before every row. Run on 2026-11-01 against the lab routes (`/debug/leaks/{scenario}`, code in `app/Debug/Leaks/`, enabled with `DEBUG_ROUTES=true`). Each cell is `leaked n/20`.
+
+| Scenario | Mode | nginx-fpm | frankenphp-octane (max-requests 500) | frankenphp-octane (max-requests 1) | frankenphp-worker |
+|----------|------|-----------|--------------------------------------|------------------------------------|-------------------|
+| dealer-scope | leak | 0/20 | 20/20 | 0/20 | 20/20 |
+| dealer-scope | fixed | 0/20 | 0/20 | 0/20 | 0/20 |
+| price-cache | leak | 0/20 | 20/20 | 0/20 | 20/20 |
+| price-cache | fixed | 0/20 | 0/20 | 0/20 | 0/20 |
+| number-locale | leak | 0/20 | 20/20 | 0/20 | 20/20 |
+| number-locale | fixed | 0/20 | 0/20 | 0/20 | 0/20 |
+| request-at-boot | leak | 0/20 | 20/20 | 20/20 | 20/20 |
+| request-at-boot | fixed | 0/20 | 0/20 | 0/20 | 0/20 |
+
+- **Matches the expectation.** Every `fixed` row and every nginx-fpm cell is `0/20`. Every `leak` row is `20/20` on both worker servers at max-requests 500. frankenphp-worker runs Octane's own worker script, so it behaves like frankenphp-octane.
+- **max-requests 1 hides three leaks, not the fourth.** With a restart after every request no worker serves A and then B, so dealer-scope, price-cache and number-locale drop to `0/20`. The leak is hidden, not fixed: the code is unchanged, and the cost is a full boot per request. request-at-boot stays `20/20` because it does not need an earlier request: every freshly booted worker captures the boot-time request, which carries no dealer, so B always sees a stale request instead of its own. A restart cannot hide that.
+- **`/debug/worker` and the lab are off by default.** With `DEBUG_ROUTES` unset the routes answer 404, and the script restores `.env` on exit.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

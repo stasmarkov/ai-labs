@@ -71,3 +71,7 @@ it('keeps env() out of application code', function (): void {
 
     expect($offenders)->toBe([]);
 });
+
+arch('MNC-2 lab classes are used only by lab controllers')
+    ->expect('App\Debug')
+    ->toOnlyBeUsedIn(['App\Debug', 'App\Http\Controllers\DebugLeakController']);

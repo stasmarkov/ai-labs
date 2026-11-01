@@ -4,7 +4,7 @@ title: Octane state-leak lab with worker inspection
 type: feature
 size: M
 priority: P2
-status: approved
+status: in-progress
 ticket:
 stakeholders: [Stanislav Markov]
 approved_by: Stas Markov
@@ -85,6 +85,9 @@ All routes below sit behind `DEBUG_ROUTES` like `/debug/runtime`. The lab needs 
 2. Tests run requests through Octane's real worker in-process, plus fresh-app classic tests (user choice).
 3. Live checker `bench/leaks.sh`, including max-requests 1 vs 500 on Octane (user choice).
 4. The roadmap's "config(['app.locale']) leak" is replaced by `Number::useLocale()`, because Octane already sandboxes the config repository and resets the translator and Carbon locales (`CreateConfigurationSandbox`, `FlushLocaleState`); the scenario reports both, to show what Octane protects and what it does not.
+5. All `/debug/*` routes are registered for every method behind one `EnsureDebugRoutes` middleware: while `DEBUG_ROUTES` is off every method gets the same 404 as an unknown path (a GET-only route answered 405 to other methods and revealed itself); when on, only GET and HEAD are allowed (review fix, 2026-11-01).
+6. `bench/leaks.sh` restarts the Octane daemon (`ddev restart`) after switching `.env`, because `octane:frankenphp` copies `.env` into the FrankenPHP process environment at start and a reload keeps the old values; it parses each response on its own, flags failed A phases, requires `jq`, and checks `/debug/worker` is back to 404 after restoring (review fix).
+7. A lab request answers 503 with a restart hint when `DEBUG_ROUTES` was enabled after the worker booted, since the lab bindings are registered at boot (review fix). `phpunit.xml` pins `DEBUG_ROUTES=false`. `/debug/worker` reports exact memory (`memory_get_usage()`), not the 2 MiB-rounded real usage (review fix).
 
 ## Open questions
 - [x] Assumption: BR-27, BR-30, BR-31 and BR-32 are unvalidated draft rules (owner Stanislav Markov). — **Accepted assumption** (Stanislav Markov, 2026-11-01).

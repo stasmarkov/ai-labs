@@ -95,7 +95,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-30, BR-31, BR-32
 - **Depends on:** SL-04
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261101-1822-octane-leak-lab
 - **Source:** brief (Phase 2)
 - **Run:** `/sdd "SL-07: Octane state-leak lab — four routes with leak/fixed toggles (singleton vs scoped current dealer, static price-formatter cache, config locale mutation, service built with the request at boot) and /debug/worker (pid, app instance id, memory, request counter); Pest tests per leak; no leak on classic servers (BR-30, BR-31, BR-32). Rules in product-brief.md."`

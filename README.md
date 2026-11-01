@@ -98,7 +98,7 @@ ddev artisan optimize:clear
 bench/versions.sh                             # one markdown row for BENCHMARKS.md
 ```
 
-The scripts never change `.env`. Set `DEBUG_ROUTES` back to `false` afterwards; it stays `false` in `.env.example` and for benchmarks.
+These two scripts never change `.env` (`bench/leaks.sh`, below, does, and restores it). Set `DEBUG_ROUTES` back to `false` afterwards; it stays `false` in `.env.example` and for benchmarks.
 
 ## How worker mode works
 
@@ -135,6 +135,15 @@ One side effect to know: `/up` prints "Response rendered in Nms" from the `LARAV
 Octane features that only work on Swoole (checked against the Octane docs and source) do not work on either of these servers: concurrent tasks (`Octane::concurrently`), interval callbacks (`Octane::tick`), Octane tables (`Octane::table`) and the `octane` cache driver. Calling them on FrankenPHP fails or has no effect. Use the normal queue, scheduler and cache drivers instead.
 
 A worker reads `.env` once when it boots. After changing `.env`, such as setting `DEBUG_ROUTES=true` for `/debug/runtime`, run `ddev artisan optimize:clear` and then `ddev restart` so the workers boot again. On frankenphp-octane `ddev artisan octane:reload --server=frankenphp` is quicker; on frankenphp-worker use the admin API call from the table above. After either, `/debug/runtime` answers 200. Without a restart or reload the running workers keep the old values and `/debug/runtime` still answers 404. The same goes for code: a code change needs a restart too, because the booted application and its loaded classes stay in memory until the worker exits.
+
+To watch a worker persist and see state leak between requests, enable `DEBUG_ROUTES=true` (and restart the workers as above), then call `/debug/worker` and `/debug/leaks/{scenario}?dealer=<id>&locale=<uk|de|en>&mode=<leak|fixed>`. The scenarios are `dealer-scope`, `price-cache`, `number-locale` and `request-at-boot`; `dealer` is required, `mode` defaults to `leak`, and `amount` (in cents) is optional. With `DEBUG_ROUTES` off both routes answer 404 and the lab registers no container bindings. To count the leaks on the active server, run:
+
+```sh
+bench/leaks.sh                    # per scenario and mode: "leaked n/20"
+bench/leaks.sh --max-requests 1   # frankenphp-octane only: rerun with workers restarting after every request
+```
+
+The script sets `DEBUG_ROUTES=true` in `.env` itself (backed up to `.env.bench-backup` and restored on exit) and restarts the workers before every row. It sends request A (dealer 1, locale uk) 20 times, then request B (dealer 2, locale de) 20 times, and counts the B responses with `leaked: true`. It exits 2 if `/debug/worker` does not answer 200, if a stale `.env.bench-backup` exists, or if `--max-requests` is given on another server. `--max-requests` writes the gitignored overlay `.ddev/config.zzz-bench-leaks.yaml`, a copy of the daemon config with the new value, and runs `ddev restart`; on exit it removes the overlay and restarts again. Each leak and its fix are explained in [section 7 of the learning guide](docs/learning-guide.md#7-state-leaks-in-worker-mode), and the measured counts are in [BENCHMARKS.md](BENCHMARKS.md#state-leaks).
 
 ## Contributing
 
