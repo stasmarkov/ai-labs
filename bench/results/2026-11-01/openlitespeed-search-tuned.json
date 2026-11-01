@@ -1,0 +1,112 @@
+{
+    "server": "openlitespeed",
+    "scenario": "search",
+    "label": "tuned",
+    "setting": "16 workers",
+    "commit": "b29c1ff",
+    "image": "grafana/k6:1.0.0",
+    "image_digest": "grafana/k6@sha256:f21270290d702cbf0a7d6ba5d7ed100b63bcb233b558b885ed787547b3488279",
+    "date": "2026-11-01",
+    "runs": [
+        {
+            "set": 1,
+            "repeat": 1,
+            "rps": 643.8908064717507,
+            "p50_ms": 75.1392875,
+            "p95_ms": 100.01548629999999,
+            "p99_ms": 122.60377383999997,
+            "error_percent": 0,
+            "idle_memory_mib": {
+                "web": 120,
+                "openlitespeed": 75.4,
+                "db": 33.1
+            },
+            "peak_memory_mib": {
+                "web": 134.7,
+                "openlitespeed": 113.3,
+                "db": 47.9
+            },
+            "avg_cpu_percent": {
+                "web": 1.7,
+                "openlitespeed": 352.5,
+                "db": 282.9
+            }
+        },
+        {
+            "set": 1,
+            "repeat": 2,
+            "rps": 649.5247788071086,
+            "p50_ms": 74.5422425,
+            "p95_ms": 99.07110819999998,
+            "p99_ms": 118.18493586000001,
+            "error_percent": 0,
+            "idle_memory_mib": {
+                "web": 120,
+                "openlitespeed": 75.4,
+                "db": 33.1
+            },
+            "peak_memory_mib": {
+                "web": 149.8,
+                "openlitespeed": 128.3,
+                "db": 61.4
+            },
+            "avg_cpu_percent": {
+                "web": 1.7,
+                "openlitespeed": 356.4,
+                "db": 284.2
+            }
+        },
+        {
+            "set": 1,
+            "repeat": 3,
+            "rps": 640.6318402278944,
+            "p50_ms": 75.546264,
+            "p95_ms": 101.1751159,
+            "p99_ms": 124.21809956,
+            "error_percent": 0,
+            "idle_memory_mib": {
+                "web": 120,
+                "openlitespeed": 75.4,
+                "db": 33.1
+            },
+            "peak_memory_mib": {
+                "web": 136.7,
+                "openlitespeed": 126.5,
+                "db": 58.2
+            },
+            "avg_cpu_percent": {
+                "web": 1.6,
+                "openlitespeed": 342.2,
+                "db": 268.9
+            }
+        }
+    ],
+    "median": {
+        "set": 1,
+        "repeat": 1,
+        "rps": 643.8908064717507,
+        "p50_ms": 75.1392875,
+        "p95_ms": 100.01548629999999,
+        "p99_ms": 122.60377383999997,
+        "error_percent": 0,
+        "idle_memory_mib": {
+            "web": 120,
+            "openlitespeed": 75.4,
+            "db": 33.1
+        },
+        "peak_memory_mib": {
+            "web": 134.7,
+            "openlitespeed": 113.3,
+            "db": 47.9
+        },
+        "avg_cpu_percent": {
+            "web": 1.7,
+            "openlitespeed": 352.5,
+            "db": 282.9
+        }
+    },
+    "spread_percent": 1.3811252606546467,
+    "noisy": false,
+    "baseline_server": "nginx-fpm",
+    "ratio": "1.03x"
+}

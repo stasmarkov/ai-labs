@@ -1,0 +1,62 @@
+{
+  "server": "nginx-fpm",
+  "date": "2026-11-01T10:50:52Z",
+  "path": "/debug/sleep/30",
+  "router_timeout": "default (ddev-router, not changed)",
+  "runs": [
+    {
+      "label": "defaults",
+      "request": 1,
+      "status": 200,
+      "seconds": 30.193758,
+      "server_header": "nginx",
+      "ending_layer": "none (request completed)",
+      "log_excerpt": ""
+    },
+    {
+      "label": "defaults",
+      "request": 2,
+      "status": 200,
+      "seconds": 30.069536,
+      "server_header": "nginx",
+      "ending_layer": "none (request completed)",
+      "log_excerpt": ""
+    },
+    {
+      "label": "defaults",
+      "request": 3,
+      "status": 200,
+      "seconds": 30.061061,
+      "server_header": "nginx",
+      "ending_layer": "none (request completed)",
+      "log_excerpt": ""
+    },
+    {
+      "label": "short",
+      "request": 1,
+      "status": 504,
+      "seconds": 10.038649,
+      "server_header": "nginx",
+      "ending_layer": "nginx fastcgi_read_timeout",
+      "log_excerpt": "2026/11/01 12:50:18 [error] 579#579: *3 upstream timed out (110: Connection timed out) while reading response header from upstream, client: 192.168.97.3, server: , request: \"GET /debug/sleep/30 HTTP/1.1\", upstream: \"fastcgi://unix:/run/php/php-fpm.sock\", host: \"interview.ddev.site\""
+    },
+    {
+      "label": "short",
+      "request": 2,
+      "status": 504,
+      "seconds": 10.038823,
+      "server_header": "nginx",
+      "ending_layer": "PHP-FPM request_terminate_timeout",
+      "log_excerpt": "2026/11/01 12:50:18 [error] 579#579: *3 upstream timed out (110: Connection timed out) while reading response header from upstream, client: 192.168.97.3, server: , request: \"GET /debug/sleep/30 HTTP/1.1\", upstream: \"fastcgi://unix:/run/php/php-fpm.sock\", host: \"interview.ddev.site\"\n[01-Nov-2026 12:50:19] WARNING: [pool www] child 589, script '/var/www/html/public/index.php' (request: \"GET /index.php\") execution timed out (10.519059 sec), terminating\n[01-Nov-2026 12:50:19] WARNING: [pool www] child 589 exited on signal 15 (SIGTERM) after 13.357086 seconds from start\n2026/11/01 12:50:29 [error] 579#579: *3 upstream timed out (110: Connection timed out) while reading response header from upstream, client: 192.168.97.3, server: , request: \"GET /debug/sleep/30 HTTP/1.1\", upstream: \"fastcgi://unix:/run/php/php-fpm.sock\", host: \"interview.ddev.site\""
+    },
+    {
+      "label": "short",
+      "request": 3,
+      "status": 504,
+      "seconds": 10.031020,
+      "server_header": "nginx",
+      "ending_layer": "PHP-FPM request_terminate_timeout",
+      "log_excerpt": "[01-Nov-2026 12:50:29] WARNING: [pool www] child 590, script '/var/www/html/public/index.php' (request: \"GET /index.php\") execution timed out (10.293672 sec), terminating\n[01-Nov-2026 12:50:29] WARNING: [pool www] child 590 exited on signal 15 (SIGTERM) after 23.363088 seconds from start\n2026/11/01 12:50:39 [error] 579#579: *3 upstream timed out (110: Connection timed out) while reading response header from upstream, client: 192.168.97.3, server: , request: \"GET /debug/sleep/30 HTTP/1.1\", upstream: \"fastcgi://unix:/run/php/php-fpm.sock\", host: \"interview.ddev.site\"\n[01-Nov-2026 12:50:39] WARNING: [pool www] child 588, script '/var/www/html/public/index.php' (request: \"GET /index.php\") execution timed out (10.071389 sec), terminating\n[01-Nov-2026 12:50:39] WARNING: [pool www] child 588 exited on signal 15 (SIGTERM) after 33.377412 seconds from start"
+    }
+  ]
+}

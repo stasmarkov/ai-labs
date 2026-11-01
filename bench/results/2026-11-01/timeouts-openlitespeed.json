@@ -1,0 +1,62 @@
+{
+  "server": "openlitespeed",
+  "date": "2026-11-01T12:41:55Z",
+  "path": "/debug/sleep/30",
+  "router_timeout": "default (ddev-router, not changed)",
+  "runs": [
+    {
+      "label": "defaults",
+      "request": 1,
+      "status": 200,
+      "seconds": 30.296252,
+      "server_header": "LiteSpeed",
+      "ending_layer": "none (request completed)",
+      "log_excerpt": ""
+    },
+    {
+      "label": "defaults",
+      "request": 2,
+      "status": 200,
+      "seconds": 30.077742,
+      "server_header": "LiteSpeed",
+      "ending_layer": "none (request completed)",
+      "log_excerpt": ""
+    },
+    {
+      "label": "defaults",
+      "request": 3,
+      "status": 200,
+      "seconds": 30.064293,
+      "server_header": "LiteSpeed",
+      "ending_layer": "none (request completed)",
+      "log_excerpt": ""
+    },
+    {
+      "label": "short",
+      "request": 1,
+      "status": 500,
+      "seconds": 11.039333,
+      "server_header": "LiteSpeed",
+      "ending_layer": "OpenLiteSpeed external app timeout",
+      "log_excerpt": ""
+    },
+    {
+      "label": "short",
+      "request": 2,
+      "status": 500,
+      "seconds": 10.931713,
+      "server_header": "LiteSpeed",
+      "ending_layer": "OpenLiteSpeed external app timeout",
+      "log_excerpt": ""
+    },
+    {
+      "label": "short",
+      "request": 3,
+      "status": 500,
+      "seconds": 10.939219,
+      "server_header": "LiteSpeed",
+      "ending_layer": "OpenLiteSpeed external app timeout",
+      "log_excerpt": ""
+    }
+  ]
+}

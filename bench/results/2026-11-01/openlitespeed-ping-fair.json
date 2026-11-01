@@ -1,0 +1,112 @@
+{
+    "server": "openlitespeed",
+    "scenario": "ping",
+    "label": "fair",
+    "setting": "8 workers",
+    "commit": "b29c1ff",
+    "image": "autopulse-oha:1.16.0",
+    "image_digest": "sha256:12c8fd3955056a7d68ff58317e87ae2878e72c2c9046169dc35da35b36428937",
+    "date": "2026-11-01",
+    "runs": [
+        {
+            "set": 1,
+            "repeat": 1,
+            "rps": 5844.026393842606,
+            "p50_ms": 7.758591,
+            "p95_ms": 13.386093,
+            "p99_ms": 16.754066,
+            "error_percent": 0,
+            "idle_memory_mib": {
+                "web": 117.4,
+                "openlitespeed": 67.8,
+                "db": 18.5
+            },
+            "peak_memory_mib": {
+                "web": 153.1,
+                "openlitespeed": 79.5,
+                "db": 40.5
+            },
+            "avg_cpu_percent": {
+                "web": 1.5,
+                "openlitespeed": 606.4,
+                "db": 0.1
+            }
+        },
+        {
+            "set": 1,
+            "repeat": 2,
+            "rps": 5856.424427444191,
+            "p50_ms": 7.760343000000001,
+            "p95_ms": 12.892809,
+            "p99_ms": 15.961722000000002,
+            "error_percent": 0,
+            "idle_memory_mib": {
+                "web": 117.4,
+                "openlitespeed": 67.8,
+                "db": 18.5
+            },
+            "peak_memory_mib": {
+                "web": 164,
+                "openlitespeed": 92.7,
+                "db": 42.2
+            },
+            "avg_cpu_percent": {
+                "web": 1.5,
+                "openlitespeed": 597.2,
+                "db": 0.1
+            }
+        },
+        {
+            "set": 1,
+            "repeat": 3,
+            "rps": 5835.724235913928,
+            "p50_ms": 7.659819,
+            "p95_ms": 13.251130999999999,
+            "p99_ms": 16.800018,
+            "error_percent": 0,
+            "idle_memory_mib": {
+                "web": 117.4,
+                "openlitespeed": 67.8,
+                "db": 18.5
+            },
+            "peak_memory_mib": {
+                "web": 154.1,
+                "openlitespeed": 88,
+                "db": 36.7
+            },
+            "avg_cpu_percent": {
+                "web": 1.7,
+                "openlitespeed": 595.4,
+                "db": 0.1
+            }
+        }
+    ],
+    "median": {
+        "set": 1,
+        "repeat": 1,
+        "rps": 5844.026393842606,
+        "p50_ms": 7.758591,
+        "p95_ms": 13.386093,
+        "p99_ms": 16.754066,
+        "error_percent": 0,
+        "idle_memory_mib": {
+            "web": 117.4,
+            "openlitespeed": 67.8,
+            "db": 18.5
+        },
+        "peak_memory_mib": {
+            "web": 153.1,
+            "openlitespeed": 79.5,
+            "db": 40.5
+        },
+        "avg_cpu_percent": {
+            "web": 1.5,
+            "openlitespeed": 606.4,
+            "db": 0.1
+        }
+    },
+    "spread_percent": 0.35421112320903914,
+    "noisy": false,
+    "baseline_server": "nginx-fpm",
+    "ratio": "~1.21x"
+}

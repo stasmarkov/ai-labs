@@ -1,0 +1,62 @@
+{
+  "server": "apache-fpm",
+  "date": "2026-11-01T11:23:56Z",
+  "path": "/debug/sleep/30",
+  "router_timeout": "default (ddev-router, not changed)",
+  "runs": [
+    {
+      "label": "defaults",
+      "request": 1,
+      "status": 200,
+      "seconds": 30.156542,
+      "server_header": "Apache/2.4.68 (Debian)",
+      "ending_layer": "none (request completed)",
+      "log_excerpt": ""
+    },
+    {
+      "label": "defaults",
+      "request": 2,
+      "status": 200,
+      "seconds": 30.075981,
+      "server_header": "Apache/2.4.68 (Debian)",
+      "ending_layer": "none (request completed)",
+      "log_excerpt": ""
+    },
+    {
+      "label": "defaults",
+      "request": 3,
+      "status": 200,
+      "seconds": 30.067336,
+      "server_header": "Apache/2.4.68 (Debian)",
+      "ending_layer": "none (request completed)",
+      "log_excerpt": ""
+    },
+    {
+      "label": "short",
+      "request": 1,
+      "status": 504,
+      "seconds": 10.056354,
+      "server_header": "Apache/2.4.68 (Debian)",
+      "ending_layer": "Apache ProxyTimeout",
+      "log_excerpt": "[Sun Nov 01 13:23:24.153757 2026] [proxy_fcgi:error] [pid 618:tid 636] (70007)The timeout specified has expired: [client 192.168.97.3:49312] AH01075: Error dispatching request to : (polling)"
+    },
+    {
+      "label": "short",
+      "request": 2,
+      "status": 504,
+      "seconds": 10.033354,
+      "server_header": "Apache/2.4.68 (Debian)",
+      "ending_layer": "PHP-FPM request_terminate_timeout",
+      "log_excerpt": "[Sun Nov 01 13:23:24.153757 2026] [proxy_fcgi:error] [pid 618:tid 636] (70007)The timeout specified has expired: [client 192.168.97.3:49312] AH01075: Error dispatching request to : (polling)\n[01-Nov-2026 13:23:27] WARNING: [pool www] child 676, script '/var/www/html/public/index.php' (request: \"GET /index.php\") execution timed out (13.231766 sec), terminating\n[01-Nov-2026 13:23:27] WARNING: [pool www] child 676 exited on signal 15 (SIGTERM) after 16.677391 seconds from start\n[Sun Nov 01 13:23:34.432782 2026] [proxy_fcgi:error] [pid 618:tid 637] (70007)The timeout specified has expired: [client 192.168.97.3:49312] AH01075: Error dispatching request to : (polling)"
+    },
+    {
+      "label": "short",
+      "request": 3,
+      "status": 504,
+      "seconds": 10.024492,
+      "server_header": "Apache/2.4.68 (Debian)",
+      "ending_layer": "PHP-FPM request_terminate_timeout",
+      "log_excerpt": "[Sun Nov 01 13:23:34.432782 2026] [proxy_fcgi:error] [pid 618:tid 637] (70007)The timeout specified has expired: [client 192.168.97.3:49312] AH01075: Error dispatching request to : (polling)\n[01-Nov-2026 13:23:37] WARNING: [pool www] child 677, script '/var/www/html/public/index.php' (request: \"GET /index.php\") execution timed out (12.978781 sec), terminating\n[01-Nov-2026 13:23:37] WARNING: [pool www] child 677 exited on signal 15 (SIGTERM) after 26.689195 seconds from start\n[Sun Nov 01 13:23:44.659973 2026] [proxy_fcgi:error] [pid 618:tid 639] (70007)The timeout specified has expired: [client 192.168.97.3:49312] AH01075: Error dispatching request to : (polling)"
+    }
+  ]
+}

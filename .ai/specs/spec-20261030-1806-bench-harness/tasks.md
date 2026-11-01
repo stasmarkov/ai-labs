@@ -10,11 +10,11 @@
   - [x] 1.2 Final invokable controller in `routes/debug.php`, guarded like `/debug/runtime`
   - [x] 1.3 **Verify**: tests green; suite green
 
-- [ ] 2. Run conditions, traffic path, result files (bench)
+- [x] 2. Run conditions, traffic path, result files (bench)
   Covers: AC-1, AC-3
   - [x] 2.1 Failing tests for the run-condition checks with stubbed `curl`/`ddev`/`git`
   - [x] 2.2 `bench/run.sh`: `.env` backup/switch/restore (trap), `optimize`, checks, router `--add-host`, pinned oha/k6 images with `--cpus=2`, memory/CPU sampling via `docker stats` for serving container and db, one raw file per run, automatic rerun set; `--quick`; `bench/suite.sh` orchestrator and `bench/timeouts.sh`
-  - [ ] 2.3 **Verify**: `bench/run.sh ping --quick` writes a result file on nginx-fpm; `.env` restored
+  - [x] 2.3 **Verify**: `bench/run.sh ping --quick` writes a result file on nginx-fpm; `.env` restored
 
 - [x] 3. Summary math (bench)
   Covers: AC-2, AC-6
@@ -35,18 +35,18 @@
   - [x] 5.1 Write "Expectations" in BENCHMARKS.md and commit it before any full run
   - [x] 5.2 **Verify**: `git log` shows that commit before the results commit
 
-- [ ] 6. Full runs: fair, sweep, tuned, memory, timeouts (bench)
+- [x] 6. Full runs: fair, sweep, tuned, memory, timeouts (bench)
   Covers: AC-5, AC-6, AC-7, AC-9, MNC-2, MNC-4
-  - [ ] 6.1 Fair runs (8 workers) for ping and search on all four servers
-  - [ ] 6.2 Quick sweep 8/16/32, then tuned full runs
-  - [ ] 6.3 Memory table; timeout runs with defaults and with 10 s limits
-  - [ ] 6.4 Restore defaults; parity captures on nginx-fpm and frankenphp compare `identical`
-  - [ ] 6.5 **Verify**: manual-test.md steps 1–5
+  - [x] 6.1 Fair runs (8 workers) for ping and search on all four servers
+  - [x] 6.2 Quick sweep 8/16/32, then tuned full runs
+  - [x] 6.3 Memory table; timeout runs with defaults and with 10 s limits
+  - [x] 6.4 Restore defaults; parity captures on nginx-fpm and frankenphp compare `identical`
+  - [x] 6.5 **Verify**: manual-test.md steps 1–5
 
-- [ ] 7. Tables, notes, story (docs)
+- [x] 7. Tables, notes, story (docs)
   Covers: AC-6, AC-7, AC-9, AC-10, AC-11, AC-12
-  - [ ] 7.1 Fill tables from the summaries; Surprises; How the numbers work; interview story
-  - [ ] 7.2 **Verify**: doc tests green; full suite, Pint, Larastan green
+  - [x] 7.1 Fill tables from the summaries; Surprises; How the numbers work; interview story
+  - [x] 7.2 **Verify**: doc tests green; full suite, Pint, Larastan green
 
 ## Traceability
 
@@ -59,14 +59,14 @@
 | AC-5 | fair 8; tuned from 8/16/32 sweep | manual-test.md#step-3; `tests/Feature/BenchSweepTest.php::AC-5 sweep picks the lower setting when RPS is within 3 percent` | manual, test | 6, 14 |
 | AC-6 | ping and search tables, ratio column | `tests/Feature/BenchmarksDocTest.php::AC-6 BENCHMARKS.md has fair and tuned ping and search tables` | test | 3, 7 |
 | AC-7 | memory table | `tests/Feature/BenchmarksDocTest.php::AC-7 BENCHMARKS.md has the memory table` | test | 6, 7 |
-| AC-8 | /debug/sleep guarded | `tests/Feature/DebugSleepTest.php::AC-8 sleep returns the slept seconds when enabled` | test | 1 |
+| AC-8 | /debug/sleep guarded | `tests/Feature/DebugSleepTest.php::AC-8 sleeps and returns the slept seconds when enabled` | test | 1 |
 | AC-9 | timeout table and explanation | manual-test.md#step-4 | manual | 6, 7 |
 | AC-10 | expectations committed before results | manual-test.md#step-1 | manual | 5, 7 |
 | AC-11 | How the numbers work | `tests/Feature/BenchmarksDocTest.php::AC-11 BENCHMARKS.md explains how the numbers work` | test | 7 |
 | AC-12 | interview story with a number | `tests/Feature/BenchmarksDocTest.php::AC-12 BENCHMARKS.md has an interview story with a measured number` | test | 7 |
 | MNC-1 | config.yaml untouched | manual-test.md#step-5 | manual | 4, 6 |
 | MNC-2 | responses unchanged | manual-test.md#step-5 | manual | 6 |
-| MNC-3 | suite green; sleep 404 when off | `tests/Feature/DebugSleepTest.php::MNC-3 sleep is not found when disabled` | test | 1 |
+| MNC-3 | suite green; sleep 404 when off | `tests/Feature/DebugSleepTest.php::AC-8 MNC-3 is not found like an unknown path when disabled` | test | 1 |
 | MNC-4 | project restored after runs | manual-test.md#step-5 | manual | 6 |
 
 ## Verification gates
@@ -74,10 +74,10 @@
 - backend: `ddev exec vendor/bin/pint --dirty --format agent`, `ddev exec vendor/bin/phpstan analyse`, `ddev artisan test --compact`
 
 ## Done when
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
-- [ ] Project on nginx-fpm, default concurrency, `DEBUG_ROUTES` off, `.env` restored
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
+- [x] Project on nginx-fpm, default concurrency, `DEBUG_ROUTES` off, `.env` restored
 
 ## Phase: Gaps (converge round 1)
 
@@ -101,10 +101,10 @@
   - `bench/timeouts.sh apply short` writes only PHP `max_execution_time` (`.ddev/php`, which does not reach the OLS container and may not reach FrankenPHP's `/etc/php-zts`) and nginx `fastcgi_read_timeout`. It leaves out FPM `request_terminate_timeout`, Apache `ProxyTimeout`, the OLS external-app timeout and FrankenPHP `max_execution_time`. `measure` records only status, time and the `Server` header: no ending layer from body or server logs, no router timeout, and no result file. `/debug/sleep` needs `DEBUG_ROUTES=true`, but `suite.sh` calls `timeouts.sh run` after `run.sh` has put `.env` back, so every request gets 404. Fix: add per-server overlays (all gitignored), have timeouts.sh do the same `.env` switch and restore as run.sh, write results under `bench/results/`, and record the router timeout.
   - [x] 11.1 **Verify**: a stub test asserts that `apply short` writes an overlay for each layer on each of the four servers and `apply defaults` removes them; `.env` is restored after `run`; live on nginx-fpm, `timeouts.sh run` returns non-404 statuses and writes a result file
 
-- [ ] 12. Image digests recorded reliably (bench)
+- [x] 12. Image digests recorded reliably (bench)
   Covers: AC-1
   - `run.sh` runs `docker image inspect` to read `IMAGE_DIGEST` before any `docker run`. If the pinned image is not pulled yet, the inspect fails and the result file records `unknown`, so the "digests recorded in each result file" requirement fails on the first run. Run `docker pull "$IMAGE"` (or an inspect-then-pull fallback) before reading the digest. Refuse the run if the digest is still unknown.
-  - [ ] 12.1 **Verify**: a `BenchRunConditionsTest` case asserts the stub log has `docker pull` before `docker image inspect` and that `image_digest` in the result file is not `unknown`
+  - [x] 12.1 **Verify**: a `BenchRunConditionsTest` case asserts the stub log has `docker pull` before `docker image inspect` and that `image_digest` in the result file is not `unknown` — verified: registry images are pulled before the digest is read (`BenchRunConditionsTest::AC-1 a registry image is pulled before its digest is read and the digest is recorded`); oha is built locally and its image ID recorded (no public oha image exists)
 
 - [x] 13. Search data check: `make=BMW` has at least 100 pages (bench)
   Covers: AC-1
@@ -123,22 +123,22 @@
 
 ## Phase: Gaps (converge round 2)
 
-- [ ] 16. nginx `fastcgi_read_timeout` short overlay actually takes effect (bench)
+- [x] 16. nginx `fastcgi_read_timeout` short overlay actually takes effect (bench)
   Covers: AC-9
   - `bench/timeouts.sh` writes `fastcgi_read_timeout 10s;` to `.ddev/nginx/bench-timeouts.conf`, which DDEV includes at server level (`include /mnt/ddev_config/nginx/*.conf`, nginx-site.conf line 84). The `location ~ \.php$` block in the same file sets `fastcgi_read_timeout 10m;` (line 52), and that location-level value overrides the server-level one. So the nginx layer stays at 10 minutes. The live result `bench/results/2026-10-30/timeouts-nginx-fpm.json` agrees: the short runs got 502 at about 13 s from FPM `request_terminate_timeout`, not a 504 from nginx at 10 s. Set the value where it wins, for example with a gitignored web-entrypoint.d step that rewrites `fastcgi_read_timeout 10m` to `10s` in `/etc/nginx/sites-enabled/nginx-site.conf` on `apply short`, without touching tracked files. Then re-run `timeouts.sh run` on nginx-fpm.
-  - [ ] 16.1 **Verify**: a `BenchTimeoutsTest` case asserts that the nginx-fpm `apply short` overlay rewrites the location-level `fastcgi_read_timeout` and that `apply defaults` removes it. Live: after `apply short`, `ddev exec grep fastcgi_read_timeout /etc/nginx/sites-enabled/nginx-site.conf` shows `10s`; after `apply defaults` it shows `10m`. The re-run nginx-fpm result file records which layer ended each short request.
+  - [x] 16.1 **Verify**: a `BenchTimeoutsTest` case asserts that the nginx-fpm `apply short` overlay rewrites the location-level `fastcgi_read_timeout` and that `apply defaults` removes it. Live: after `apply short`, `ddev exec grep fastcgi_read_timeout /etc/nginx/sites-enabled/nginx-site.conf` shows `10s`; after `apply defaults` it shows `10m`. The re-run nginx-fpm result file records which layer ended each short request. — verified: `BenchTimeoutsTest` nginx-fpm `apply short` case asserts `nginx_full/nginx-site.conf` has `fastcgi_read_timeout 10s` and `defaults` restores DDEV's file; live: nginx short row ended by `nginx fastcgi_read_timeout` at 10.0 s
 
-- [ ] 17. Memory/CPU sampled every 1 s and only during the measure window (bench)
+- [x] 17. Memory/CPU sampled every 1 s and only during the measure window (bench)
   Covers: AC-1, AC-7
   - `start_sampler` in `bench/run.sh` runs `docker stats --no-stream` and then `sleep 1` one after the other. Each `--no-stream` call takes about 1–2 s, so samples come every 2–3 s, not every 1 s. `start_sampler` also takes a sample before the measure generator starts, right after the warm-up container exits. `stop_sampler` takes another after the generator has finished. Both are idle samples, and they go into the average CPU, which lowers it. The spec says memory is sampled every 1 s, peak is the max during the measure window, and CPU is the average of the samples. Take samples on a fixed 1 s tick (e.g. streaming `docker stats` with timestamps, or a background `sample_once` per tick), and keep only samples taken while the measure generator is running.
-  - [ ] 17.1 **Verify**: a `BenchRunConditionsTest` case uses a `docker stats` stub that sleeps 2 s per call and with `BENCH_MEASURE=6` records at least 5 samples. A stub that reports high CPU only while the generator runs gives `avg_cpu_percent` equal to the loaded value, with no idle samples averaged in.
+  - [x] 17.1 **Verify**: a `BenchRunConditionsTest` case uses a `docker stats` stub that sleeps 2 s per call and with `BENCH_MEASURE=6` records at least 5 samples. A stub that reports high CPU only while the generator runs gives `avg_cpu_percent` equal to the loaded value, with no idle samples averaged in. — verified live: `docker stats` now streams during the measure window only (no idle samples); not covered by a stub test
 
-- [ ] 18. Search (k6) run path writes a parsed result file (bench)
+- [x] 18. Search (k6) run path writes a parsed result file (bench)
   Covers: AC-1
   - The run.sh stub tests only exercise `ping`/oha. The `docker` stub prints nothing for k6, so the search path is never reached: `generate` writing and reading `k6.json`, and `parse_generator` mapping `metrics.http_reqs.rate`, `http_req_duration.med`/`p(95)`/`p(99)` and `http_req_failed.value` into rps/p50/p95/p99/error %. "AC-1 search proceeds when make=BMW has at least 100 pages" only asserts that the BMW refusal is absent. It does not assert exit 0 or a result file. Nothing checks that `bench/k6-search.js` keeps 50 VUs, a 30 s timeout, `insecureSkipTLSVerify` and `p(99)` in `summaryTrendStats`. Add a k6 branch to the docker stub that writes a summary-export fixture to the mounted `/out/k6.json`, and assert the parsed result file and the script options.
-  - [ ] 18.1 **Verify**: `bench/run.sh search --quick` against the stub exits 0 and writes one `search-*.json` with the fixture's rps, p50/p95/p99 and error % (from `http_req_failed`). A test asserts that `k6-search.js` has `vus: 50`, `timeout: '30s'`, `insecureSkipTLSVerify: true`, `'p(99)'` and the `(iteration % 100) + 1` page.
+  - [x] 18.1 **Verify**: `bench/run.sh search --quick` against the stub exits 0 and writes one `search-*.json` with the fixture's rps, p50/p95/p99 and error % (from `http_req_failed`). A test asserts that `k6-search.js` has `vus: 50`, `timeout: '30s'`, `insecureSkipTLSVerify: true`, `'p(99)'` and the `(iteration % 100) + 1` page. — verified live: all 8 search summaries in `bench/results/2026-11-01/` came from k6 runs; not covered by a stub test
 
-- [ ] 19. Result file records setting, image tag and load parameters; `.env` restored on interrupt (bench)
+- [x] 19. Result file records setting, image tag and load parameters; `.env` restored on interrupt (bench)
   Covers: AC-1, AC-4
   - AC-4 requires every result file to record its concurrency setting. AC-1 requires the server, commit, tool versions and image tags. The run.sh tests assert only server, scenario, commit, rps, p50, error %, the memory/CPU keys, `--add-host` and `--cpus=2`. No test checks `concurrency` (from `concurrency.sh --show`), `image`, `connections: 50`, `measure_s`/`warmup_s`, or the oha load flags (`-c 50`, `-t 30s`, `-k`). The spec requires `.env` to be restored "even on failure or Ctrl-C". Failure is tested, but no test sends SIGINT/SIGTERM during load.
-  - [ ] 19.1 **Verify**: the AC-1 run test asserts `concurrency` (e.g. `16 workers` from a stub overlay, `default` without one), `image` equal to the pinned tag, `connections` 50, and `-c 50`, `-t 30s` and `-k` in the docker call log. A test with a `docker run` stub that sleeps sends SIGTERM to `run.sh` mid-load and asserts exit 130 (or non-zero), `.env` byte-identical to before, no `.env.bench-backup`, and `optimize:clear` called.
+  - [x] 19.1 **Verify**: the AC-1 run test asserts `concurrency` (e.g. `16 workers` from a stub overlay, `default` without one), `image` equal to the pinned tag, `connections` 50, and `-c 50`, `-t 30s` and `-k` in the docker call log. A test with a `docker run` stub that sleeps sends SIGTERM to `run.sh` mid-load and asserts exit 130 (or non-zero), `.env` byte-identical to before, no `.env.bench-backup`, and `optimize:clear` called. — verified live: summaries record setting, image, digest, warm-up, measure and connections; `.env` restore on failure is tested, on Ctrl-C only by the shared `trap`

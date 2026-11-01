@@ -121,6 +121,10 @@ During runs the harness itself sets `.env` to `APP_ENV=production`, `APP_DEBUG=f
 3. Add guarded `/debug/sleep/{seconds}` for the timeout comparison (user choice).
 4. Full method in one background run, about 1.5–2 hours of load (user choice).
 5. Q-02 validity rule: spread > 5 % → rerun once, then mark `noisy` (user choice).
+6. oha has no public Docker image (the build's pinned `ghcr.io/hatoo/oha` tag was never pullable), so `bench/oha/Dockerfile` builds oha 1.16.0 from the release binary with SHA-256 values computed on 2026-11-01 (oha publishes none); the image ID is recorded instead of a registry digest (fix pass, 2026-11-01).
+7. The nginx 10 s timeout replaces DDEV's `nginx_full/nginx-site.conf` for the short mode, because DDEV sets `fastcgi_read_timeout 10m` inside the PHP location, where a server-level snippet cannot override it; `defaults` restores DDEV's file (fix pass).
+8. The clean-tree check ignores `.ai/session/`, the SDD tooling's own log, which the tooling rewrites; app code is still required to be committed (fix pass).
+9. Timeout attribution reads only the request's own log lines: container output since the request started, Laravel's `storage/logs/laravel.log` and OpenLiteSpeed's `error.log`, both read inside the serving container (fix pass).
 
 ## Open questions
 - [x] Assumption: BR-20, BR-21, BR-22, BR-23, BR-24, BR-26 and BR-27 are unvalidated draft rules (owner Stanislav Markov). — **Accepted assumption** (Stanislav Markov, 2026-10-30).

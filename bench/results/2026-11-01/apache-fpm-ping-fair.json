@@ -1,0 +1,100 @@
+{
+    "server": "apache-fpm",
+    "scenario": "ping",
+    "label": "fair",
+    "setting": "8 workers",
+    "commit": "b29c1ff",
+    "image": "autopulse-oha:1.16.0",
+    "image_digest": "sha256:12c8fd3955056a7d68ff58317e87ae2878e72c2c9046169dc35da35b36428937",
+    "date": "2026-11-01",
+    "runs": [
+        {
+            "set": 1,
+            "repeat": 1,
+            "rps": 5651.985687003796,
+            "p50_ms": 8.317858,
+            "p95_ms": 12.282892,
+            "p99_ms": 15.310969,
+            "error_percent": 0,
+            "idle_memory_mib": {
+                "web": 150.9,
+                "db": 18.8
+            },
+            "peak_memory_mib": {
+                "web": 181.8,
+                "db": 58.7
+            },
+            "avg_cpu_percent": {
+                "web": 584.6,
+                "db": 0.1
+            }
+        },
+        {
+            "set": 1,
+            "repeat": 2,
+            "rps": 5654.178902653876,
+            "p50_ms": 8.334359,
+            "p95_ms": 12.098934,
+            "p99_ms": 14.980011999999999,
+            "error_percent": 0,
+            "idle_memory_mib": {
+                "web": 150.9,
+                "db": 18.8
+            },
+            "peak_memory_mib": {
+                "web": 166.1,
+                "db": 33.2
+            },
+            "avg_cpu_percent": {
+                "web": 591,
+                "db": 0.1
+            }
+        },
+        {
+            "set": 1,
+            "repeat": 3,
+            "rps": 5670.20423653515,
+            "p50_ms": 8.329108,
+            "p95_ms": 11.991142,
+            "p99_ms": 14.822761999999999,
+            "error_percent": 0,
+            "idle_memory_mib": {
+                "web": 150.9,
+                "db": 18.8
+            },
+            "peak_memory_mib": {
+                "web": 174.9,
+                "db": 42.2
+            },
+            "avg_cpu_percent": {
+                "web": 590.5,
+                "db": 0.1
+            }
+        }
+    ],
+    "median": {
+        "set": 1,
+        "repeat": 2,
+        "rps": 5654.178902653876,
+        "p50_ms": 8.334359,
+        "p95_ms": 12.098934,
+        "p99_ms": 14.980011999999999,
+        "error_percent": 0,
+        "idle_memory_mib": {
+            "web": 150.9,
+            "db": 18.8
+        },
+        "peak_memory_mib": {
+            "web": 166.1,
+            "db": 33.2
+        },
+        "avg_cpu_percent": {
+            "web": 591,
+            "db": 0.1
+        }
+    },
+    "spread_percent": 0.3222138854291133,
+    "noisy": false,
+    "baseline_server": "nginx-fpm",
+    "ratio": "~1.17x"
+}

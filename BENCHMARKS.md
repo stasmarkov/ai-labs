@@ -41,9 +41,73 @@ Written before any full run and committed first, so the results can be judged ag
 - **Where a request waits when every worker is busy.** PHP-FPM: in the socket listen backlog until a child is free. OpenLiteSpeed: in the LSAPI connection queue (`maxConns`) in front of the lsphp children. FrankenPHP: in its request queue until a PHP thread is free. In all three models extra load raises latency first and RPS stays flat.
 - **Why only ratios are compared.** Absolute numbers depend on this laptop, Docker's VM and what else is running, so they are not portable. Every row is shown as a ratio to the nginx-fpm row of the same table, measured in the same session, and the ratio is shown as `~` only when the nginx-fpm baseline of that table is marked `noisy`, because then no difference can be trusted.
 
+## Results (2026-11-01)
+
+All throughput runs used commit `b29c1ff`, 50 concurrent connections (closed model, no think time), 30 s warm-up and 60 s measure, 3 repeats, median by RPS. Load came from oha 1.16.0 (built locally from the checksum-pinned release, `bench/oha/Dockerfile`) for ping and grafana/k6 1.0.0 for search, capped at 2 CPUs on the OrbStack VM (7 CPUs, 16 GB) shared with every DDEV container. "fair" is 8 PHP workers with no recycling on every server; "tuned" is the best of 8/16/32 from a 10 s + 30 s sweep. CPU % is of one core (600 % = 6 cores). Ratios compare fair rows with fair nginx-fpm and tuned rows with tuned nginx-fpm; `~` means that baseline was `noisy`. The OpenLiteSpeed timeout rows were re-measured at `e5a3dfd` after fixing their classification. Raw runs: `bench/results/raw/` (not committed); summaries: `bench/results/2026-11-01/`.
+
+### /api/ping (bootstrap-dominated)
+
+| Server | Setting | RPS | p50 ms | p95 ms | p99 ms | Errors % | Peak MiB (serving) | CPU % (serving) | Spread | RPS vs nginx-fpm | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| nginx-fpm | fair: 8 workers | 4812 | 9.7 | 15.1 | 20.5 | 0.00 | 185 | 495 | 15.7% noisy | ~1.00x |  |
+| apache-fpm | fair: 8 workers | 5654 | 8.3 | 12.1 | 15.0 | 0.00 | 166 | 591 | 0.3% | ~1.17x |  |
+| openlitespeed | fair: 8 workers | 5844 | 7.8 | 13.4 | 16.8 | 0.00 | 80 | 606 | 0.4% | ~1.21x |  |
+| frankenphp | fair: 8 workers | 6235 | 7.5 | 12.2 | 16.2 | 0.00 | 221 | 595 | 0.9% | ~1.30x |  |
+| nginx-fpm | tuned: 16 workers | 6205 | 7.7 | 11.1 | 14.2 | 0.00 | 180 | 602 | 1.0% | 1.00x |  |
+| apache-fpm | tuned: 16 workers | 5937 | 8.1 | 11.5 | 14.7 | 0.00 | 194 | 620 | 0.2% | 0.96x |  |
+| openlitespeed | tuned: 8 workers | 5761 | 7.5 | 15.1 | 19.0 | 0.00 | 95 | 606 | 1.0% | 0.93x |  |
+| frankenphp | tuned: 8 workers | 6254 | 7.4 | 12.3 | 16.2 | 0.00 | 233 | 591 | 0.3% | 1.01x |  |
+
+### /listings?make=BMW (DB-dominated)
+
+| Server | Setting | RPS | p50 ms | p95 ms | p99 ms | Errors % | Peak MiB (serving) | CPU % (serving) | Spread | RPS vs nginx-fpm | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| nginx-fpm | fair: 8 workers | 528 | 92.8 | 116.9 | 130.1 | 0.00 | 183 | 310 | 4.8% | 1.00x |  |
+| apache-fpm | fair: 8 workers | 537 | 91.1 | 115.1 | 127.2 | 0.00 | 205 | 312 | 0.9% | 1.02x |  |
+| openlitespeed | fair: 8 workers | 554 | 83.2 | 130.4 | 154.9 | 0.00 | 93 | 311 | 2.5% | 1.05x |  |
+| frankenphp | fair: 8 workers | 495 | 97.9 | 126.7 | 153.2 | 0.00 | 254 | 378 | 2.9% | 0.94x |  |
+| nginx-fpm | tuned: 16 workers | 625 | 77.8 | 101.1 | 119.3 | 0.00 | 210 | 361 | 0.4% | 1.00x |  |
+| apache-fpm | tuned: 16 workers | 625 | 78.1 | 100.7 | 117.0 | 0.00 | 202 | 364 | 0.8% | 1.00x |  |
+| openlitespeed | tuned: 16 workers | 644 | 75.1 | 100.0 | 122.6 | 0.00 | 113 | 353 | 1.4% | 1.03x |  |
+| frankenphp | tuned: 16 workers | 537 | 90.4 | 117.2 | 145.2 | 0.00 | 261 | 404 | 0.6% | 0.86x |  |
+
+### Memory and CPU at 50 concurrent users (fair ping run)
+
+| Server | Serving container | Idle MiB | Peak MiB | Avg CPU % | db idle MiB | db peak MiB | db avg CPU % | Idle `web` MiB (OLS only) |
+|---|---|---|---|---|---|---|---|---|
+| nginx-fpm | web | 143 | 185 | 495 | 18 | 39 | 0 | — |
+| apache-fpm | web | 151 | 166 | 591 | 19 | 33 | 0 | — |
+| openlitespeed | openlitespeed | 68 | 80 | 606 | 19 | 41 | 0 | 153 |
+| frankenphp | web | 156 | 221 | 595 | 19 | 26 | 0 | — |
+
+### Timeouts: GET /debug/sleep/30
+
+| Server | Timeouts | Status | Seconds | Ended by |
+|---|---|---|---|---|
+| nginx-fpm | defaults | 200 | 30.2 | none (request completed) |
+| nginx-fpm | short | 504 | 10.0 | nginx fastcgi_read_timeout |
+| apache-fpm | defaults | 200 | 30.2 | none (request completed) |
+| apache-fpm | short | 504 | 10.1 | Apache ProxyTimeout |
+| openlitespeed | defaults | 200 | 30.3 | none (request completed) |
+| openlitespeed | short | 500 | 11.0 | OpenLiteSpeed external app timeout |
+| frankenphp | defaults | 200 | 30.2 | none (request completed) |
+| frankenphp | short | 500 | 10.1 | PHP max_execution_time |
+
+The memory table comes from the ping run, which never touches the database, so `db` CPU is 0 there by design; on search the serving container's CPU (310–404 %) is what grows.
+
 ## Surprises
 
-The first draft of "How the numbers work" said a difference within 5 percent is reported as `~`. The harness does not do that: `~` replaces the ratio only when the nginx-fpm baseline is `noisy`, and the Expectations line about 5 percent describes the noise rule, not a rounding rule. The results-based surprises follow after the full runs.
+- **The fair ping baseline is noisy.** nginx-fpm's fair ping run spread 27 % and still 15.7 % after the automatic rerun, so every fair ping ratio carries `~`. It was the very first run of the suite, right after DDEV started; the tuned nginx-fpm run an hour later had 1.0 % spread and 6205 RPS, about 29 % above that noisy median. The fair ping ranking (frankenphp 1.30x, openlitespeed 1.21x, apache-fpm 1.17x) is therefore not trustworthy; the tuned ping table, where all four land within 7 % (0.93x–1.01x), is. That matches the expectation and DDEV's own benchmark.
+- **FrankenPHP classic is slower on search, not equal.** Expected: classic servers within about 10 %. Measured: frankenphp 0.94x fair and 0.86x tuned (537 vs 625 RPS), with the highest CPU (378–404 %) of all four. Likely contributors, not yet proven: the thread-safe (ZTS) PHP build, which pays for thread-local storage on every global access, and a different PHP patch release (8.4.27 ZTS vs 8.4.24 NTS). On ping, where the request does almost nothing, the gap disappears.
+- **Throughput rose from 8 to 16 workers on search, not only on CPU-light ping.** Expected: past 8 workers the database becomes the limit. Measured: 16 workers won the search sweep on every server (RPS +16 % to +18 % on nginx-fpm, apache-fpm and openlitespeed, +8 % on frankenphp; p95 down by 10–30 ms), and 32 never won. The database (PostgreSQL 16, not MariaDB as the Expectations said) was not yet the limit at 8; waiting on it simply left CPU idle that a few more workers could use.
+- **FrankenPHP's 8 threads used more memory than 8 FPM children.** Expected: one process with threads uses less. Measured at 50 users: 221 MiB peak for the frankenphp `web` container vs 185 MiB for nginx-fpm and 166 MiB for apache-fpm. Caddy and the Go runtime live in the same process, and the comparison is at only 8 workers, where per-process overhead is small; the expected advantage would show at higher worker counts. OpenLiteSpeed's own container was smallest (80 MiB), but the idle `web` container next to it adds another 153 MiB.
+- **Timeouts behaved as expected, with one detail.** With every limit at 10 s, nginx and Apache ended the 30 s sleep with a 504 at their proxy timeout, OpenLiteSpeed with its own 500 at about 11 s, and only FrankenPHP's PHP stopped it itself (500, Laravel logged "Maximum execution time of 10 seconds exceeded"). Under nginx and Apache the web server and FPM's `request_terminate_timeout` race each other at 10 s, so in a dry run some requests were ended by FPM instead; which one wins is luck. The OpenLiteSpeed row is attributed by elimination: no PHP fatal was logged and its error log records nothing at ERROR level.
+- **Worker mode was not measured here.** The Expectations predicted 2–5x for the worker-mode servers; that comparison is SL-08.
+- **Tooling note.** The first draft of "How the numbers work" said a difference within 5 % is reported as `~`. The harness does not do that: `~` replaces the ratio only when the nginx-fpm baseline is `noisy`.
+
+## Interview story
+
+I ran the same Laravel app behind nginx-fpm, Apache, OpenLiteSpeed and FrankenPHP on DDEV and measured them with a harness that warms up, repeats each run three times and refuses to run unless OPcache is on and debug mode is off. Once each server was tuned, `/api/ping` landed within 7 % across all four (nginx-fpm 6205 RPS, FrankenPHP 6254), and on the database-bound search FrankenPHP classic was actually 14 % slower (537 vs 625 RPS). So swapping the web server alone does not buy speed; the gains, if any, come from worker mode. The most useful lesson was timeouts: with `max_execution_time=10`, a 30-second `sleep()` was not stopped under PHP-FPM, because on Linux that limit counts CPU time, while FrankenPHP's thread-safe PHP stopped it at 10 s. Under FPM, the real guard is the web server's timeout or `request_terminate_timeout`.
 
 ## Response parity
 

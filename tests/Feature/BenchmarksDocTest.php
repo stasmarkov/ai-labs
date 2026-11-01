@@ -16,7 +16,8 @@ test('AC-12 BENCHMARKS.md versions table has one nginx-fpm and one apache-fpm ro
         expect(preg_match_all("/^\| $server \| $version \| $version \| $version \| fpm-fcgi \| true \| $date \|$/m", $doc))
             ->toBe(1);
     }
-    expect(preg_match_all('/^\| (nginx|apache)-fpm \|/m', $doc))->toBe(2);
+    preg_match('/^## Versions\n(.*?)(?=^## |\z)/ms', $doc, $versions);
+    expect(preg_match_all('/^\| (nginx|apache)-fpm \|/m', $versions[1] ?? ''))->toBe(2);
 });
 
 test('AC-10 BENCHMARKS.md has a frankenphp row and the add-on version', function (): void {
@@ -117,4 +118,59 @@ test('AC-11 BENCHMARKS.md explains how the numbers work', function (): void {
 
     preg_match('/^## Surprises\n(.*?)(?=^## |\z)/ms', $doc, $surprises);
     expect($surprises[1] ?? '')->toContain('`~`')->toContain('noisy');
+});
+
+/**
+ * The body of one `## ` or `### ` section of BENCHMARKS.md.
+ */
+function benchmarksSection(string $heading): string
+{
+    $doc = (string) file_get_contents(base_path('BENCHMARKS.md'));
+    preg_match('/^'.preg_quote($heading, '/').'\n(.*?)(?=^#{2,3} |\z)/ms', $doc, $matches);
+
+    return $matches[1] ?? '';
+}
+
+test('AC-6 BENCHMARKS.md has fair and tuned ping and search tables', function (): void {
+    foreach (['### /api/ping (bootstrap-dominated)', '### /listings?make=BMW (DB-dominated)'] as $heading) {
+        $section = benchmarksSection($heading);
+
+        expect($section)->toContain('| Server | Setting | RPS | p50 ms | p95 ms | p99 ms | Errors % |')
+            ->toContain('RPS vs nginx-fpm')
+            ->toContain('| Notes |');
+
+        foreach (['nginx-fpm', 'apache-fpm', 'openlitespeed', 'frankenphp'] as $server) {
+            expect(preg_match_all("/^\\| {$server} \\| fair: /m", $section))->toBe(1)
+                ->and(preg_match_all("/^\\| {$server} \\| tuned: /m", $section))->toBe(1);
+        }
+    }
+});
+
+test('AC-7 BENCHMARKS.md has the memory table', function (): void {
+    $section = benchmarksSection('### Memory and CPU at 50 concurrent users (fair ping run)');
+
+    expect($section)->toContain('| Idle MiB | Peak MiB | Avg CPU % | db idle MiB | db peak MiB |');
+
+    foreach (['nginx-fpm', 'apache-fpm', 'openlitespeed', 'frankenphp'] as $server) {
+        expect($section)->toMatch("/^\\| {$server} \\| (web|openlitespeed) \\| \\d+ \\| \\d+ \\|/m");
+    }
+});
+
+test('AC-9 BENCHMARKS.md has the timeout table with defaults and short rows', function (): void {
+    $section = benchmarksSection('### Timeouts: GET /debug/sleep/30');
+
+    foreach (['nginx-fpm', 'apache-fpm', 'openlitespeed', 'frankenphp'] as $server) {
+        expect($section)->toMatch("/^\\| {$server} \\| defaults \\| 200 \\|/m")
+            ->toMatch("/^\\| {$server} \\| short \\| 50\\d \\|/m");
+    }
+
+    expect($section)->not->toContain('unknown');
+});
+
+test('AC-12 BENCHMARKS.md has an interview story with a measured number', function (): void {
+    $story = benchmarksSection('## Interview story');
+    $sentences = preg_split('/(?<=[.!?])\s+(?=[A-Z])/', trim($story)) ?: [];
+
+    expect(count($sentences))->toBeGreaterThanOrEqual(3)->toBeLessThanOrEqual(6)
+        ->and($story)->toMatch('/\\d{3,} RPS/');
 });

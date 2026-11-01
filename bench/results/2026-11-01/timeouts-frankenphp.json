@@ -1,0 +1,62 @@
+{
+  "server": "frankenphp",
+  "date": "2026-11-01T12:36:25Z",
+  "path": "/debug/sleep/30",
+  "router_timeout": "default (ddev-router, not changed)",
+  "runs": [
+    {
+      "label": "defaults",
+      "request": 1,
+      "status": 200,
+      "seconds": 30.190599,
+      "server_header": "FrankenPHP Caddy",
+      "ending_layer": "none (request completed)",
+      "log_excerpt": ""
+    },
+    {
+      "label": "defaults",
+      "request": 2,
+      "status": 200,
+      "seconds": 30.108127,
+      "server_header": "FrankenPHP Caddy",
+      "ending_layer": "none (request completed)",
+      "log_excerpt": ""
+    },
+    {
+      "label": "defaults",
+      "request": 3,
+      "status": 200,
+      "seconds": 30.053686,
+      "server_header": "FrankenPHP Caddy",
+      "ending_layer": "none (request completed)",
+      "log_excerpt": ""
+    },
+    {
+      "label": "short",
+      "request": 1,
+      "status": 500,
+      "seconds": 10.132775,
+      "server_header": "FrankenPHP Caddy",
+      "ending_layer": "PHP max_execution_time",
+      "log_excerpt": "{\"level\":\"error\",\"ts\":1793536548.111789,\"logger\":\"http.handlers.php\",\"msg\":\"PHP Fatal error:  Maximum execution time of 10 seconds exceeded in /var/www/html/vendor/laravel/framework/src/Illuminate/Support/Sleep.php on line 345\",\"syslog_level\":\"err\",\"stacktrace\":\"log/slog.(*Logger).LogAttrs\\n\\t/opt/spc-pkgroot/go-xcaddy/src/log/slog/logger.go:194\\ngithub.com/dunglas/frankenphp.go_log\\n\\t/__w/packages/packages/source/frankenphp/frankenphp.go:843\\n_cgoexp_69580133288a_go_log\\n\\t/__w/packages/packages/source/frankenphp/frankenphp.go:790\\nruntime.cgocallbackg1\\n\\t/opt/spc-pkgroot/go-xcaddy/src/runtime/cgocall.go:474\\nruntime.cgocallbackg\\n\\t/opt/spc-pkgroot/go-xcaddy/src/runtime/cgocall.go:362\\nruntime.cgocallback\\n\\t/opt/spc-pkgroot/go-xcaddy/src/runtime/asm_arm64.s:949\"}\n[2026-11-01 12:35:48] local.ERROR: Maximum execution time of 10 seconds exceeded {\"exception\":\"[object] (Symfony\\\\Component\\\\ErrorHandler\\\\Error\\\\FatalError(code: 0): Maximum execution time of 10 seco"
+    },
+    {
+      "label": "short",
+      "request": 2,
+      "status": 500,
+      "seconds": 10.060101,
+      "server_header": "FrankenPHP Caddy",
+      "ending_layer": "PHP max_execution_time",
+      "log_excerpt": "{\"level\":\"error\",\"ts\":1793536548.111789,\"logger\":\"http.handlers.php\",\"msg\":\"PHP Fatal error:  Maximum execution time of 10 seconds exceeded in /var/www/html/vendor/laravel/framework/src/Illuminate/Support/Sleep.php on line 345\",\"syslog_level\":\"err\",\"stacktrace\":\"log/slog.(*Logger).LogAttrs\\n\\t/opt/spc-pkgroot/go-xcaddy/src/log/slog/logger.go:194\\ngithub.com/dunglas/frankenphp.go_log\\n\\t/__w/packages/packages/source/frankenphp/frankenphp.go:843\\n_cgoexp_69580133288a_go_log\\n\\t/__w/packages/packages/source/frankenphp/frankenphp.go:790\\nruntime.cgocallbackg1\\n\\t/opt/spc-pkgroot/go-xcaddy/src/runtime/cgocall.go:474\\nruntime.cgocallbackg\\n\\t/opt/spc-pkgroot/go-xcaddy/src/runtime/cgocall.go:362\\nruntime.cgocallback\\n\\t/opt/spc-pkgroot/go-xcaddy/src/runtime/asm_arm64.s:949\"}\n{\"level\":\"error\",\"ts\":1793536558.339934,\"logger\":\"http.handlers.php\",\"msg\":\"PHP Fatal error:  Maximum execution time of 10 seconds exceeded in /var/www/html/vendor/laravel/framework/src/Illuminate/Support/Sleep.php on line 345\",\"syslog_level\":\"err\",\"stacktrace\":\"log/slog.(*Logger).LogAttrs\\n\\t/opt/spc-pkgroot/go-xcaddy/src/log/slog/logger.go:194\\ngithub.com/dunglas/frankenphp.go_log\\n\\t/__w/packages/packages/source/frankenphp/frankenphp.go:843\\n_cgoexp_69580133288a_go_log\\n\\t/__w/packages/packages/source/frankenphp/frankenphp.go:790\\nruntime.cgocallbackg1\\n\\t/opt/spc-pkgroot/go-xcaddy/src/runtime/cgocall.go:474\\nruntime.cgocallbackg\\n\\t/opt/spc-pkgroot/go-xcaddy/src/runtime/cgocall.go:362\\nruntime.cgocallback\\n\\t/opt/spc-pkgroot/go-xcaddy/src/runtime/asm_arm64.s:949\"}\n[2026-11-01 12:35:58] local.ERROR: Maximum execution time of 10 seconds exceeded {\"exception\":\"[object] (Symfony\\\\Component\\\\ErrorHandler\\\\Error\\\\FatalError(code: 0): Maximum execution time of 10 seco"
+    },
+    {
+      "label": "short",
+      "request": 3,
+      "status": 500,
+      "seconds": 10.067549,
+      "server_header": "FrankenPHP Caddy",
+      "ending_layer": "PHP max_execution_time",
+      "log_excerpt": "{\"level\":\"error\",\"ts\":1793536558.339934,\"logger\":\"http.handlers.php\",\"msg\":\"PHP Fatal error:  Maximum execution time of 10 seconds exceeded in /var/www/html/vendor/laravel/framework/src/Illuminate/Support/Sleep.php on line 345\",\"syslog_level\":\"err\",\"stacktrace\":\"log/slog.(*Logger).LogAttrs\\n\\t/opt/spc-pkgroot/go-xcaddy/src/log/slog/logger.go:194\\ngithub.com/dunglas/frankenphp.go_log\\n\\t/__w/packages/packages/source/frankenphp/frankenphp.go:843\\n_cgoexp_69580133288a_go_log\\n\\t/__w/packages/packages/source/frankenphp/frankenphp.go:790\\nruntime.cgocallbackg1\\n\\t/opt/spc-pkgroot/go-xcaddy/src/runtime/cgocall.go:474\\nruntime.cgocallbackg\\n\\t/opt/spc-pkgroot/go-xcaddy/src/runtime/cgocall.go:362\\nruntime.cgocallback\\n\\t/opt/spc-pkgroot/go-xcaddy/src/runtime/asm_arm64.s:949\"}\n{\"level\":\"error\",\"ts\":1793536568.5413642,\"logger\":\"http.handlers.php\",\"msg\":\"PHP Fatal error:  Maximum execution time of 10 seconds exceeded in /var/www/html/vendor/laravel/framework/src/Illuminate/Support/Sleep.php on line 345\",\"syslog_level\":\"err\",\"stacktrace\":\"log/slog.(*Logger).LogAttrs\\n\\t/opt/spc-pkgroot/go-xcaddy/src/log/slog/logger.go:194\\ngithub.com/dunglas/frankenphp.go_log\\n\\t/__w/packages/packages/source/frankenphp/frankenphp.go:843\\n_cgoexp_69580133288a_go_log\\n\\t/__w/packages/packages/source/frankenphp/frankenphp.go:790\\nruntime.cgocallbackg1\\n\\t/opt/spc-pkgroot/go-xcaddy/src/runtime/cgocall.go:474\\nruntime.cgocallbackg\\n\\t/opt/spc-pkgroot/go-xcaddy/src/runtime/cgocall.go:362\\nruntime.cgocallback\\n\\t/opt/spc-pkgroot/go-xcaddy/src/runtime/asm_arm64.s:949\"}\n[2026-11-01 12:36:08] local.ERROR: Maximum execution time of 10 seconds exceeded {\"exception\":\"[object] (Symfony\\\\Component\\\\ErrorHandler\\\\Error\\\\FatalError(code: 0): Maximum execution time of 10 seco"
+    }
+  ]
+}
