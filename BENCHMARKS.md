@@ -34,6 +34,16 @@ Written before any full run and committed first, so the results can be judged ag
 - **timeout behaviour.** `max_execution_time` counts CPU time under PHP-FPM on Linux, so `/debug/sleep` should not be stopped by it there. Under thread-safe PHP (FrankenPHP) it uses wall-clock timers and should stop the request. With 10 s limits, a sleep above the limit should fail on the servers whose own timeout applies and succeed elsewhere.
 - **noise.** Runs with spread above 5 percent are rerun once and marked noisy if they stay above it. Anything within 5 percent of the baseline is reported as `~`, not as a win.
 
+## Expectations (classic vs worker)
+
+Written before any classic-vs-worker run and committed first, so the results can be judged against a prediction made without them. Compared servers: frankenphp (classic), frankenphp-octane and frankenphp-worker, with frankenphp classic as the baseline.
+
+- **ping.** Worker mode should reach at least 2x the RPS of frankenphp classic, because the app boots once instead of on every request and the request itself does almost no work.
+- **search.** Worker mode should reach at most 1.3x the RPS of frankenphp classic, because the database query dominates the request and bootstrap is a small share of it.
+- **memory, case A (leak, no recycling).** `memory_bytes` should grow roughly linearly with requests, since the static cache gets a new key every request.
+- **memory, case B (fixed, no recycling) and both classic cases.** Growth should stay within 5 KiB per 1 000 requests: the fixed route keeps nothing, and classic mode throws everything away after each request.
+- **memory, case C (leak, max-requests 500).** `memory_bytes` should drop at every worker restart, about every 500 requests, giving a sawtooth instead of a straight line.
+
 ## How the numbers work
 
 - **RPS** is completed requests per second during the 60 s measure window, after a 30 s warm-up. **p50, p95 and p99** are the latencies under which 50, 95 and 99 percent of requests finished; p95 and p99 show the slow tail that an average hides. **Error %** (the error rate) is the share of requests that failed: a status outside 2xx and 3xx, a transport error or a generator timeout. **Spread** is the run-to-run spread: (max - min) / median RPS over the 3 repeats; above 5 percent the set is rerun once and the row is marked `noisy` if it stays above.

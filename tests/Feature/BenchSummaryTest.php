@@ -235,3 +235,48 @@ it('AC-6 AC-7 tables render fair and tuned rows, the memory table and the timeou
     array_map('unlink', glob("$dir/*.json"));
     rmdir($dir);
 });
+
+it('AC-2 tables take the server list from the summaries present and use frankenphp as the baseline column', function (): void {
+    $dir = sys_get_temp_dir().'/bench-tables-'.bin2hex(random_bytes(4));
+    mkdir($dir);
+    foreach (['frankenphp-worker' => 2000, 'frankenphp' => 1000, 'frankenphp-octane' => 1500] as $server => $rps) {
+        $summary = benchSummarize([benchRun($rps, overrides: ['server' => $server, 'label' => 'fair', 'concurrency' => 'workers=8'])]);
+        file_put_contents("$dir/$server-ping-fair.json", json_encode(benchSummaryDocument($summary, null)));
+    }
+
+    $tables = benchTables($dir);
+
+    expect($tables)->toContain('RPS vs frankenphp')
+        ->not->toContain('nginx-fpm')
+        ->not->toContain('apache-fpm')
+        ->and(strpos($tables, '| frankenphp |'))->toBeLessThan(strpos($tables, '| frankenphp-octane |'))
+        ->and(strpos($tables, '| frankenphp-octane |'))->toBeLessThan(strpos($tables, '| frankenphp-worker |'));
+
+    array_map('unlink', glob("$dir/*.json"));
+    rmdir($dir);
+});
+
+it('AC-6 tables render the worker memory table from memory files', function (): void {
+    $dir = sys_get_temp_dir().'/bench-tables-'.bin2hex(random_bytes(4));
+    mkdir($dir);
+    $samples = fn (int $base, int $step): array => array_map(
+        fn (int $requests): array => ['requests' => $requests, 'memory_bytes' => $base + $requests * $step, 'worker_hits' => 1, 'first_seen_at' => 'x'],
+        [0, 1000, 5000, 10000],
+    );
+    file_put_contents("$dir/memory-frankenphp-worker.json", json_encode([
+        'server' => 'frankenphp-worker', 'commit' => 'abc', 'date' => '2030-01-01',
+        'cases' => [
+            ['case' => 'A', 'mode' => 'leak', 'workers' => 1, 'max_requests' => 1000000, 'samples' => $samples(2000000, 1024), 'restarts' => 0, 'growth_kib_per_1000' => 1000.0],
+            ['case' => 'C', 'mode' => 'leak', 'workers' => 1, 'max_requests' => 500, 'samples' => array_slice($samples(2000000, 10), 0, 2), 'restarts' => 19, 'growth_kib_per_1000' => 9.77],
+        ],
+    ]));
+
+    $tables = benchTables($dir);
+
+    expect($tables)->toContain('### Worker memory growth')
+        ->toContain('| frankenphp-worker | A | leak | 1000000 | 2000000 | 3024000 | 7120000 | 12240000 | 0 | 12240000 | 1000.00 |')
+        ->toContain('| frankenphp-worker | C | leak | 500 | 2000000 | 2010000 | — | — | 19 | 2010000 | 9.77 |');
+
+    array_map('unlink', glob("$dir/*.json"));
+    rmdir($dir);
+});

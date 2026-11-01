@@ -10,6 +10,7 @@
 ## reaching the DDEV router through --add-host.
 ## Env: BENCH_WARMUP, BENCH_MEASURE (seconds), BENCH_REPEATS, BENCH_SETTLE (seconds after restart),
 ##      BENCH_APPROOT (project root), BENCH_BASE_URL (default: `ddev server --url`),
+##      BENCH_READY_TIMEOUT (seconds to wait for /debug/runtime after a worker-server reload, default 120),
 ##      BENCH_OHA_IMAGE, BENCH_K6_IMAGE.
 
 set -Eeuo pipefail
@@ -102,6 +103,18 @@ set_env_value APP_ENV production
 set_env_value APP_DEBUG false
 set_env_value DEBUG_ROUTES true
 ddev artisan optimize >/dev/null
+
+# Worker servers boot the app once: reload them so the switched .env and the caches are what they serve.
+READY_TIMEOUT="${BENCH_READY_TIMEOUT:-120}"
+if [[ "$server" == "frankenphp-octane" || "$server" == "frankenphp-worker" ]]; then
+  ddev restart >/dev/null
+  waited=0
+  until [[ "$(curl -ksS --max-time 30 -H 'Accept: application/json' -o /dev/null -w '%{http_code}' "$BASE_URL/debug/runtime" 2>/dev/null || true)" == "200" ]]; do
+    [[ "$waited" -lt "$READY_TIMEOUT" ]] || refuse "$server did not answer /debug/runtime with 200 within ${READY_TIMEOUT}s after the restart"
+    sleep 1
+    waited=$((waited + 1))
+  done
+fi
 
 check_conditions() {
   local value body status

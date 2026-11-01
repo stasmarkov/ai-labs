@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Debug\Leaks\LeakLabServiceProvider;
-
 use App\Debug\Leaks\LeakMode;
 use App\Debug\Leaks\LeakProbe;
 use App\Debug\Leaks\LeakProbeRunner;

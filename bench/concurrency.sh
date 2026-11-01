@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-## Usage: bench/concurrency.sh <n>
+## Usage: bench/concurrency.sh <n> [--max-requests <m>]
 ##        bench/concurrency.sh default
 ##        bench/concurrency.sh --show
 ## Sets the PHP worker limit of the active server to n and restarts DDEV; default restores today's values
@@ -7,8 +7,14 @@
 ## n means: FPM pm=static, pm.max_children=n, pm.max_requests=0 (web-entrypoint.d script that edits the pool);
 ## OpenLiteSpeed PHP_LSAPI_CHILDREN=n and maxConns n (generated httpd_config.conf mounted by a compose overlay);
 ## FrankenPHP num_threads n and max_threads n (FRANKENPHP_CONFIG in a config.zz-*.yaml overlay).
+## frankenphp-octane: the daemon command of the stash, copied to config.zzz-bench-concurrency.yaml with
+## --workers=n and --max-requests=m and override_config: true, so it replaces the active daemon. m defaults to
+## 1000000, "no recycling": Octane's worker script treats 0 as "stop at once". frankenphp-worker: the stash Caddyfile with "num n" and "env MAX_REQUESTS m", written to
+## .ddev/web-build/Caddyfile.frankenphp (the file `ddev server` activates); default copies the stash file back.
+## --max-requests <m> is accepted for these two servers only.
 ## All overlays are gitignored and written under .ddev/; .ddev/config.yaml is never touched.
-## --show prints "<n> workers" or "default". Env: BENCH_APPROOT.
+## --show prints "<n> workers" or "default"; on frankenphp-octane and frankenphp-worker it prints
+## "<n> workers, max-requests <m>" read from the active configuration. Env: BENCH_APPROOT.
 
 set -Eeuo pipefail
 
@@ -21,14 +27,53 @@ OLS_COMPOSE="$DDEV_DIR/docker-compose.bench-concurrency.yaml"
 OLS_DIR="$DDEV_DIR/bench-concurrency"
 OLS_CONF="$OLS_DIR/httpd_config.conf"
 OLS_SOURCE="$DDEV_DIR/servers/openlitespeed/conf/httpd_config.conf"
+OCTANE_OVERLAY="$DDEV_DIR/config.zzz-bench-concurrency.yaml"
+OCTANE_ACTIVE="$DDEV_DIR/config.zz-server.yaml"
+OCTANE_SOURCE="$DDEV_DIR/servers/frankenphp-octane/config.frankenphp-octane.yaml"
+CADDYFILE="$DDEV_DIR/web-build/Caddyfile.frankenphp"
+CADDYFILE_SOURCE="$DDEV_DIR/servers/frankenphp-worker/web-build/Caddyfile.frankenphp"
+NO_RECYCLING=1000000
 
 usage() {
-  echo "Usage: $0 <n>|default|--show (n is a positive integer)" >&2
+  echo "Usage: $0 <n> [--max-requests <m>]|default|--show (n and m are positive integers; --max-requests only on frankenphp-octane and frankenphp-worker)" >&2
   exit 2
 }
 
 remove_overlays() {
-  rm -rf "$FPM_SCRIPT" "$FRANKEN_OVERLAY" "$OLS_COMPOSE" "$OLS_DIR"
+  rm -rf "$FPM_SCRIPT" "$FRANKEN_OVERLAY" "$OLS_COMPOSE" "$OLS_DIR" "$OCTANE_OVERLAY"
+}
+
+write_octane() {
+  {
+    echo "override_config: true"
+    sed -E "s/--workers=[0-9]+/--workers=$1/; s/--max-requests=[0-9]+/--max-requests=$2/" "$OCTANE_SOURCE"
+  } > "$OCTANE_OVERLAY"
+}
+
+write_worker() {
+  mkdir -p "$(dirname "$CADDYFILE")"
+  sed -E "s/^([[:space:]]*num )[0-9]+\$/\1$1/; s/^([[:space:]]*env MAX_REQUESTS )[0-9]+\$/\1$2/" "$CADDYFILE_SOURCE" > "$CADDYFILE"
+}
+
+restore_worker() {
+  mkdir -p "$(dirname "$CADDYFILE")"
+  cp "$CADDYFILE_SOURCE" "$CADDYFILE"
+}
+
+show_worker_server() {
+  local file
+  case "$1" in
+    frankenphp-octane)
+      file="$OCTANE_OVERLAY"
+      [[ -f "$file" ]] || file="$OCTANE_ACTIVE"
+      echo "$(sed -n 's/.*--workers=\([0-9]*\).*/\1/p' "$file" | head -n 1) workers, max-requests $(sed -n 's/.*--max-requests=\([0-9]*\).*/\1/p' "$file" | head -n 1)"
+      ;;
+    frankenphp-worker)
+      file="$CADDYFILE"
+      [[ -f "$file" ]] || file="$CADDYFILE_SOURCE"
+      echo "$(sed -n 's/^[[:space:]]*num \([0-9]*\)$/\1/p' "$file" | head -n 1) workers, max-requests $(sed -n 's/^[[:space:]]*env MAX_REQUESTS \([0-9]*\)$/\1/p' "$file" | head -n 1)"
+      ;;
+  esac
 }
 
 write_fpm() {
@@ -64,7 +109,12 @@ COMPOSE
 }
 
 show() {
-  local file
+  local file server
+  server="$(cd "$APPROOT" && ddev server --current)"
+  if [[ "$server" == "frankenphp-octane" || "$server" == "frankenphp-worker" ]]; then
+    show_worker_server "$server"
+    return
+  fi
   for file in "$FPM_SCRIPT" "$FRANKEN_OVERLAY" "$OLS_COMPOSE"; do
     if [[ -f "$file" ]]; then
       sed -n 's/^# bench: //p' "$file" | head -n 1
@@ -74,6 +124,7 @@ show() {
   echo default
 }
 
+max_requests=""
 case "${1:-}" in
   --show) show; exit 0 ;;
   default) value="" ;;
@@ -82,13 +133,27 @@ case "${1:-}" in
     value="$1"
     ;;
 esac
+if [[ "${2:-}" == "--max-requests" ]]; then
+  [[ -n "$value" && "${3:-}" =~ ^[1-9][0-9]*$ && $# -eq 3 ]] || usage
+  max_requests="$3"
+elif [[ $# -gt 1 ]]; then
+  usage
+fi
 
 server="$(cd "$APPROOT" && ddev server --current)"
+if [[ -n "$max_requests" && "$server" != "frankenphp-octane" && "$server" != "frankenphp-worker" ]]; then
+  usage
+fi
 remove_overlays
+if [[ "$server" == "frankenphp-worker" && -z "$value" ]]; then
+  restore_worker
+fi
 if [[ -n "$value" ]]; then
   case "$server" in
     nginx-fpm | apache-fpm) write_fpm "$value" ;;
-    frankenphp | frankenphp-octane | frankenphp-worker) write_frankenphp "$value" ;;
+    frankenphp) write_frankenphp "$value" ;;
+    frankenphp-octane) write_octane "$value" "${max_requests:-$NO_RECYCLING}" ;;
+    frankenphp-worker) write_worker "$value" "${max_requests:-$NO_RECYCLING}" ;;
     openlitespeed) write_openlitespeed "$value" ;;
     *) echo "Unknown server '$server'" >&2; exit 1 ;;
   esac

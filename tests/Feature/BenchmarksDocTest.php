@@ -195,3 +195,20 @@ test('AC-9 BENCHMARKS.md has the leak table', function (): void {
     expect(preg_match_all('/^\| \S+ \| leak \| 0\/20 \|/m', $section))->toBe(4);
     expect($section)->toContain('request-at-boot');
 });
+
+test('AC-4 BENCHMARKS.md has Expectations (classic vs worker) with the five predictions', function (): void {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+
+    expect($doc)->toContain("\n## Expectations (classic vs worker)\n");
+
+    preg_match('/^## Expectations \(classic vs worker\)\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->toContain('2x')
+        ->toContain('1.3x')
+        ->toContain('5 KiB per 1 000')
+        ->toContain('case A')
+        ->toContain('case B')
+        ->toContain('case C')
+        ->toContain('500');
+});

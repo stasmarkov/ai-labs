@@ -42,6 +42,7 @@ Thumbs.db
 .ddev/nginx/bench-timeouts.conf
 .ddev/web-entrypoint.d/zz-bench-fpm.sh
 .ddev/config.zz-bench-concurrency.yaml
+.ddev/config.zzz-bench-concurrency.yaml
 .ddev/docker-compose.bench-concurrency.yaml
 .ddev/bench-concurrency/
 .ddev/web-entrypoint.d/zz-bench-timeouts.sh

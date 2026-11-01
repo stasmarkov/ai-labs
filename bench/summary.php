@@ -5,7 +5,7 @@ declare(strict_types=1);
 /**
  * Summary math for benchmark result files (plain PHP, no Laravel).
  *
- * Usage: php bench/summary.php <result-dir-or-file>... [--baseline=<dir-or-file>...] [--write=<file>]
+ * Usage: php bench/summary.php <result-dir-or-file>... [--baseline=<dir-or-file>...] [--self-baseline] [--write=<file>]
  * Prints one BENCHMARKS.md table row per scenario/label/server group.
  * With --write=<file> it also writes the committed summary JSON (a --baseline file may be such a summary JSON).
  */
@@ -217,20 +217,69 @@ function benchRow(array $summary, ?array $baseline): string
 }
 
 /**
+ * The worker memory table from the memory-<server>.json documents: memory_bytes at requests 0, 1000, 5000
+ * and 10000 (`—` when a stretch was not sampled), restarts, the highest memory_bytes and the growth slope.
+ *
+ * @param  list<string>  $servers
+ * @param  array<string, array<string, mixed>>  $documents
+ */
+function benchMemoryTable(array $servers, array $documents): string
+{
+    $rows = '';
+
+    foreach ($servers as $server) {
+        foreach ($documents["memory-{$server}"]['cases'] ?? [] as $case) {
+            $bytes = [];
+
+            foreach ($case['samples'] as $sample) {
+                $bytes[(int) $sample['requests']] = (int) $sample['memory_bytes'];
+            }
+
+            $rows .= '| '.implode(' | ', [
+                $server,
+                $case['case'],
+                $case['mode'],
+                $case['max_requests'] ?? '—',
+                ...array_map(fn (int $requests): string => (string) ($bytes[$requests] ?? '—'), [0, 1000, 5000, 10000]),
+                $case['restarts'],
+                $bytes === [] ? '—' : max($bytes),
+                number_format((float) $case['growth_kib_per_1000'], 2, '.', ''),
+            ])." |\n";
+        }
+    }
+
+    if ($rows === '') {
+        return '';
+    }
+
+    return "\n### Worker memory growth (memory_bytes, 1 worker, sequential requests)\n\n"
+        ."| Server | Case | Mode | Max-requests | Bytes at 0 | at 1000 | at 5000 | at 10000 | Restarts | Highest bytes | KiB per 1000 requests |\n"
+        ."|---|---|---|---|---|---|---|---|---|---|---|\n".$rows;
+}
+
+/**
  * All BENCHMARKS.md result tables (ping and search with fair then tuned rows, memory, timeouts) built
  * from the committed summary JSON files in one results directory.
  */
 function benchTables(string $directory): string
 {
-    $servers = ['nginx-fpm', 'apache-fpm', 'openlitespeed', 'frankenphp'];
     $documents = [];
+    $present = [];
 
     foreach (glob(rtrim($directory, '/').'/*.json') ?: [] as $file) {
         $document = json_decode((string) file_get_contents($file), true, flags: JSON_THROW_ON_ERROR);
         $documents[basename($file, '.json')] = $document;
+
+        if (preg_match('/^(.+)-(?:ping|search)-(?:fair|tuned)$/', basename($file, '.json'), $matches) === 1) {
+            $present[$matches[1]] = true;
+        }
     }
 
-    $header = "| Server | Setting | RPS | p50 ms | p95 ms | p99 ms | Errors % | Peak MiB (serving) | CPU % (serving) | Spread | RPS vs nginx-fpm | Notes |\n"
+    $known = ['nginx-fpm', 'apache-fpm', 'openlitespeed', 'frankenphp', 'frankenphp-octane', 'frankenphp-worker'];
+    $servers = array_values(array_filter($known, fn (string $server): bool => isset($present[$server])));
+    $baseline = in_array('nginx-fpm', $servers, true) ? 'nginx-fpm' : 'frankenphp';
+
+    $header = "| Server | Setting | RPS | p50 ms | p95 ms | p99 ms | Errors % | Peak MiB (serving) | CPU % (serving) | Spread | RPS vs {$baseline} | Notes |\n"
         ."|---|---|---|---|---|---|---|---|---|---|---|---|\n";
     $out = '';
 
@@ -294,6 +343,8 @@ function benchTables(string $directory): string
         ])." |\n";
     }
 
+    $out .= benchMemoryTable($known, $documents);
+
     $out .= "\n### Timeouts: GET /debug/sleep/30\n\n"
         ."| Server | Timeouts | Status | Seconds | Ended by |\n|---|---|---|---|---|\n";
 
@@ -323,9 +374,12 @@ if (PHP_SAPI === 'cli' && isset($argv[0]) && realpath($argv[0]) === __FILE__) {
     $paths = [];
     $baselinePaths = [];
     $writePath = null;
+    $selfBaseline = false;
 
     foreach (array_slice($argv, 1) as $argument) {
-        if (str_starts_with($argument, '--baseline=')) {
+        if ($argument === '--self-baseline') {
+            $selfBaseline = true;
+        } elseif (str_starts_with($argument, '--baseline=')) {
             $baselinePaths[] = substr($argument, strlen('--baseline='));
         } elseif (str_starts_with($argument, '--write=')) {
             $writePath = substr($argument, strlen('--write='));
@@ -335,13 +389,13 @@ if (PHP_SAPI === 'cli' && isset($argv[0]) && realpath($argv[0]) === __FILE__) {
     }
 
     if ($paths === []) {
-        fwrite(STDERR, "Usage: php bench/summary.php <result-dir-or-file>... [--baseline=<dir-or-file>...] [--write=<file>]\n");
+        fwrite(STDERR, "Usage: php bench/summary.php <result-dir-or-file>... [--baseline=<dir-or-file>...] [--self-baseline] [--write=<file>]\n");
         exit(2);
     }
 
     $summary = benchSummarizeFiles($paths);
     $baseline = $baselinePaths === [] ? null : benchLoadBaseline($baselinePaths);
-    $baseline ??= $summary['server'] === 'nginx-fpm' ? $summary : null;
+    $baseline ??= $summary['server'] === 'nginx-fpm' || $selfBaseline ? $summary : null;
 
     echo benchRow($summary, $baseline), "\n";
 

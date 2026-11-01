@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Debug\Leaks\CachedPriceFormatter;
 use App\Debug\Leaks\LeakLabServiceProvider;
 use Illuminate\Support\Facades\Cache;
 use Tests\Support\OctaneRunner;
@@ -149,7 +150,7 @@ test('AC-2 fixed price-cache stores each amount and locale under its own key for
         ->withArgs(fn (string $key, int $ttl, Closure $callback): bool => $key === 'lab:price:7150300:de' && $ttl === 60)
         ->andReturn(['locale' => 'de', 'formatted' => 'x']);
 
-    expect((new App\Debug\Leaks\CachedPriceFormatter)->format(7150300, 'de'))->toBe(['locale' => 'de', 'formatted' => 'x']);
+    expect((new CachedPriceFormatter)->format(7150300, 'de'))->toBe(['locale' => 'de', 'formatted' => 'x']);
 });
 
 test('AC-3 fixed number-locale never changes the global Number locale', function (): void {

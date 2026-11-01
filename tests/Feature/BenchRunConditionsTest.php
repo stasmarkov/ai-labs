@@ -18,7 +18,7 @@ if [[ -n "${STUB_DDEV_FAIL-}" && "$*" == *"$STUB_DDEV_FAIL"* ]]; then
   exit 1
 fi
 case "$*" in
-  "server --current") echo nginx-fpm ;;
+  "server --current") echo "${STUB_SERVER-nginx-fpm}" ;;
   "server --url") echo "https://interview.ddev.site" ;;
   "artisan config:show app.env") echo "${STUB_APP_ENV-production}" ;;
   "artisan config:show app.debug") echo "${STUB_APP_DEBUG-false}" ;;
@@ -36,6 +36,12 @@ while [[ $# -gt 0 ]]; do
     *) shift ;;
   esac
 done
+if [[ -n "${STUB_RELOAD_REQUIRED-}" && "$url" == */debug/runtime ]]; then
+  if ! awk '/^ddev artisan optimize$/ {seen=1; reloaded=0} /^ddev restart/ && seen {reloaded=1} END {exit !reloaded}' "$STUB_LOG"; then
+    printf '404'
+    exit 0
+  fi
+fi
 if [[ "$url" == */listings* ]]; then
   printf '{"meta":{"last_page":%s}}' "${STUB_LAST_PAGE-120}" > "$out"
   printf '200'
@@ -215,4 +221,27 @@ it('AC-3 changes in the tooling log .ai/session do not block a run', function ()
     $process = ($this->bench)(['STUB_GIT_STATUS' => ' M .ai/session/lessons.jsonl'], 'ping', '--quick');
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput());
+});
+
+it('AC-2 worker servers are reloaded after the env switch before run conditions are checked', function (string $server, array $args): void {
+    $process = ($this->bench)(['STUB_SERVER' => $server, 'STUB_RELOAD_REQUIRED' => '1', 'BENCH_READY_TIMEOUT' => '5'], 'ping', ...$args);
+    $log = file_get_contents($this->root.'/calls.log');
+    $files = glob($this->root.'/app/bench/results/raw/*/'.$server.'/ping-*.json') ?: [];
+
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
+        ->and($files)->not->toBeEmpty()
+        ->and(strpos($log, 'ddev artisan optimize'))->toBeLessThan(strpos($log, 'ddev restart'))
+        ->and(strpos($log, 'ddev restart'))->toBeLessThan(strpos($log, 'curl'));
+})->with([
+    'octane' => ['frankenphp-octane', ['--quick']],
+    'worker' => ['frankenphp-worker', ['--quick']],
+    'octane full' => ['frankenphp-octane', []],
+    'worker full' => ['frankenphp-worker', []],
+]);
+
+it('AC-2 classic servers are not restarted before run conditions in quick mode', function (): void {
+    $process = ($this->bench)([], 'ping', '--quick');
+
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
+        ->and(file_get_contents($this->root.'/calls.log'))->not->toContain('ddev restart');
 });
