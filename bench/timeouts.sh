@@ -167,13 +167,21 @@ measure() {
   server="$(cd "$APPROOT" && ddev server --current)"
   service="$(service_name "$server")"
   base="${BENCH_BASE_URL:-$(cd "$APPROOT" && ddev server --url)}"
+  local app_log="/var/www/html/storage/logs/laravel.log" log_size app_lines
   for i in 1 2 3; do
     started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    # Laravel's own log is read inside the serving container: the Mac's copy lags behind (Mutagen).
+    log_size="$(docker exec "ddev-$SITE-$service" sh -c "wc -c < $app_log 2>/dev/null || echo 0" 2>/dev/null | tr -dc '0-9')"
+    log_size="${log_size:-0}"
     read -r status seconds header < <(curl -ksS -o "$WORK/body" --max-time $((SLEEP_SECONDS + 30)) \
       -w '%{http_code} %{time_total} %header{server}\n' "$base/debug/sleep/$SLEEP_SECONDS" || echo "000 0 none")
     body="$(head -c 400 "$WORK/body" 2>/dev/null | tr '\n' ' ' || true)"
     # Only this request's log lines (since it started), without the entrypoint's shell trace lines (`+ ...`).
     logs="$(docker logs --since "$started" "ddev-$SITE-$service" 2>&1 | grep -vE '^\++ ' | grep -iE 'timed out|terminat|signal|Maximum execution|AH0|upstream' | tail -n 5 || true)"
+    # Lines Laravel appended during this request, e.g. "Maximum execution time of 10 seconds exceeded".
+    app_lines="$(docker exec "ddev-$SITE-$service" sh -c "tail -c +$((log_size + 1)) $app_log 2>/dev/null" 2>/dev/null | grep -iE 'Maximum execution' | cut -c1-200 | tail -n 2 || true)"
+    [[ -z "$app_lines" ]] || logs="${logs:+$logs
+}$app_lines"
     layer="$(classify "$status" "$header" "$body" "$logs")"
     printf '%s\t%s\trequest %s\tstatus=%s\tseconds=%s\tserver=%s\tlayer=%s\n' "$server" "$label" "$i" "$status" "$seconds" "$header" "$layer"
     jq -nc --arg label "$label" --argjson request "$i" --arg status "$status" --arg seconds "$seconds" \
@@ -217,7 +225,7 @@ run_all() {
   measure short
   apply defaults
 
-  out="$RESULTS_DIR/$(date -u +%F)/timeouts-$server.json"
+  out="$RESULTS_DIR/${BENCH_DATE:-$(date -u +%F)}/timeouts-$server.json"
   mkdir -p "$(dirname "$out")"
   jq -s --arg server "$server" --arg date "$(date -u +%FT%TZ)" --arg router "$ROUTER_TIMEOUT" --argjson seconds "$SLEEP_SECONDS" \
     '{server: $server, date: $date, path: "/debug/sleep/\($seconds)", router_timeout: $router, runs: .}' "$WORK/runs.jsonl" > "$out"

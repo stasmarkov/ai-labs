@@ -16,9 +16,15 @@ beforeEach(function (): void {
     file_put_contents($this->root.'/bin/docker', <<<'BASH'
 #!/usr/bin/env bash
 echo "docker $*" >> "$STUB_LOG"
-if [[ "$1" == "logs" ]]; then
+if [[ "$1" == "logs" && -z "${STUB_NO_SERVER_LOG-}" ]]; then
   echo "++ echo 'request_terminate_timeout = 10s'"
   echo "upstream timed out (110: Connection timed out)"
+fi
+if [[ "$1" == "exec" ]]; then
+  case "$*" in
+    *"wc -c"*) echo 0 ;;
+    *"tail -c"*) [[ -n "${STUB_APP_LOG-}" ]] && echo "$STUB_APP_LOG" ;;
+  esac
 fi
 BASH);
     chmod($this->root.'/bin/docker', 0755);
@@ -49,16 +55,17 @@ while [[ $# -gt 0 ]]; do
 done
 echo "DEBUG_ROUTES seen: $(grep DEBUG_ROUTES "$BENCH_APPROOT/.env")" >> "$STUB_LOG"
 echo '{"message":"gateway"}' > "$out"
-printf '504 10.2 nginx\n'
+printf '%s\n' "${STUB_CURL_RESULT:-504 10.2 nginx}"
 BASH);
     chmod($this->root.'/bin/ddev', 0755);
     chmod($this->root.'/bin/curl', 0755);
 
+    $this->extraEnv = [];
     $this->timeouts = function (string $server, string ...$args): Process {
         $process = new Process(
             ['bash', base_path('bench/timeouts.sh'), ...$args],
             $this->root,
-            [
+            $this->extraEnv + [
                 'BENCH_APPROOT' => $this->root.'/app',
                 'BENCH_RESULTS_DIR' => $this->root.'/results',
                 'STUB_SERVER' => $server,
@@ -165,4 +172,21 @@ it('AC-9 MNC-4 timeouts run restores .env when a measurement fails', function ()
 
     expect(file_get_contents($this->root.'/app/.env'))->toBe($before)
         ->and(($this->overlayFiles)())->toBe([]);
+});
+
+it('AC-9 a timeout seen only in Laravel\'s own log is attributed to max_execution_time', function (): void {
+    $this->extraEnv = [
+        'STUB_NO_SERVER_LOG' => '1',
+        'STUB_CURL_RESULT' => '500 10.0 LiteSpeed',
+        'STUB_APP_LOG' => '[2026-11-01 10:10:10] production.ERROR: Maximum execution time of 10 seconds exceeded',
+    ];
+
+    $run = ($this->timeouts)('openlitespeed', 'run');
+
+    expect($run->getExitCode())->toBe(0, $run->getErrorOutput());
+
+    $result = json_decode(file_get_contents(glob($this->root.'/results/*/timeouts-openlitespeed.json')[0]), true);
+
+    expect($result['runs'][0]['ending_layer'])->toBe('PHP max_execution_time')
+        ->and($result['runs'][0]['log_excerpt'])->toContain('Maximum execution time');
 });
