@@ -1,0 +1,154 @@
+# AutoPulse learning guide
+
+This guide explains how everything in this project works, in the order it was built. Each section says what the mechanism is, walks through what happens for one request, links to the code and specs in this repo, quotes what was measured, and ends with official docs to read next.
+
+It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan and its order are in [`backlog.md`](../backlog.md).
+
+**Status (2026-11-01):** sections 1–6 cover the shipped slices SL-01 to SL-06. Planned sections are listed at the end.
+
+---
+
+## 1. The app and one request on nginx-fpm
+
+**What it is.** A small car marketplace on Laravel 13 and PHP 8.4: 500 dealers and 50 000 listings in PostgreSQL 16, with Redis for cache and sessions. It runs in DDEV, which starts a `web` container (nginx + PHP-FPM by default), a `db` container and a `redis` container behind a shared router.
+
+**One request, step by step** (`GET /listings?make=BMW`):
+
+1. The browser connects to `https://interview.ddev.site`. The DDEV router (Traefik) ends TLS and forwards plain HTTP to the `web` container.
+2. nginx sees a path that is not a file and passes it over FastCGI to a free PHP-FPM child process.
+3. That child boots Laravel from scratch: autoloader, service providers, config, routes. With OPcache, the compiled PHP is already in shared memory, so "boot" means running code, not parsing it.
+4. The router matches `ListListingsController`. A form request validates the filters (422 on bad input). `ListingSearchService` asks `EloquentListingRepository` for one page, ordered newest first.
+5. PostgreSQL answers using the indexes from the migrations. The controller wraps the result in the `ApiResponse` envelope.
+6. The child sends the response back through nginx and then throws away everything it built. The next request boots Laravel again.
+
+**In this repo.**
+- Routes: [`routes/catalog.php`](../routes/catalog.php) and [`routes/api.php`](../routes/api.php).
+- Request path: [`app/Http/Controllers/ListListingsController.php`](../app/Http/Controllers/ListListingsController.php), [`app/Services/ListingSearchService.php`](../app/Services/ListingSearchService.php) and [`app/Repositories/EloquentListingRepository.php`](../app/Repositories/EloquentListingRepository.php).
+- Design notes: [`docs/architecture.md`](architecture.md); schemas: [`docs/schemas/`](schemas/).
+
+**Read next.** [Laravel request lifecycle](https://laravel.com/docs/13.x/lifecycle) · [DDEV architecture](https://docs.ddev.com/en/stable/users/usage/architecture/) · [PHP OPcache](https://www.php.net/manual/en/book.opcache.php)
+
+## 2. Switching servers and proving they answer the same
+
+**What it is.** One command, `ddev server <name>`, swaps the web server without touching `.ddev/config.yaml`. It writes a gitignored overlay `.ddev/config.zz-server.yaml`. DDEV merges every `config.*.yaml` over `config.yaml` in name order, so `zz` wins. Then it restarts the project. A parity script then proves every server returns the same responses.
+
+**How parity works.** `bench/parity.sh capture` sends 7 fixed requests and stores, per request, the status, the media type and a SHA-256 of the body. `compare` diffs two snapshots line by line. A few differences are expected and normalised:
+- the `/up` page prints its own render time, which is masked;
+- nginx adds `; charset=utf-8` to JSON, so only the media type is compared;
+- OpenLiteSpeed answers on its own port, so its base URL is rewritten.
+
+The `Server` header must match the active server, so a snapshot can never be filed under the wrong name.
+
+**In this repo.**
+- The switch command: [`.ddev/commands/host/server`](../.ddev/commands/host/server).
+- The scripts: [`bench/parity.sh`](../bench/parity.sh) and [`bench/versions.sh`](../bench/versions.sh); snapshots in [`bench/parity/`](../bench/parity/).
+- Versions and parity results: [`BENCHMARKS.md`](../BENCHMARKS.md).
+- How to switch: the "Switching servers" section of the [README](../README.md).
+- Spec: [`.ai/specs/spec-20261029-1013-apache-fpm-parity/`](../.ai/specs/spec-20261029-1013-apache-fpm-parity/).
+
+**Read next.** [DDEV config overrides](https://docs.ddev.com/en/stable/users/extend/customization-extendibility/) · [DDEV custom commands](https://docs.ddev.com/en/stable/users/extend/custom-commands/)
+
+## 3. Four ways to run PHP behind a web server
+
+**What it is.** The servers differ less as HTTP servers than in *how PHP is executed*:
+
+| Server | How PHP runs | Concurrency unit | PHP build |
+|---|---|---|---|
+| nginx-fpm | nginx talks FastCGI to a separate PHP-FPM pool | FPM child process | NTS |
+| apache-fpm | Apache `mod_proxy_fcgi` talks to the same FPM pool; reads `public/.htaccess` on every request | FPM child process | NTS |
+| openlitespeed | OpenLiteSpeed talks LSAPI to its own `lsphp` processes, in a separate container on port 8091 | lsphp process | NTS |
+| frankenphp | PHP is embedded in one Go process (Caddy + FrankenPHP); each request runs on a thread | PHP thread | **ZTS** |
+
+**Why FrankenPHP needs ZTS PHP.** With processes, each request has its own memory, so PHP's globals are safe. With threads, many requests share one process, so PHP must keep per-request state in thread-local storage. That is the "Zend Thread Safety" (ZTS) build, and every extension must be built for it, hence the `php-zts-*` packages. ZTS costs a little on every access to global state. That is one possible reason FrankenPHP classic measured slower on the database-bound search (section 6).
+
+**How the extra servers are wired.** FrankenPHP and OpenLiteSpeed are not DDEV web server types. Their files live in committed "stashes" under [`.ddev/servers/`](../.ddev/servers/), and `ddev server` copies them into `.ddev/` on switch and removes them when you leave.
+- **FrankenPHP:** the stash is the `ddev/ddev-frankenphp` add-on v1.3.0. Its Dockerfile switches the container's PHP to ZTS, which is why it must never stay active on the FPM servers.
+- **OpenLiteSpeed:** runs as an extra container. Its OPcache settings were matched to the FPM pool, because lsphp's defaults (128 MB, 10 000 files) would overflow on this app's ~10 600 PHP files.
+
+**In this repo.**
+- Stashes: [`.ddev/servers/frankenphp/`](../.ddev/servers/frankenphp/) and [`.ddev/servers/openlitespeed/`](../.ddev/servers/openlitespeed/).
+- The PHP settings table per server: [`BENCHMARKS.md`](../BENCHMARKS.md).
+- Specs: [FrankenPHP](../.ai/specs/spec-20261029-1221-frankenphp-classic/) and [OpenLiteSpeed](../.ai/specs/spec-20261029-2027-openlitespeed/).
+
+**Read next.** [PHP-FPM configuration](https://www.php.net/manual/en/install.fpm.configuration.php) · [nginx FastCGI module](https://nginx.org/en/docs/http/ngx_http_fastcgi_module.html) · [Apache mod_proxy_fcgi](https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html) · [OpenLiteSpeed docs](https://docs.openlitespeed.org/) · [FrankenPHP docs](https://frankenphp.dev/docs/) · [FrankenPHP known issues](https://frankenphp.dev/docs/known-issues/) · [DDEV FrankenPHP add-on](https://github.com/ddev/ddev-frankenphp)
+
+## 4. Worker mode: boot once, serve many
+
+**What it is.** In worker mode, PHP threads boot Laravel once and then loop, waiting for requests. Bootstrap cost disappears from every request after the first. The price is that anything kept in memory survives into the next request.
+
+**One request, step by step** (frankenphp-octane):
+
+1. The router forwards to Octane's FrankenPHP process on port 8000.
+2. Caddy serves existing files (such as `/build/*` assets) directly and hands everything else to an idle worker thread.
+3. The worker already holds a booted application. Octane clones it into a per-request "sandbox", which includes a fresh copy of the config repository. It runs the request through the kernel, then resets request state: listeners such as `FlushLocaleState`, the `flush` list, and scoped instances.
+4. After 500 requests (`--max-requests`), the worker script leaves its loop and FrankenPHP starts a fresh worker, which limits slow memory growth.
+
+**Two ways to get there.**
+
+| Who | frankenphp-octane | frankenphp-worker |
+|---|---|---|
+| Runs it | `php artisan octane:frankenphp` (a DDEV daemon) | the add-on's `frankenphp run` with an edited Caddyfile |
+| Owns the config | Octane generates its Caddyfile from `vendor/laravel/octane` | `.ddev/servers/frankenphp-worker/web-build/Caddyfile.frankenphp` and its [`CHANGES.md`](../.ddev/servers/frankenphp-worker/CHANGES.md) |
+| HTTPS awareness | `OCTANE_HTTPS=true` makes Octane set `HTTPS=on` | a Caddy `map` turns `X-Forwarded-Proto` into `HTTPS=on` |
+| Restart workers | `ddev artisan octane:reload --server=frankenphp` | `ddev restart`, or the admin API `POST /frankenphp/workers/restart` |
+
+**Things that surprised us.**
+- `octane:reload` does not work on frankenphp-worker: it looks for the state file that only Octane's own daemon writes.
+- The `/up` page's "rendered in N ms" uses the `LARAVEL_START` constant, which is set once per worker. In worker mode it shows the worker's uptime, not the request time.
+- A `.env` change is invisible until the workers restart, because the booted app keeps its config in memory.
+
+**In this repo.**
+- The detailed walkthrough: the "How worker mode works" section of the [README](../README.md).
+- Stashes: [`.ddev/servers/frankenphp-octane/`](../.ddev/servers/frankenphp-octane/) and [`.ddev/servers/frankenphp-worker/`](../.ddev/servers/frankenphp-worker/); the worker script: [`public/frankenphp-worker.php`](../public/frankenphp-worker.php).
+- Spec: [`.ai/specs/spec-20261030-1437-octane-worker-mode/`](../.ai/specs/spec-20261030-1437-octane-worker-mode/).
+
+**Read next.** [Laravel Octane](https://laravel.com/docs/13.x/octane) · [FrankenPHP worker mode](https://frankenphp.dev/docs/worker/) · [FrankenPHP configuration](https://frankenphp.dev/docs/config/)
+
+## 5. Measuring fairly
+
+**What it is.** A benchmark is only worth something if you can defend it. The harness enforces the rules instead of trusting you to remember them:
+- It refuses to run unless `APP_ENV=production`, `APP_DEBUG=false`, caches are built, OPcache is on, Xdebug is off and the git tree is clean (so every result has one commit).
+- Each run is a 30 s warm-up, then a 60 s measurement, repeated 3 times. The median by RPS is reported.
+- If the 3 runs differ by more than 5 % (spread = (max − min) / median), it reruns once, then marks the row `noisy`.
+- The load generator (oha for ping, k6 for search) runs in its own container capped at 2 CPUs and goes through the router like a browser.
+- "Fair" means 8 PHP workers everywhere with no recycling; "tuned" means the best of 8/16/32 per server.
+- Only ratios against nginx-fpm are compared, never absolute numbers from a laptop.
+
+**What the numbers mean.**
+- **RPS** is completed requests per second.
+- **p50/p95/p99** are the latencies that 50/95/99 % of requests stayed under. p95 and p99 show the slow tail an average hides.
+- **Spread** shows whether a result is repeatable.
+- **Where requests wait** when every worker is busy:
+  - FPM: in the socket's listen backlog;
+  - OpenLiteSpeed: in the LSAPI connection queue;
+  - FrankenPHP: in its request queue.
+
+  Latency rises before RPS falls.
+
+**In this repo.**
+- The scripts: [`bench/run.sh`](../bench/run.sh) (one scenario), [`bench/suite.sh`](../bench/suite.sh) (the whole matrix), [`bench/concurrency.sh`](../bench/concurrency.sh), [`bench/timeouts.sh`](../bench/timeouts.sh), [`bench/summary.php`](../bench/summary.php) and the k6 script [`bench/k6-search.js`](../bench/k6-search.js).
+- oha has no public image, so [`bench/oha/Dockerfile`](../bench/oha/Dockerfile) builds it from a checksum-pinned release.
+- Spec: [`.ai/specs/spec-20261030-1806-bench-harness/`](../.ai/specs/spec-20261030-1806-bench-harness/).
+
+**Read next.** [k6 docs](https://grafana.com/docs/k6/latest/) · [oha](https://github.com/hatoo/oha) · [Brendan Gregg on latency percentiles and methodology](https://www.brendangregg.com/methodology.html)
+
+## 6. What was measured (SL-06)
+
+Full tables, the Expectations written before the runs and the Surprises are in [`BENCHMARKS.md`](../BENCHMARKS.md). The short version:
+
+- **Swapping the web server alone buys almost nothing.** Tuned, `/api/ping` landed within 7 % across all four servers (nginx-fpm 6205 RPS, FrankenPHP classic 6254).
+- **FrankenPHP classic was 14 % slower on the database-bound search** (537 vs 625 RPS), with the highest CPU of the four.
+- **16 workers beat 8 on search for every server, and 32 never won.** At 8, workers were waiting on PostgreSQL while CPU sat idle.
+- **Timeouts are not what they seem.** With every limit at 10 s, a 30 s `sleep()` was *not* stopped by PHP's `max_execution_time` under PHP-FPM or lsphp: on Linux, the NTS build counts CPU time, and sleeping uses none. The web server's own timeout ended the request (504 from nginx and Apache, 500 from OpenLiteSpeed). Only FrankenPHP's thread-safe PHP, which uses wall-clock timers, stopped it itself.
+- **Noise is real.** The very first run of the suite was so noisy (15.7 % spread after a rerun) that the fair ping comparison is marked untrustworthy. That is the reason for the spread rule.
+
+**Read next.** [PHP `max_execution_time`](https://www.php.net/manual/en/info.configuration.php#ini.max-execution-time) · [FPM `request_terminate_timeout`](https://www.php.net/manual/en/install.fpm.configuration.php) · [nginx `fastcgi_read_timeout`](https://nginx.org/en/docs/http/ngx_http_fastcgi_module.html#fastcgi_read_timeout) · [Apache `ProxyTimeout`](https://httpd.apache.org/docs/2.4/mod/mod_proxy.html#proxytimeout)
+
+---
+
+## Planned sections
+
+Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):
+
+- **Server track:** state leaks in worker mode (SL-07), classic vs worker numbers (SL-08), slow I/O and thread autoscaling (SL-09), Early Hints and compression (SL-10), file downloads offloaded to the web server (SL-11), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
+- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; streaming over SSE (SL-20); running models locally (SL-22); structured output (SL-23); embeddings and vector search (SL-24); tool calling (SL-25); evals (SL-26, SL-33); vision (SL-27); model comparison (SL-28); RAG with citations (SL-32); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39); semantic caching (SL-40); streaming chat UI (SL-41); a research agent (SL-42); a prompt playground (SL-43).

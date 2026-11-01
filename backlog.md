@@ -5,7 +5,7 @@ brief: product-brief.md
 
 # AutoPulse backlog
 
-Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → SL-08 → SL-09 → {SL-10, SL-11, SL-12} → SL-13 → SL-14 → SL-15 → {SL-16, SL-17} → {SL-18, SL-19} → SL-20 → SL-21 → SL-22 → {SL-23, SL-24, SL-26, SL-27} → SL-25 → SL-28 → {SL-29, SL-30, SL-31} → SL-32 → {SL-33, SL-40, SL-41, SL-42} → SL-34 → SL-35 → SL-36 → {SL-37, SL-38, SL-39} → SL-43 → SL-44
+Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → SL-08 → SL-09 → {SL-10, SL-11, SL-12} → SL-13 → SL-14 → SL-15 → {SL-16, SL-17} → SL-20 → SL-22 → {SL-23, SL-24, SL-26, SL-27} → SL-25 → SL-28 → SL-32 → {SL-33, SL-40, SL-41, SL-42} → SL-34 → SL-35 → SL-36 → {SL-37, SL-38, SL-39} → SL-43 → SL-44
 
 ## Slices
 
@@ -95,8 +95,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-30, BR-31, BR-32
 - **Depends on:** SL-04
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261101-1822-octane-leak-lab
 - **Source:** brief (Phase 2)
 - **Run:** `/sdd "SL-07: Octane state-leak lab — four routes with leak/fixed toggles (singleton vs scoped current dealer, static price-formatter cache, config locale mutation, service built with the request at boot) and /debug/worker (pid, app instance id, memory, request counter); Pest tests per leak; no leak on classic servers (BR-30, BR-31, BR-32). Rules in product-brief.md."`
 
@@ -238,9 +238,9 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-80, BR-26
 - **Depends on:** SL-06
 - **Blocked by:** none
-- **Status:** approved
+- **Status:** dropped
 - **Spec:** —
-- **Source:** brief (Phase 8)
+- **Source:** brief (Phase 8); dropped 2026-11-01 (Stanislav Markov)
 - **Run:** `/sdd "SL-18: a Go extension autopulse_vin_valid built into a custom FrankenPHP via xcaddy, used by a Laravel validation rule with a pure-PHP fallback giving identical results, with micro (1M, Go vs PHP vs JIT) and request-level benchmarks (BR-80, BR-26). Rules in product-brief.md."`
 
 ### SL-19 · App as a single binary (optional)
@@ -251,9 +251,9 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-26
 - **Depends on:** SL-03
 - **Blocked by:** none
-- **Status:** approved
+- **Status:** dropped
 - **Spec:** —
-- **Source:** brief (Phase 9)
+- **Source:** brief (Phase 9); dropped 2026-11-01 (Stanislav Markov)
 - **Run:** `/sdd "SL-19: build AutoPulse as an embedded FrankenPHP binary, run it on a clean container without PHP, and compare size and cold start with a Docker image (BR-26). Rules in product-brief.md."`
 
 ### SL-20 · Streamed car description with a fake provider
@@ -277,9 +277,9 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-95, BR-26
 - **Depends on:** SL-20, SL-13, SL-09
 - **Blocked by:** none
-- **Status:** approved
+- **Status:** dropped
 - **Spec:** —
-- **Source:** brief (Phase 10)
+- **Source:** brief (Phase 10); dropped 2026-11-01 (Stanislav Markov)
 - **Run:** `/sdd "SL-21: queued describe variant that returns immediately and streams chunks to a per-request Mercure topic, plus a 200-concurrent-describe load test measuring search p95, completed streams and errors on nginx-fpm, FrankenPHP classic, Octane and FrankenPHP + Mercure (BR-95, BR-26). Rules in product-brief.md."`
 
 ### SL-22 · Local model wiring
@@ -381,9 +381,9 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-03, BR-04, BR-20
 - **Depends on:** SL-01
 - **Blocked by:** none
-- **Status:** proposed
+- **Status:** dropped
 - **Spec:** —
-- **Source:** greenfield-build
+- **Source:** greenfield-build; dropped 2026-11-01 (Stanislav Markov)
 - **Run:** `/sdd "SL-29: JsonErrorRenderer envelope for 422/404/500 with and without Accept, no stack traces with APP_DEBUG=false, and Pest checks that config:cache, route:cache and view:cache succeed with identical responses (BR-03, BR-04, BR-20). Rules in product-brief.md."`
 
 ### SL-30 · Search index proof on the 50k seed
@@ -394,9 +394,9 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-03, BR-05
 - **Depends on:** SL-01
 - **Blocked by:** none
-- **Status:** proposed
+- **Status:** dropped
 - **Spec:** —
-- **Source:** greenfield-build
+- **Source:** greenfield-build; dropped 2026-11-01 (Stanislav Markov)
 - **Run:** `/sdd "SL-30: EXPLAIN-backed index verification for the newest-first, make, make+model and city searches on the seeded data, p95 targets recorded in docs/schemas/listings.md, and a Pest guard on query count per request (BR-03, BR-05). Rules in product-brief.md."`
 
 ### SL-31 · Dealer inventory listing
@@ -407,9 +407,9 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-03, BR-04, BR-10
 - **Depends on:** SL-01
 - **Blocked by:** none
-- **Status:** proposed
+- **Status:** dropped
 - **Spec:** —
-- **Source:** greenfield-build
+- **Source:** greenfield-build; dropped 2026-11-01 (Stanislav Markov)
 - **Run:** `/sdd "SL-31: GET /dealers/{id}/listings through DealerInventoryController, service and repository using listings_dealer_id_idx, 404 for unknown dealer ids, per_page 1-50 default 20 (BR-03, BR-04, BR-10). Rules in product-brief.md."`
 
 ### SL-32 · Docs chatbot with RAG and citations
@@ -568,18 +568,18 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-43: prompt playground — versioned prompts, the same input run across 2–3 local models side by side, output, tokens and latency logged per run (BR-90, BR-91, BR-27). Rules in product-brief.md."`
 
-### SL-44 · Learning guide to everything built
+### SL-44 · Living learning guide
 
-- **Outcome:** The developer opens one guide that walks through every mechanism the project implemented, in learning order, each with a short explanation, a step-by-step walkthrough of one request or job, links to the code and specs in this repo, the measured numbers from BENCHMARKS.md, and links to the official docs to read next. Server part: PHP execution models (FPM, LSAPI, FrankenPHP classic, worker mode via Octane and the add-on), state leaks, threads and slow I/O, HTTP features, real-time, observability, DX, Go extension, single binary. AI part, covering every AI feature built (SL-20…SL-28, SL-32…SL-43) and the concepts behind it: the five LLM layers (weights, engine, server, SDK, app), tokens, quantization, context window, TTFT vs tokens/s, local model serving; streaming over SSE vs queued + Mercure; structured output and validation/retries; natural-language search to filters; text embeddings, vector similarity and pgvector/HNSW; image embeddings (CLIP/SigLIP) for similar photos, text-to-photo and hybrid search; vision models for tagging and duplicate detection; RAG (chunking, retrieval, citations, "I don't know"); evals and LLM-as-judge; tool calling with the SDK's loop vs a hand-written agent loop, confirmations and step limits; MCP; multi-step agents with memory and replay; semantic caching; prompt versioning and model comparison; logging tokens/latency per call.
+- **Outcome:** `docs/learning-guide.md` exists from SL-06 on and grows with every slice (BR-27); this final slice checks every link, fills gaps, orders the sections in learning order and adds a closing summary. The guide covers the server part (PHP execution models, worker mode and state leaks, threads and slow I/O, HTTP features, real-time, observability, DX) and the AI part (every AI slice SL-20, SL-22…SL-28, SL-32…SL-43 and its concepts), each with a short explanation, a walkthrough of one request or job, links to the code and specs, BENCHMARKS.md numbers and official docs.
 - **Entry point:** `docs/learning-guide.md`
-- **Size:** M
+- **Size:** S
 - **BRs:** BR-27
 - **Depends on:** SL-43
 - **Blocked by:** none
 - **Status:** proposed
 - **Spec:** —
 - **Source:** intake 2026-10-30 (Stanislav Markov: "a guide with links that teaches me how everything we implemented works", after all planned slices)
-- **Run:** `/sdd "SL-44: write docs/learning-guide.md — server part and AI part (every AI slice SL-20…SL-28, SL-32…SL-43 and its concepts), one section per mechanism in learning order, each assembled from the slice's How-it-works note (BR-27): what it is, what happens per request or job, links to repo code/specs, BENCHMARKS.md numbers, and official docs to read next; every link checked (BR-27). Rules in product-brief.md."`
+- **Run:** `/sdd "SL-44: finish docs/learning-guide.md — check every link, fill missing sections, put sections in learning order, add a closing summary (BR-27). Rules in product-brief.md."`
 
 ## Intake log
 
@@ -606,3 +606,5 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 | 2026-10-30 | AI ideas chat | Which car photos; pgvector vs Elasticsearch; image encoder choice | Question | Q-06, Q-07, Q-01 widened |
 | 2026-10-30 | Stanislav Markov | Final guide with links teaching how everything implemented works | New slice | SL-44 (last; built from the BR-27 notes) |
 | 2026-10-30 | Stanislav Markov | Guide must explain all AI features built | New slice (scope) | SL-44 outcome lists every AI slice and its concepts |
+| 2026-11-01 | Stanislav Markov | Drop optional/non-learning slices | Scope change | SL-18, SL-19, SL-21, SL-29, SL-30, SL-31 dropped; BR-80 retired |
+| 2026-11-01 | Stanislav Markov | Start the learning guide now and grow it per slice | BR change | BR-27 widened; SL-44 becomes the final polish (S) |

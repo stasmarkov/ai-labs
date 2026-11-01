@@ -51,9 +51,9 @@ There is no authentication; every endpoint is public on the local DDEV network.
 8. **Real-time price updates.** Live price changes via FrankenPHP's built-in Mercure hub, and the same via Reverb on nginx-fpm.
 9. **Observability.** Prometheus + Grafana with FrankenPHP and FPM metrics, structured PHP logs, worker restart through the admin API.
 10. **Developer experience.** Worker watch, hot reload, Xdebug inside a worker.
-11. **Go extension** *(optional deep dive)*. VIN check-digit validation written in Go, with a PHP fallback.
-12. **Standalone binary** *(optional deep dive)*. The whole app as one executable, compared to a Docker image.
-13. **AI streaming under load** *(optional deep dive)*. Streamed car descriptions held open vs queued and pushed via Mercure.
+11. ~~**Go extension**~~ *(dropped 2026-11-01, Stanislav Markov: optional deep dive, cut to reach the learning guide sooner)*.
+12. ~~**Standalone binary**~~ *(dropped 2026-11-01, Stanislav Markov: optional deep dive)*.
+13. **AI streaming.** A car description streamed token by token over SSE (SL-20). The queued Mercure variant and its load test were dropped 2026-11-01 (Stanislav Markov).
 14. **Local LLM features.** Local model wiring, NL search to filters, semantic search, tool-calling assistant, moderation classifier with an eval set, car-photo vision, and a model/concurrency comparison.
 15. **AI integration lab.** Docs chatbot with RAG and citations, a RAG eval harness, an admin assistant with a hand-written agent loop and an MCP server, similar-car-photos by image embeddings (plus text-to-photo search, hybrid similarity, duplicate detection), a semantic cache, a streaming chat UI, a multi-step research agent and a prompt playground. Each one exists to show how its mechanism works.
 
@@ -64,6 +64,7 @@ There is no authentication; every endpoint is public on the local DDEV network.
 - Real marketplace features: user accounts, payments, image upload, dealer admin.
 - Paid external APIs: the VIN API is a stub; no cloud LLM providers, LLM work is local models or a fake provider only.
 - Declaring a single "winning" server.
+- Go extensions, a single-binary build, the queued AI-streaming variant and its load test (dropped 2026-11-01, Stanislav Markov).
 
 ## Draft business rules
 
@@ -92,7 +93,7 @@ moves to `docs/context/business-rules.md` with the same ids.
 - **BR-24** Results are reported as ratios against the nginx-fpm baseline plus trade-offs (memory, leak risk, moving parts); the expected outcome is written down before each run and any surprise explained after.
 - **BR-25** Server, PHP, DDEV and add-on versions are pinned in config and recorded in BENCHMARKS.md for every result table.
 - **BR-26** A slice that produces measurements is done only with passing tests, a committed result table following BR-21, and a short interview story containing at least one measured number. *(cross-cutting)*
-- **BR-27** Every shipped slice includes a short "How it works" note that names the concepts involved and walks through what happens, step by step, for one request or job (e.g. which process handles it, what is cached, which model call is made). *(cross-cutting)* Source: intake 2026-10-30 (Stanislav Markov).
+- **BR-27** Every shipped slice includes a short "How it works" note that names the concepts involved and walks through what happens, step by step, for one request or job (e.g. which process handles it, what is cached, which model call is made), and adds or updates its section in `docs/learning-guide.md` with links to the code, specs, measured numbers and official docs. *(cross-cutting)* Source: intake 2026-10-30; guide duty added 2026-11-01 (Stanislav Markov).
 
 ### Worker mode lab
 
@@ -123,7 +124,7 @@ moves to `docs/context/business-rules.md` with the same ids.
 
 ### VIN
 
-- **BR-80** A VIN is valid when it has 17 characters, contains no I, O or Q, and its 9th character matches the check digit; the Go and PHP implementations return the same result for every input.
+- ~~**BR-80**~~ *(retired: the VIN Go extension slice SL-18 was dropped, 2026-11-01, Stanislav Markov)*
 
 ### AI
 
