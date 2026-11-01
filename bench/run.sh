@@ -123,8 +123,9 @@ check_conditions() {
     value="$(jq -r '.meta.last_page // 0' "$body")"
     [[ "$value" =~ ^[0-9]+$ && "$value" -ge 100 ]] || refuse "make=BMW has $value pages, at least 100 are needed"
   fi
-  value="$(git status --porcelain -- . ':!bench/results' 2>/dev/null || true)"
-  [[ -z "$value" ]] || refuse "git working tree has changes outside bench/results/"
+  # .ai/session/ is the SDD tooling's own log, rewritten by the tooling itself; it is not app code.
+  value="$(git status --porcelain -- . ':!bench/results' ':!.ai/session' 2>/dev/null || true)"
+  [[ -z "$value" ]] || refuse "git working tree has changes outside bench/results/ and .ai/session/"
 }
 check_conditions
 

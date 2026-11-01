@@ -47,7 +47,9 @@ BASH,
         'git' => <<<'BASH'
 #!/usr/bin/env bash
 case "$*" in
-  *status*) printf '%s' "${STUB_GIT_STATUS-}" ;;
+  *status*)
+    # Honour the .ai/session exclusion pathspec the way git would.
+    if [[ "$*" == *":!.ai/session"* && "${STUB_GIT_STATUS-}" == *" .ai/session/"* ]]; then :; else printf '%s' "${STUB_GIT_STATUS-}"; fi ;;
   *rev-parse*) echo abc1234 ;;
 esac
 BASH,
@@ -207,4 +209,10 @@ it('AC-2 run keeps a single set when the spread is within 5 percent', function (
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
         ->and(glob($this->root.'/app/bench/results/raw/*/nginx-fpm/ping-*.json'))->toHaveCount(3);
+});
+
+it('AC-3 changes in the tooling log .ai/session do not block a run', function (): void {
+    $process = ($this->bench)(['STUB_GIT_STATUS' => ' M .ai/session/lessons.jsonl'], 'ping', '--quick');
+
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput());
 });
