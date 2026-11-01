@@ -89,3 +89,32 @@ test('AC-10 BENCHMARKS.md has expectations written before results', function ():
         ->toContain('worker')
         ->toContain('Surprises');
 });
+
+test('AC-11 BENCHMARKS.md explains how the numbers work', function (): void {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+
+    expect($doc)->toContain("\n## How the numbers work\n");
+
+    preg_match('/^## How the numbers work\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->toContain('RPS')
+        ->toContain('p50')
+        ->toContain('p95')
+        ->toContain('p99')
+        ->toContain('error')
+        ->toContain('spread')
+        ->toContain('router')
+        ->toContain('listen backlog')
+        ->toContain('connection queue')
+        ->toContain('request queue')
+        ->toContain('ratios')
+        ->toContain('7 CPUs')
+        ->toContain('2 CPUs')
+        ->toContain('3xx')
+        ->toMatch('/`~`[^\n]*`noisy`|`noisy`[^\n]*`~`/')
+        ->not->toContain('within 5 percent is reported as `~`');
+
+    preg_match('/^## Surprises\n(.*?)(?=^## |\z)/ms', $doc, $surprises);
+    expect($surprises[1] ?? '')->toContain('`~`')->toContain('noisy');
+});

@@ -34,6 +34,17 @@ Written before any full run and committed first, so the results can be judged ag
 - **timeout behaviour.** `max_execution_time` counts CPU time under PHP-FPM on Linux, so `/debug/sleep` should not be stopped by it there. Under thread-safe PHP (FrankenPHP) it uses wall-clock timers and should stop the request. With 10 s limits, a sleep above the limit should fail on the servers whose own timeout applies and succeed elsewhere.
 - **noise.** Runs with spread above 5 percent are rerun once and marked noisy if they stay above it. Anything within 5 percent of the baseline is reported as `~`, not as a win.
 
+## How the numbers work
+
+- **RPS** is completed requests per second during the 60 s measure window, after a 30 s warm-up. **p50, p95 and p99** are the latencies under which 50, 95 and 99 percent of requests finished; p95 and p99 show the slow tail that an average hides. **Error %** (the error rate) is the share of requests that failed: a status outside 2xx and 3xx, a transport error or a generator timeout. **Spread** is the run-to-run spread: (max - min) / median RPS over the 3 repeats; above 5 percent the set is rerun once and the row is marked `noisy` if it stays above.
+- **Traffic path.** The load container (oha for ping, k6 for search, limited to 2 CPUs) sends HTTPS to the DDEV router, which forwards to the serving container, where a PHP worker handles the request and queries the `db` container. OpenLiteSpeed and FrankenPHP run in their own containers behind the same router. All containers, the load generator included, share the 7 CPUs of the OrbStack VM, and the load container is capped at 2 CPUs of them, so the generator and the server compete for the same cores.
+- **Where a request waits when every worker is busy.** PHP-FPM: in the socket listen backlog until a child is free. OpenLiteSpeed: in the LSAPI connection queue (`maxConns`) in front of the lsphp children. FrankenPHP: in its request queue until a PHP thread is free. In all three models extra load raises latency first and RPS stays flat.
+- **Why only ratios are compared.** Absolute numbers depend on this laptop, Docker's VM and what else is running, so they are not portable. Every row is shown as a ratio to the nginx-fpm row of the same table, measured in the same session, and the ratio is shown as `~` only when the nginx-fpm baseline of that table is marked `noisy`, because then no difference can be trusted.
+
+## Surprises
+
+The first draft of "How the numbers work" said a difference within 5 percent is reported as `~`. The harness does not do that: `~` replaces the ratio only when the nginx-fpm baseline is `noisy`, and the Expectations line about 5 percent describes the noise rule, not a rounding rule. The results-based surprises follow after the full runs.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

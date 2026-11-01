@@ -21,6 +21,7 @@ final class DebugRuntimeController extends Controller
             'sapi' => PHP_SAPI,
             'php_version' => PHP_VERSION,
             'opcache_enabled' => $opcacheEnabled,
+            'xdebug_loaded' => extension_loaded('xdebug'),
             'server_software' => $request->server('SERVER_SOFTWARE'),
         ], 'runtime');
     }
