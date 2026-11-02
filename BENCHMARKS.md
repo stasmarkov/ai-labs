@@ -286,6 +286,10 @@ recall@10 = mean over the 20 queries of |HNSW top 10 ∩ exact top 10| / 10. The
 - **Ollama's tokenizer failed twice in 198 calls.** Two batch calls got HTTP 400 `Post "http://127.0.0.1:…/tokenize": EOF` from Ollama's internal runner; the job retried after 5 s and both batches succeeded. Without the retry backoff they would have counted as failed batches.
 - **The SDK's embedding calls had a hidden 30 s HTTP timeout.** It did not trigger here (a batch of 256 takes about 5 s warm) but would on a cold model load or a busy GPU; the calls now use `AI_EMBED_TIMEOUT` (120 s).
 
+### Interview story (embeddings)
+
+I embedded 50 000 car listings with a local bge-m3 model into pgvector at about 49 vectors per second, and semantic search answered in about 30 ms, two thirds of it spent embedding the question. The first recall check said the HNSW index was perfect, and it was lying twice: once because my two-key sort made PostgreSQL skip the index, and once because at `ef_search` 200 the planner decided a 260 ms full scan was cheaper than the index. Forcing the index showed the real trade-off, recall 0.41 at `ef_search` 40 up to 0.80 at 400 for 11 ms, low because template descriptions crowd 30 neighbours into a cosine distance of 0.008. Lesson: a perfect recall or a 100x slowdown means read the plan.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

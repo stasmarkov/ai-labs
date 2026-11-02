@@ -5,7 +5,7 @@ brief: product-brief.md
 
 # AutoPulse backlog
 
-Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → SL-08 → SL-20 → SL-22 → SL-24 → SL-32 → {SL-33, SL-40, SL-41} → SL-09 → {SL-10, SL-11, SL-12} → SL-13 → SL-14 → SL-15 → {SL-16, SL-17} → {SL-23, SL-26, SL-27} → SL-25 → SL-28 → SL-42 → SL-34 → SL-35 → SL-36 → {SL-37, SL-38, SL-39} → SL-43 → SL-44
+Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → SL-08 → SL-20 → SL-22 → SL-24 → SL-32 → SL-45 → {SL-33, SL-40, SL-41} → SL-09 → {SL-10, SL-11, SL-12} → SL-13 → SL-14 → SL-15 → {SL-16, SL-17} → {SL-23, SL-26, SL-27} → SL-25 → SL-28 → SL-42 → SL-34 → SL-35 → SL-36 → {SL-37, SL-38, SL-39} → SL-43 → SL-44
 
 ## Slices
 
@@ -412,19 +412,33 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Source:** greenfield-build; dropped 2026-11-01 (Stanislav Markov)
 - **Run:** `/sdd "SL-31: GET /dealers/{id}/listings through DealerInventoryController, service and repository using listings_dealer_id_idx, 404 for unknown dealer ids, per_page 1-50 default 20 (BR-03, BR-04, BR-10). Rules in product-brief.md."`
 
-### SL-32 · Docs chatbot with RAG and citations
+### SL-32 · Docs index and hybrid retrieval
 
-- **Outcome:** The developer asks questions about this repo's docs (README, BENCHMARKS.md, specs) and the Laravel 13 docs, and gets answers from the local model that cite the chunks they came from, or "I don't know" when nothing relevant is retrieved; prompt-injection attempts in the question or in a document do not change the bot's rules.
-- **Entry point:** docs chat endpoint, `docs:index` command
-- **Size:** L (split into indexing and answering if the spec passes 12 tasks)
-- **BRs:** BR-98, BR-100, BR-90, BR-27
-- **Notes:** structure-aware chunks (300–500 tokens, 50–80 overlap, headings → paragraphs → sentences, tables and code never split, "document › section" prefix, per-document hash for idempotent re-indexing); vector-only retrieval first, then hybrid vector + full text fused with RRF, compared by SL-33; chunks passed as marked data with their source; embedding model and its query/document prefixes stored with each document; ingest runs as queued jobs on a dedicated low-concurrency queue; the trace row adds retrieved chunk ids and cache hit. Reference design: `.ai/research/ai-chatbot-reference.md` (owner input 2026-11-02).
+- **Outcome:** The developer indexes this repo's docs and the Laravel 13 docs into structure-aware chunks embedded with the local model, and searches them by vector or by hybrid (vector + full text, fused with RRF), seeing the top chunks with their source, section and scores.
+- **Entry point:** `docs:index` command, `GET /api/docs/search`
+- **Size:** M
+- **BRs:** BR-90, BR-26, BR-27
+- **Notes:** split from the original SL-32 on 2026-11-02 (answering moved to SL-45). Structure-aware chunks (300–500 tokens, 50–80 overlap, headings → paragraphs → sentences, tables and code never split, "document › section" prefix, per-document hash for idempotent re-indexing); vector-only and hybrid retrieval side by side. Reference design: `.ai/research/ai-chatbot-reference.md` (owner input 2026-11-02).
 - **Depends on:** SL-22, SL-24
 - **Blocked by:** none
 - **Status:** approved
 - **Spec:** —
-- **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
-- **Run:** `/sdd "SL-32: docs chatbot — queued ingest of this repo's markdown docs and the Laravel 13 docs into structure-aware chunks embedded with the local model into pgvector, vector then hybrid (vector + full text, RRF) top-k retrieval, answers with citations, "I don't know" below the relevance threshold, retrieved text marked as data plus an input/output guard (BR-98, BR-100, BR-90, BR-27). Rules in product-brief.md; design in .ai/research/ai-chatbot-reference.md."`
+- **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov); split 2026-11-02
+- **Run:** `/sdd "SL-32: docs index and hybrid retrieval — queued ingest of this repo's markdown docs and the Laravel 13 docs into structure-aware chunks embedded with bge-m3 into pgvector, vector and hybrid (vector + full text, RRF) top-k search via docs:search and GET /api/docs/search (BR-90, BR-26, BR-27). Rules in product-brief.md; design in .ai/research/ai-chatbot-reference.md."`
+
+### SL-45 · Docs chatbot answering with citations
+
+- **Outcome:** The developer asks a question about the indexed docs and gets a streamed answer from the local model that cites the chunks it used, or "I don't know" when nothing relevant is retrieved; prompt-injection attempts in the question or in a document do not change the bot's rules.
+- **Entry point:** docs chat endpoint
+- **Size:** M
+- **BRs:** BR-98, BR-100, BR-90, BR-95, BR-27
+- **Notes:** split from the original SL-32 on 2026-11-02. Chunks passed as marked data with their source; input/output guard; the trace row adds retrieved chunk ids. Reference design: `.ai/research/ai-chatbot-reference.md`.
+- **Depends on:** SL-32, SL-20
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** split from SL-32, 2026-11-02 (Stanislav Markov's request to build the chatbot sooner)
+- **Run:** `/sdd "SL-45: docs chatbot answering — stream an answer from qwen3.5:9b over the SL-32 retrieval with citations to the chunks used, \"I don't know\" below the relevance threshold, retrieved text marked as data plus an input/output guard, retrieved chunk ids in ai_runs (BR-98, BR-100, BR-90, BR-95, BR-27). Rules in product-brief.md; design in .ai/research/ai-chatbot-reference.md."`
 
 ### SL-33 · RAG evaluation harness
 
@@ -433,7 +447,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Entry point:** `rag:eval` command
 - **Size:** S
 - **BRs:** BR-26, BR-27
-- **Depends on:** SL-32
+- **Depends on:** SL-45
 - **Blocked by:** none
 - **Status:** approved
 - **Spec:** —
@@ -527,7 +541,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Entry point:** docs chat endpoint
 - **Size:** S
 - **BRs:** BR-99, BR-90, BR-27
-- **Depends on:** SL-32
+- **Depends on:** SL-45
 - **Blocked by:** none
 - **Status:** approved
 - **Spec:** —
@@ -541,7 +555,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Entry point:** docs chat page
 - **Size:** S
 - **BRs:** BR-95, BR-27
-- **Depends on:** SL-32, SL-20
+- **Depends on:** SL-45, SL-20
 - **Blocked by:** none
 - **Status:** approved
 - **Spec:** —
@@ -618,5 +632,6 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 | 2026-11-02 | same | Input/output guard against prompt injection | BR change | BR-100 (draft); cited by SL-32 |
 | 2026-11-02 | same | Prism client, Ollama + qwen2.5:7b + nomic-embed-text | Question | Q-01 widened (client per slice, candidates) |
 | 2026-11-02 | same | Tenants, per-tool policies, queued job + Reverb streaming | Non-goal | logged only: no accounts; queued streaming dropped 2026-11-01 |
-| 2026-11-02 | Stanislav Markov | Build the docs chatbot sooner | Reorder | SL-20 → SL-22 → SL-24 → SL-32 → {SL-33, SL-40, SL-41} moved right after SL-08, before the server track; SL-32, SL-33, SL-40, SL-41 approved |
+| 2026-11-02 | Stanislav Markov | Build the docs chatbot sooner | Reorder | SL-20 → SL-22 → SL-24 → SL-32 → SL-45 → {SL-33, SL-40, SL-41} moved right after SL-08, before the server track; SL-32, SL-33, SL-40, SL-41 approved |
 | 2026-11-02 | Stanislav Markov | Q-01 / Q-03 decision | Decision | ADR 0001 accepted; SL-22 run text uses the native ollama driver; SL-22 and SL-24 unblocked |
+| 2026-11-02 | Claude (standing approval) | SL-32 sized L with 10–12 tasks | Split | SL-32 narrowed to index and hybrid retrieval; answering, citations and guard moved to new SL-45; SL-33, SL-40, SL-41 now depend on SL-45 |

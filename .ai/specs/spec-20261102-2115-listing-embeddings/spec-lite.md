@@ -34,7 +34,7 @@ A visitor types what they want ("family car with a big boot") and gets the 10 li
   - **BR-05** The seeded dataset is 500 dealers and 50 000 listings, generated from a fixed seed, so every server queries identical data.
   - **BR-90** Every AI call is logged with provider, model, prompt version, tokens in and out, and latency.
   - **BR-91** Provider and model are chosen by configuration only.
-  - **BR-26** Results are recorded with versions and settings so they can be reproduced.
+  - **BR-26** A slice that produces measurements is done only with passing tests, a committed result table following BR-21, and a short interview story containing at least one measured number. (BR-21's load-test columns do not apply to embedding runs; the tables record the measures in AC-8. Corrected 2026-11-02: the first draft paraphrased this rule wrongly.)
   - **BR-27** Every shipped slice adds its section to `docs/learning-guide.md`.
 
 ## Scope
