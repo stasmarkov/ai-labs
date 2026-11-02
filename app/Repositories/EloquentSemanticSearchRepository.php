@@ -16,8 +16,10 @@ final readonly class EloquentSemanticSearchRepository implements SemanticSearchR
     public function nearest(array $vector, int $limit, int $efSearch): array
     {
         return DB::transaction(function () use ($vector, $limit, $efSearch): array {
-            // ef_search only lasts for this transaction.
+            // Both settings only last for this transaction. pgvector's cost estimate grows with ef_search, and past about
+            // 200 the planner picks a ~260 ms exact sequential scan over the ~11 ms index search, so forbid the scan.
             DB::statement('SET LOCAL hnsw.ef_search = '.max(1, $efSearch));
+            DB::statement('SET LOCAL enable_seqscan = off');
 
             return $this->query($vector, $limit);
         });

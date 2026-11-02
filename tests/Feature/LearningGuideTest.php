@@ -104,7 +104,7 @@ test('AC-9 learning guide explains embeddings and vector search', function (): v
 
     expect($section)->not->toBe('');
 
-    foreach (['embedding', 'bge-m3', 'cosine', 'normalised', 'HNSW', 'ef_search', 'seed', '43.37', '391 MB', '2.9 ms', 'recall@10'] as $needle) {
+    foreach (['embedding', 'bge-m3', 'cosine', 'normalised', 'HNSW', 'ef_search', 'seed', '48.98', '391 MB', '2.9 ms', 'recall@10', '0.795', 'enable_seqscan', 'ordering'] as $needle) {
         expect($section)->toContain($needle);
     }
 

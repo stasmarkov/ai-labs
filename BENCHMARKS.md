@@ -220,7 +220,7 @@ I expected worker mode to help a tiny endpoint a lot and a database search hardl
 
 bge-m3 embeddings of 50 000 generated listing descriptions, stored in PostgreSQL with an HNSW index and searched by cosine distance (SL-24, [ADR 0001](docs/adr/0001-local-model-server-models-php-client.md)). Raw files: [`bench/results/2026-11-02-embeddings/`](bench/results/2026-11-02-embeddings/). Queries: [`bench/semantic-queries.txt`](bench/semantic-queries.txt) (20 queries, each run 5 times for 100 latency samples).
 
-Versions and settings: model `bge-m3` (digest `790764642607`, 566.7M parameters, F16, 1024 dimensions) on Ollama 0.40.13 on the host; pgvector 0.8.7 on PostgreSQL 16.15 with `shared_buffers` 128 MB; HNSW defaults (`m` 16, `ef_construction` 64, `ef_search` 40); one queue worker on the `embeddings` queue; database queue.
+Versions and settings: model `bge-m3` (digest `790764642607`, 566.7M parameters, F16, 1024 dimensions, unit-length vectors) on Ollama 0.40.13 on the host (`OLLAMA_NUM_PARALLEL` not set); pgvector 0.8.7 on PostgreSQL 16.15 with `shared_buffers` 128 MB; HNSW `m` 16, `ef_construction` 64; one queue worker on the `embeddings` queue (database queue). Throughput is measured from the first model call of a run to the last stored vector.
 
 ### Batch size sweep (2 000 listings, `--fresh`, index in place)
 
@@ -230,43 +230,61 @@ Versions and settings: model `bge-m3` (digest `790764642607`, 566.7M parameters,
 | 64 | 32 | 41.402 | 48.31 |
 | 256 | 8 | 40.029 | 49.96 |
 
-Seconds are now fractional: `embedded_at` has microsecond precision and the summary measures from the command's start to the last stored vector. Each summary also records `ollama_version` (0.40.13, from `/api/version`) and `ollama_num_parallel` (null here: `OLLAMA_NUM_PARALLEL` was not set for the app). The first sweep (whole seconds) showed 64 and 256 tied at 40 s; with sub-second timing they separate. A second pass of 64 and 256 gave 41.391 s and 41.945 s for 64, and 38.206 s and 39.841 s for 256, so 256 was faster in all three pairs, by 3 to 9 %.
+A second pass of 64 and 256 gave 41.391 s and 41.945 s for 64, and 38.206 s and 39.841 s for 256: 256 was faster in all three pairs, by 3 to 9 %. **Best batch size: 256**, now the default (`ai.embeddings.batch`). The win is small and close to the run-to-run spread; the cost is that a failed batch retries up to 256 descriptions at once.
 
-**Best batch size: 256**, now the default (`ai.embeddings.batch`). The gain over 64 is small and the margin is close to the run-to-run spread, so the choice rests on 256 winning every time, not on the size of the win. The cost is that a failed batch loses more vectors at once (up to 256 instead of 64) and is retried as a whole. No batch failed. The full run below was taken earlier at batch 64.
-
-### Full run (50 000 listings, batch 64)
+### Full run (50 000 listings, batch 256)
 
 | Measure | Value |
 |---------|-------|
-| Model calls | 782 (0 failed batches) |
-| Total time | 1 153 s (19 min 13 s) |
-| embeddings/s | 43.37 |
-| HNSW build (drop, then `CREATE INDEX`, all vectors loaded) | 35.4 s and 41.1 s in two runs |
-| Table size (`pg_relation_size`) | 20 MB |
-| HNSW index size | 391 MB (409 608 192 bytes) |
-| Table plus index plus TOAST (`pg_total_relation_size`) | 677 MB |
+| Jobs / model calls | 196 / 198 (2 calls failed and were retried, see Surprises; 0 failed batches) |
+| Total time | 1 020.8 s (17 min 1 s) |
+| embeddings/s | 48.98 |
+| HNSW build (all vectors loaded, built next to the old index and swapped) | 39.1 s (42.2 s in an earlier run) |
+| Table size (`pg_relation_size`) | 34 MB (35 397 632 bytes) |
+| HNSW index size, grown by inserts during the run | 455 MB (477 159 424 bytes) |
+| HNSW index size, built at once | 391 MB (409 608 192 bytes) |
+| Table plus index plus TOAST (`pg_total_relation_size`), after the run | 826 MB (866 131 968 bytes) |
 
-### Search (100 samples over 20 queries)
+The earlier full run at batch 64 took 1 153 s (43.37/s, 782 calls) with timing counted from dispatch; it is kept in [`embed-64-all.json`](bench/results/2026-11-02-embeddings/embed-64-all.json) but not compared with the run above, because the timing rule changed.
+
+### Search (100 samples over 20 queries, `ef_search` 100 in this run)
 
 | Time | p50 | p95 |
 |------|-----|-----|
-| Embedding the query (Ollama) | 16.4 ms | 33.8 ms |
-| Database (HNSW) | 2.6 ms | 5.5 ms |
-| Total | 19.0 ms | 37.6 ms |
+| Embedding the query (Ollama) | 21.1 ms | 44.2 ms |
+| Database (HNSW) | 6.2 ms | 13.6 ms |
+| Total | 29.5 ms | 52.3 ms |
 
-recall@10 of HNSW against an exact scan (`SET LOCAL enable_indexscan = off`), mean over the 20 queries: 0.37 at `ef_search` 40 (0.445 in the run before the batch sweep was repeated; the HNSW graph had been updated by 2 000 more inserts in between). "family car with a big boot" still returns 10 estates out of 10, so AC-7 holds (at least 7 of 10 estates, SUVs or MPVs). The latency table and recall above were re-measured (with the Ollama version recorded) after the approximate query was fixed to use the index (see the note below); the earlier 1.0 compared an exact scan with itself.
+### Recall and `ef_search` (HNSW forced, 20 queries, exact scan as reference)
+
+recall@10 = mean over the 20 queries of |HNSW top 10 ∩ exact top 10| / 10. The exact scan turns index scans off; the HNSW queries turn sequential scans off so every row measures the index (see Surprises).
+
+| `ef_search` | recall@10 | database p50 |
+|-------------|-----------|--------------|
+| 40 | 0.405 | 3.6 ms |
+| 100 | 0.485 | 3.2 ms |
+| 200 | 0.605 | 6.8 ms |
+| 400 | 0.795 | 10.7 ms |
+| exact scan | 1.0 | about 260 ms |
+
+**Chosen default: `ef_search` 400** (`AI_EF_SEARCH`): about 11 ms of database time, still less than the 21 ms spent embedding the query, for recall 0.80 instead of 0.49. Recall also moves between index builds (0.57 at 100 before the last rebuild, 0.485 after), because the HNSW graph is built with randomness.
+
+"family car with a big boot" returns 10 estates out of 10 at every setting tried (AC-7: at least 7 of 10 estates, SUVs or MPVs). Over HTTPS the endpoint answers in about 60 ms once warm.
 
 ### What the numbers say
 
-- **Batching helps, then nearly stops helping.** Going from 16 to 64 per call cut the calls by four and raised throughput by a sixth; 256 per call added only about 3 % more, so the model, not the per-call overhead, is the limit.
-- **The full run is slower per vector than the sweep** (43 against 50 embeddings/s). The HNSW index is updated on every insert and grows with the table; this run did not isolate that cost.
-- **Building the index at once takes about 40 s**, and the 391 MB index is 20 times the size of the table. It is larger than `shared_buffers`, so the first queries read pages from the OS cache.
-- **Embedding the query costs several times the database lookup.** At this size the model call dominates the latency of a semantic search.
-- **Recall is 0.37 at `ef_search` 40 (0.445 an hour earlier), and the first 1.0 was wrong.** The bench's approximate query ordered by distance and then by listing id, which PostgreSQL cannot serve from the HNSW index, so it ran an exact scan and was compared with an exact scan. After ordering by distance alone in an inner query, the approximate query uses the index (guarded by an `EXPLAIN` test) and the recall is 0.37 to 0.445. Recall counts listing ids, and the descriptions are template text, so many vectors sit at equal or near-equal distance; ids swapped among such ties count as misses even when the body type is the same. That tie explanation is not isolated here; the top 10 of the probe query is still 10 estates. A higher `ef_search` would raise the recall at the cost of time; that was not measured.
+- **Batching helps, then nearly stops helping.** 16 → 64 per call raised throughput by a sixth; 256 added about 3 %. The GPU work per text, not the per-call overhead, is the limit.
+- **Building the index at once is cheaper and smaller.** About 40 s, and 391 MB against 455 MB for the index grown by 50 000 inserts. Either way the index is more than ten times the table and larger than `shared_buffers`.
+- **Embedding the query costs more than the lookup**, even at `ef_search` 400.
+- **Recall is low because the data is crowded, not because HNSW is broken.** Template descriptions make every vector similar: for "family car with a big boot" the 30 nearest of 50 000 listings all lie within a cosine distance of 0.008 (0.4376 to 0.4454). In such a crowd the graph search easily misses true neighbours that are only a hair closer, and `ef_search` (how many candidates it keeps) buys them back. Results that are "wrong" by id are still near-identical cars, which is why the body-type probe holds at every setting.
 
 ### Surprises (embeddings)
 
-- **The first endpoint query ignored the HNSW index.** It joined `listings` and ordered by distance and then by listing id (the tie-break). PostgreSQL cannot serve a two-key sort from an HNSW index, so it ran a parallel exact scan: database p50 296.5 ms and p95 430.8 ms ([`search-bench-before-subquery.json`](bench/results/2026-11-02-embeddings/search-bench-before-subquery.json)). Ordering by distance alone in an inner query with the limit, and joining and tie-breaking in the outer one, brought it to 2.9 ms. Recall stayed 1.0 because the benchmark's own approximate query was separate from the endpoint's: the endpoint's answers were right, only slow.
+- **At `ef_search` 200 and above, PostgreSQL stops using the HNSW index.** pgvector's cost estimate grows with `ef_search`; on this table the planner switched to a parallel sequential scan with a top-N sort (about 260 ms) and reported recall 1.0, which looked like a perfect index. `EXPLAIN` showed `Seq Scan on listing_documents`. The bench and the endpoint now set `enable_seqscan = off` for their HNSW query (guarded by `EXPLAIN` tests), because the planner's estimate is wrong here: the index search takes about 11 ms at 400.
+- **The first endpoint query ignored the HNSW index for another reason.** It ordered by distance and then by listing id (the tie-break); PostgreSQL cannot serve a two-key sort from an HNSW index, so it ran a parallel exact scan: database p50 296.5 ms and p95 430.8 ms ([`search-bench-before-subquery.json`](bench/results/2026-11-02-embeddings/search-bench-before-subquery.json)). Ordering by distance alone in an inner query with the limit, and tie-breaking in the outer one, brought it to about 3 ms.
+- **The first recall figure (1.0) compared an exact scan with an exact scan**, for the same tie-break reason; a later test-only leak of `SET LOCAL enable_indexscan` inside test transactions was the same trap in another form and is now covered by a test.
+- **Ollama's tokenizer failed twice in 198 calls.** Two batch calls got HTTP 400 `Post "http://127.0.0.1:…/tokenize": EOF` from Ollama's internal runner; the job retried after 5 s and both batches succeeded. Without the retry backoff they would have counted as failed batches.
+- **The SDK's embedding calls had a hidden 30 s HTTP timeout.** It did not trigger here (a batch of 256 takes about 5 s warm) but would on a cold model load or a busy GPU; the calls now use `AI_EMBED_TIMEOUT` (120 s).
 
 ## Response parity
 

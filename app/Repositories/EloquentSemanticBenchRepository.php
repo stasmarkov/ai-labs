@@ -19,6 +19,9 @@ final readonly class EloquentSemanticBenchRepository implements SemanticBenchRep
     {
         return DB::transaction(function () use ($vector, $limit, $efSearch): array {
             DB::statement('SET LOCAL hnsw.ef_search = '.max(1, $efSearch));
+            // pgvector's cost estimate grows with ef_search; past about 200 the planner picks an exact sequential scan,
+            // which would report perfect recall. Forbid it so this always measures the HNSW index.
+            DB::statement('SET LOCAL enable_seqscan = off');
 
             return $this->ids($vector, $limit);
         });

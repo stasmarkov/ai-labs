@@ -28,7 +28,7 @@ final readonly class SemanticBenchService
     /**
      * ef_search values compared for recall and database time.
      */
-    private const EF_SWEEP = [40, 100, 200];
+    private const EF_SWEEP = [40, 100, 200, 400];
 
     public function embeddedCount(): int
     {

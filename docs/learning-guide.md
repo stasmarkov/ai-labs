@@ -316,32 +316,37 @@ Loading cost five seconds once. The generation itself took about the same in bot
 
 **The pipeline, step by step.**
 1. **Descriptions.** `listings:describe-all` writes a deterministic description per listing into `listing_documents`. It is a template over the listing's own fields, so the same listing always gets the same text and a second run changes 0 rows. It is a separate table and a separate command on purpose: the generator must not touch the seed, because the `listings` table has to stay byte-identical (its `md5` over all rows was `6a0f96d2c7139919cc215a520072d3f7` before and after) and the parity hashes of the other endpoints depend on it.
-2. **Embedding.** `listings:embed` sends the descriptions in batches (default 256) to the model as queued jobs on the `embeddings` queue. A vector of the wrong length fails the whole batch and stores nothing. A row is embedded again only if its vector is missing, the model name differs, or the sha256 of its description changed, which is why a second run embeds only what changed.
+2. **Embedding.** `listings:embed` sends the descriptions in batches (default 256) to the model as queued jobs on the `embeddings` queue. A vector of the wrong length fails the whole batch, stores nothing, and the call is logged `failed`. A call that errors is retried after 5 s and then 30 s: Ollama's tokenizer crashed twice in the full run, and both retries succeeded. A row is embedded again only if its vector is missing, the model name differs, or the sha256 of its description changed, which is why a second run embeds only what changed.
 3. **Storing.** The vector goes into a pgvector column with an HNSW index using cosine distance.
-4. **Searching.** The query is embedded with the same provider and model, and the database returns the nearest ten. Query embeddings are logged in `ai_runs` as agent `embeddings:query`, batches as `embeddings`.
+4. **Searching.** The query is embedded with the same provider and model, and the database returns the nearest ten, searching the HNSW graph with `ef_search` 400 (`AI_EF_SEARCH`). Query embeddings are logged in `ai_runs` as agent `embeddings:query`, batches as `embeddings`.
 
 **Why cosine, and why normalised vectors.** Cosine similarity compares the direction of two vectors and ignores their length, which is what "same meaning" needs: a longer text must not look further away just because of its size. `bge-m3` returns vectors normalised to length 1. For unit vectors, cosine distance and Euclidean distance rank neighbours the same way and the dot product equals the cosine, so any of the three would find the same ten listings; cosine is the one that stays correct if a model ever returns unnormalised vectors. The endpoint shows `similarity` (1 minus the distance, 4 decimals).
 
 **What HNSW trades.** Finding the exact nearest neighbours means comparing the query with all 50 000 vectors. HNSW (hierarchical navigable small world) builds a layered graph of neighbours and walks it, looking at a few hundred vectors instead. The price:
-- **Exactness.** The result is approximate. `ef_search` (40 by default in pgvector) is how many candidates the walk keeps: higher finds more of the true neighbours and costs time. Measured recall@10 against an exact scan was 0.37 at 40: on template text many vectors sit at nearly equal distance, so HNSW returns different ids than the exact scan even when the results look the same.
-- **Build time.** Building the index over all 50 000 vectors took 35.4 s and 41.1 s in two runs.
-- **Memory and disk.** The index is 391 MB for a table of 20 MB, 677 MB in total with TOAST. It is bigger than `shared_buffers` (128 MB), so the first queries read from the OS cache.
-- **Insert cost.** Every insert updates the graph: the full run managed 43.37 embeddings/s against 50/s in the 2 000-listing sweep.
+- **Exactness.** The result is approximate. `ef_search` (40 by default in pgvector) is how many candidates the walk keeps: higher finds more of the true neighbours and costs time. Measured with the index forced, recall@10 against an exact scan was 0.405 at 40, 0.485 at 100, 0.605 at 200 and 0.795 at 400, for 3.6, 3.2, 6.8 and 10.7 ms; the exact scan takes about 260 ms. The app uses 400.
+- **Why recall is low here.** The descriptions are template text, so every vector is close to every other: for "family car with a big boot" the 30 nearest of 50 000 listings all lie within a cosine distance of 0.008. A graph walk in such a crowd easily misses neighbours that are only a hair closer, and more candidates win them back. The "missed" listings are near-identical cars, so the answers still look right (10 estates at every setting).
+- **Build time.** Building the index over all 50 000 vectors took 39.1 s (42.2 s in an earlier run).
+- **Memory and disk.** Built at once, the index is 391 MB; grown by 50 000 inserts during the embedding run it was 455 MB. The table itself is 34 MB. Either index is bigger than `shared_buffers` (128 MB), so the first queries read from the OS cache.
+- **Insert cost.** Every insert updates the graph, which is part of why the index built at once is smaller.
 
 **What was measured.** Details and versions are in [`BENCHMARKS.md`](../BENCHMARKS.md#embeddings-and-vector-search-2026-11-02).
 
 | Measure | Value |
 |---|---|
-| Full run, 50 000 listings, batch 64 | 1 153 s, 43.37 embeddings/s, 782 model calls, 0 failed |
+| Full run, 50 000 listings, batch 256 | 1 020.8 s, 48.98 embeddings/s, 196 jobs, 198 model calls (2 retried), 0 failed batches |
 | Batch 16 / 64 / 256 (2 000 listings) | 41.57 / 48.31 / 49.96 embeddings/s; 256 won every pair, so it is the default |
-| Search, embedding the query | p50 16.4 ms, p95 33.8 ms |
-| Search, database (HNSW) | p50 2.6 ms, p95 5.5 ms |
-| Search, total | p50 19.0 ms, p95 37.6 ms |
-| recall@10 at `ef_search` 40 | 0.37 |
+| Search, embedding the query | p50 21.1 ms, p95 44.2 ms |
+| Search, database (HNSW, `ef_search` 100) | p50 6.2 ms, p95 13.6 ms |
+| recall@10 at `ef_search` 40 / 100 / 200 / 400 | 0.405 / 0.485 / 0.605 / 0.795 |
+| HNSW build, index size | 39.1 s, 391 MB |
 
-Run times are fractional seconds, and every summary names the Ollama version, because a whole-second timer once hid the difference between batch 64 and 256. Embedding the query costs several times the database lookup, so at this size the model call is the latency of a semantic search.
+Throughput counts from the first model call of a run, not from dispatch: worker start-up and clearing old vectors are not embedding time. Embedding the query costs more than the database lookup even at `ef_search` 400, so at this size the model call is most of the latency of a semantic search (about 60 ms over HTTPS end to end).
 
-**A query that quietly skipped the index.** The first version of the endpoint ordered by distance and then by listing id (a tie-break) and joined `listings`. PostgreSQL cannot serve a two-key sort from an HNSW index, so it scanned all vectors: database p50 296.5 ms. Ordering by distance alone in an inner query with the limit, and joining and tie-breaking outside, brought it to 2.9 ms. The answers were identical; only the speed told the two apart, which is why the benchmark keeps the slow run. The same mistake hid in the benchmark itself: its approximate query had the two-key sort, so it ran an exact scan and the first recall of 1.0 compared an exact scan with itself. It now uses the index, an `EXPLAIN` test guards that, and the recall is 0.37.
+**A query that quietly skipped the index.** The first version of the endpoint ordered by distance and then by listing id (a tie-break) and joined `listings`. PostgreSQL cannot serve a two-key sort from an HNSW index, so it scanned all vectors: database p50 296.5 ms. Ordering by distance alone in an inner query with the limit, and joining and tie-breaking outside, brought it to 2.9 ms. The answers were identical; only the speed told the two apart, which is why the benchmark keeps the slow run. The same mistake hid in the benchmark itself: its approximate query had the two-key sort, so it ran an exact scan and the first recall of 1.0 compared an exact scan with itself. It now uses the index, and an `EXPLAIN` test guards that.
+
+**The planner can also choose to skip the index on its own.** pgvector's cost estimate for an HNSW search grows with `ef_search`. On this table, at 200 and above PostgreSQL decided that reading all 50 000 rows and sorting them was cheaper, ran a sequential scan (about 260 ms), and the benchmark reported recall 1.0. `EXPLAIN` showed `Seq Scan on listing_documents`. The estimate is wrong here (the index search at 400 takes about 11 ms), so both the endpoint and the benchmark set `enable_seqscan = off` inside the transaction of their HNSW query, and tests check the plan. Lesson: a perfect recall or a sudden 100x slowdown is a reason to read the plan.
+
+**What the tests prove, and what the template text limits.** The AC-7 test gives listings arranged fake vectors and checks that the nearest come first; it proves the ordering and the SQL, not that the model understands "big boot". That part is only shown by the live run. And the descriptions are generated from a handful of templates and feature lists, so the model can only find meaning that the templates put there: "big boot" works because estates get "large boot" in their feature pool, while a query about something no template mentions (rust, a towbar, a nervous dog) has nothing to match. Real descriptions written by people would carry far more meaning, and far more noise.
 
 **In this repo.**
 - Decision: [`ADR 0001`](../docs/adr/0001-local-model-server-models-php-client.md).

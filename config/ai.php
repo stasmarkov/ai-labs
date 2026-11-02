@@ -42,7 +42,7 @@ return [
         // HTTP timeout of one embedding call; below the batch job's 300 s.
         'timeout' => max(1, (int) (env('AI_EMBED_TIMEOUT') ?: 120)),
         // HNSW candidates searched per query: more = better recall, slower (see BENCHMARKS.md).
-        'ef_search' => max(1, min(1000, (int) (env('AI_EF_SEARCH') ?: 100))),
+        'ef_search' => max(1, min(1000, (int) (env('AI_EF_SEARCH') ?: 400))),
     ],
 
     'semantic_per_minute' => filled(env('AI_SEMANTIC_PER_MINUTE')) ? (int) env('AI_SEMANTIC_PER_MINUTE') : 60,

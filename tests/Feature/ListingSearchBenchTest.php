@@ -78,7 +78,7 @@ it('AC-8 search-bench records latency, recall and the body type count', function
         ->and($report['db_ms']['p95'])->toBeGreaterThanOrEqual($report['db_ms']['p50'])
         ->and($report['recall_at_10'])->toEqual(1.0)
         ->and($report['ef_search'])->toBe(config('ai.embeddings.ef_search'))
-        ->and(array_keys($report['ef_sweep']))->toBe([40, 100, 200])
+        ->and(array_keys($report['ef_sweep']))->toBe([40, 100, 200, 400])
         ->and($report['index_build_seconds'])->toBeNull()
         ->and($report['probe']['query'])->toBe('family car with a big boot')
         ->and($report['probe']['total'])->toBe(10)
@@ -140,7 +140,7 @@ it('AC-8 the endpoint and bench approximate queries use the HNSW index and the e
     benchEmbeddedListings(12);
     $vector = benchVector(0.0);
 
-    $endpoint = benchCapturedNearestQuery(fn () => app(SemanticSearchRepositoryInterface::class)->nearest($vector, 10, 40));
+    $endpoint = benchCapturedNearestQuery(fn () => app(SemanticSearchRepositoryInterface::class)->nearest($vector, 10, 400));
     $approximate = benchCapturedNearestQuery(fn () => app(SemanticBenchRepositoryInterface::class)->approximateIds($vector, 10, 40));
     $exact = benchCapturedNearestQuery(fn () => app(SemanticBenchRepositoryInterface::class)->exactIds($vector, 10));
 
@@ -166,4 +166,36 @@ it('AC-8 an index rebuild leaves exactly one HNSW index under the usual name', f
 
     expect(DB::scalar("SELECT count(*) FROM pg_indexes WHERE tablename = 'listing_documents' AND indexdef LIKE '%hnsw%'"))->toBe(1)
         ->and(DB::scalar('SELECT count(*) FROM pg_indexes WHERE indexname = ?', [ListingDocument::EMBEDDING_INDEX]))->toBe(1);
+});
+
+it('AC-8 the bench measures the HNSW index even at a high ef_search', function (): void {
+    benchEmbeddedListings(12);
+    $vector = benchVector(0.0);
+    $plans = [];
+    DB::listen(function ($query) use (&$plans): void {
+        if (str_contains($query->sql, '<=>') && ! str_starts_with($query->sql, 'EXPLAIN')) {
+            $plans[] = collect(DB::select('EXPLAIN '.$query->sql, $query->bindings))->map(fn (object $row): string => (string) ((array) $row)['QUERY PLAN'])->implode("\n");
+        }
+    });
+
+    app(SemanticBenchRepositoryInterface::class)->approximateIds($vector, 10, 1000);
+
+    expect($plans)->not->toBeEmpty()
+        ->and($plans[0])->toContain(ListingDocument::EMBEDDING_INDEX);
+});
+
+it('AC-6 the endpoint query uses the HNSW index at the configured ef_search', function (): void {
+    benchEmbeddedListings(12);
+    $plans = [];
+    DB::listen(function ($query) use (&$plans): void {
+        if (str_contains($query->sql, '<=>') && ! str_starts_with($query->sql, 'EXPLAIN')) {
+            $plans[] = collect(DB::select('EXPLAIN '.$query->sql, $query->bindings))->map(fn (object $row): string => (string) ((array) $row)['QUERY PLAN'])->implode("\n");
+        }
+    });
+
+    app(SemanticSearchRepositoryInterface::class)->nearest(benchVector(0.0), 10, (int) config('ai.embeddings.ef_search'));
+
+    expect(config('ai.embeddings.ef_search'))->toBe(400)
+        ->and($plans)->not->toBeEmpty()
+        ->and($plans[0])->toContain(ListingDocument::EMBEDDING_INDEX);
 });

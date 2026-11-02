@@ -47,9 +47,9 @@
   - [x] 6.1 Failing doc test: heading `## 11. Embeddings and vector search` with links to ADR 0001, the code, the spec, the results folder, https://github.com/pgvector/pgvector and https://huggingface.co/BAAI/bge-m3
   - [x] 6.2 Write the section with the measured numbers; update the status line and Planned list
 
-- [ ] 7. Gates (all)
+- [x] 7. Gates (all)
   Covers: MNC-3
-  - [ ] 7.1 **Verify**: Pint, PHPStan, full suite green (network-free); after committing, `bench/run.sh ping --quick` passes on nginx-fpm
+  - [x] 7.1 **Verify**: Pint, PHPStan, full suite green (network-free); after committing, `bench/run.sh ping --quick` passes on nginx-fpm
 
 ## Traceability
 
@@ -106,20 +106,20 @@
 
 ## Phase: Gaps (converge round 2)
 
-- [ ] 12. Re-run the full 50 000 embedding at the best batch size and re-time the HNSW build (bench, docs)
+- [x] 12. Re-run the full 50 000 embedding at the best batch size and re-time the HNSW build (bench, docs)
   Covers: AC-8, AC-2, AC-9
   - AC-8 asks for "the full run's embeddings/s and total time with the best batch size". Task 9 made 256 the best size and the default (`config/ai.php` `AI_EMBED_BATCH ?: 256`), but the only full run is `bench/results/2026-11-02-embeddings/embed-64-all.json`. It used batch 64, has whole-second `seconds` (1153), and has no `ollama_version` or `ollama_num_parallel` keys. BENCHMARKS.md says "The full run below was taken earlier at batch 64", and guide section 11 shows "Full run, 50 000 listings, batch 64". The HNSW build time is only in `search-bench-before-subquery.json` (`index_build_seconds` 35.42). The current `search-bench.json` has `index_build_seconds: null`, and the "41.1 s" run quoted in BENCHMARKS.md and the guide has no results file. The sizes quoted (391 MB index, 677 MB total) come from the batch-64 run, while `search-bench.json` now reports `index_bytes` 423 723 008. AC-2 still says "(default 64)", which no longer matches the code.
   - With one worker on `--queue=embeddings`, run `listings:embed --fresh --batch=256 --wait`, which writes `embed-256-all.json` with the Ollama version and fractional seconds. Then run `listings:search-bench --index` so one `search-bench.json` holds the build time, index size, latency and recall of the final state. Update the BENCHMARKS.md full-run table and sizes, the search table and recall, and the "What the numbers say" bullets. Update the guide section 11 numbers table and its HNSW build, memory and insert-cost bullets. Keep `embed-64-all.json` as the earlier run and label it that way. Point `BenchmarksDocTest` and `LearningGuideTest` at the new file and figures. In spec-lite.md, change AC-2's "(default 64)" to the decided default, with a note that Clarifications (best batch size) allowed the change. Afterwards check the listings hash (MNC-1) again.
-  - [ ] **Verify**: `bench/results/2026-11-02-embeddings/embed-256-all.json` exists with `batch` 256, `listings_embedded` 50000, `failed_batches` 0, `ollama_version` set and non-integer `seconds`; `search-bench.json` has non-null `index_build_seconds`; BENCHMARKS.md and guide section 11 name the batch-256 full run and the new build time, sizes, latency and recall; the listings hash is still `6a0f96d2c7139919cc215a520072d3f7`; full suite green; no queue worker left running
+  - [x] **Verify**: `bench/results/2026-11-02-embeddings/embed-256-all.json` exists with `batch` 256, `listings_embedded` 50000, `failed_batches` 0, `ollama_version` set and non-integer `seconds`; `search-bench.json` has non-null `index_build_seconds`; BENCHMARKS.md and guide section 11 name the batch-256 full run and the new build time, sizes, latency and recall; the listings hash is still `6a0f96d2c7139919cc215a520072d3f7`; full suite green; no queue worker left running
 
-- [ ] 13. Log a wrong-length query embedding as failed (backend)
+- [x] 13. Log a wrong-length query embedding as failed (backend)
   Covers: AC-6, AC-5
   - Clarifications (query-time failures): "Ollama down or a wrong-length query vector → 503 JSON ... with the call logged `failed`". In `SemanticSearchService::embedQuery`, the length check runs after `generate()` has returned. By then `RecordEmbeddingsRun::onGenerated` has already written the `embeddings:query` row as `completed`, and nothing marks it failed. The test `AC-6 semantic search answers 503 JSON when the query vector has the wrong length` (`tests/Feature/SemanticSearchTest.php`) asserts only the status and message, not the `ai_runs` row.
   - When the run's agent is `embeddings:query` and a returned vector's length differs from the requested dimensions, record the call as `failed` with `InvalidEmbeddingException` (class and message) instead of `completed`. For example, check this in `RecordEmbeddingsRun::onGenerated` against `$event->prompt->dimensions`, using the agent kept by `AiRunRecorder::started`. Batch calls keep the batch rule (`completed`, because the model did answer). Extend the wrong-length test to assert one `embeddings:query` row with status `failed` and an `InvalidEmbeddingException` error class. Assert that the AC-3 batch path still logs `completed`.
-  - [ ] **Verify**: `ddev artisan test --compact --filter='wrong length'` passes with the new `ai_runs` assertions; full suite green
+  - [x] **Verify**: `ddev artisan test --compact --filter='wrong length'` passes with the new `ai_runs` assertions; full suite green
 
-- [ ] 14. Make guide section 11 say what the AC-7 test proves, and what template text limits (docs)
+- [x] 14. Make guide section 11 say what the AC-7 test proves, and what template text limits (docs)
   Covers: AC-9
   - Clarifications ("Live check for AC-7") say "the test with arranged fake vectors only proves ordering, and that is said plainly in the guide". Decision 1 says "The guide notes that template text limits how much 'meaning' there is to find". Section 11 of `docs/learning-guide.md` says neither: it never mentions the fake-vector test or what it proves. It also states the cause of the low recall as fact ("on template text many vectors sit at nearly equal distance, so HNSW returns different ids"), while BENCHMARKS.md says "That tie explanation is not isolated here".
   - Add one sentence saying the AC-7 test uses arranged fake vectors and proves only the ordering, and that the "7 of 10" claim rests on the live run. Add one sentence on how template descriptions limit the meaning a model can find (every text says the same kinds of things in the same order). Reword the recall bullet so the tie explanation reads as an untested hypothesis, matching BENCHMARKS.md. Extend `AC-9 learning guide explains embeddings and vector search` to check for the fake-vector and template notes.
-  - [ ] **Verify**: `ddev artisan test --compact --filter='AC-9 learning guide explains embeddings'` passes with the new needles; section 11 contains the three statements; full suite green
+  - [x] **Verify**: `ddev artisan test --compact --filter='AC-9 learning guide explains embeddings'` passes with the new needles; section 11 contains the three statements; full suite green
