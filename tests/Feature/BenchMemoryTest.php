@@ -76,7 +76,10 @@ else
     hits=1; seen="2030-01-01T00:00:$served"
     [[ "$out" != "/dev/null" ]] && echo "$served" > "$d/seen"
   fi
-  echo "{\"data\":{\"memory_bytes\":$(( 2000000 + leaked * 1024 )),\"worker_hits\":$hits,\"first_seen_at\":\"$seen\"}}" > "$out"
+  # Garbage only shows before collection: with ?gc=1 memory_bytes is what stays after collecting it.
+  before=$(( 2000000 + leaked * 1024 + served % 7 * 4096 )); memory=$before
+  [[ "$url" == *gc=1* ]] && memory=$(( 2000000 + leaked * 1024 ))
+  echo "{\"data\":{\"memory_bytes\":$memory,\"memory_bytes_before_gc\":$before,\"worker_hits\":$hits,\"first_seen_at\":\"$seen\"}}" > "$out"
 fi
 echo "$served" > "$d/served"; echo "$hits" > "$d/hits"; echo "$leaked" > "$d/leaked"
 echo 200
@@ -120,7 +123,8 @@ it('AC-3 memory run samples every 100 requests across its cases and restores .en
 
     [$a, $b, $c] = $result['cases'];
     expect(array_column($a['samples'], 'requests'))->toBe(range(0, 1000, 100))
-        ->and($a['samples'][0])->toHaveKeys(['requests', 'memory_bytes', 'worker_hits', 'first_seen_at'])
+        ->and($a['samples'][0])->toHaveKeys(['requests', 'memory_bytes', 'memory_bytes_before_gc', 'worker_hits', 'first_seen_at'])
+        ->and($a['samples'][3]['memory_bytes_before_gc'])->toBeGreaterThan($a['samples'][3]['memory_bytes'])
         ->and($a['restarts'])->toBe(0)
         ->and($a['growth_kib_per_1000'])->toEqualWithDelta(1000.0, 5.0)
         ->and($b['restarts'])->toBe(0)

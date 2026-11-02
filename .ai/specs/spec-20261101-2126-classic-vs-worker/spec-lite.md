@@ -109,6 +109,7 @@ The SL-06 harness is extended to the two worker-mode servers. BENCHMARKS.md then
 3. "No recycling" = `max-requests` 1 000 000, because `0` stops Octane's worker loop at once.
 4. Memory runs use 1 worker so every request and every `/debug/worker` read hit the same worker thread.
 5. Self-review (2026-11-01): re-measuring classic in the same session, sequential memory load (~80 000 requests, 20–30 min), sampling every 100 against restarts every ~500, and no recycling in fair runs were checked and kept; `memory_get_usage()` in a ZTS build reports the worker thread's own PHP heap, which is the right measure and is explained in the guide (self-decided, standing approval).
+6. Dry run (2026-11-02): uncollected garbage cycles make `memory_get_usage()` climb ~4.8 KB per request in every mode and drop every ~750 requests when PHP's cycle collector runs (Octane worker, 1 thread, 4 000 lab requests). That sawtooth (~3 MB swing) is larger than case A's real leak (~0.25 KB per request), so a slope over raw readings cannot separate A from B. `bench/memory.sh` now samples `/debug/worker?gc=1`, which runs `gc_collect_cycles()` before reading memory; `memory_bytes` is retained memory and `memory_bytes_before_gc` keeps the raw value for the guide (self-decided, standing approval).
 
 ## Open questions
 - [x] Assumption: BR-20, BR-21, BR-23, BR-24, BR-26 and BR-27 are unvalidated draft rules (owner Stanislav Markov). — **Accepted assumption** (Stanislav Markov, standing approval 2026-11-01).

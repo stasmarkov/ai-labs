@@ -36,3 +36,12 @@ test('MNC-1 worker endpoint is a 404 when debug routes are off', function (): vo
 
     $this->getJson('/debug/worker')->assertNotFound();
 });
+
+test('AC-3 worker endpoint collects garbage cycles before reading memory when asked', function (): void {
+    [$plain, $collected] = OctaneRunner::worker(['/debug/worker', '/debug/worker?gc=1']);
+
+    expect($plain['body']['data']['gc_collected'])->toBeNull()
+        ->and($plain['body']['data']['memory_bytes_before_gc'])->toBeInt()
+        ->and($collected['body']['data']['gc_collected'])->toBeInt()->toBeGreaterThanOrEqual(0)
+        ->and($collected['body']['data']['memory_bytes_before_gc'])->toBeInt()->toBeGreaterThan(0);
+});

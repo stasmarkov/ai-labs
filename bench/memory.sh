@@ -7,8 +7,10 @@
 ## Cases: A leak, no recycling (max-requests 1000000); B fixed, no recycling; C leak, max-requests 500 (worker
 ## servers only). Classic frankenphp runs A and B on one thread (num_threads 1, max_threads 1), where nothing
 ## survives a request. n must be a positive multiple of 100.
-## Before the first request and after every 100 requests it reads /debug/worker and records memory_bytes,
-## worker_hits and first_seen_at. A restart shows as worker_hits going down or first_seen_at changing (workers
+## Before the first request and after every 100 requests it reads /debug/worker?gc=1 and records memory_bytes,
+## memory_bytes_before_gc, worker_hits and first_seen_at. gc=1 runs PHP's cycle collector before memory is read:
+## without it, garbage cycles waiting for the collector make memory climb ~5 KB per request and drop every few
+## hundred requests, a sawtooth that hides a real leak of a few hundred bytes per request. A restart shows as worker_hits going down or first_seen_at changing (workers
 ## are threads in one process, so pid does not change). The reads count toward the worker's max-requests; the n
 ## counts lab requests only. Classic frankenphp has no long-lived worker, so its restarts are reported as 0.
 ## growth_kib_per_1000 is the least-squares slope of memory_bytes over requests, per stretch between restarts
@@ -127,13 +129,13 @@ check_conditions() {
   [[ -z "$value" ]] || refuse "git working tree has changes outside bench/results/ and .ai/session/"
 }
 
-# Appends {requests, memory_bytes, worker_hits, first_seen_at} read from /debug/worker to the case's samples.
+# Appends {requests, memory_bytes, memory_bytes_before_gc, worker_hits, first_seen_at} read from /debug/worker?gc=1.
 sample() {
   local attempt status
   for attempt in 1 2 3; do
-    status="$(curl -ksS --max-time 30 -H 'Accept: application/json' -o "$WORK/sample.json" -w '%{http_code}' "$BASE_URL/debug/worker")" || status=000
+    status="$(curl -ksS --max-time 30 -H 'Accept: application/json' -o "$WORK/sample.json" -w '%{http_code}' "$BASE_URL/debug/worker?gc=1")" || status=000
     if [[ "$status" == "200" ]] && jq -ce --argjson requests "$1" \
-      '{requests: $requests, memory_bytes: .data.memory_bytes, worker_hits: .data.worker_hits, first_seen_at: .data.first_seen_at}' \
+      '{requests: $requests, memory_bytes: .data.memory_bytes, memory_bytes_before_gc: .data.memory_bytes_before_gc, worker_hits: .data.worker_hits, first_seen_at: .data.first_seen_at}' \
       "$WORK/sample.json" >> "$WORK/samples.ndjson" 2>/dev/null; then
       return 0
     fi
