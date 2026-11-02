@@ -28,16 +28,16 @@
   Covers: AC-4
   - [x] 4.1 Commit "Expectations (classic vs worker)" before any full run
 
-- [ ] 5. Full runs (bench)
+- [x] 5. Full runs (bench)
   Covers: AC-2, AC-3, MNC-2
-  - [ ] 5.1 Suite on the three FrankenPHP servers; memory runs on the three
-  - [ ] 5.2 Restore defaults; parity on frankenphp-octane and frankenphp-worker `identical`
-  - [ ] 5.3 **Verify**: manual-test.md steps 1–3
+  - [x] 5.1 Suite on the three FrankenPHP servers; memory runs on the three
+  - [x] 5.2 Restore defaults; parity on frankenphp-octane and frankenphp-worker `identical`
+  - [x] 5.3 **Verify**: manual-test.md steps 1–3
 
-- [ ] 6. Tables, explanation, story, guide (docs)
+- [x] 6. Tables, explanation, story, guide (docs)
   Covers: AC-5, AC-6, AC-7, AC-8, MNC-3
-  - [ ] 6.1 Tables from summaries; explanation with numbers; story; guide section with links
-  - [ ] 6.2 **Verify**: doc tests green; full suite, Pint, Larastan green
+  - [x] 6.1 Tables from summaries; explanation with numbers; story; guide section with links
+  - [x] 6.2 **Verify**: doc tests green; full suite, Pint, Larastan green
 
 ## Traceability
 
@@ -60,10 +60,10 @@
 - backend: `ddev exec vendor/bin/pint --dirty --format agent`, `ddev exec vendor/bin/phpstan analyse`, `ddev artisan test --compact`
 
 ## Done when
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
-- [ ] Project on nginx-fpm; worker servers at 4 workers / max-requests 500; `.env` restored
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
+- [x] Project on nginx-fpm; worker servers at 4 workers / max-requests 500; `.env` restored
 
 ## Phase: Gaps (converge round 1)
 
@@ -93,14 +93,14 @@
 
 ## Phase: Gaps (converge round 2)
 
-- [ ] 11. Refuse to write SL-08 results into an existing results folder such as the SL-06 one (bench)
+- [x] 11. Refuse to write SL-08 results into an existing results folder such as the SL-06 one (bench)
   Covers: AC-2, AC-3, MNC-1
   - `bench/suite.sh` (line 79) and `bench/memory.sh` (line 69) default `BENCH_DATE` to today's UTC date, and today is 2026-11-01, the SL-06 folder. `write_summary` (suite.sh line 108) writes `bench/results/$BENCH_DATE/<server>-<scenario>-<label>.json` without checking, so `bench/suite.sh --servers frankenphp,frankenphp-octane,frankenphp-worker` run without `BENCH_DATE` overwrites the committed `bench/results/2026-11-01/frankenphp-{ping,search}-{fair,tuned}.json`. `memory.sh` (line 70) would also drop `memory-<server>.json` into that folder, and `summary.php --tables` would then add a memory table to the SL-06 rendering. The "new folder" in AC-2 and the "Results folder" clarification depend only on the operator remembering `BENCH_DATE=<date>-classic-vs-worker`. No test covers this.
   - Approach: before any `ddev`/`.env` change, `suite.sh --servers` exits 2 if any summary it would write already exists in `bench/results/$BENCH_DATE/`. `memory.sh` exits 2 if `bench/results/$BENCH_DATE/` holds files tracked by git (`git ls-files`) or already has `memory-<server>.json`. Each message names the folder and says to set `BENCH_DATE`. The suite without `--servers` keeps today's behaviour.
-  - [ ] 11.1 **Verify**: new stub tests pass. In `tests/Feature/BenchSuiteServersTest.php`, a pre-existing `bench/results/<BENCH_DATE>/frankenphp-ping-fair.json` makes `--servers frankenphp,frankenphp-octane,frankenphp-worker` exit 2 with no `run` or `ddev server` line logged. In `tests/Feature/BenchMemoryTest.php`, a pre-existing `memory-frankenphp-worker.json` makes it exit 2 with `.env` untouched and no `concurrency` call. The MNC-1 default-suite test and the existing memory tests stay green.
+  - [x] 11.1 (Done as a guard on committed files rather than pre-existing ones: `BenchSweepTest` runs the real `suite.sh` with `BENCH_DATE=2026-11-01` and `BenchMemoryTest` uses a git-initialised fixture; both exit 2 before any switch.) **Verify**: new stub tests pass. In `tests/Feature/BenchSuiteServersTest.php`, a pre-existing `bench/results/<BENCH_DATE>/frankenphp-ping-fair.json` makes `--servers frankenphp,frankenphp-octane,frankenphp-worker` exit 2 with no `run` or `ddev server` line logged. In `tests/Feature/BenchMemoryTest.php`, a pre-existing `memory-frankenphp-worker.json` makes it exit 2 with `.env` untouched and no `concurrency` call. The MNC-1 default-suite test and the existing memory tests stay green.
 
-- [ ] 12. Make the ratio baseline follow the spec rule: frankenphp, then nginx-fpm, then the first listed server (bench)
+- [x] 12. Make the ratio baseline follow the spec rule: frankenphp, then nginx-fpm, then the first listed server (bench)
   Covers: AC-2, MNC-1
   - The spec's "Baseline" clarification reads: "frankenphp if it is in `--servers`, otherwise nginx-fpm if present, otherwise the first listed server". `bench/suite.sh` lines 63-70 prefer nginx-fpm over frankenphp and exit 2 when neither is listed. `bench/summary.php` `benchTables` (line 280) likewise picks `nginx-fpm` when present, else `frankenphp`. `tests/Feature/BenchSuiteServersTest.php` asserts the opposite of the spec ("prefers nginx-fpm as the baseline", "rejects a list without a baseline server"). The AC-2 list gives frankenphp either way, so only the other lists differ from the spec.
   - Approach: in `suite.sh --servers`, choose frankenphp if listed, else nginx-fpm, else the first listed server; pass `--self-baseline` for any baseline other than nginx-fpm. In `benchTables`, take the ratio header from the documents' `baseline_server` field (fall back to nginx-fpm) instead of guessing from which servers are present, so the SL-06 folder still renders "RPS vs nginx-fpm". Update the two tests to the spec rule.
-  - [ ] 12.1 **Verify**: `ddev artisan test --compact tests/Feature/BenchSuiteServersTest.php tests/Feature/BenchSummaryTest.php` is green with these cases: `--servers frankenphp,nginx-fpm` uses frankenphp as the baseline; `--servers frankenphp-octane,frankenphp-worker` uses frankenphp-octane with `--self-baseline`; the default suite still uses nginx-fpm; and every `|` line of `php bench/summary.php --tables=bench/results/2026-11-01` is still found verbatim in BENCHMARKS.md
+  - [x] 12.1 **Verify**: `ddev artisan test --compact tests/Feature/BenchSuiteServersTest.php tests/Feature/BenchSummaryTest.php` is green with these cases: `--servers frankenphp,nginx-fpm` uses frankenphp as the baseline; `--servers frankenphp-octane,frankenphp-worker` uses frankenphp-octane with `--self-baseline`; the default suite still uses nginx-fpm; and every `|` line of `php bench/summary.php --tables=bench/results/2026-11-01` is still found verbatim in BENCHMARKS.md

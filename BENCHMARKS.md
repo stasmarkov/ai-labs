@@ -138,6 +138,84 @@ I ran the same Laravel app behind nginx-fpm, Apache, OpenLiteSpeed and FrankenPH
 - **max-requests 1 hides three leaks, not the fourth.** With a restart after every request no worker serves A and then B, so dealer-scope, price-cache and number-locale drop to `0/20`. The leak is hidden, not fixed: the code is unchanged, and the cost is a full boot per request. request-at-boot stays `20/20` because it does not need an earlier request: every freshly booted worker captures the boot-time request, which carries no dealer, so B always sees a stale request instead of its own. A restart cannot hide that.
 - **`/debug/worker` and the lab are off by default.** With `DEBUG_ROUTES` unset the routes answer 404, and the script restores `.env` on exit.
 
+## Classic vs worker (2026-11-02)
+
+FrankenPHP classic against both worker setups (Octane's daemon and the add-on worker), same machine and rules as SL-06, run on 2026-11-02 from commit `7aca1d0`. Fair = 8 workers, no recycling; tuned = best of 8/16/32. Raw files: [`bench/results/2026-11-02-classic-vs-worker/`](bench/results/2026-11-02-classic-vs-worker/). Expectations were committed first ([above](#expectations-classic-vs-worker), commit `c82f462`).
+
+#### /api/ping (bootstrap-dominated)
+
+| Server | Setting | RPS | p50 ms | p95 ms | p99 ms | Errors % | Peak MiB (serving) | CPU % (serving) | Spread | RPS vs frankenphp | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| frankenphp | fair: 8 workers | 4766 | 9.3 | 18.0 | 27.7 | 0.00 | 227 | 563 | 8.8% noisy | ~1.00x |  |
+| frankenphp-octane | fair: 8 workers, max-requests 1000000 | 10604 | 4.3 | 9.2 | 12.3 | 0.00 | 343 | 448 | 1.8% | ~2.23x |  |
+| frankenphp-worker | fair: 8 workers, max-requests 1000000 | 8945 | 4.9 | 11.4 | 16.4 | 0.00 | 309 | 412 | 9.4% noisy | ~1.88x |  |
+| frankenphp | tuned: 8 workers | 4669 | 10.1 | 16.7 | 22.0 | 0.00 | 220 | 560 | 20.4% noisy | ~1.00x |  |
+| frankenphp-octane | tuned: 8 workers, max-requests 1000000 | 7817 | 5.7 | 12.6 | 18.2 | 0.00 | 348 | 412 | 36.4% noisy | ~1.67x |  |
+| frankenphp-worker | tuned: 8 workers, max-requests 1000000 | 8271 | 5.1 | 12.6 | 20.4 | 0.00 | 298 | 412 | 20.6% noisy | ~1.77x |  |
+
+#### /listings?make=BMW (DB-dominated)
+
+| Server | Setting | RPS | p50 ms | p95 ms | p99 ms | Errors % | Peak MiB (serving) | CPU % (serving) | Spread | RPS vs frankenphp | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| frankenphp | fair: 8 workers | 365 | 130.6 | 195.0 | 231.7 | 0.00 | 277 | 329 | 18.5% noisy | ~1.00x |  |
+| frankenphp-octane | fair: 8 workers, max-requests 1000000 | 1363 | 33.9 | 55.2 | 74.7 | 0.00 | 393 | 286 | 9.9% noisy | ~3.74x |  |
+| frankenphp-worker | fair: 8 workers, max-requests 1000000 | 1461 | 33.2 | 44.4 | 51.1 | 0.00 | 316 | 287 | 20.2% noisy | ~4.01x |  |
+| frankenphp | tuned: 32 workers | 485 | 99.5 | 147.8 | 180.8 | 0.00 | 319 | 390 | 1.6% | 1.00x |  |
+| frankenphp-octane | tuned: 32 workers, max-requests 1000000 | 1206 | 36.1 | 78.1 | 122.9 | 0.00 | 548 | 288 | 9.8% noisy | 2.49x |  |
+| frankenphp-worker | tuned: 16 workers, max-requests 1000000 | 1468 | 32.9 | 45.8 | 56.6 | 0.00 | 387 | 292 | 11.3% noisy | 3.03x |  |
+
+#### Memory and CPU at 50 concurrent users (fair ping run)
+
+| Server | Serving container | Idle MiB | Peak MiB | Avg CPU % | db idle MiB | db peak MiB | db avg CPU % | Idle `web` MiB (OLS only) |
+|---|---|---|---|---|---|---|---|---|
+| frankenphp | web | 293 | 227 | 563 | 29 | 44 | 0 | — |
+| frankenphp-octane | web | 405 | 343 | 448 | 25 | 53 | 0 | — |
+| frankenphp-worker | web | 233 | 309 | 412 | 19 | 38 | 0 | — |
+
+#### Worker memory growth (memory_bytes, 1 worker, sequential requests)
+
+| Server | Case | Mode | Max-requests | Bytes at 0 | at 1000 | at 5000 | at 10000 | Restarts | Highest bytes | KiB per 1000 requests |
+|---|---|---|---|---|---|---|---|---|---|---|
+| frankenphp | A | leak | — | 799104 | 799104 | 799104 | 799104 | 0 | 799104 | 0.00 |
+| frankenphp | B | fixed | — | 799104 | 799104 | 799104 | 799104 | 0 | 799104 | 0.00 |
+| frankenphp-octane | A | leak | 1000000 | 5685624 | 6594576 | 8705296 | 11312976 | 0 | 11312976 | 508.44 |
+| frankenphp-octane | B | fixed | 1000000 | 5683952 | 6174488 | 6174488 | 6174488 | 0 | 6174488 | 0.00 |
+| frankenphp-octane | C | leak | 500 | 5683952 | 1172384 | 1192544 | 1228712 | 20 | 6298824 | 494.64 |
+| frankenphp-worker | A | leak | 1000000 | 5682368 | 6591320 | 8702040 | 11309720 | 0 | 11309720 | 508.44 |
+| frankenphp-worker | B | fixed | 1000000 | 5680696 | 6171232 | 6171232 | 6171232 | 0 | 6171232 | 0.00 |
+| frankenphp-worker | C | leak | 500 | 5680696 | 1169128 | 1189288 | 1225456 | 20 | 6295568 | 494.64 |
+
+Memory rows: one worker, 10 000 sequential lab requests per case, read every 100 requests from `/debug/worker?gc=1` (garbage cycles collected before reading, see below). Growth is the least-squares slope per stretch between restarts, without each stretch's first (warm-up) sample.
+
+### What the numbers say
+
+**Bootstrap share** = 1 − (worker p50 ÷ classic p50) at the fair setting: the part of a classic request's latency that worker mode removes.
+
+| Scenario | Classic p50 | Octane p50 | Add-on worker p50 | Bootstrap share (Octane / worker) |
+|---|---|---|---|---|
+| ping | 9.3 ms | 4.3 ms | 4.9 ms | 54 % / 47 % |
+| search | 130.6 ms | 33.9 ms | 33.2 ms | 74 % / 75 % |
+
+p50 is measured at 50 concurrent connections, so it includes queueing as well as work; the share is a comparison between modes under the same load, not a pure service-time split.
+
+**Why search gains more than ping.** Each classic request opens a new PostgreSQL connection, and PostgreSQL starts a new backend process for every connection. Counted with `pg_stat_database.sessions`: 500 search requests opened 501 sessions on FrankenPHP classic (one per request plus the counting query) and 2 on Octane, where each worker keeps its connection for its whole life. Connection setup, plus booting the framework, Eloquent and the view layer, is most of a search request; the query itself is small. The "DB-dominated" label from SL-06 was wrong about the cause: the cost is the connection, not the query.
+
+**Why classic search tunes to 32 workers.** A classic thread spends much of each request waiting for PostgreSQL to fork a backend and authenticate, so more threads keep the CPU busy (485 RPS at 32, 365 at 8). Worker mode has no such wait and does not gain from more workers.
+
+**Memory.** Case A grows 508 KiB per 1 000 requests (about 0.5 KB per request: one static array entry per new amount) and reached 11.3 MB after 10 000 requests on both worker servers. Case B, the same work with the cache in Redis, is flat from request 100 to 10 000. Case C, the leak with max-requests 500, restarted 20 times and never went above 6.3 MB: recycling caps the leak, it does not remove it (the slope inside each stretch is still 495 KiB per 1 000). Classic FrankenPHP shows 0.8 MB on every read and no growth, because nothing survives a request.
+
+### Surprises (classic vs worker)
+
+- **Search, predicted at most 1.3x: got 3.7x (Octane) and 4.0x (worker) fair, 2.5x and 3.0x tuned.** Missed, because the prediction assumed the query dominates the request. It is the per-request connection and boot that dominate (see above).
+- **Ping, predicted at least 2x: Octane 2.23x, add-on worker 1.88x fair.** Met by Octane, narrowly missed by the add-on worker. The two run the same Laravel worker loop, the worker row is marked noisy (9.4 %), and in the tuned rows the order flips (1.67x vs 1.77x), so the gap between them is inside the noise.
+- **Case B, predicted within 5 KiB per 1 000: 0.00, but only after a fix to the measurement.** The dry run read `memory_get_usage()` directly and saw every mode, fixed included, climb about 4.8 KB per request and drop every ~750 requests. That is garbage (reference cycles) waiting for PHP's cycle collector, not a leak; the sawtooth swings about 3 MB, far more than case A's real leak. Reading memory after `gc_collect_cycles()` removed it.
+- **Case C, predicted a drop about every 500 requests: 20 drops in 10 000, as predicted. Unexplained:** after a max-requests restart the worker reports about 1.2 MB, while the first worker after a container start reported 5.7 MB for the same app and route. Both had booted Laravel (`worker_hits` restarts at 1). Not investigated further; a likely place to look is what the first boot after a container start loads that a recycled worker reuses.
+- **Noise.** 10 of the 12 ping and search rows are marked noisy (spread above 5 % after one rerun), worst on classic ping, which keeps 5.6 of the VM's 7 CPUs busy and is the most sensitive to other apps on the host. The tuned Octane ping row picked the same setting as fair (8 workers) and came out at 7 817 RPS against 10 604: the same configuration measured twice differs by 26 %. The ratios above are much larger than that, so the conclusions hold; the exact ping ratios do not.
+
+### Interview story (classic vs worker)
+
+I expected worker mode to help a tiny endpoint a lot and a database search hardly at all, and wrote that down before measuring. Ping did gain about 2x, but search gained 3–4x, and the reason was not the query: classic PHP opened one PostgreSQL connection per request (501 sessions for 500 requests), while a worker kept its connection open. The memory test needed fixing first, because PHP's cycle collector made even leak-free code look like it grew 5 KB per request until I collected garbage before reading memory. After that the static-array leak showed a clean 0.5 KB per request, and max-requests 500 capped it at 6.3 MB instead of 11.3 MB, which limits the damage but leaves the bug in place.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

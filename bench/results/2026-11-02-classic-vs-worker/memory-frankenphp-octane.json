@@ -1,0 +1,2158 @@
+{
+  "server": "frankenphp-octane",
+  "commit": "7aca1d0",
+  "date": "2026-11-02-classic-vs-worker",
+  "cases": [
+    {
+      "case": "A",
+      "mode": "leak",
+      "workers": 1,
+      "max_requests": 1000000,
+      "samples": [
+        {
+          "requests": 0,
+          "memory_bytes": 5685624,
+          "memory_bytes_before_gc": 5680472,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 100,
+          "memory_bytes": 6151408,
+          "memory_bytes_before_gc": 6627776,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 200,
+          "memory_bytes": 6201104,
+          "memory_bytes_before_gc": 6677472,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 300,
+          "memory_bytes": 6254896,
+          "memory_bytes_before_gc": 6731264,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 400,
+          "memory_bytes": 6300496,
+          "memory_bytes_before_gc": 6776864,
+          "worker_hits": 6,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 500,
+          "memory_bytes": 6346096,
+          "memory_bytes_before_gc": 6822464,
+          "worker_hits": 7,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 600,
+          "memory_bytes": 6412176,
+          "memory_bytes_before_gc": 6888544,
+          "worker_hits": 8,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 700,
+          "memory_bytes": 6457776,
+          "memory_bytes_before_gc": 6934144,
+          "worker_hits": 9,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 800,
+          "memory_bytes": 6503376,
+          "memory_bytes_before_gc": 6979744,
+          "worker_hits": 10,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 900,
+          "memory_bytes": 6548976,
+          "memory_bytes_before_gc": 7025344,
+          "worker_hits": 11,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 1000,
+          "memory_bytes": 6594576,
+          "memory_bytes_before_gc": 7070944,
+          "worker_hits": 12,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 1100,
+          "memory_bytes": 6681136,
+          "memory_bytes_before_gc": 7157504,
+          "worker_hits": 13,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 1200,
+          "memory_bytes": 6726736,
+          "memory_bytes_before_gc": 7203104,
+          "worker_hits": 14,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 1300,
+          "memory_bytes": 6772336,
+          "memory_bytes_before_gc": 7248704,
+          "worker_hits": 15,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 1400,
+          "memory_bytes": 6817936,
+          "memory_bytes_before_gc": 7294304,
+          "worker_hits": 16,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 1500,
+          "memory_bytes": 6863536,
+          "memory_bytes_before_gc": 7339904,
+          "worker_hits": 17,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 1600,
+          "memory_bytes": 6909136,
+          "memory_bytes_before_gc": 7385504,
+          "worker_hits": 18,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 1700,
+          "memory_bytes": 6954736,
+          "memory_bytes_before_gc": 7431104,
+          "worker_hits": 19,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 1800,
+          "memory_bytes": 7000336,
+          "memory_bytes_before_gc": 7476704,
+          "worker_hits": 20,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 1900,
+          "memory_bytes": 7045936,
+          "memory_bytes_before_gc": 7522304,
+          "worker_hits": 21,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 2000,
+          "memory_bytes": 7091536,
+          "memory_bytes_before_gc": 7567904,
+          "worker_hits": 22,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 2100,
+          "memory_bytes": 7219056,
+          "memory_bytes_before_gc": 7695424,
+          "worker_hits": 23,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 2200,
+          "memory_bytes": 7264656,
+          "memory_bytes_before_gc": 7741024,
+          "worker_hits": 24,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 2300,
+          "memory_bytes": 7310256,
+          "memory_bytes_before_gc": 7786624,
+          "worker_hits": 25,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 2400,
+          "memory_bytes": 7355856,
+          "memory_bytes_before_gc": 7832224,
+          "worker_hits": 26,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 2500,
+          "memory_bytes": 7401456,
+          "memory_bytes_before_gc": 7877824,
+          "worker_hits": 27,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 2600,
+          "memory_bytes": 7447056,
+          "memory_bytes_before_gc": 7923424,
+          "worker_hits": 28,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 2700,
+          "memory_bytes": 7492656,
+          "memory_bytes_before_gc": 7969024,
+          "worker_hits": 29,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 2800,
+          "memory_bytes": 7538256,
+          "memory_bytes_before_gc": 8014624,
+          "worker_hits": 30,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 2900,
+          "memory_bytes": 7583856,
+          "memory_bytes_before_gc": 8060224,
+          "worker_hits": 31,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 3000,
+          "memory_bytes": 7629456,
+          "memory_bytes_before_gc": 8105824,
+          "worker_hits": 32,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 3100,
+          "memory_bytes": 7675056,
+          "memory_bytes_before_gc": 8151424,
+          "worker_hits": 33,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 3200,
+          "memory_bytes": 7720656,
+          "memory_bytes_before_gc": 8197024,
+          "worker_hits": 34,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 3300,
+          "memory_bytes": 7766256,
+          "memory_bytes_before_gc": 8242624,
+          "worker_hits": 35,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 3400,
+          "memory_bytes": 7811856,
+          "memory_bytes_before_gc": 8288224,
+          "worker_hits": 36,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 3500,
+          "memory_bytes": 7857456,
+          "memory_bytes_before_gc": 8333824,
+          "worker_hits": 37,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 3600,
+          "memory_bytes": 7903056,
+          "memory_bytes_before_gc": 8379424,
+          "worker_hits": 38,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 3700,
+          "memory_bytes": 7948656,
+          "memory_bytes_before_gc": 8425024,
+          "worker_hits": 39,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 3800,
+          "memory_bytes": 7994256,
+          "memory_bytes_before_gc": 8470624,
+          "worker_hits": 40,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 3900,
+          "memory_bytes": 8039856,
+          "memory_bytes_before_gc": 8516224,
+          "worker_hits": 41,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 4000,
+          "memory_bytes": 8085456,
+          "memory_bytes_before_gc": 8561824,
+          "worker_hits": 42,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 4100,
+          "memory_bytes": 8294896,
+          "memory_bytes_before_gc": 8771264,
+          "worker_hits": 43,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 4200,
+          "memory_bytes": 8340496,
+          "memory_bytes_before_gc": 8816864,
+          "worker_hits": 44,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 4300,
+          "memory_bytes": 8386096,
+          "memory_bytes_before_gc": 8862464,
+          "worker_hits": 45,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 4400,
+          "memory_bytes": 8431696,
+          "memory_bytes_before_gc": 8908064,
+          "worker_hits": 46,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 4500,
+          "memory_bytes": 8477296,
+          "memory_bytes_before_gc": 8953664,
+          "worker_hits": 47,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 4600,
+          "memory_bytes": 8522896,
+          "memory_bytes_before_gc": 8999264,
+          "worker_hits": 48,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 4700,
+          "memory_bytes": 8568496,
+          "memory_bytes_before_gc": 9044864,
+          "worker_hits": 49,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 4800,
+          "memory_bytes": 8614096,
+          "memory_bytes_before_gc": 9090464,
+          "worker_hits": 50,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 4900,
+          "memory_bytes": 8659696,
+          "memory_bytes_before_gc": 9136064,
+          "worker_hits": 51,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 5000,
+          "memory_bytes": 8705296,
+          "memory_bytes_before_gc": 9181664,
+          "worker_hits": 52,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 5100,
+          "memory_bytes": 8750896,
+          "memory_bytes_before_gc": 9227264,
+          "worker_hits": 53,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 5200,
+          "memory_bytes": 8796496,
+          "memory_bytes_before_gc": 9272864,
+          "worker_hits": 54,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 5300,
+          "memory_bytes": 8842096,
+          "memory_bytes_before_gc": 9318464,
+          "worker_hits": 55,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 5400,
+          "memory_bytes": 8887696,
+          "memory_bytes_before_gc": 9364064,
+          "worker_hits": 56,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 5500,
+          "memory_bytes": 8933296,
+          "memory_bytes_before_gc": 9409664,
+          "worker_hits": 57,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 5600,
+          "memory_bytes": 8978896,
+          "memory_bytes_before_gc": 9455264,
+          "worker_hits": 58,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 5700,
+          "memory_bytes": 9024496,
+          "memory_bytes_before_gc": 9500864,
+          "worker_hits": 59,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 5800,
+          "memory_bytes": 9070096,
+          "memory_bytes_before_gc": 9546464,
+          "worker_hits": 60,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 5900,
+          "memory_bytes": 9115696,
+          "memory_bytes_before_gc": 9592064,
+          "worker_hits": 61,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 6000,
+          "memory_bytes": 9161296,
+          "memory_bytes_before_gc": 9637664,
+          "worker_hits": 62,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 6100,
+          "memory_bytes": 9206896,
+          "memory_bytes_before_gc": 9683264,
+          "worker_hits": 63,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 6200,
+          "memory_bytes": 9252496,
+          "memory_bytes_before_gc": 9728864,
+          "worker_hits": 64,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 6300,
+          "memory_bytes": 9298096,
+          "memory_bytes_before_gc": 9774464,
+          "worker_hits": 65,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 6400,
+          "memory_bytes": 9343696,
+          "memory_bytes_before_gc": 9820064,
+          "worker_hits": 66,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 6500,
+          "memory_bytes": 9389296,
+          "memory_bytes_before_gc": 9865664,
+          "worker_hits": 67,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 6600,
+          "memory_bytes": 9434896,
+          "memory_bytes_before_gc": 9911264,
+          "worker_hits": 68,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 6700,
+          "memory_bytes": 9480496,
+          "memory_bytes_before_gc": 9956864,
+          "worker_hits": 69,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 6800,
+          "memory_bytes": 9526096,
+          "memory_bytes_before_gc": 10002464,
+          "worker_hits": 70,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 6900,
+          "memory_bytes": 9571696,
+          "memory_bytes_before_gc": 10048064,
+          "worker_hits": 71,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 7000,
+          "memory_bytes": 9617296,
+          "memory_bytes_before_gc": 10093664,
+          "worker_hits": 72,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 7100,
+          "memory_bytes": 9662896,
+          "memory_bytes_before_gc": 10139264,
+          "worker_hits": 73,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 7200,
+          "memory_bytes": 9708496,
+          "memory_bytes_before_gc": 10184864,
+          "worker_hits": 74,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 7300,
+          "memory_bytes": 9754096,
+          "memory_bytes_before_gc": 10230464,
+          "worker_hits": 75,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 7400,
+          "memory_bytes": 9799696,
+          "memory_bytes_before_gc": 10276064,
+          "worker_hits": 76,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 7500,
+          "memory_bytes": 9845296,
+          "memory_bytes_before_gc": 10321664,
+          "worker_hits": 77,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 7600,
+          "memory_bytes": 9890896,
+          "memory_bytes_before_gc": 10367264,
+          "worker_hits": 78,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 7700,
+          "memory_bytes": 9936496,
+          "memory_bytes_before_gc": 10412864,
+          "worker_hits": 79,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 7800,
+          "memory_bytes": 9982096,
+          "memory_bytes_before_gc": 10458464,
+          "worker_hits": 80,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 7900,
+          "memory_bytes": 10027696,
+          "memory_bytes_before_gc": 10504064,
+          "worker_hits": 81,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 8000,
+          "memory_bytes": 10073296,
+          "memory_bytes_before_gc": 10549664,
+          "worker_hits": 82,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 8100,
+          "memory_bytes": 10118896,
+          "memory_bytes_before_gc": 10595264,
+          "worker_hits": 83,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 8200,
+          "memory_bytes": 10492176,
+          "memory_bytes_before_gc": 10968544,
+          "worker_hits": 84,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 8300,
+          "memory_bytes": 10537776,
+          "memory_bytes_before_gc": 11014144,
+          "worker_hits": 85,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 8400,
+          "memory_bytes": 10583376,
+          "memory_bytes_before_gc": 11059744,
+          "worker_hits": 86,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 8500,
+          "memory_bytes": 10628976,
+          "memory_bytes_before_gc": 11105344,
+          "worker_hits": 87,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 8600,
+          "memory_bytes": 10674576,
+          "memory_bytes_before_gc": 11150944,
+          "worker_hits": 88,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 8700,
+          "memory_bytes": 10720176,
+          "memory_bytes_before_gc": 11196544,
+          "worker_hits": 89,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 8800,
+          "memory_bytes": 10765776,
+          "memory_bytes_before_gc": 11242144,
+          "worker_hits": 90,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 8900,
+          "memory_bytes": 10811376,
+          "memory_bytes_before_gc": 11287744,
+          "worker_hits": 91,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 9000,
+          "memory_bytes": 10856976,
+          "memory_bytes_before_gc": 11333344,
+          "worker_hits": 92,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 9100,
+          "memory_bytes": 10902576,
+          "memory_bytes_before_gc": 11378944,
+          "worker_hits": 93,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 9200,
+          "memory_bytes": 10948176,
+          "memory_bytes_before_gc": 11424544,
+          "worker_hits": 94,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 9300,
+          "memory_bytes": 10993776,
+          "memory_bytes_before_gc": 11470144,
+          "worker_hits": 95,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 9400,
+          "memory_bytes": 11039376,
+          "memory_bytes_before_gc": 11515744,
+          "worker_hits": 96,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 9500,
+          "memory_bytes": 11084976,
+          "memory_bytes_before_gc": 11561344,
+          "worker_hits": 97,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 9600,
+          "memory_bytes": 11130576,
+          "memory_bytes_before_gc": 11606944,
+          "worker_hits": 98,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 9700,
+          "memory_bytes": 11176176,
+          "memory_bytes_before_gc": 11652544,
+          "worker_hits": 99,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 9800,
+          "memory_bytes": 11221776,
+          "memory_bytes_before_gc": 11698144,
+          "worker_hits": 100,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 9900,
+          "memory_bytes": 11267376,
+          "memory_bytes_before_gc": 11743744,
+          "worker_hits": 101,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        },
+        {
+          "requests": 10000,
+          "memory_bytes": 11312976,
+          "memory_bytes_before_gc": 11789344,
+          "worker_hits": 102,
+          "first_seen_at": "2026-11-02T13:10:45+00:00"
+        }
+      ],
+      "restarts": 0,
+      "growth_kib_per_1000": 508.44
+    },
+    {
+      "case": "B",
+      "mode": "fixed",
+      "workers": 1,
+      "max_requests": 1000000,
+      "samples": [
+        {
+          "requests": 0,
+          "memory_bytes": 5683952,
+          "memory_bytes_before_gc": 5678800,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 100,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 200,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 300,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 400,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 6,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 500,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 7,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 600,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 8,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 700,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 9,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 800,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 10,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 900,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 11,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 1000,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 12,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 1100,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 13,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 1200,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 14,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 1300,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 15,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 1400,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 16,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 1500,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 17,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 1600,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 18,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 1700,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 19,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 1800,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 20,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 1900,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 21,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 2000,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 22,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 2100,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 23,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 2200,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 24,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 2300,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 25,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 2400,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 26,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 2500,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 27,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 2600,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 28,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 2700,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 29,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 2800,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 30,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 2900,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 31,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 3000,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 32,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 3100,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 33,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 3200,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 34,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 3300,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 35,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 3400,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 36,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 3500,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 37,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 3600,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 38,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 3700,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 39,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 3800,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 40,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 3900,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 41,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 4000,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 42,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 4100,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 43,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 4200,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 44,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 4300,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 45,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 4400,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 46,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 4500,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 47,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 4600,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 48,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 4700,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 49,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 4800,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 50,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 4900,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 51,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 5000,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 52,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 5100,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 53,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 5200,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 54,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 5300,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 55,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 5400,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 56,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 5500,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 57,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 5600,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 58,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 5700,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 59,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 5800,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 60,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 5900,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 61,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 6000,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 62,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 6100,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 63,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 6200,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 64,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 6300,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 65,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 6400,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 66,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 6500,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 67,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 6600,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 68,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 6700,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 69,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 6800,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 70,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 6900,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 71,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 7000,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 72,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 7100,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 73,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 7200,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 74,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 7300,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 75,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 7400,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 76,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 7500,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 77,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 7600,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 78,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 7700,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 79,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 7800,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 80,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 7900,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 81,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 8000,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 82,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 8100,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 83,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 8200,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 84,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 8300,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 85,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 8400,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 86,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 8500,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 87,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 8600,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 88,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 8700,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 89,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 8800,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 90,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 8900,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 91,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 9000,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 92,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 9100,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 93,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 9200,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 94,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 9300,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 95,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 9400,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 96,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 9500,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 97,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 9600,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 98,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 9700,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 99,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 9800,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 100,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 9900,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 101,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        },
+        {
+          "requests": 10000,
+          "memory_bytes": 6174488,
+          "memory_bytes_before_gc": 6654856,
+          "worker_hits": 102,
+          "first_seen_at": "2026-11-02T13:14:43+00:00"
+        }
+      ],
+      "restarts": 0,
+      "growth_kib_per_1000": 0
+    },
+    {
+      "case": "C",
+      "mode": "leak",
+      "workers": 1,
+      "max_requests": 500,
+      "samples": [
+        {
+          "requests": 0,
+          "memory_bytes": 5683952,
+          "memory_bytes_before_gc": 5678800,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:18:01+00:00"
+        },
+        {
+          "requests": 100,
+          "memory_bytes": 6149736,
+          "memory_bytes_before_gc": 6626104,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:18:01+00:00"
+        },
+        {
+          "requests": 200,
+          "memory_bytes": 6199432,
+          "memory_bytes_before_gc": 6675800,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:18:01+00:00"
+        },
+        {
+          "requests": 300,
+          "memory_bytes": 6253224,
+          "memory_bytes_before_gc": 6729592,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:18:01+00:00"
+        },
+        {
+          "requests": 400,
+          "memory_bytes": 6298824,
+          "memory_bytes_before_gc": 6775192,
+          "worker_hits": 6,
+          "first_seen_at": "2026-11-02T13:18:01+00:00"
+        },
+        {
+          "requests": 500,
+          "memory_bytes": 1169784,
+          "memory_bytes_before_gc": 1192984,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:18:10+00:00"
+        },
+        {
+          "requests": 600,
+          "memory_bytes": 1231448,
+          "memory_bytes_before_gc": 1707816,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:18:10+00:00"
+        },
+        {
+          "requests": 700,
+          "memory_bytes": 1281144,
+          "memory_bytes_before_gc": 1757512,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:18:10+00:00"
+        },
+        {
+          "requests": 800,
+          "memory_bytes": 1334936,
+          "memory_bytes_before_gc": 1811304,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:18:10+00:00"
+        },
+        {
+          "requests": 900,
+          "memory_bytes": 1380536,
+          "memory_bytes_before_gc": 1856904,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:18:10+00:00"
+        },
+        {
+          "requests": 1000,
+          "memory_bytes": 1172384,
+          "memory_bytes_before_gc": 1219504,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:18:18+00:00"
+        },
+        {
+          "requests": 1100,
+          "memory_bytes": 1233728,
+          "memory_bytes_before_gc": 1710096,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:18:18+00:00"
+        },
+        {
+          "requests": 1200,
+          "memory_bytes": 1283424,
+          "memory_bytes_before_gc": 1759792,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:18:18+00:00"
+        },
+        {
+          "requests": 1300,
+          "memory_bytes": 1337216,
+          "memory_bytes_before_gc": 1813584,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:18:18+00:00"
+        },
+        {
+          "requests": 1400,
+          "memory_bytes": 1382816,
+          "memory_bytes_before_gc": 1859184,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:18:18+00:00"
+        },
+        {
+          "requests": 1500,
+          "memory_bytes": 1174664,
+          "memory_bytes_before_gc": 1245704,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:18:28+00:00"
+        },
+        {
+          "requests": 1600,
+          "memory_bytes": 1236008,
+          "memory_bytes_before_gc": 1712376,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:18:28+00:00"
+        },
+        {
+          "requests": 1700,
+          "memory_bytes": 1285704,
+          "memory_bytes_before_gc": 1762072,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:18:28+00:00"
+        },
+        {
+          "requests": 1800,
+          "memory_bytes": 1339496,
+          "memory_bytes_before_gc": 1815864,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:18:28+00:00"
+        },
+        {
+          "requests": 1900,
+          "memory_bytes": 1385096,
+          "memory_bytes_before_gc": 1861464,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:18:28+00:00"
+        },
+        {
+          "requests": 2000,
+          "memory_bytes": 1177584,
+          "memory_bytes_before_gc": 1272544,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:18:36+00:00"
+        },
+        {
+          "requests": 2100,
+          "memory_bytes": 1238288,
+          "memory_bytes_before_gc": 1714656,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:18:36+00:00"
+        },
+        {
+          "requests": 2200,
+          "memory_bytes": 1287984,
+          "memory_bytes_before_gc": 1764352,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:18:36+00:00"
+        },
+        {
+          "requests": 2300,
+          "memory_bytes": 1341776,
+          "memory_bytes_before_gc": 1818144,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:18:36+00:00"
+        },
+        {
+          "requests": 2400,
+          "memory_bytes": 1387376,
+          "memory_bytes_before_gc": 1863744,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:18:36+00:00"
+        },
+        {
+          "requests": 2500,
+          "memory_bytes": 1179864,
+          "memory_bytes_before_gc": 1298744,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:18:44+00:00"
+        },
+        {
+          "requests": 2600,
+          "memory_bytes": 1240568,
+          "memory_bytes_before_gc": 1716936,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:18:44+00:00"
+        },
+        {
+          "requests": 2700,
+          "memory_bytes": 1290264,
+          "memory_bytes_before_gc": 1766632,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:18:44+00:00"
+        },
+        {
+          "requests": 2800,
+          "memory_bytes": 1344056,
+          "memory_bytes_before_gc": 1820424,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:18:44+00:00"
+        },
+        {
+          "requests": 2900,
+          "memory_bytes": 1389656,
+          "memory_bytes_before_gc": 1866024,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:18:44+00:00"
+        },
+        {
+          "requests": 3000,
+          "memory_bytes": 1182144,
+          "memory_bytes_before_gc": 1324944,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:18:53+00:00"
+        },
+        {
+          "requests": 3100,
+          "memory_bytes": 1246944,
+          "memory_bytes_before_gc": 1723312,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:18:53+00:00"
+        },
+        {
+          "requests": 3200,
+          "memory_bytes": 1292544,
+          "memory_bytes_before_gc": 1768912,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:18:53+00:00"
+        },
+        {
+          "requests": 3300,
+          "memory_bytes": 1346336,
+          "memory_bytes_before_gc": 1822704,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:18:53+00:00"
+        },
+        {
+          "requests": 3400,
+          "memory_bytes": 1391936,
+          "memory_bytes_before_gc": 1868304,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:18:53+00:00"
+        },
+        {
+          "requests": 3500,
+          "memory_bytes": 1185704,
+          "memory_bytes_before_gc": 1352424,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:19:02+00:00"
+        },
+        {
+          "requests": 3600,
+          "memory_bytes": 1249224,
+          "memory_bytes_before_gc": 1725592,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:19:02+00:00"
+        },
+        {
+          "requests": 3700,
+          "memory_bytes": 1294824,
+          "memory_bytes_before_gc": 1771192,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:19:02+00:00"
+        },
+        {
+          "requests": 3800,
+          "memory_bytes": 1348616,
+          "memory_bytes_before_gc": 1824984,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:19:02+00:00"
+        },
+        {
+          "requests": 3900,
+          "memory_bytes": 1394216,
+          "memory_bytes_before_gc": 1870584,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:19:02+00:00"
+        },
+        {
+          "requests": 4000,
+          "memory_bytes": 1187984,
+          "memory_bytes_before_gc": 1378624,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:19:11+00:00"
+        },
+        {
+          "requests": 4100,
+          "memory_bytes": 1251504,
+          "memory_bytes_before_gc": 1727872,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:19:11+00:00"
+        },
+        {
+          "requests": 4200,
+          "memory_bytes": 1297104,
+          "memory_bytes_before_gc": 1773472,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:19:11+00:00"
+        },
+        {
+          "requests": 4300,
+          "memory_bytes": 1350896,
+          "memory_bytes_before_gc": 1827264,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:19:11+00:00"
+        },
+        {
+          "requests": 4400,
+          "memory_bytes": 1396496,
+          "memory_bytes_before_gc": 1872864,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:19:11+00:00"
+        },
+        {
+          "requests": 4500,
+          "memory_bytes": 1190256,
+          "memory_bytes_before_gc": 1404816,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:19:22+00:00"
+        },
+        {
+          "requests": 4600,
+          "memory_bytes": 1253776,
+          "memory_bytes_before_gc": 1730144,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:19:22+00:00"
+        },
+        {
+          "requests": 4700,
+          "memory_bytes": 1299376,
+          "memory_bytes_before_gc": 1775744,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:19:22+00:00"
+        },
+        {
+          "requests": 4800,
+          "memory_bytes": 1353168,
+          "memory_bytes_before_gc": 1829536,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:19:22+00:00"
+        },
+        {
+          "requests": 4900,
+          "memory_bytes": 1398768,
+          "memory_bytes_before_gc": 1875136,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:19:22+00:00"
+        },
+        {
+          "requests": 5000,
+          "memory_bytes": 1192544,
+          "memory_bytes_before_gc": 1431024,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:19:32+00:00"
+        },
+        {
+          "requests": 5100,
+          "memory_bytes": 1256064,
+          "memory_bytes_before_gc": 1732432,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:19:32+00:00"
+        },
+        {
+          "requests": 5200,
+          "memory_bytes": 1301664,
+          "memory_bytes_before_gc": 1778032,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:19:32+00:00"
+        },
+        {
+          "requests": 5300,
+          "memory_bytes": 1355456,
+          "memory_bytes_before_gc": 1831824,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:19:32+00:00"
+        },
+        {
+          "requests": 5400,
+          "memory_bytes": 1401056,
+          "memory_bytes_before_gc": 1877424,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:19:32+00:00"
+        },
+        {
+          "requests": 5500,
+          "memory_bytes": 1194824,
+          "memory_bytes_before_gc": 1457224,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:19:43+00:00"
+        },
+        {
+          "requests": 5600,
+          "memory_bytes": 1258344,
+          "memory_bytes_before_gc": 1734712,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:19:43+00:00"
+        },
+        {
+          "requests": 5700,
+          "memory_bytes": 1303944,
+          "memory_bytes_before_gc": 1780312,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:19:43+00:00"
+        },
+        {
+          "requests": 5800,
+          "memory_bytes": 1357736,
+          "memory_bytes_before_gc": 1834104,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:19:43+00:00"
+        },
+        {
+          "requests": 5900,
+          "memory_bytes": 1403336,
+          "memory_bytes_before_gc": 1879704,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:19:43+00:00"
+        },
+        {
+          "requests": 6000,
+          "memory_bytes": 1197104,
+          "memory_bytes_before_gc": 1483424,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:19:53+00:00"
+        },
+        {
+          "requests": 6100,
+          "memory_bytes": 1260624,
+          "memory_bytes_before_gc": 1736992,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:19:53+00:00"
+        },
+        {
+          "requests": 6200,
+          "memory_bytes": 1314416,
+          "memory_bytes_before_gc": 1790784,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:19:53+00:00"
+        },
+        {
+          "requests": 6300,
+          "memory_bytes": 1360016,
+          "memory_bytes_before_gc": 1836384,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:19:53+00:00"
+        },
+        {
+          "requests": 6400,
+          "memory_bytes": 1405616,
+          "memory_bytes_before_gc": 1881984,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:19:53+00:00"
+        },
+        {
+          "requests": 6500,
+          "memory_bytes": 1213208,
+          "memory_bytes_before_gc": 1523448,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:20:03+00:00"
+        },
+        {
+          "requests": 6600,
+          "memory_bytes": 1262904,
+          "memory_bytes_before_gc": 1739272,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:20:03+00:00"
+        },
+        {
+          "requests": 6700,
+          "memory_bytes": 1316696,
+          "memory_bytes_before_gc": 1793064,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:20:03+00:00"
+        },
+        {
+          "requests": 6800,
+          "memory_bytes": 1362296,
+          "memory_bytes_before_gc": 1838664,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:20:03+00:00"
+        },
+        {
+          "requests": 6900,
+          "memory_bytes": 1407896,
+          "memory_bytes_before_gc": 1884264,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:20:03+00:00"
+        },
+        {
+          "requests": 7000,
+          "memory_bytes": 1215488,
+          "memory_bytes_before_gc": 1549648,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:20:12+00:00"
+        },
+        {
+          "requests": 7100,
+          "memory_bytes": 1265184,
+          "memory_bytes_before_gc": 1741552,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:20:12+00:00"
+        },
+        {
+          "requests": 7200,
+          "memory_bytes": 1318976,
+          "memory_bytes_before_gc": 1795344,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:20:12+00:00"
+        },
+        {
+          "requests": 7300,
+          "memory_bytes": 1364576,
+          "memory_bytes_before_gc": 1840944,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:20:12+00:00"
+        },
+        {
+          "requests": 7400,
+          "memory_bytes": 1410176,
+          "memory_bytes_before_gc": 1886544,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:20:12+00:00"
+        },
+        {
+          "requests": 7500,
+          "memory_bytes": 1217768,
+          "memory_bytes_before_gc": 1575848,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:20:23+00:00"
+        },
+        {
+          "requests": 7600,
+          "memory_bytes": 1267464,
+          "memory_bytes_before_gc": 1743832,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:20:23+00:00"
+        },
+        {
+          "requests": 7700,
+          "memory_bytes": 1321256,
+          "memory_bytes_before_gc": 1797624,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:20:23+00:00"
+        },
+        {
+          "requests": 7800,
+          "memory_bytes": 1366856,
+          "memory_bytes_before_gc": 1843224,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:20:23+00:00"
+        },
+        {
+          "requests": 7900,
+          "memory_bytes": 1412456,
+          "memory_bytes_before_gc": 1888824,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:20:23+00:00"
+        },
+        {
+          "requests": 8000,
+          "memory_bytes": 1220048,
+          "memory_bytes_before_gc": 1602048,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:20:33+00:00"
+        },
+        {
+          "requests": 8100,
+          "memory_bytes": 1269744,
+          "memory_bytes_before_gc": 1746112,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:20:33+00:00"
+        },
+        {
+          "requests": 8200,
+          "memory_bytes": 1323536,
+          "memory_bytes_before_gc": 1799904,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:20:33+00:00"
+        },
+        {
+          "requests": 8300,
+          "memory_bytes": 1369136,
+          "memory_bytes_before_gc": 1845504,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:20:33+00:00"
+        },
+        {
+          "requests": 8400,
+          "memory_bytes": 1414736,
+          "memory_bytes_before_gc": 1891104,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:20:33+00:00"
+        },
+        {
+          "requests": 8500,
+          "memory_bytes": 1222328,
+          "memory_bytes_before_gc": 1628248,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:20:43+00:00"
+        },
+        {
+          "requests": 8600,
+          "memory_bytes": 1272024,
+          "memory_bytes_before_gc": 1748392,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:20:43+00:00"
+        },
+        {
+          "requests": 8700,
+          "memory_bytes": 1325816,
+          "memory_bytes_before_gc": 1802184,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:20:43+00:00"
+        },
+        {
+          "requests": 8800,
+          "memory_bytes": 1371416,
+          "memory_bytes_before_gc": 1847784,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:20:43+00:00"
+        },
+        {
+          "requests": 8900,
+          "memory_bytes": 1417016,
+          "memory_bytes_before_gc": 1893384,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:20:43+00:00"
+        },
+        {
+          "requests": 9000,
+          "memory_bytes": 1224608,
+          "memory_bytes_before_gc": 1654448,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:20:53+00:00"
+        },
+        {
+          "requests": 9100,
+          "memory_bytes": 1274304,
+          "memory_bytes_before_gc": 1750672,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:20:53+00:00"
+        },
+        {
+          "requests": 9200,
+          "memory_bytes": 1328096,
+          "memory_bytes_before_gc": 1804464,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:20:53+00:00"
+        },
+        {
+          "requests": 9300,
+          "memory_bytes": 1373696,
+          "memory_bytes_before_gc": 1850064,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:20:53+00:00"
+        },
+        {
+          "requests": 9400,
+          "memory_bytes": 1419296,
+          "memory_bytes_before_gc": 1895664,
+          "worker_hits": 5,
+          "first_seen_at": "2026-11-02T13:20:53+00:00"
+        },
+        {
+          "requests": 9500,
+          "memory_bytes": 1226888,
+          "memory_bytes_before_gc": 1680648,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:21:02+00:00"
+        },
+        {
+          "requests": 9600,
+          "memory_bytes": 1276584,
+          "memory_bytes_before_gc": 1752952,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:21:02+00:00"
+        },
+        {
+          "requests": 9700,
+          "memory_bytes": 1330376,
+          "memory_bytes_before_gc": 1806744,
+          "worker_hits": 3,
+          "first_seen_at": "2026-11-02T13:21:02+00:00"
+        },
+        {
+          "requests": 9800,
+          "memory_bytes": 1375976,
+          "memory_bytes_before_gc": 1852344,
+          "worker_hits": 4,
+          "first_seen_at": "2026-11-02T13:21:02+00:00"
+        },
+        {
+          "requests": 9900,
+          "memory_bytes": 1145032,
+          "memory_bytes_before_gc": 1139904,
+          "worker_hits": 1,
+          "first_seen_at": "2026-11-02T13:21:10+00:00"
+        },
+        {
+          "requests": 10000,
+          "memory_bytes": 1228712,
+          "memory_bytes_before_gc": 1704704,
+          "worker_hits": 2,
+          "first_seen_at": "2026-11-02T13:21:10+00:00"
+        }
+      ],
+      "restarts": 20,
+      "growth_kib_per_1000": 494.64
+    }
+  ]
+}

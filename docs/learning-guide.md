@@ -4,7 +4,7 @@ This guide explains how everything in this project works, in the order it was bu
 
 It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan and its order are in [`backlog.md`](../backlog.md).
 
-**Status (2026-11-01):** sections 1–7 cover the shipped slices SL-01 to SL-07. Planned sections are listed at the end.
+**Status (2026-11-02):** sections 1–8 cover the shipped slices SL-01 to SL-08. Planned sections are listed at the end.
 
 ---
 
@@ -180,11 +180,42 @@ Each response has `requested`, `observed` and `leaked` (true when they differ). 
 
 **Read next.** [Laravel Octane: dependency injection and Octane](https://laravel.com/docs/13.x/octane#dependency-injection-and-octane) · [Laravel Octane](https://laravel.com/docs/13.x/octane) · [FrankenPHP worker mode](https://frankenphp.dev/docs/worker/)
 
+## 8. Classic vs worker mode: what the numbers say
+
+**What it is.** The same app on the same FrankenPHP binary, run two ways. Classic: every request boots Laravel, handles the request, and throws everything away. Worker: a long-running PHP script boots Laravel once, then loops, handing each incoming request to the booted app (Octane's daemon and the add-on worker both run Octane's loop: `vendor/laravel/octane/bin/frankenphp-worker.php`, which the add-on worker loads through [`public/frankenphp-worker.php`](../public/frankenphp-worker.php)). Full tables are in [`BENCHMARKS.md`](../BENCHMARKS.md#classic-vs-worker-2026-11-02).
+
+**What a classic request pays for that a worker request does not.**
+1. Loading and running the bootstrap: autoloading, the config and route caches, every service provider's `register()` and `boot()`.
+2. **A new database connection.** PHP closes its PostgreSQL connection at the end of every classic request, and PostgreSQL starts a new backend process for each connection. Counted in `pg_stat_database.sessions`: 500 searches opened 501 sessions on classic FrankenPHP and 2 on Octane.
+3. Booting whatever the route touches for the first time: Eloquent models, the view engine.
+
+**Why search gained more than ping.** Measured as 1 − (worker p50 ÷ classic p50), worker mode removed about half of ping's latency and three quarters of search's. The prediction was the opposite (ping gains most, the database dominates search). Ping has no database work, so it pays only for item 1. Search pays for all three, and its query is small next to the connection setup. Lesson: "DB-bound" is a guess until you measure where the time goes; the connection can cost more than the query.
+
+**How to read the memory curve.** `bench/memory.sh` sends 10 000 requests to one worker and reads `/debug/worker` every 100. Two traps, both found in this repo:
+- **Garbage looks like a leak.** PHP frees most memory at once by reference counting, but objects that point at each other (cycles) wait for the cycle collector, which runs when its buffer fills (here roughly every 750 requests). Read raw, memory climbs ~5 KB per request and drops, a sawtooth bigger than the leak being measured. `/debug/worker?gc=1` calls `gc_collect_cycles()` first, so the reading is what the worker really keeps.
+- **Warm-up looks like growth.** The first request to a route loads its classes once; that step is excluded from the slope.
+
+After both fixes: the static-array leak grows a steady 0.5 KB per request (11.3 MB after 10 000), the Redis-cached version is flat, and classic mode is flat because nothing survives a request.
+
+**`MAX_REQUESTS=0` does not mean unlimited.** Octane's worker loop is `while ($requestCount < $maxRequests && frankenphp_handle_request(...))`. With 0 the condition is false before the first request, so the worker exits at once and FrankenPHP keeps restarting it. "No recycling" in this repo is a large number (1 000 000). The default when the variable is unset is 1 000; the add-on worker here uses 500.
+
+**When recycling is a fix and when it hides a leak.** With max-requests 500 the leaking worker restarted 20 times and peaked at 6.3 MB instead of 11.3 MB. That is a fix for memory you cannot control (a library that grows slowly, fragmentation). For your own leak it only hides the symptom: inside each stretch the slope is unchanged, and wrong answers caused by leaked state (section 7) still happen until the restart. Find the leak with the curve, fix it, and keep recycling as a safety net.
+
+**Noise.** Most rows were marked noisy, worst on classic ping, which keeps almost every CPU busy and so feels any other app on the host. The same Octane setting measured twice gave 10 604 and 7 817 RPS. Trust a ratio only when it is clearly bigger than the spread.
+
+**In this repo.**
+- Scripts: [`bench/suite.sh`](../bench/suite.sh) (`--servers`), [`bench/memory.sh`](../bench/memory.sh), [`bench/concurrency.sh`](../bench/concurrency.sh) (worker count and max-requests for both worker servers), [`bench/summary.php`](../bench/summary.php) (tables).
+- Endpoint: [`app/Http/Controllers/DebugWorkerController.php`](../app/Http/Controllers/DebugWorkerController.php) (`?gc=1`).
+- Results: [`bench/results/2026-11-02-classic-vs-worker/`](../bench/results/2026-11-02-classic-vs-worker/), tables and surprises in [`BENCHMARKS.md`](../BENCHMARKS.md#classic-vs-worker-2026-11-02).
+- Spec: [`.ai/specs/spec-20261101-2126-classic-vs-worker/`](../.ai/specs/spec-20261101-2126-classic-vs-worker/).
+
+**Read next.** [Laravel Octane](https://laravel.com/docs/13.x/octane) · [FrankenPHP worker mode](https://frankenphp.dev/docs/worker/) · [PHP garbage collection: collecting cycles](https://www.php.net/manual/en/features.gc.collecting-cycles.php) · [`gc_collect_cycles()`](https://www.php.net/manual/en/function.gc-collect-cycles.php) · [PostgreSQL: `pg_stat_database`](https://www.postgresql.org/docs/16/monitoring-stats.html#MONITORING-PG-STAT-DATABASE-VIEW)
+
 ---
 
 ## Planned sections
 
 Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):
 
-- **Server track:** classic vs worker numbers (SL-08), slow I/O and thread autoscaling (SL-09), Early Hints and compression (SL-10), file downloads offloaded to the web server (SL-11), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
+- **Server track:** slow I/O and thread autoscaling (SL-09), Early Hints and compression (SL-10), file downloads offloaded to the web server (SL-11), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
 - **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; streaming over SSE (SL-20); running models locally (SL-22); structured output (SL-23); embeddings and vector search (SL-24); tool calling (SL-25); evals (SL-26, SL-33); vision (SL-27); model comparison (SL-28); RAG with citations (SL-32); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39); semantic caching (SL-40); streaming chat UI (SL-41); a research agent (SL-42); a prompt playground (SL-43).

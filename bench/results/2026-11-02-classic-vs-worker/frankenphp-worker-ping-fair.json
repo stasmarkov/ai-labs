@@ -1,0 +1,100 @@
+{
+    "server": "frankenphp-worker",
+    "scenario": "ping",
+    "label": "fair",
+    "setting": "8 workers, max-requests 1000000",
+    "commit": "7aca1d0",
+    "image": "autopulse-oha:1.16.0",
+    "image_digest": "sha256:12c8fd3955056a7d68ff58317e87ae2878e72c2c9046169dc35da35b36428937",
+    "date": "2026-11-02-classic-vs-worker",
+    "runs": [
+        {
+            "set": 2,
+            "repeat": 1,
+            "rps": 8134.299992235011,
+            "p50_ms": 5.194998,
+            "p95_ms": 13.064122,
+            "p99_ms": 21.206374,
+            "error_percent": 0,
+            "idle_memory_mib": {
+                "web": 232.6,
+                "db": 19.3
+            },
+            "peak_memory_mib": {
+                "web": 294.6,
+                "db": 59.2
+            },
+            "avg_cpu_percent": {
+                "web": 400.5,
+                "db": 0.4
+            }
+        },
+        {
+            "set": 2,
+            "repeat": 2,
+            "rps": 8944.925245514632,
+            "p50_ms": 4.888326999999999,
+            "p95_ms": 11.413721,
+            "p99_ms": 16.434633,
+            "error_percent": 0,
+            "idle_memory_mib": {
+                "web": 232.6,
+                "db": 19.3
+            },
+            "peak_memory_mib": {
+                "web": 309,
+                "db": 38.2
+            },
+            "avg_cpu_percent": {
+                "web": 411.8,
+                "db": 0.2
+            }
+        },
+        {
+            "set": 2,
+            "repeat": 3,
+            "rps": 8978.923445164357,
+            "p50_ms": 4.871118,
+            "p95_ms": 11.417638,
+            "p99_ms": 16.700887,
+            "error_percent": 0,
+            "idle_memory_mib": {
+                "web": 232.6,
+                "db": 19.3
+            },
+            "peak_memory_mib": {
+                "web": 285.5,
+                "db": 40
+            },
+            "avg_cpu_percent": {
+                "web": 419.3,
+                "db": 0.1
+            }
+        }
+    ],
+    "median": {
+        "set": 2,
+        "repeat": 2,
+        "rps": 8944.925245514632,
+        "p50_ms": 4.888326999999999,
+        "p95_ms": 11.413721,
+        "p99_ms": 16.434633,
+        "error_percent": 0,
+        "idle_memory_mib": {
+            "web": 232.6,
+            "db": 19.3
+        },
+        "peak_memory_mib": {
+            "web": 309,
+            "db": 38.2
+        },
+        "avg_cpu_percent": {
+            "web": 411.8,
+            "db": 0.2
+        }
+    },
+    "spread_percent": 9.44248755296056,
+    "noisy": true,
+    "baseline_server": "frankenphp",
+    "ratio": "~1.88x"
+}
