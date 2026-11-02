@@ -14,7 +14,9 @@
 ## are threads in one process, so pid does not change). The reads count toward the worker's max-requests; the n
 ## counts lab requests only. Classic frankenphp has no long-lived worker, so its restarts are reported as 0.
 ## growth_kib_per_1000 is the least-squares slope of memory_bytes over requests, per stretch between restarts
-## (stretches with one sample are skipped), averaged, in KiB per 1000 requests.
+## (stretches with one sample are skipped), averaged, in KiB per 1000 requests. The first sample of a stretch with
+## three or more samples is left out of the slope: it is read before the lab's code is loaded (warm-up), and that
+## one-off step would otherwise count as growth.
 ## The run is a single pass with the BR-20 conditions (APP_ENV=production, APP_DEBUG=false, DEBUG_ROUTES=true,
 ## optimized caches, OPcache on, Xdebug off, clean git tree). .env is backed up and restored on exit, and
 ## `concurrency.sh default` runs on exit, so the server returns to its committed worker settings.
@@ -161,7 +163,7 @@ def slope:
   end;
 . as $samples
 | ($samples | stretches($classic)) as $parts
-| ($parts | map(slope) | map(select(. != null))) as $slopes
+| ($parts | map(if length >= 3 then .[1:] else . end | slope) | map(select(. != null))) as $slopes
 | {
     case: $case, mode: $mode, workers: 1, max_requests: $max,
     samples: $samples,

@@ -37,7 +37,7 @@ max=1000000
 [[ "${2:-}" == "--max-requests" ]] && max="$3"
 echo "$max" > "$d/max"
 echo "$(( $(cat "$d/started" 2>/dev/null || echo 0) + 1 ))" > "$d/started"
-echo 0 > "$d/served"; echo 0 > "$d/hits"; echo 0 > "$d/leaked"
+echo 0 > "$d/served"; echo 0 > "$d/hits"; echo 0 > "$d/leaked"; rm -f "$d/warm"
 SH);
 
     // One worker thread: every request counts toward max-requests; past it the worker restarts.
@@ -67,6 +67,7 @@ if [[ "$url" == */debug/leaks/price-cache* ]]; then
   echo "env: $(grep -h 'APP_ENV\|APP_DEBUG\|DEBUG_ROUTES' "$BENCH_APPROOT/.env" | tr '\n' ' ')" >> "$d/log"
   mode="${url#*mode=}"
   echo "${url##*amount=} ${mode%%&*}" >> "$d/urls"
+  touch "$d/warm"
   [[ "$url" == *mode=leak* && "$STUB_SERVER" != "frankenphp" ]] && leaked=$(( leaked + 1 ))
   echo '{"success":true}' > "$out"
 else
@@ -79,6 +80,8 @@ else
   # Garbage only shows before collection: with ?gc=1 memory_bytes is what stays after collecting it.
   before=$(( 2000000 + leaked * 1024 + served % 7 * 4096 )); memory=$before
   [[ "$url" == *gc=1* ]] && memory=$(( 2000000 + leaked * 1024 ))
+  # STUB_WARMUP: a one-off step once the lab has served its first request (its classes are loaded).
+  [[ -n "${STUB_WARMUP-}" && -f "$d/warm" ]] && memory=$(( memory + STUB_WARMUP )) && before=$(( before + STUB_WARMUP ))
   echo "{\"data\":{\"memory_bytes\":$memory,\"memory_bytes_before_gc\":$before,\"worker_hits\":$hits,\"first_seen_at\":\"$seen\"}}" > "$out"
 fi
 echo "$served" > "$d/served"; echo "$hits" > "$d/hits"; echo "$leaked" > "$d/leaked"
@@ -215,4 +218,15 @@ it('MNC-1 refuses with exit 2 when the results folder already holds committed re
         ->and($process->getErrorOutput())->toContain('already holds committed results')
         ->and(file_get_contents($this->dir.'/bench/results/2030-01-01/memory-frankenphp-worker.json'))->toBe('{}')
         ->and(array_filter(($this->log)(), fn (string $line): bool => str_starts_with($line, 'concurrency ')))->toBe([]);
+});
+
+it('AC-3 a one-off warm-up step after the first sample does not count as growth', function (): void {
+    $process = ($this->memory)('frankenphp-worker', ['--requests', '1000'], ['STUB_WARMUP' => '500000']);
+
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput());
+
+    [$a, $b] = ($this->result)('frankenphp-worker')['cases'];
+    expect($b['samples'][1]['memory_bytes'] - $b['samples'][0]['memory_bytes'])->toBeGreaterThanOrEqual(500000)
+        ->and($b['growth_kib_per_1000'])->toEqualWithDelta(0.0, 1.0)
+        ->and($a['growth_kib_per_1000'])->toEqualWithDelta(1000.0, 5.0);
 });
