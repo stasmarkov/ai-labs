@@ -38,9 +38,9 @@
   - [x] 5.2 Write the section with the per-server `bench/sse.sh` numbers and the buffering fixes; update the guide's status line and Planned list
   - [x] 5.3 **Verify**: doc test green; links return 200
 
-- [ ] 6. Gates (all)
+- [x] 6. Gates (all)
   Covers: MNC-2
-  - [ ] 6.1 **Verify**: Pint, PHPStan and the full suite green; `bench/run.sh ping --quick` passes its run conditions on nginx-fpm
+  - [x] 6.1 **Verify**: Pint, PHPStan and the full suite green; `bench/run.sh ping --quick` passes its run conditions on nginx-fpm
 
 ## Traceability
 
@@ -63,10 +63,10 @@
 - backend: `ddev exec vendor/bin/pint --dirty --format agent`, `ddev exec vendor/bin/phpstan analyse`, `ddev artisan test --compact`
 
 ## Done when
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
-- [ ] Project on nginx-fpm; `.env` back to its normal values
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
+- [x] Project on nginx-fpm; `.env` back to its normal values
 
 ## Phase: Gaps (converge round 1)
 
