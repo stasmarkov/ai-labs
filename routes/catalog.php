@@ -11,4 +11,5 @@ Route::get('/listings/{id}', ShowListingController::class)
     ->name('listings.show');
 Route::get('/listings/{id}/describe', DescribeListingController::class)
     ->where('id', '[1-9][0-9]{0,17}')
+    ->middleware('throttle:describe')
     ->name('listings.describe');

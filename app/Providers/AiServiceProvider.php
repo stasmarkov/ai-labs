@@ -9,9 +9,12 @@ use App\Ai\FakeStreamProvider;
 use App\Ai\RecordAiRun;
 use App\Contracts\AiRunRepositoryInterface;
 use App\Repositories\EloquentAiRunRepository;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Ai\AiManager;
 use Laravel\Ai\Events\AgentFailed;
@@ -44,5 +47,8 @@ class AiServiceProvider extends ServiceProvider
         Event::listen(StreamingAgent::class, [RecordAiRun::class, 'onStreaming']);
         Event::listen(AgentStreamed::class, [RecordAiRun::class, 'onStreamed']);
         Event::listen(AgentFailed::class, [RecordAiRun::class, 'onFailed']);
+
+        // Each describe call holds a PHP worker and the GPU for seconds, so callers are limited per IP.
+        RateLimiter::for('describe', fn (Request $request): Limit => Limit::perMinute((int) config('ai.describe_per_minute'))->by((string) $request->ip()));
     }
 }

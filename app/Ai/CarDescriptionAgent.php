@@ -6,9 +6,11 @@ namespace App\Ai;
 
 use App\DTOs\ListingDetail;
 use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\HasProviderOptions;
+use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
 
-final class CarDescriptionAgent implements Agent, VersionedPrompt
+final class CarDescriptionAgent implements Agent, HasProviderOptions, VersionedPrompt
 {
     use Promptable;
 
@@ -26,6 +28,42 @@ final class CarDescriptionAgent implements Agent, VersionedPrompt
         $dot = strrpos($name, '.');
 
         return $dot === false ? $name : substr_replace($name, '@', $dot, 1);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function providerOptions(Lab|string $provider): array
+    {
+        // The SDK passes the driver ("ollama"), not the config entry name, so match it against the active entry.
+        $driver = $provider instanceof Lab ? $provider->value : $provider;
+        $entry = $this->activeProviderEntry();
+
+        return ($entry['driver'] ?? null) === $driver ? (array) ($entry['request_options'] ?? []) : [];
+    }
+
+    public function maxTokens(): ?int
+    {
+        $maxTokens = $this->activeProviderEntry()['max_tokens'] ?? null;
+
+        return $maxTokens === null ? null : (int) $maxTokens;
+    }
+
+    /**
+     * The SDK calls this instead of its own fallback when it exists, so an entry without "timeout" keeps the SDK's 60 s
+     * (Promptable::getTimeout).
+     */
+    public function timeout(): int
+    {
+        return (int) ($this->activeProviderEntry()['timeout'] ?? 60);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function activeProviderEntry(): array
+    {
+        return (array) config('ai.providers.'.config('ai.default'), []);
     }
 
     private function promptName(): string

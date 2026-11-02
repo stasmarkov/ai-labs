@@ -10,13 +10,20 @@ use Laravel\Ai\Events\StreamingAgent;
 
 final readonly class RecordAiRun
 {
-    public function __construct(private AiRunRecorder $recorder) {}
+    /**
+     * Octane's event dispatcher keeps the booted application, so a constructor-injected scoped recorder would not be
+     * the one the request's SSE protocol reports to. The recorder is taken from the current container instead.
+     */
+    private function recorder(): AiRunRecorder
+    {
+        return app(AiRunRecorder::class);
+    }
 
     public function onStreaming(StreamingAgent $event): void
     {
         $agent = $event->prompt->agent;
 
-        $this->recorder->started(
+        $this->recorder()->started(
             $event->invocationId,
             class_basename($agent),
             $event->prompt->provider()->name(),
@@ -27,7 +34,7 @@ final readonly class RecordAiRun
 
     public function onStreamed(AgentStreamed $event): void
     {
-        $this->recorder->completed(
+        $this->recorder()->completed(
             $event->invocationId,
             $event->response->usage->inputTokens,
             $event->response->usage->outputTokens,
@@ -36,6 +43,6 @@ final readonly class RecordAiRun
 
     public function onFailed(AgentFailed $event): void
     {
-        $this->recorder->failed($event->invocationId, $event->exception);
+        $this->recorder()->failed($event->invocationId, $event->exception);
     }
 }

@@ -4,7 +4,7 @@ This guide explains how everything in this project works, in the order it was bu
 
 It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan and its order are in [`backlog.md`](../backlog.md).
 
-**Status (2026-11-02):** sections 1–9 cover the shipped slices SL-01 to SL-08 and SL-20. Planned sections are listed at the end.
+**Status (2026-11-02):** sections 1–10 cover the shipped slices SL-01 to SL-08, SL-20 and SL-22. Planned sections are listed at the end.
 
 ---
 
@@ -253,9 +253,66 @@ After both fixes: the static-array leak grows a steady 0.5 KB per request (11.3 
 
 ---
 
+## 10. Running the model locally
+
+**What it is.** The same endpoint, `GET /listings/{id}/describe`, now streams text from a real model: `qwen3.5:9b` served by Ollama on the Mac. Nothing in the controller, the SSE protocol or `ai_runs` changed. Switching is configuration: `AI_PROVIDER=ollama` in `.env` (default `fake-stream`) selects the `ollama` entry in [`config/ai.php`](../config/ai.php), and `AI_PROVIDER=fake-stream` brings back the fake provider that the test suite and `bench/sse.sh` without `--real` rely on.
+
+**One call, end to end.**
+1. **Provider entry.** The app's `providers` array replaces the package's, so the `ollama` entry has to exist in `config/ai.php`: URL from `OLLAMA_URL` (default `http://host.docker.internal:11434`), model from `OLLAMA_MODEL` (`qwen3.5:9b`), `max_tokens` (`AI_MAX_TOKENS`, 400) and `timeout` (`AI_TIMEOUT`, 120 s).
+2. **Request options.** [`CarDescriptionAgent`](../app/Ai/CarDescriptionAgent.php) adds `think`, `keep_alive` and `options.num_ctx` to the body of `POST /api/chat`, and the SDK sends `num_predict` from `max_tokens`. `think: false` matters: a thinking model spends its token budget on reasoning that the client never sees.
+3. **Reaching the host.** Ollama runs on macOS, the PHP code in a container. `host.docker.internal` has to resolve inside the web container on every server, so the project adds `extra_hosts: host.docker.internal:host-gateway` in `.ddev/docker-compose.host-gateway.yaml`. OpenLiteSpeed runs in its own container and needed the same line in its overlay.
+4. **Stream to SSE.** Ollama answers with newline-delimited JSON, one object per chunk, the last one with `done: true` and the real `prompt_eval_count` and `eval_count`. The SDK turns them into the same events as the fake provider, so `SseProtocol` and `RecordAiRun` are unchanged and `ai_runs` now holds real token counts.
+
+**Cold versus warm.** Ollama loads the weights on the first request and unloads them after `keep_alive` (10 minutes here). Two requests with `curl` straight to Ollama, the first after `ollama stop`, read from its `load_duration`, `prompt_eval_duration` and `eval_duration` fields:
+
+| Request | Total (ms) | load_duration (ms) | Prompt eval (ms) | Eval (ms) |
+|---|---|---|---|---|
+| Cold | 6987 | 4927 | 333 | 1720 |
+| Warm | 1729 | 3 | 27 | 1698 |
+
+Loading cost five seconds once. The generation itself took about the same in both. Warm the model before measuring anything else.
+
+**What goes into the first token.** On a warm model, time to first token is prompt processing plus the first decode step: the 111 prompt tokens took about 27 ms to evaluate above, and `ai_runs.ttft_ms` of 89 to 145 ms adds PHP, the HTTP call to Ollama and the first chunk. On a cold model the load is added in front (about 5 s above), which is why the model is warmed before measuring.
+
+**What the model is.** `qwen3.5:9b` has 9.7 billion parameters stored as `nvfp4`, a 4-bit floating-point format: each weight takes about half a byte, so the file is a few GB instead of about 19 GB at 16 bits, at a small cost in quality. Ollama 0.40 runs it on its MLX runner, Apple's array framework for Apple Silicon, which keeps the weights in unified memory and uses the GPU. ADR 0001 first assumed the Q4_K_M build on the llama.cpp engine; the pulled model differs, so its sizes were not re-measured.
+
+**Context and the KV cache.** While generating, the model keeps the keys and values of every token seen so far, the KV cache, so each new token only attends to them instead of recomputing the prompt. Its size grows with the context window: `num_ctx` (`OLLAMA_NUM_CTX`, 8192) reserves room for it, and prompt plus output must fit. A loaded model keeps its runner and memory until `keep_alive` expires, which is why the warm request had `load_duration` of 3 ms. The model supports 262144 tokens, but a bigger `num_ctx` costs memory for no gain on a 111-token prompt.
+
+**Tokens versus words.** The fake provider emits 200 "tokens" that are words, so `AI_FAKE_TOKENS=200` always means 200 events. A real tokenizer splits text into sub-word pieces: this prompt is 111 tokens, and a description of 79 to 126 output tokens arrived as nearly as many text events. Token counts, not word counts, are what `ai_runs.tokens_in` and `tokens_out` now hold, and what limits `num_predict`.
+
+**What each server showed.** `bench/sse.sh --real` streams the endpoint with the same prompt and checks the stream instead of fixed counts. Times are from the client; `ttft` and latency are `ai_runs.ttft_ms` and `latency_ms`, measured inside PHP. Tokens/s is tokens out divided by ((latency - ttft) / 1000):
+
+| Server | Tokens in | Tokens out | First text (ms) | Last text (ms) | Text events | ttft (ms) | Latency (ms) | tokens/s |
+|---|---|---|---|---|---|---|---|---|
+| nginx-fpm | 111 | 79 | 450 | 1762 | 76 | 140 | 1459 | 59.9 |
+| apache-fpm | 111 | 101 | 330 | 1857 | 99 | 124 | 1653 | 66.1 |
+| openlitespeed | 111 | 92 | 514 | 2383 | 90 | 145 | 2035 | 48.7 |
+| frankenphp | 111 | 126 | 635 | 2899 | 123 | 89 | 2361 | 55.5 |
+| frankenphp-octane | 111 | 111 | 225 | 2079 | 108 | 118 | 1974 | 59.8 |
+| frankenphp-worker | 111 | 106 | 240 | 2121 | 104 | 107 | 2003 | 55.9 |
+
+- All six servers delivered the text as it was generated: first text between 225 and 635 ms, spread over one to three seconds. The model writes a different text each time, so token counts differ per row; the speeds of 49 to 66 tokens/s are within the run-to-run noise of one model on one laptop. This table shows the pipeline is not buffering, not which server is faster.
+- **ttft on the Octane servers.** An earlier run showed an empty `ttft_ms` on `frankenphp-octane` and `frankenphp-worker`. Under Octane the event dispatcher keeps the container it was booted with, so the listener and the SSE protocol used different scoped `AiRunRecorder` instances; both now resolve the recorder from the current container, and the rows above have a value.
+- The number of text events is close to the number of output tokens, since each token is one SSE line.
+- **Arrival times are clumpier than the fake provider's, and the model server causes it.** `ollama show qwen3.5:9b` lists `draft_num_predict 3`: Ollama uses speculative decoding, where a small draft step proposes up to 3 tokens and the model accepts several at once, so they leave Ollama together. Called directly (no PHP, no web server), 112 chunks had only 55 % new millisecond timestamps, with up to 3 chunks in the same millisecond. `--real` therefore counts `new_ms` (text events whose timestamp differs from the previous one) and requires 40 %, not the 80 % first tried (the fake stream needs 150 distinct of 200). Speculative decoding also explains why generation here (49 to 66 tokens/s) is faster than the 39.8 tokens/s of the first smoke test with a 3-token answer.
+- **Thinking.** With `AI_THINK=true` the model reasons before it answers, and the reasoning counts against `num_predict`. At `AI_MAX_TOKENS=400` the run on nginx-fpm used all 400 tokens on reasoning, took 5904 ms and produced no visible text. With `AI_THINK=true AI_MAX_TOKENS=1200` the run still used all 1200 tokens (109 in), took 19216 ms (about 62 tokens/s over the whole latency) and showed no text, so `sse.sh --real` failed again and `ttft_ms` stayed empty, because it is set on the first visible text. For this prompt, thinking costs a multiple of the time of the non-thinking run (1459 ms) and needs a budget well above 1200 tokens; it was not worth raising further here.
+
+**Network setting.** All the numbers above were taken with Ollama listening on every interface (`lsof` showed `*:11434`), because the macOS app's "Expose Ollama to the network" switch was on. The container does not need that. Tested on 2026-11-02: a throwaway HTTP server bound only to `127.0.0.1` on the Mac answered a container started with `--add-host=host.docker.internal:host-gateway`, because OrbStack relays the host's loopback. Recommendation: turn "Expose Ollama to the network" off, so that only this machine can use the model, and re-run `ddev exec curl -s http://host.docker.internal:11434/api/version` to confirm.
+
+**In this repo.**
+- Decision and later notes: [`ADR 0001`](../docs/adr/0001-local-model-server-models-php-client.md).
+- Code: [`CarDescriptionAgent.php`](../app/Ai/CarDescriptionAgent.php), [`app/Ai/`](../app/Ai/), [`config/ai.php`](../config/ai.php); the AI keys are listed in `.env.example`.
+- Measuring: [`bench/sse.sh`](../bench/sse.sh) with `--real`.
+- Tests: [`OllamaProviderTest`](../tests/Feature/OllamaProviderTest.php), [`DdevHostGatewayTest`](../tests/Feature/DdevHostGatewayTest.php), [`BenchSseTest`](../tests/Feature/BenchSseTest.php); none needs a network or a running Ollama.
+- Spec: [`.ai/specs/spec-20261102-1812-local-model-wiring/`](../.ai/specs/spec-20261102-1812-local-model-wiring/).
+
+**Read next.** [Ollama docs](https://docs.ollama.com/) · [Ollama usage fields](https://docs.ollama.com/api/usage) · [Ollama thinking](https://docs.ollama.com/capabilities/thinking) · [Laravel AI SDK](https://laravel.com/docs/13.x/ai-sdk)
+
+---
+
 ## Planned sections
 
 Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):
 
 - **Server track:** slow I/O and thread autoscaling (SL-09), Early Hints and compression (SL-10), file downloads offloaded to the web server (SL-11), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
-- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; running models locally (SL-22); structured output (SL-23); embeddings and vector search (SL-24); tool calling (SL-25); evals (SL-26, SL-33); vision (SL-27); model comparison (SL-28); RAG with citations (SL-32); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39); semantic caching (SL-40); streaming chat UI (SL-41); a research agent (SL-42); a prompt playground (SL-43).
+- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; structured output (SL-23); embeddings and vector search (SL-24); tool calling (SL-25); evals (SL-26, SL-33); vision (SL-27); model comparison (SL-28); RAG with citations (SL-32); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39); semantic caching (SL-40); streaming chat UI (SL-41); a research agent (SL-42); a prompt playground (SL-43).

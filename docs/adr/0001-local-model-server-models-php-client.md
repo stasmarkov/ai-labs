@@ -232,6 +232,16 @@ Negative:
 
 Runner-up and why not: Option 2, LM Studio headless with the `openai-compatible` driver. It is close, with one `/v1` wire format for both the SDK and SL-34 and an MLX engine. It loses on two required config traps (`stream_options.include_usage` and explicit `models.text.default` on every entry), JIT/Auto-Evict swapping unless models are preloaded, open MLX context and embedding bugs, and a GUI-first install outside the repo. If Ollama's structured output or vision proves unreliable for the chosen models, switching to LM Studio is a config-only change (BR-91), with the embedder on a GGUF build such as `ggml-org/bge-m3-Q8_0-GGUF`.
 
+## Note (2026-11-02, SL-22 local wiring)
+
+- `host.docker.internal` did not resolve in the web container by default. The project now adds `extra_hosts: host.docker.internal:host-gateway` in `.ddev/docker-compose.host-gateway.yaml` and in the OpenLiteSpeed overlay (its own container). This supersedes the line "Do not add `extra_hosts: host-gateway` on macOS" in Decision. Wiring checked on all six servers.
+- The live runs used Ollama bound to all interfaces (the app's "Expose Ollama to the network" switch was on). Binding to 127.0.0.1 only was not re-tested; the guide recommends turning the switch off.
+- The `ollama` entry's URL default is `http://host.docker.internal:11434`; `http://localhost:11434` fails inside the container.
+- The model thinks by default in Ollama; the app sends `think: false` unless `AI_THINK=true`. With it on and `num_predict` 400 the model spent all tokens on reasoning and returned no visible text.
+- A loaded model keeps its context: `keep_alive` is 10 minutes and `num_ctx` is 8192. A cold request took 6987 ms (4927 ms load), a warm one 1729 ms.
+- The pulled `qwen3.5:9b` (Ollama 0.40.13) is 9.7B parameters in `nvfp4` on the MLX runner, not the Q4_K_M GGUF assumed above, so the sizes and memory figures in this ADR are for the GGUF and were not re-measured for it. Generation was 39.8 tokens/s in a smoke test.
+- Ollama delivers tokens in bursts, so the `bench/sse.sh --real` distinct-arrival rule is 40 %, not the fake provider's 75 %.
+
 ## Open Questions
 
 1. Final model set and measured resident peak: Qwen3.5-9B versus Qwen2.5-7B/Qwen3-8B for chat, Gemma 4 12B versus another family for the grader, and whether one multimodal model should cover chat and vision. Measure at Q4_K_M with the chosen `num_ctx` and confirm it fits about 26 GB, possibly raising `iogpu.wired_limit_mb`.

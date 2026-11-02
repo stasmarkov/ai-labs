@@ -12,6 +12,8 @@ services:
     restart: "no"
     expose:
       - "8088"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - VIRTUAL_HOST=$DDEV_HOSTNAME
       - HTTPS_EXPOSE=8091:8088
