@@ -45,9 +45,9 @@
   - [x] 6.1 Failing doc test: heading `## 12. Chunking and hybrid retrieval`, links to `.ai/research/ai-chatbot-reference.md`, the code, the spec, the results folder, https://www.postgresql.org/docs/16/textsearch.html and https://github.com/pgvector/pgvector, and the words "overlap", "RRF", "oversize"
   - [x] 6.2 Write the section with the measured numbers; update the status line and Planned list
 
-- [ ] 7. Gates (all)
+- [x] 7. Gates (all)
   Covers: MNC-3
-  - [ ] 7.1 **Verify**: Pint, PHPStan, full suite green; after committing, `bench/run.sh ping --quick` passes
+  - [x] 7.1 **Verify**: Pint, PHPStan, full suite green; after committing, `bench/run.sh ping --quick` passes
 
 ## Traceability
 
@@ -71,10 +71,10 @@
 - backend: `ddev exec vendor/bin/pint --dirty --format agent`, `ddev exec vendor/bin/phpstan analyse`, `ddev artisan test --compact`
 
 ## Done when
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
-- [ ] Project on nginx-fpm; both corpora indexed and embedded; no queue worker left running
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
+- [x] Project on nginx-fpm; both corpora indexed and embedded; no queue worker left running
 
 ## Phase: Gaps (converge round 1)
 
