@@ -4,7 +4,7 @@ title: Semantic listing search with bge-m3 embeddings in pgvector
 type: feature
 size: M
 priority: P2
-status: in-progress
+status: done
 ticket:
 stakeholders: [Stanislav Markov]
 approved_by: Stas Markov (standing approval)

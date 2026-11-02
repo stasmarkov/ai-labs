@@ -73,10 +73,10 @@
 - backend: `ddev exec vendor/bin/pint --dirty --format agent`, `ddev exec vendor/bin/phpstan analyse`, `ddev artisan test --compact`
 
 ## Done when
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
-- [ ] Project on nginx-fpm; 50 000 listings described and embedded; no queue worker left running
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
+- [x] Project on nginx-fpm; 50 000 listings described and embedded; no queue worker left running
 
 ## Phase: Gaps (converge round 1)
 
