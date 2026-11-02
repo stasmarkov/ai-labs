@@ -5,7 +5,7 @@ brief: product-brief.md
 
 # AutoPulse backlog
 
-Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → SL-08 → SL-20 → SL-22 → SL-24 → SL-32 → SL-45 → {SL-33, SL-40, SL-41} → SL-09 → {SL-10, SL-11, SL-12} → SL-13 → SL-14 → SL-15 → {SL-16, SL-17} → {SL-23, SL-26, SL-27} → SL-25 → SL-28 → SL-42 → SL-34 → SL-35 → SL-36 → {SL-37, SL-38, SL-39} → SL-43 → SL-44
+Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → SL-08 → SL-20 → SL-22 → SL-24 → SL-32 → SL-46 → SL-45 → {SL-33, SL-40, SL-41} → SL-09 → {SL-10, SL-11, SL-12} → SL-13 → SL-14 → SL-15 → {SL-16, SL-17} → {SL-23, SL-26, SL-27} → SL-25 → SL-28 → SL-42 → SL-34 → SL-35 → SL-36 → {SL-37, SL-38, SL-39} → SL-43 → SL-44
 
 ## Slices
 
@@ -426,6 +426,20 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov); split 2026-11-02
 - **Run:** `/sdd "SL-32: docs index and hybrid retrieval — queued ingest of this repo's markdown docs and the Laravel 13 docs into structure-aware chunks embedded with bge-m3 into pgvector, vector and hybrid (vector + full text, RRF) top-k search via docs:search and GET /api/docs/search (BR-90, BR-26, BR-27). Rules in product-brief.md; design in .ai/research/ai-chatbot-reference.md."`
 
+### SL-46 · AI lab UI (Inertia + Vue)
+
+- **Outcome:** The developer opens `/ai` and uses each AI capability from one reactive UI: the streamed car description with a stop button, semantic listing search, docs search comparing vector, full-text and hybrid side by side, and recent `ai_runs`; every page shows "under the hood" what happened (events, time to first token, tokens/s, timings, scores). Chat and similar photos have placeholder pages until SL-45/SL-41 and SL-36 fill them.
+- **Entry point:** `/ai`, `/ai/describe`, `/ai/semantic`, `/ai/docs`, `/ai/chat`, `/ai/photos`
+- **Size:** M
+- **BRs:** BR-27, BR-90, BR-95
+- **Notes:** Inertia 2 with Vue 3 and TypeScript, a separate Vite entry so the existing pages' built CSS and JS stay byte-identical (parity). Design chosen by Claude (owner: "taste any design by your own"). SL-41 (streaming chat UI) and SL-36 (similar photos) build their pages inside this UI.
+- **Depends on:** SL-20, SL-22, SL-24, SL-32
+- **Blocked by:** none
+- **Status:** specced
+- **Spec:** spec-20261103-0012-ai-lab-ui
+- **Source:** Stanislav Markov, 2026-11-03 ("for the future chat streaming and similar photos I need some UI … use inertia or similar … taste any design by your own")
+- **Run:** `/sdd "SL-46: AI lab UI — Inertia + Vue 3 + TypeScript under /ai with pages for streamed describe (stop button, live event log, TTFT and tokens/s), semantic search, docs search comparing three modes, recent ai_runs, and placeholders for chat and photos; existing pages' assets byte-identical (BR-27, BR-90, BR-95). Rules in product-brief.md."`
+
 ### SL-45 · Docs chatbot answering with citations
 
 - **Outcome:** The developer asks a question about the indexed docs and gets a streamed answer from the local model that cites the chunks it used, or "I don't know" when nothing relevant is retrieved; prompt-injection attempts in the question or in a document do not change the bot's rules.
@@ -551,11 +565,11 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 ### SL-41 · Streaming chat UI with stop
 
 - **Outcome:** The developer chats with the docs chatbot in a page that shows the answer token by token and has a stop button that cancels generation on the server.
-- **Notes:** direct SSE (BR-95); the reference design's queued job + Reverb stream is the dropped queued variant and stays out unless the owner reopens that non-goal.
+- **Notes:** built as a page of the SL-46 AI lab UI (Vue), replacing the original Livewire/Alpine idea; direct SSE (BR-95); the queued job + Reverb stream from the reference design stays out unless the owner reopens that non-goal.
 - **Entry point:** docs chat page
 - **Size:** S
 - **BRs:** BR-95, BR-27
-- **Depends on:** SL-45, SL-20
+- **Depends on:** SL-45, SL-46
 - **Blocked by:** none
 - **Status:** approved
 - **Spec:** —
@@ -632,6 +646,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 | 2026-11-02 | same | Input/output guard against prompt injection | BR change | BR-100 (draft); cited by SL-32 |
 | 2026-11-02 | same | Prism client, Ollama + qwen2.5:7b + nomic-embed-text | Question | Q-01 widened (client per slice, candidates) |
 | 2026-11-02 | same | Tenants, per-tool policies, queued job + Reverb streaming | Non-goal | logged only: no accounts; queued streaming dropped 2026-11-01 |
-| 2026-11-02 | Stanislav Markov | Build the docs chatbot sooner | Reorder | SL-20 → SL-22 → SL-24 → SL-32 → SL-45 → {SL-33, SL-40, SL-41} moved right after SL-08, before the server track; SL-32, SL-33, SL-40, SL-41 approved |
+| 2026-11-02 | Stanislav Markov | Build the docs chatbot sooner | Reorder | SL-20 → SL-22 → SL-24 → SL-32 → SL-46 → SL-45 → {SL-33, SL-40, SL-41} moved right after SL-08, before the server track; SL-32, SL-33, SL-40, SL-41 approved |
 | 2026-11-02 | Stanislav Markov | Q-01 / Q-03 decision | Decision | ADR 0001 accepted; SL-22 run text uses the native ollama driver; SL-22 and SL-24 unblocked |
 | 2026-11-02 | Claude (standing approval) | SL-32 sized L with 10–12 tasks | Split | SL-32 narrowed to index and hybrid retrieval; answering, citations and guard moved to new SL-45; SL-33, SL-40, SL-41 now depend on SL-45 |
+| 2026-11-03 | Stanislav Markov | UI for AI capabilities (chat streaming, similar photos), Inertia or similar, design by Claude | New slice | SL-46 AI lab UI, before SL-45; SL-41 builds inside it |
