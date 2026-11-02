@@ -316,8 +316,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-90
 - **Depends on:** SL-22
 - **Blocked by:** none (Q-03 answered by ADR 0001)
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261102-2115-listing-embeddings
 - **Source:** brief (Phase 11)
 - **Run:** `/sdd "SL-24: pgvector semantic search — queued batch embedding of all 50 000 listing descriptions with the local embedding model, HNSW index, top-10 similarity search, recording embeddings/s, total time and index size (BR-90). Rules in product-brief.md."`
 
