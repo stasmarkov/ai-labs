@@ -4,7 +4,7 @@ title: Streamed car description with a slow fake provider and an AI-run log
 type: feature
 size: M
 priority: P2
-status: approved
+status: in-progress
 ticket:
 stakeholders: [Stanislav Markov]
 approved_by: Stas Markov (standing approval)
@@ -106,6 +106,7 @@ Resolved under standing approval (self-decided). Facts about the SDK were checke
 3. Log through the SDK's own events instead of wrapping each call, so every future agent is logged without extra code (self-decided, standing approval).
 4. Record time to first token as well as total latency: for a streamed answer it is the number the user feels (self-decided, standing approval).
 5. GET, not POST, because the browser `EventSource` API only sends GET (self-decided, standing approval).
+6. Review fix pass (2026-11-02): time to first token stays in the SSE protocol class, the only place a token's departure to the client is visible. A run streamed without it (a queued job, a CLI command) is still logged by the SDK events but with `ttft_ms` null; revisit if SL-41 or a queued agent needs it (self-decided, standing approval). Fixed from review: tokens in counts instructions plus prompt; no wait before the first token; empty `AI_FAKE_*` values fall back to defaults; tokens out = deltas sent; a provider `error` event is masked and sent once; out-of-pattern ids get the JSON 404; a failed `ai_runs` insert is reported without breaking a finished stream.
 
 ## Open questions
 

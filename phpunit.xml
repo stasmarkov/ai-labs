@@ -19,6 +19,9 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="AI_PROVIDER" value="fake-stream"/>
+        <env name="AI_FAKE_TOKENS" value="20"/>
+        <env name="AI_FAKE_TOKEN_DELAY_MS" value="0"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

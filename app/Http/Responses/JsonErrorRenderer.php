@@ -16,7 +16,8 @@ final class JsonErrorRenderer
     public static function wantsJson(Request $request): bool
     {
         return $request->is('api/*')
-            || $request->routeIs('listings.index')
+            || $request->routeIs('listings.index', 'listings.describe')
+            || $request->is('listings/*/describe')
             || $request->expectsJson();
     }
 

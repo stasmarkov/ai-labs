@@ -4,7 +4,7 @@ This guide explains how everything in this project works, in the order it was bu
 
 It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan and its order are in [`backlog.md`](../backlog.md).
 
-**Status (2026-11-02):** sections 1–8 cover the shipped slices SL-01 to SL-08. Planned sections are listed at the end.
+**Status (2026-11-02):** sections 1–9 cover the shipped slices SL-01 to SL-08 and SL-20. Planned sections are listed at the end.
 
 ---
 
@@ -213,9 +213,49 @@ After both fixes: the static-array leak grows a steady 0.5 KB per request (11.3 
 
 ---
 
+## 9. Streaming an AI answer
+
+**What it is.** `GET /listings/{id}/describe` returns a short description of one car and sends it while it is generated, as server-sent events (SSE): a normal HTTP response that stays open, with `Content-Type: text/event-stream`, where the server writes lines of the form `data: <payload>` followed by a blank line. The browser or `curl -N` sees each line as soon as it is written. Until a local model is chosen, the text comes from a fake provider that sends one word every 50 ms for 10 seconds, so the stream is visible, testable and load-testable without a model.
+
+**One call, end to end.**
+1. **Route and controller.** [`DescribeListingController`](../app/Http/Controllers/DescribeListingController.php) calls `ListingDescriptionService`, which loads the listing (404 as JSON if missing) and builds the prompt from its attributes.
+2. **Agent.** `CarDescriptionAgent` takes its instructions from a versioned prompt file under `resources/prompts/` (`car-description.v1.md` is recorded as `car-description@v1`).
+3. **Provider and gateway.** `ai.default` and the model come from `.env` (`AI_PROVIDER`, `AI_MODEL`), so switching models needs no code change. The `fake-stream` driver is registered on the SDK's manager by `AiServiceProvider`; its gateway yields the SDK's events (stream start, one text delta per word, stream end with token usage). `AI_FAKE_TOKENS` (200) and `AI_FAKE_TOKEN_DELAY_MS` (50) set the length and pace.
+4. **Events to SSE lines.** `SseProtocol` turns every event into one `data: {json}` line (`"type":"text_delta"` for text) and ends with `data: [DONE]`. If the run fails midway, the client gets an `error` event, then `data: [DONE]`.
+5. **Server, router, client.** The response leaves PHP, passes the web server, then the DDEV router, then reaches the client. Any of those can hold bytes back until a buffer fills, which turns a 10-second stream into one late burst.
+
+**How `ai_runs` is filled.** `RecordAiRun` listens to the SDK's lifecycle events and `AiRunRecorder` writes one row per run: provider, model, prompt version, tokens in and out, time to first token, total latency and status (`completed` or `failed`). A live run on nginx-fpm wrote provider `fake-stream`, model `fake-slow-1`, prompt `car-description@v1`, 53 tokens in (instructions plus prompt), 200 out, first token after 1 ms, 10 399 ms in total. Time to first token is measured inside PHP, from the start of the run to the first text delta; `bench/sse.sh` measures it from the client and also counts TLS, the router and the server (126 ms in the same check).
+
+**What each server needed.** `bench/sse.sh` streams the endpoint with `curl --no-buffer`, timestamps every line, and passes when the first text event comes within 1 s, the last at 9.5 s or later, there are exactly 200 text events and at least 150 distinct arrival times (the last run per server):
+
+| Server | first_text_ms | last_text_ms | text_events | distinct_ms | Needed |
+|---|---|---|---|---|---|
+| nginx-fpm | 84 | 10771 | 200 | 200 | nothing; `X-Accel-Buffering: no` from the app turns FastCGI buffering off |
+| apache-fpm | 228 | 10699 | 200 | 200 | `ProxySet flushpackets=on` on the PHP-FPM proxy worker in `.ddev/apache/apache-site.conf` |
+| openlitespeed | 409 | 11013 | 200 | 200 | nothing |
+| frankenphp | 255 | 10929 | 200 | 200 | nothing |
+| frankenphp-octane | 119 | 10676 | 200 | 199 | `SseProtocol::response()` drains the generator and flushes per chunk |
+| frankenphp-worker | 166 | 10811 | 200 | 200 | same fix as Octane |
+
+- **Apache** delivered about 13 chunks, the first at roughly 1.3 s: `mod_proxy_fcgi` waits for a buffer to fill. `proxy-flushall` had no effect; `flushpackets=on` on the proxy worker did.
+- **Octane and the FrankenPHP worker** returned an empty body. Laravel's `response()->stream()` hands the server client an un-iterated generator callback when `LARAVEL_OCTANE` is set, and Octane's FrankenPHP client calls it without draining it.
+- The first nginx-fpm run after a server switch showed `first_text_ms=1071` (fail); two reruns gave 216 and 84. Treat the first request after a switch as a cold start.
+
+**What the fake provider hides.** A real model streams *tokens* from its tokenizer, which are word pieces, not words: "Defender" may arrive as two or three pieces, and spaces and punctuation are part of the pieces. Real latency is not a flat 50 ms: there is a wait before the first token (queueing, reading the prompt), a pace that varies with load, and token counts that come from the provider rather than a word count. Here the first token arrives at once and the pace is perfectly even, so a buffering bug is easy to see, but timing-based tuning must be redone with a real model (SL-22).
+
+**In this repo.**
+- Code: [`app/Ai/`](../app/Ai/), [`DescribeListingController`](../app/Http/Controllers/DescribeListingController.php), [`config/ai.php`](../config/ai.php).
+- Measuring: [`bench/sse.sh`](../bench/sse.sh) (`--analyse <file>` checks a saved log).
+- Tests: [`ListingDescribeTest`](../tests/Feature/ListingDescribeTest.php), [`AiRunLogTest`](../tests/Feature/AiRunLogTest.php), [`FakeStreamProviderTest`](../tests/Feature/FakeStreamProviderTest.php), [`BenchSseTest`](../tests/Feature/BenchSseTest.php).
+- Spec: [`.ai/specs/spec-20261102-1552-streamed-car-description/`](../.ai/specs/spec-20261102-1552-streamed-car-description/).
+
+**Read next.** [Laravel AI SDK](https://laravel.com/docs/13.x/ai-sdk) · [MDN: Using server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) · [Apache `ProxySet` (`flushpackets`)](https://httpd.apache.org/docs/2.4/mod/mod_proxy.html#proxyset) · [nginx `X-Accel-Buffering`](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffering)
+
+---
+
 ## Planned sections
 
 Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):
 
 - **Server track:** slow I/O and thread autoscaling (SL-09), Early Hints and compression (SL-10), file downloads offloaded to the web server (SL-11), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
-- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; streaming over SSE (SL-20); running models locally (SL-22); structured output (SL-23); embeddings and vector search (SL-24); tool calling (SL-25); evals (SL-26, SL-33); vision (SL-27); model comparison (SL-28); RAG with citations (SL-32); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39); semantic caching (SL-40); streaming chat UI (SL-41); a research agent (SL-42); a prompt playground (SL-43).
+- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; running models locally (SL-22); structured output (SL-23); embeddings and vector search (SL-24); tool calling (SL-25); evals (SL-26, SL-33); vision (SL-27); model comparison (SL-28); RAG with citations (SL-32); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39); semantic caching (SL-40); streaming chat UI (SL-41); a research agent (SL-42); a prompt playground (SL-43).
