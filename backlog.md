@@ -5,7 +5,7 @@ brief: product-brief.md
 
 # AutoPulse backlog
 
-Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → SL-08 → SL-09 → {SL-10, SL-11, SL-12} → SL-13 → SL-14 → SL-15 → {SL-16, SL-17} → SL-20 → SL-22 → {SL-23, SL-24, SL-26, SL-27} → SL-25 → SL-28 → SL-32 → {SL-33, SL-40, SL-41, SL-42} → SL-34 → SL-35 → SL-36 → {SL-37, SL-38, SL-39} → SL-43 → SL-44
+Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → SL-08 → SL-20 → SL-22 → SL-24 → SL-32 → {SL-33, SL-40, SL-41} → SL-09 → {SL-10, SL-11, SL-12} → SL-13 → SL-14 → SL-15 → {SL-16, SL-17} → {SL-23, SL-26, SL-27} → SL-25 → SL-28 → SL-42 → SL-34 → SL-35 → SL-36 → {SL-37, SL-38, SL-39} → SL-43 → SL-44
 
 ## Slices
 
@@ -108,7 +108,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-21, BR-24, BR-26
 - **Depends on:** SL-06, SL-07
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261101-2126-classic-vs-worker
 - **Source:** brief (Phase 2)
 - **Run:** `/sdd "SL-08: benchmark FrankenPHP classic vs Octane worker on ping and search, record memory growth over 10 000 requests with/without the static cache and with max-requests, and explain the gap in BENCHMARKS.md (BR-21, BR-24, BR-26). Rules in product-brief.md."`
@@ -421,7 +421,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Notes:** structure-aware chunks (300–500 tokens, 50–80 overlap, headings → paragraphs → sentences, tables and code never split, "document › section" prefix, per-document hash for idempotent re-indexing); vector-only retrieval first, then hybrid vector + full text fused with RRF, compared by SL-33; chunks passed as marked data with their source; embedding model and its query/document prefixes stored with each document; ingest runs as queued jobs on a dedicated low-concurrency queue; the trace row adds retrieved chunk ids and cache hit. Reference design: `.ai/research/ai-chatbot-reference.md` (owner input 2026-11-02).
 - **Depends on:** SL-22, SL-24
 - **Blocked by:** none
-- **Status:** proposed
+- **Status:** approved
 - **Spec:** —
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-32: docs chatbot — queued ingest of this repo's markdown docs and the Laravel 13 docs into structure-aware chunks embedded with the local model into pgvector, vector then hybrid (vector + full text, RRF) top-k retrieval, answers with citations, "I don't know" below the relevance threshold, retrieved text marked as data plus an input/output guard (BR-98, BR-100, BR-90, BR-27). Rules in product-brief.md; design in .ai/research/ai-chatbot-reference.md."`
@@ -435,7 +435,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-26, BR-27
 - **Depends on:** SL-32
 - **Blocked by:** none
-- **Status:** proposed
+- **Status:** approved
 - **Spec:** —
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-33: RAG eval harness — 30 labelled Q/A pairs, an Artisan command that reports retrieval recall@k, then runs them through the docs chatbot and grades correctness and groundedness with a second model call, results table per chunk size / k / vector-vs-hybrid / model (BR-26, BR-27). Rules in product-brief.md."`
@@ -529,7 +529,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-99, BR-90, BR-27
 - **Depends on:** SL-32
 - **Blocked by:** none
-- **Status:** proposed
+- **Status:** approved
 - **Spec:** —
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-40: semantic cache in front of the docs chatbot — embed the question, return a stored answer above a similarity threshold, mark it cached, record hit rate and latency saved (BR-99, BR-90, BR-27). Rules in product-brief.md."`
@@ -543,7 +543,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-95, BR-27
 - **Depends on:** SL-32, SL-20
 - **Blocked by:** none
-- **Status:** proposed
+- **Status:** approved
 - **Spec:** —
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-41: chat page streaming the docs chatbot's tokens over SSE into a Livewire/Alpine component, with a stop button that cancels generation server-side (BR-95, BR-27). Rules in product-brief.md."`
@@ -618,3 +618,4 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 | 2026-11-02 | same | Input/output guard against prompt injection | BR change | BR-100 (draft); cited by SL-32 |
 | 2026-11-02 | same | Prism client, Ollama + qwen2.5:7b + nomic-embed-text | Question | Q-01 widened (client per slice, candidates) |
 | 2026-11-02 | same | Tenants, per-tool policies, queued job + Reverb streaming | Non-goal | logged only: no accounts; queued streaming dropped 2026-11-01 |
+| 2026-11-02 | Stanislav Markov | Build the docs chatbot sooner | Reorder | SL-20 → SL-22 → SL-24 → SL-32 → {SL-33, SL-40, SL-41} moved right after SL-08, before the server track; SL-32, SL-33, SL-40, SL-41 approved |
