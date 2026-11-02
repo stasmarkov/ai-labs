@@ -1,0 +1,198 @@
+{
+    "model": "bge-m3",
+    "provider": "ollama",
+    "ollama_version": "0.40.13",
+    "pgvector": "0.8.7",
+    "repo": {
+        "commit": "856a86fa991561097ad4895fe458328ba3c770db",
+        "dirty": true
+    },
+    "laravel": {
+        "branch": "13.x",
+        "commit": "625d1dfb61018e6bc50cc7ab67fca89ae018dfa2"
+    },
+    "sources": {
+        "laravel": {
+            "documents": 102,
+            "chunks": 2417,
+            "tokens": {
+                "min": 31,
+                "median": 400,
+                "max": 2738
+            },
+            "oversize": 5
+        },
+        "repo": {
+            "documents": 19,
+            "chunks": 289,
+            "tokens": {
+                "min": 47,
+                "median": 390,
+                "max": 1054
+            },
+            "oversize": 2
+        }
+    },
+    "indexing_seconds": 2.13,
+    "embedding": {
+        "calls": 85,
+        "tokens_in": 1161309,
+        "started_at": "2026-11-02T23:24:03+00:00",
+        "finished_at": "2026-11-02T23:26:30+00:00",
+        "seconds": 146.83
+    },
+    "sizes": {
+        "table_bytes": 6070272,
+        "hnsw_bytes": 22175744,
+        "gin_bytes": 5996544,
+        "total_bytes": 54886400
+    },
+    "token_check": {
+        "chunks": 20,
+        "mean_ratio": 0.824,
+        "max_ratio": 0.938,
+        "mean_abs_error": 91.9,
+        "samples": [
+            {
+                "id": 1631,
+                "source": "laravel",
+                "path": "mail.md",
+                "estimate": 128,
+                "real": 157
+            },
+            {
+                "id": 534,
+                "source": "laravel",
+                "path": "billing.md",
+                "estimate": 414,
+                "real": 497
+            },
+            {
+                "id": 1217,
+                "source": "laravel",
+                "path": "errors.md",
+                "estimate": 488,
+                "real": 530
+            },
+            {
+                "id": 2704,
+                "source": "laravel",
+                "path": "vite.md",
+                "estimate": 474,
+                "real": 534
+            },
+            {
+                "id": 1251,
+                "source": "laravel",
+                "path": "events.md",
+                "estimate": 252,
+                "real": 299
+            },
+            {
+                "id": 1425,
+                "source": "laravel",
+                "path": "helpers.md",
+                "estimate": 488,
+                "real": 657
+            },
+            {
+                "id": 2529,
+                "source": "laravel",
+                "path": "telescope.md",
+                "estimate": 257,
+                "real": 290
+            },
+            {
+                "id": 2037,
+                "source": "laravel",
+                "path": "pulse.md",
+                "estimate": 498,
+                "real": 548
+            },
+            {
+                "id": 1109,
+                "source": "laravel",
+                "path": "eloquent-resources.md",
+                "estimate": 466,
+                "real": 505
+            },
+            {
+                "id": 366,
+                "source": "laravel",
+                "path": "ai-sdk.md",
+                "estimate": 379,
+                "real": 460
+            },
+            {
+                "id": 275,
+                "source": "repo",
+                "path": "docs/manual-test.md",
+                "estimate": 397,
+                "real": 593
+            },
+            {
+                "id": 83,
+                "source": "repo",
+                "path": ".ai/specs/spec-20261102-1552-streamed-car-description/spec-lite.md",
+                "estimate": 500,
+                "real": 606
+            },
+            {
+                "id": 268,
+                "source": "repo",
+                "path": "docs/learning-guide.md",
+                "estimate": 498,
+                "real": 564
+            },
+            {
+                "id": 102,
+                "source": "repo",
+                "path": ".ai/specs/spec-20261102-1812-local-model-wiring/spec-lite.md",
+                "estimate": 465,
+                "real": 570
+            },
+            {
+                "id": 218,
+                "source": "repo",
+                "path": "docs/adr/0001-local-model-server-models-php-client.md",
+                "estimate": 423,
+                "real": 599
+            },
+            {
+                "id": 163,
+                "source": "repo",
+                "path": "README.md",
+                "estimate": 441,
+                "real": 539
+            },
+            {
+                "id": 6,
+                "source": "repo",
+                "path": ".ai/specs/spec-20261029-1013-apache-fpm-parity/spec-lite.md",
+                "estimate": 478,
+                "real": 657
+            },
+            {
+                "id": 246,
+                "source": "repo",
+                "path": "docs/learning-guide.md",
+                "estimate": 442,
+                "real": 659
+            },
+            {
+                "id": 264,
+                "source": "repo",
+                "path": "docs/learning-guide.md",
+                "estimate": 451,
+                "real": 481
+            },
+            {
+                "id": 92,
+                "source": "repo",
+                "path": ".ai/specs/spec-20261102-1812-local-model-wiring/spec-lite.md",
+                "estimate": 164,
+                "real": 196
+            }
+        ]
+    }
+}

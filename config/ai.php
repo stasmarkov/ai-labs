@@ -45,6 +45,35 @@ return [
         'ef_search' => max(1, min(1000, (int) (env('AI_EF_SEARCH') ?: 400))),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Docs Index
+    |--------------------------------------------------------------------------
+    |
+    | The two corpora docs:index reads: this repository's markdown (its root) and
+    | the Laravel docs fetched by docs:fetch-laravel (git remote, branch, the
+    | folder it is cloned into and the file recording its commit). "embed_batch"
+    | is the chunks sent per embedding call.
+    |
+    */
+
+    'docs' => [
+        'repo' => [
+            'path' => base_path(),
+        ],
+        'laravel' => [
+            'repository' => env('AI_DOCS_LARAVEL_REPOSITORY') ?: 'https://github.com/laravel/docs.git',
+            'branch' => env('AI_DOCS_LARAVEL_BRANCH') ?: '13.x',
+            'path' => storage_path('app/docs/laravel'),
+            'meta_path' => storage_path('app/docs/laravel.json'),
+        ],
+        'embed_batch' => max(1, min(256, (int) (env('AI_DOCS_EMBED_BATCH') ?: 32))),
+        'k_default' => max(1, (int) (env('AI_DOCS_K_DEFAULT') ?: 6)),
+        'k_max' => max(1, (int) (env('AI_DOCS_K_MAX') ?: 20)),
+        'rrf_depth' => max(1, (int) (env('AI_DOCS_RRF_DEPTH') ?: 20)),
+        'search_per_minute' => filled(env('AI_DOCS_SEARCH_PER_MINUTE')) ? (int) env('AI_DOCS_SEARCH_PER_MINUTE') : 60,
+    ],
+
     'semantic_per_minute' => filled(env('AI_SEMANTIC_PER_MINUTE')) ? (int) env('AI_SEMANTIC_PER_MINUTE') : 60,
 
     /*

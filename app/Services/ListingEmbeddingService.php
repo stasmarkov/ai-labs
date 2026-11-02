@@ -116,30 +116,51 @@ final readonly class ListingEmbeddingService
             return 0;
         }
 
+        $vectors = $this->embedTexts(array_map(fn ($document): string => $document->description, $documents));
+
+        $embeddings = [];
+
+        foreach ($documents as $index => $document) {
+            $embeddings[] = new ListingEmbedding($document->listingId, hash('sha256', $document->description), $vectors[$index]);
+        }
+
+        return $this->documents->storeEmbeddings($embeddings, $this->modelLabel(), CarbonImmutable::now());
+    }
+
+    /**
+     * One model call for all texts, checked for the number and length of the vectors.
+     *
+     * @param  list<string>  $texts
+     * @return list<list<float>> one vector per text, in order
+     *
+     * @throws InvalidEmbeddingException when the model answers with the wrong number or size of vectors.
+     */
+    public function embedTexts(array $texts): array
+    {
         $dimensions = $this->dimensions();
-        $vectors = Embeddings::for(array_map(fn ($document): string => $document->description, $documents))
+        $vectors = Embeddings::for($texts)
             ->dimensions($dimensions)
             ->timeout((int) config('ai.embeddings.timeout'))
             ->generate($this->provider(), $this->model())
             ->embeddings;
 
-        if (count($vectors) !== count($documents)) {
-            throw InvalidEmbeddingException::wrongCount(count($documents), count($vectors));
+        if (count($vectors) !== count($texts)) {
+            throw InvalidEmbeddingException::wrongCount(count($texts), count($vectors));
         }
 
-        $embeddings = [];
+        $checked = [];
 
-        foreach ($documents as $index => $document) {
-            $vector = array_values($vectors[$index]);
+        foreach ($vectors as $vector) {
+            $vector = array_values($vector);
 
             if (count($vector) !== $dimensions) {
                 throw InvalidEmbeddingException::wrongLength($dimensions, count($vector));
             }
 
-            $embeddings[] = new ListingEmbedding($document->listingId, hash('sha256', $document->description), $vector);
+            $checked[] = $vector;
         }
 
-        return $this->documents->storeEmbeddings($embeddings, $this->modelLabel(), CarbonImmutable::now());
+        return $checked;
     }
 
     public function summarize(EmbeddingRun $run): EmbeddingRunSummary

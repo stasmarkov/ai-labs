@@ -1,0 +1,376 @@
+{
+    "k": 3,
+    "modes": [
+        "vector",
+        "text",
+        "hybrid"
+    ],
+    "queries": 10,
+    "rows": [
+        {
+            "type": "identifier",
+            "query": "flushpackets",
+            "expected": [
+                "repo:docs/learning-guide.md"
+            ],
+            "vector": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:docs/learning-guide.md",
+                    "repo:docs/learning-guide.md",
+                    "laravel:strings.md"
+                ]
+            },
+            "text": {
+                "passed": true,
+                "rank": 2,
+                "top": [
+                    "repo:BENCHMARKS.md",
+                    "repo:docs/learning-guide.md",
+                    "repo:docs/learning-guide.md"
+                ]
+            },
+            "hybrid": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:docs/learning-guide.md",
+                    "repo:docs/learning-guide.md",
+                    "repo:docs/learning-guide.md"
+                ]
+            }
+        },
+        {
+            "type": "identifier",
+            "query": "AI_EF_SEARCH",
+            "expected": [
+                "repo:BENCHMARKS.md",
+                "repo:docs/learning-guide.md",
+                "repo:.ai/specs/spec-20261102-2115-listing-embeddings/spec-lite.md"
+            ],
+            "vector": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:.ai/specs/spec-20261102-2115-listing-embeddings/spec-lite.md",
+                    "repo:BENCHMARKS.md",
+                    "laravel:scout.md"
+                ]
+            },
+            "text": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:.ai/specs/spec-20261102-2115-listing-embeddings/spec-lite.md",
+                    "repo:BENCHMARKS.md",
+                    "repo:BENCHMARKS.md"
+                ]
+            },
+            "hybrid": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:.ai/specs/spec-20261102-2115-listing-embeddings/spec-lite.md",
+                    "repo:BENCHMARKS.md",
+                    "repo:docs/learning-guide.md"
+                ]
+            }
+        },
+        {
+            "type": "identifier",
+            "query": "draft_num_predict",
+            "expected": [
+                "repo:docs/learning-guide.md",
+                "repo:.ai/specs/spec-20261102-1812-local-model-wiring/spec-lite.md"
+            ],
+            "vector": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:docs/learning-guide.md",
+                    "repo:.ai/specs/spec-20261101-2126-classic-vs-worker/spec-lite.md",
+                    "repo:BENCHMARKS.md"
+                ]
+            },
+            "text": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:.ai/specs/spec-20261102-1812-local-model-wiring/spec-lite.md",
+                    "repo:BENCHMARKS.md",
+                    "repo:docs/learning-guide.md"
+                ]
+            },
+            "hybrid": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:docs/learning-guide.md",
+                    "repo:.ai/specs/spec-20261102-1812-local-model-wiring/spec-lite.md",
+                    "repo:BENCHMARKS.md"
+                ]
+            }
+        },
+        {
+            "type": "identifier",
+            "query": "pg_stat_database",
+            "expected": [
+                "repo:docs/learning-guide.md",
+                "repo:BENCHMARKS.md"
+            ],
+            "vector": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:docs/learning-guide.md",
+                    "repo:BENCHMARKS.md",
+                    "laravel:queries.md"
+                ]
+            },
+            "text": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:BENCHMARKS.md",
+                    "repo:docs/learning-guide.md",
+                    "repo:docs/learning-guide.md"
+                ]
+            },
+            "hybrid": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:docs/learning-guide.md",
+                    "repo:BENCHMARKS.md",
+                    "repo:BENCHMARKS.md"
+                ]
+            }
+        },
+        {
+            "type": "identifier",
+            "query": "withoutOverlapping",
+            "expected": [
+                "laravel:scheduling.md"
+            ],
+            "vector": {
+                "passed": true,
+                "rank": 3,
+                "top": [
+                    "laravel:queues.md",
+                    "laravel:queues.md",
+                    "laravel:scheduling.md"
+                ]
+            },
+            "text": {
+                "passed": true,
+                "rank": 3,
+                "top": [
+                    "laravel:queues.md",
+                    "laravel:queues.md",
+                    "laravel:scheduling.md"
+                ]
+            },
+            "hybrid": {
+                "passed": true,
+                "rank": 3,
+                "top": [
+                    "laravel:queues.md",
+                    "laravel:queues.md",
+                    "laravel:scheduling.md"
+                ]
+            }
+        },
+        {
+            "type": "meaning",
+            "query": "why does apache hold back a streamed response until the end",
+            "expected": [
+                "repo:docs/learning-guide.md",
+                "repo:.ai/specs/spec-20261102-1552-streamed-car-description/spec-lite.md"
+            ],
+            "vector": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:docs/learning-guide.md",
+                    "laravel:responses.md",
+                    "repo:docs/learning-guide.md"
+                ]
+            },
+            "text": {
+                "passed": true,
+                "rank": 2,
+                "top": [
+                    "repo:BENCHMARKS.md",
+                    "repo:docs/learning-guide.md"
+                ]
+            },
+            "hybrid": {
+                "passed": true,
+                "rank": 2,
+                "top": [
+                    "repo:BENCHMARKS.md",
+                    "repo:docs/learning-guide.md",
+                    "repo:docs/learning-guide.md"
+                ]
+            }
+        },
+        {
+            "type": "meaning",
+            "query": "how do I run a command every five minutes",
+            "expected": [
+                "laravel:scheduling.md"
+            ],
+            "vector": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "laravel:scheduling.md",
+                    "laravel:scheduling.md",
+                    "laravel:octane.md"
+                ]
+            },
+            "text": {
+                "passed": false,
+                "rank": null,
+                "top": [
+                    "laravel:horizon.md",
+                    "repo:BENCHMARKS.md",
+                    "repo:BENCHMARKS.md"
+                ]
+            },
+            "hybrid": {
+                "passed": true,
+                "rank": 2,
+                "top": [
+                    "laravel:horizon.md",
+                    "laravel:scheduling.md",
+                    "repo:BENCHMARKS.md"
+                ]
+            }
+        },
+        {
+            "type": "meaning",
+            "query": "how can a queued job wait before it is tried again",
+            "expected": [
+                "laravel:queues.md"
+            ],
+            "vector": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "laravel:queues.md",
+                    "laravel:queues.md",
+                    "laravel:events.md"
+                ]
+            },
+            "text": {
+                "passed": false,
+                "rank": null,
+                "top": [
+                    "repo:BENCHMARKS.md",
+                    "laravel:events.md",
+                    "laravel:events.md"
+                ]
+            },
+            "hybrid": {
+                "passed": true,
+                "rank": 2,
+                "top": [
+                    "laravel:events.md",
+                    "laravel:queues.md",
+                    "laravel:events.md"
+                ]
+            }
+        },
+        {
+            "type": "meaning",
+            "query": "why is worker mode so much faster for the database search",
+            "expected": [
+                "repo:BENCHMARKS.md",
+                "repo:docs/learning-guide.md",
+                "repo:.ai/specs/spec-20261101-2126-classic-vs-worker/spec-lite.md"
+            ],
+            "vector": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:BENCHMARKS.md",
+                    "repo:BENCHMARKS.md",
+                    "repo:BENCHMARKS.md"
+                ]
+            },
+            "text": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:BENCHMARKS.md"
+                ]
+            },
+            "hybrid": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:BENCHMARKS.md",
+                    "repo:BENCHMARKS.md",
+                    "repo:BENCHMARKS.md"
+                ]
+            }
+        },
+        {
+            "type": "meaning",
+            "query": "how does the container reach the model server on the Mac",
+            "expected": [
+                "repo:docs/learning-guide.md",
+                "repo:docs/adr/0001-local-model-server-models-php-client.md",
+                "repo:.ai/specs/spec-20261102-1812-local-model-wiring/spec-lite.md"
+            ],
+            "vector": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:docs/adr/0001-local-model-server-models-php-client.md",
+                    "repo:docs/learning-guide.md",
+                    "repo:docs/adr/0001-local-model-server-models-php-client.md"
+                ]
+            },
+            "text": {
+                "passed": true,
+                "rank": 2,
+                "top": [
+                    "repo:BENCHMARKS.md",
+                    "repo:docs/adr/0001-local-model-server-models-php-client.md",
+                    "repo:docs/adr/0001-local-model-server-models-php-client.md"
+                ]
+            },
+            "hybrid": {
+                "passed": true,
+                "rank": 1,
+                "top": [
+                    "repo:docs/adr/0001-local-model-server-models-php-client.md",
+                    "repo:.ai/specs/spec-20261102-1812-local-model-wiring/spec-lite.md",
+                    "repo:docs/learning-guide.md"
+                ]
+            }
+        }
+    ],
+    "summary": {
+        "identifier": {
+            "total": 5,
+            "vector": 5,
+            "text": 5,
+            "hybrid": 5
+        },
+        "meaning": {
+            "total": 5,
+            "vector": 5,
+            "text": 3,
+            "hybrid": 5
+        }
+    },
+    "thresholds": {
+        "hybrid_identifier_min": 4,
+        "hybrid_meaning_min": 4,
+        "met": true
+    }
+}

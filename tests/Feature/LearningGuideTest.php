@@ -52,7 +52,7 @@ test('AC-9 learning guide explains streaming an AI answer with links', function 
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–11');
+    expect($guide)->toContain('sections 1–12');
 });
 
 test('AC-8 learning guide explains running the model locally', function (): void {
@@ -92,7 +92,7 @@ test('AC-8 learning guide explains running the model locally', function (): void
 
     expect($section)->toContain('| Server | Tokens in |');
 
-    expect($guide)->toContain('sections 1–11');
+    expect($guide)->toContain('sections 1–12');
     expect($guide)->not->toContain('running models locally (SL-22)');
 });
 
@@ -123,6 +123,38 @@ test('AC-9 learning guide explains embeddings and vector search', function (): v
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–11');
+    expect($guide)->toContain('sections 1–12');
     expect($guide)->not->toContain('embeddings and vector search (SL-24)');
+});
+
+test('AC-9 learning guide explains chunking and hybrid retrieval', function (): void {
+    $guide = file_get_contents(base_path('docs/learning-guide.md'));
+
+    preg_match('/^## 12\. Chunking and hybrid retrieval\n(.*?)(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->not->toBe('');
+
+    foreach (['overlap', 'RRF', 'oversize', 'websearch_to_tsquery', 'ts_rank_cd', 'flushpackets', '2 706', '0.824', '146.8', '10 of 10', '8 of 10', '› Section:'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    foreach ([
+        '../.ai/research/ai-chatbot-reference.md',
+        '../app/Services/MarkdownChunker.php',
+        '../app/Services/DocsSearchService.php',
+        '../.ai/specs/spec-20261102-2352-docs-index-retrieval/',
+        '../bench/results/2026-11-02-docs-index/',
+        'https://www.postgresql.org/docs/16/textsearch.html',
+        'https://github.com/pgvector/pgvector',
+    ] as $link) {
+        expect($section)->toContain("]($link");
+    }
+
+    foreach (['../.ai/research/ai-chatbot-reference.md', '../app/Services/MarkdownChunker.php', '../app/Services/DocsSearchService.php', '../.ai/specs/spec-20261102-2352-docs-index-retrieval/', '../bench/results/2026-11-02-docs-index/'] as $path) {
+        expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
+    }
+
+    expect($guide)->toContain('sections 1–12');
+    expect($guide)->not->toContain('RAG with citations (SL-32)');
 });

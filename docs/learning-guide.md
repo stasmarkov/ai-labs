@@ -4,7 +4,7 @@ This guide explains how everything in this project works, in the order it was bu
 
 It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan and its order are in [`backlog.md`](../backlog.md).
 
-**Status (2026-11-02):** sections 1–11 cover the shipped slices SL-01 to SL-08, SL-20, SL-22 and SL-24. Planned sections are listed at the end.
+**Status (2026-11-03):** sections 1–12 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24 and SL-32. Planned sections are listed at the end.
 
 ---
 
@@ -359,9 +359,53 @@ Throughput counts from the first model call of a run, not from dispatch: worker 
 
 ---
 
+## 12. Chunking and hybrid retrieval
+
+**What it is.** Section 11 searched one short description per listing. A documentation set is different: a page can be thousands of words, and one vector for a whole page is a blur of everything in it. So each document is cut into chunks of about 300 to 500 tokens, each chunk is embedded on its own, and a search returns chunks, not files. This slice indexes two corpora, this repository's own markdown (19 files) and the Laravel 13 docs (102 files), into 2 706 chunks, and searches them three ways: `vector`, `text` and `hybrid`. It is the first half of a docs chatbot; answering from the chunks comes later.
+
+**Chunking, step by step.** The chunker is plain PHP ([`MarkdownChunker`](../app/Services/MarkdownChunker.php)), with no model call.
+1. **Follow the structure.** Front matter, anchors, comments and HTML tags are dropped (autolinks like `<https://…>` and types like `Collection<int, User>` stay), inline `data:` images are shortened to `data:…`, the title comes from the first `#` or the file name, and the text is split by headings first, then paragraphs, then sentences. A paragraph with no sentence end (a link list) is cut at line breaks, and as a last resort at the last space before the limit.
+2. **Prefix.** Every chunk starts with `Document: <title> › Section: <heading>`, so a chunk that says only "set it to 400" still carries what it is about. `bge-m3` needs no instruction prefix, so this line is context, not a model convention.
+3. **Overlap.** When a long section needs several chunks, the next one starts with the last whole paragraphs or sentences of the previous one, enough to cover 50 to 80 estimated tokens, so a thought split across the boundary is found from either side. An overlap of fewer than 50 tokens is dropped, and there is none across sections.
+4. **Code and tables stay whole.** A code block or table is never split, because half a table answers nothing. A block above 500 estimated tokens becomes an oversize chunk on purpose: 7 of 2 706 (0.3 %), all tables, the largest 2 738 estimated tokens (the contracts table in `contracts.md`). The model reads up to 8 192 tokens, so none is cut, but such a chunk embeds as a blur of its whole content. The first run had 15 oversize chunks: 8 were link lists and a base64 screenshot of 8 780 tokens, which is more than the model reads. The write-up first called them code blocks; querying the rows showed otherwise.
+5. **Hash per document.** A file is chunked again only when its hash changed, so a second `docs:index` run changes nothing. The hash covers the chunker version as well as the text, so a change to the rules above re-chunks every file; chunks whose text did not change keep their vectors. Each chunk is stored with a `tsvector` (generated column, `english`) and a 1024-number embedding (HNSW, cosine), as in section 11.
+
+**What the token estimate gets wrong.** The chunker needs token counts but does not load a tokenizer; it estimates `ceil(characters / 4)`. Measured against Ollama's own count on 20 chunks, the estimate was lower than the real count in all 20: the mean estimate / real was 0.824 (18 % low), the worst chunk 397 estimated against 593 real. Code, tables and punctuation split into more tokens than prose. So the "500" limit is a limit on the estimate; a chunk at the limit is about 600 tokens to the model. Median chunk size was 390 to 400 estimated tokens in both corpora, inside the target.
+
+**What each search finds.**
+- **Vector** finds meaning: "why does apache hold back a streamed response until the end" lands on the right file without sharing its words. Its weakness is exact strings: an identifier like `flushpackets` or an error code has no "meaning" to be near, and other chunks about similar topics can crowd it out.
+- **Full text** finds exact words. It uses `websearch_to_tsquery('english', …)` ranked by `ts_rank_cd`, on the generated `tsvector`, and never calls the model. Its weakness is the opposite: the words are joined with AND, so a question phrased differently from the docs matches no chunk at all, and on the first run two of the three misses returned nothing.
+- **Hybrid** runs both and fuses them.
+
+**Reciprocal Rank Fusion (RRF).** The two lists cannot be added up: a cosine similarity (0.71) and a `ts_rank_cd` value (0.06) are on different scales and mean different things. RRF ignores the scores and uses only positions. Take the top 20 of each list; a chunk at rank r in a list earns 1 / (60 + r) from it; the chunk's score is the sum over both lists, and the best k are returned. A chunk high in both lists wins, a chunk found by one list still scores, and no weights need tuning. The 60 damps the gap between first and second place. Ties go by chunk id. If one list is empty, the other is used alone. The response shows each chunk's rank and score in each list (null when absent), so a result can be explained. The cost: RRF sees only ranks, so when full text is confidently wrong it gets the same say as the vector list.
+
+**What was measured.** Ten queries were written and fixed before the first run: five identifiers (`flushpackets`, `AI_EF_SEARCH`, `draft_num_predict`, `pg_stat_database`, `withoutOverlapping`) and five questions in other words; a query counts as found when a chunk of an expected file is in the top 3. Details are in [`BENCHMARKS.md`](../BENCHMARKS.md#docs-index-and-hybrid-retrieval-2026-11-02).
+
+| Measure | Value |
+|---|---|
+| Index | 121 documents, 2 706 chunks (repo 289, laravel 2 417), 7 oversize |
+| Embedding, one worker | 146.8 s for 85 calls, 18.4 chunks/s, about 7 900 tokens/s |
+| Size | table 5.8 MB, HNSW 21.1 MB, GIN 5.7 MB |
+| Identifier queries found (of 5) | vector 5, text 5, hybrid 5 |
+| Meaning queries found (of 5) | vector 5, text 3, hybrid 5 |
+| All queries | vector 10 of 10, text 8 of 10, hybrid 10 of 10 |
+
+**What surprised.** The textbook says vectors fail on identifiers; here they did not (5 of 5), because each identifier is rare and sits in a short, distinctive chunk. That does not make hybrid unnecessary: the corpus is small, the identifiers came from our own text, and the noise is visible (`AI_EF_SEARCH` had an unrelated Laravel page in third place). Hybrid never lost a query, but "how do I run a command every five minutes" moved from first (vector) to second because full text put another page first. The text score rose from 2 to 3 meaning questions after the fixes, but not because full text got better: this guide and BENCHMARKS.md are in the corpus and quote the queries, so full text found the quote. A test set must stay out of the corpus it tests. A bigger corpus and a proper evaluation are needed to see the difference, which is why the larger evaluation is a later slice.
+
+**In this repo.**
+- Reference design: [`.ai/research/ai-chatbot-reference.md`](../.ai/research/ai-chatbot-reference.md).
+- Code: [`MarkdownChunker`](../app/Services/MarkdownChunker.php) and [`DocsSearchService`](../app/Services/DocsSearchService.php) in `app/Services/`; commands `docs:fetch-laravel`, `docs:index`, `docs:search` and `docs:search-bench`; endpoint `GET /api/docs/search?q=…&mode=hybrid&k=6`.
+- Results: [`bench/results/2026-11-02-docs-index/`](../bench/results/2026-11-02-docs-index/), queries in [`bench/docs-queries.txt`](../bench/docs-queries.txt).
+- Tests: `MarkdownChunkerTest`, `DocsIndexCommandTest` and the search tests; none needs a network or Ollama.
+- Spec: [`.ai/specs/spec-20261102-2352-docs-index-retrieval/`](../.ai/specs/spec-20261102-2352-docs-index-retrieval/).
+
+**Read next.** [PostgreSQL full text search](https://www.postgresql.org/docs/16/textsearch.html) · [pgvector](https://github.com/pgvector/pgvector) · [bge-m3 model card](https://huggingface.co/BAAI/bge-m3)
+
+---
+
 ## Planned sections
 
 Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):
 
 - **Server track:** slow I/O and thread autoscaling (SL-09), Early Hints and compression (SL-10), file downloads offloaded to the web server (SL-11), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
-- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; structured output (SL-23); tool calling (SL-25); evals (SL-26, SL-33); vision (SL-27); model comparison (SL-28); RAG with citations (SL-32); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39); semantic caching (SL-40); streaming chat UI (SL-41); a research agent (SL-42); a prompt playground (SL-43).
+- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; structured output (SL-23); tool calling (SL-25); evals (SL-26, SL-33); vision (SL-27); model comparison (SL-28); RAG with citations (SL-45, on top of the index from SL-32); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39); semantic caching (SL-40); streaming chat UI (SL-41); a research agent (SL-42); a prompt playground (SL-43).

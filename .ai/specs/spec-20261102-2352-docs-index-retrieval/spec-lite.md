@@ -4,7 +4,7 @@ title: Docs index with structure-aware chunks and hybrid retrieval
 type: feature
 size: M
 priority: P2
-status: approved
+status: in-progress
 ticket:
 stakeholders: [Stanislav Markov]
 approved_by: Stas Markov (standing approval)
@@ -92,7 +92,7 @@ Resolved under standing approval (self-decided).
 - **Overlap.** After a chunk closes inside a section, the next chunk of that section starts with the last whole units (paragraphs, list items or sentences, never code or tables) of the previous chunk, taken from the end until 50–80 estimated tokens are covered; if the last unit alone is above 80, its last sentences are used; if no sentence fits, there is no overlap. Overlap counts toward the 500 limit. No overlap after an oversize chunk and none across sections.
 - **Prefix and heading.** `docs_chunks.heading` holds the section path without the title (`H2 › H3`), or `Introduction` for text before the first `##`. The prefix is `Document: <title> › Section: <heading>`. The prefix counts toward the 500 limit and `token_estimate`; `tsv` is built from `coalesce(heading, '') || ' ' || body`.
 - **Headings** are ATX lines `#` to `###` outside fenced code; the first `#` line is the title, later `#` lines are treated as `##`. Setext headings and trailing `{#anchor}` markers are not special (rare in both corpora).
-- **Units.** A list (consecutive lines starting with `-`, `*`, `+` or `1.`) is one unit that may be split between items; fences are opened by three or more backticks or tildes and closed by the same marker of at least that length; an unclosed fence runs to the end of the section; indented code is treated as a paragraph; tables are consecutive lines starting with `|`. Sentence end: `[.!?]` followed by whitespace and an uppercase letter or a digit, not after a single letter or a known abbreviation (`e.g.`, `i.e.`, `etc.`, `vs.`). A single sentence above 500 becomes its own oversize chunk.
+- **Units.** A list (consecutive lines starting with `-`, `*`, `+` or `1.`) is one unit that may be split between items; fences are opened by three or more backticks or tildes and closed by the same marker of at least that length; an unclosed fence runs to the end of the document, as in CommonMark (changed in the review fix pass: ending it at the next heading line cut code at its first `#` comment); indented code is treated as a paragraph; tables are consecutive lines starting with `|`. Sentence end: `[.!?]` followed by whitespace and an uppercase letter or a digit, not after a single letter or a known abbreviation (`e.g.`, `i.e.`, `etc.`, `vs.`). A sentence or list item above 500 is cut at line breaks, then at the last space before the limit (changed in the review fix pass: link lists with no sentence end became oversize chunks of up to 8 780 tokens), so only code blocks and tables can be oversize.
 - **HTML.** Strip `<a name="…"></a>` anchors, HTML comments and `<style>…</style>` blocks; remove other HTML tags but keep their inner text.
 
 **Indexing and hashes**
@@ -146,6 +146,7 @@ Resolved under standing approval (self-decided).
 2. Plain-PHP chunker instead of a markdown parser package: no new dependency, and the rules are few and visible (self-decided, standing approval).
 3. Keep all three retrieval modes in the product, not just in the bench, so SL-33 and SL-45 can compare them by configuration (self-decided, standing approval).
 4. English text search configuration (`english` stemming) because both corpora are English; Ukrainian is not in these corpora (self-decided, standing approval).
+5. Re-captured the six `bench/parity/*.txt` baselines with this slice applied (self-decided, standing approval). The committed ones differed on `/listings/1` only, because the Vite assets were rebuilt on 2026-11-03. On the same `public/build`, captures at the pre-slice code (the five shared files reverted to `856a86f`) and with the slice are identical for all six servers, so the slice is not the cause.
 
 ## Open questions
 

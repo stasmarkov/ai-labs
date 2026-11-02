@@ -1,0 +1,10 @@
+identifier	flushpackets	repo:docs/learning-guide.md
+identifier	AI_EF_SEARCH	repo:BENCHMARKS.md|repo:docs/learning-guide.md|repo:.ai/specs/spec-20261102-2115-listing-embeddings/spec-lite.md
+identifier	draft_num_predict	repo:docs/learning-guide.md|repo:.ai/specs/spec-20261102-1812-local-model-wiring/spec-lite.md
+identifier	pg_stat_database	repo:docs/learning-guide.md|repo:BENCHMARKS.md
+identifier	withoutOverlapping	laravel:scheduling.md
+meaning	why does apache hold back a streamed response until the end	repo:docs/learning-guide.md|repo:.ai/specs/spec-20261102-1552-streamed-car-description/spec-lite.md
+meaning	how do I run a command every five minutes	laravel:scheduling.md
+meaning	how can a queued job wait before it is tried again	laravel:queues.md
+meaning	why is worker mode so much faster for the database search	repo:BENCHMARKS.md|repo:docs/learning-guide.md|repo:.ai/specs/spec-20261101-2126-classic-vs-worker/spec-lite.md
+meaning	how does the container reach the model server on the Mac	repo:docs/learning-guide.md|repo:docs/adr/0001-local-model-server-models-php-client.md|repo:.ai/specs/spec-20261102-1812-local-model-wiring/spec-lite.md

@@ -290,6 +290,88 @@ recall@10 = mean over the 20 queries of |HNSW top 10 ∩ exact top 10| / 10. The
 
 I embedded 50 000 car listings with a local bge-m3 model into pgvector at about 49 vectors per second, and semantic search answered in about 30 ms, two thirds of it spent embedding the question. The first recall check said the HNSW index was perfect, and it was lying twice: once because my two-key sort made PostgreSQL skip the index, and once because at `ef_search` 200 the planner decided a 260 ms full scan was cheaper than the index. Forcing the index showed the real trade-off, recall 0.41 at `ef_search` 40 up to 0.80 at 400 for 11 ms, low because template descriptions crowd 30 neighbours into a cosine distance of 0.008. Lesson: a perfect recall or a 100x slowdown means read the plan.
 
+## Docs index and hybrid retrieval (2026-11-02)
+
+Two corpora cut into structure-aware chunks, embedded with bge-m3 and searched by vector similarity, by PostgreSQL full text and by both fused with Reciprocal Rank Fusion (SL-32). Raw files: [`bench/results/2026-11-02-docs-index/`](bench/results/2026-11-02-docs-index/) (`index.json`, `search-bench.json`). Queries: [`bench/docs-queries.txt`](bench/docs-queries.txt), fixed before the first run and not changed after it. Reproduce with `ddev artisan docs:fetch-laravel`, `ddev artisan docs:index`, one `queue:work --queue=embeddings --stop-when-empty`, then `ddev artisan docs:search-bench`.
+
+Versions: this repository at commit `856a86f` plus the uncommitted working tree of this slice, after the review fixes (chunker version 2) (the `repo` corpus is read from the working tree, so `index.json` records `dirty: true`); Laravel docs branch `13.x` at commit `625d1dfb61018e6bc50cc7ab67fca89ae018dfa2`; bge-m3 on Ollama 0.40.13; pgvector 0.8.7; HNSW `m` 16, `ef_construction` 64, `ef_search` 400; GIN on the generated `tsvector` (`english`).
+
+### Index
+
+| Source | Documents | Chunks | Estimated tokens min / median / max | Oversize chunks |
+|--------|-----------|--------|-------------------------------------|-----------------|
+| repo | 19 | 289 | 47 / 390 / 1 054 | 2 |
+| laravel | 102 | 2 417 | 31 / 400 / 2 738 | 5 |
+| total | 121 | 2 706 | | 7 |
+
+All 7 oversize chunks are tables above 500 estimated tokens, kept whole on purpose; the largest (2 738) is the contracts table in `contracts.md`. No code block in either corpus is above the limit.
+
+The first run, before the review, had 15 oversize chunks and a largest of 8 780. Only 7 were tables. The other 8 were paragraphs with no sentence end, which the chunker could only cut at sentence ends: link lists from the method index of `collections.md`, `strings.md`, `helpers.md`, `http-tests.md` and `dusk.md`, and a screenshot inlined as base64 `data:image/png` in `mcp.md`. The image was the 8 780-token chunk, above bge-m3's 8 192-token context, so Ollama cut it when embedding it, and it was noise anyway. The chunker now cuts such paragraphs at line breaks and then at the last space before the limit, and shortens `data:` image URIs to `data:…`.
+
+| Measure | Value |
+|---------|-------|
+| `docs:index` (chunk and store 121 documents, queue 85 jobs of 32 chunks, from empty tables) | 2.1 s wall clock, measured around `ddev artisan`, so about a second of it is DDEV start-up |
+| Embedding (one worker, first to last model call) | 146.8 s for 85 calls and 1 161 309 input tokens: 18.4 chunks/s, about 7 900 tokens/s |
+| Table (`pg_relation_size`) | 5.8 MB (6 070 272 bytes) |
+| HNSW index | 21.1 MB (22 175 744 bytes) |
+| GIN index | 5.7 MB (5 996 544 bytes) |
+| Table plus indexes plus TOAST (`pg_total_relation_size`) | 52.3 MB (54 886 400 bytes) |
+
+### Token estimate against the model's count
+
+The estimate is `ceil(characters / 4)` of the embedded text. 20 chunks (10 per source, fixed seed) were embedded one at a time and compared with Ollama's `prompt_eval_count`:
+
+| Measure | Value |
+|---------|-------|
+| Mean estimate / real | 0.824 |
+| Max estimate / real | 0.938 |
+| Mean absolute error | 91.9 tokens |
+
+The estimate was below the real count in all 20 chunks, by 18 % on average. Markdown with code, tables and punctuation splits into more tokens than English prose does, so a chunk estimated at 500 can really be about 600 tokens. The 500 limit is therefore a limit on the estimate, not on what the model sees. The largest chunk now (2 738 estimated, so perhaps 3 300 real) is well inside bge-m3's 8 192-token context, so no chunk is cut when it is embedded.
+
+### Identifier and meaning queries (top 3)
+
+Each cell is the position (1 to 3) of the first chunk that belongs to an expected file, or a miss.
+
+| Type | Query | vector | text | hybrid |
+|------|-------|--------|------|--------|
+| identifier | `flushpackets` | 1 | 2 | 1 |
+| identifier | `AI_EF_SEARCH` | 1 | 1 | 1 |
+| identifier | `draft_num_predict` | 1 | 1 | 1 |
+| identifier | `pg_stat_database` | 1 | 1 | 1 |
+| identifier | `withoutOverlapping` | 3 | 3 | 3 |
+| meaning | why does apache hold back a streamed response until the end | 1 | 2 | 2 |
+| meaning | how do I run a command every five minutes | 1 | miss | 2 |
+| meaning | how can a queued job wait before it is tried again | 1 | miss | 2 |
+| meaning | why is worker mode so much faster for the database search | 1 | 1 | 1 |
+| meaning | how does the container reach the model server on the Mac | 1 | 2 | 1 |
+
+| | vector | text | hybrid |
+|-|--------|------|--------|
+| identifier queries found (of 5) | 5 | 5 | 5 |
+| meaning queries found (of 5) | 5 | 3 | 5 |
+
+AC-7 asks hybrid for at least 4 of 5 in each group: met, 5 of 5 and 5 of 5.
+
+### What the numbers say
+
+- **Full text alone fails on meaning.** On the first run three of five questions found no expected file, because `websearch_to_tsquery` joins the words with AND and no chunk contains every word of a sentence phrased differently from the docs. Vectors do not care about the exact words. The second run looks better for full text (3 of 5), but see the contamination surprise below: that gain is not real.
+- **Vectors did not fail on identifiers here, against the expectation.** bge-m3 found all five by embedding, because each identifier is rare and sits in a short, distinctive chunk. This does not show that hybrid is unneeded: the corpus is small (2 693 chunks), the identifiers were chosen from our own text, and in the vector lists the noise is visible (`AI_EF_SEARCH` has `laravel:scout.md` in third place; `withoutOverlapping` has `queues.md` twice ahead of `scheduling.md` in vector and text mode alike).
+- **Fusion keeps what either list finds, and costs a place when the weaker list is wrong.** Hybrid never lost a query, but "how do I run a command every five minutes" moved from first (vector) to second: full text put `horizon.md` first and RRF, which sees only ranks, gave both lists' first place equal weight.
+- **Chunking works at the size it was meant to.** The median chunk is 390 to 399 estimated tokens in both corpora, in the 300 to 500 target. Only 7 of 2 706 chunks (0.3 %) are oversize, all tables.
+
+### Surprises (docs index)
+
+- **The estimate is optimistic on technical text.** I expected `characters / 4` to be close; it is 18 % low on average and 33 % low on the worst chunk (a manual-test page full of commands: 397 estimated, 593 real).
+- **The repo corpus is smaller than the spec assumed.** Only 19 files qualify (documents, ADRs and the spec-lite files of `done` specs), 289 chunks, against 2 417 chunks from 102 Laravel files. Repo queries therefore compete with few chunks and are easier than they will be once more specs are done.
+- **The biggest chunk was a picture.** The 8 780-token chunk I first described as "a table or code block" was a base64 PNG in `mcp.md`, and 8 of the 15 oversize chunks were link lists. I wrote the explanation from the rule ("only code and tables may be oversize") instead of from the rows; the review queried the rows. Fixed in the chunker (see Index), and the chunker now carries a version in the document hash, so changing the rules re-chunks every file on the next `docs:index`.
+- **The benchmark measures itself.** BENCHMARKS.md and the learning guide are in the `repo` corpus, and this section quotes the ten queries word for word. On the second run full text ranked `BENCHMARKS.md` first for the Apache question and the worker-mode question: it matched the query as written in the results table, not an answer. Text mode's meaning score rose from 2 to 3 of 5 for that reason only. SL-33's evaluation set must keep its questions out of the indexed corpus, or exclude the files that quote them.
+- **The parity baselines differ on `/listings/1` only, for a reason outside this slice.** The six servers answer identically to each other, but the committed `bench/parity/*.txt` hash of `/listings/1` is from 2026-10-29 and that page links the Vite assets, whose hashed file names changed when the frontend was rebuilt (`public/build/manifest.json`, 2026-11-03). No view, controller or route of the listing page changed in this slice. Proved on the same `public/build`: captures of all six servers at the pre-slice code (shared files reverted to `856a86f`) and with the slice, compared pair by pair with `bench/parity.sh compare`, print `identical` for nginx-fpm, apache-fpm, openlitespeed, frankenphp, frankenphp-octane and frankenphp-worker. The baselines were then re-captured with the slice applied (decision 5 in spec-lite.md).
+
+### Interview story (docs index)
+
+I indexed 121 markdown files into 2 706 chunks of about 400 tokens and searched them three ways. I expected exact identifiers to need full text and meaning questions to need vectors, so I wrote ten queries before running anything and promised hybrid at least 4 of 5 in each group. The result was less tidy: bge-m3 alone found all 10, full text found 7 of 10 and failed three questions worded differently from the docs (8 of 10 on the re-run, but only because this file now quotes the queries), and hybrid found 10 of 10, losing one place on a question where full text was confidently wrong. My own `characters / 4` token estimate was 18 % low on real text, so the "500 token" chunks are about 600 in the model's eyes. And my first write-up said the biggest chunk was a code block; a query of the rows showed a base64 screenshot of 8 780 tokens, more than the model reads. Lessons: measure the estimate you build on, describe the data from the data, not from the rule, and do not assume the textbook weakness of vector search shows up on a small corpus. It needs the larger set in SL-33 to show.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.
