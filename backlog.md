@@ -290,8 +290,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-91
 - **Depends on:** SL-20
 - **Blocked by:** none (Q-01 answered by ADR 0001)
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261102-1812-local-model-wiring
 - **Source:** brief (Phase 11), user 2026-10-28 (Hugging Face models, M3 Max 36 GB)
 - **Run:** `/sdd "SL-22: wire the chosen local model server (per the Q-01 ADR) through the native laravel/ai ollama driver (Ollama /v1 only for SL-34), reachable from DDEV via host.docker.internal; the describe agent and both streaming variants run on it, switched only via .env (BR-91). Rules in product-brief.md."`
 
