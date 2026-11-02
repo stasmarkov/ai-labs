@@ -4,7 +4,7 @@ title: Streamed car description with a slow fake provider and an AI-run log
 type: feature
 size: M
 priority: P2
-status: in-progress
+status: done
 ticket:
 stakeholders: [Stanislav Markov]
 approved_by: Stas Markov (standing approval)

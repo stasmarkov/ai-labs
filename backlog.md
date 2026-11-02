@@ -264,7 +264,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-90, BR-91, BR-95
 - **Depends on:** SL-01
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261102-1552-streamed-car-description
 - **Source:** brief (Phase 10)
 - **Run:** `/sdd "SL-20: Laravel AI SDK agent that describes a car from its specs, streamed as SSE from GET /listings/{id}/describe, a fake streaming provider (token every 50 ms for 10 s) for tests and load, and an AI-run log (provider, model, prompt version, tokens, latency) (BR-90, BR-91, BR-95). Rules in product-brief.md."`
@@ -289,11 +289,11 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Size:** S
 - **BRs:** BR-91
 - **Depends on:** SL-20
-- **Blocked by:** Q-01, decision "Which local models (text, vision, embeddings) and local server fit an M3 Max 36 GB?"
+- **Blocked by:** none (Q-01 answered by ADR 0001)
 - **Status:** approved
 - **Spec:** —
 - **Source:** brief (Phase 11), user 2026-10-28 (Hugging Face models, M3 Max 36 GB)
-- **Run:** `/sdd "SL-22: wire the chosen local model server (per the Q-01 ADR) as an openai-compatible provider reachable from DDEV via host.docker.internal; the describe agent and both streaming variants run on it, switched only via .env (BR-91). Rules in product-brief.md."`
+- **Run:** `/sdd "SL-22: wire the chosen local model server (per the Q-01 ADR) through the native laravel/ai ollama driver (Ollama /v1 only for SL-34), reachable from DDEV via host.docker.internal; the describe agent and both streaming variants run on it, switched only via .env (BR-91). Rules in product-brief.md."`
 
 ### SL-23 · Natural-language search to filters
 
@@ -315,7 +315,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Size:** M
 - **BRs:** BR-90
 - **Depends on:** SL-22
-- **Blocked by:** Q-03
+- **Blocked by:** none (Q-03 answered by ADR 0001)
 - **Status:** approved
 - **Spec:** —
 - **Source:** brief (Phase 11)
@@ -619,3 +619,4 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 | 2026-11-02 | same | Prism client, Ollama + qwen2.5:7b + nomic-embed-text | Question | Q-01 widened (client per slice, candidates) |
 | 2026-11-02 | same | Tenants, per-tool policies, queued job + Reverb streaming | Non-goal | logged only: no accounts; queued streaming dropped 2026-11-01 |
 | 2026-11-02 | Stanislav Markov | Build the docs chatbot sooner | Reorder | SL-20 → SL-22 → SL-24 → SL-32 → {SL-33, SL-40, SL-41} moved right after SL-08, before the server track; SL-32, SL-33, SL-40, SL-41 approved |
+| 2026-11-02 | Stanislav Markov | Q-01 / Q-03 decision | Decision | ADR 0001 accepted; SL-22 run text uses the native ollama driver; SL-22 and SL-24 unblocked |
