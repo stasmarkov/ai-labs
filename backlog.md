@@ -421,8 +421,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Notes:** split from the original SL-32 on 2026-11-02 (answering moved to SL-45). Structure-aware chunks (300–500 tokens, 50–80 overlap, headings → paragraphs → sentences, tables and code never split, "document › section" prefix, per-document hash for idempotent re-indexing); vector-only and hybrid retrieval side by side. Reference design: `.ai/research/ai-chatbot-reference.md` (owner input 2026-11-02).
 - **Depends on:** SL-22, SL-24
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261102-2352-docs-index-retrieval
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov); split 2026-11-02
 - **Run:** `/sdd "SL-32: docs index and hybrid retrieval — queued ingest of this repo's markdown docs and the Laravel 13 docs into structure-aware chunks embedded with bge-m3 into pgvector, vector and hybrid (vector + full text, RRF) top-k search via docs:search and GET /api/docs/search (BR-90, BR-26, BR-27). Rules in product-brief.md; design in .ai/research/ai-chatbot-reference.md."`
 

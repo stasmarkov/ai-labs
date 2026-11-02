@@ -4,7 +4,7 @@ title: Benchmark harness and process-vs-thread comparison on four servers
 type: feature
 size: M
 priority: P2
-status: in-progress
+status: done
 ticket:
 stakeholders: [Stanislav Markov]
 approved_by: Stas Markov

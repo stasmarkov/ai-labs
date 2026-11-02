@@ -4,7 +4,7 @@ title: FrankenPHP worker mode two ways — Octane daemon and add-on worker direc
 type: feature
 size: M
 priority: P2
-status: in-progress
+status: done
 ticket:
 stakeholders: [Stanislav Markov]
 approved_by: Stas Markov
