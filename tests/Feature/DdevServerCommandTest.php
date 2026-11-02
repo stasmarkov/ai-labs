@@ -523,8 +523,8 @@ describe('worker servers', function (): void {
             ->and($octane)->not->toContain('frankenphp run')
             ->and(substr($octane, strpos($octane, 'webimage_extra_packages')))->toBe(substr($classic, strpos($classic, 'webimage_extra_packages')))
             ->and($caddyfile)->toContain('frankenphp-worker.php')
-            ->and($caddyfile)->toContain('num 4')
-            ->and($caddyfile)->toContain('MAX_REQUESTS 500')
+            ->and($caddyfile)->toContain('num {$WORKER_NUM:4}')
+            ->and($caddyfile)->toContain('MAX_REQUESTS {$WORKER_MAX_REQUESTS:500}')
             ->and($caddyfile)->toContain('REQUEST_MAX_EXECUTION_TIME 30')
             ->and($caddyfile)->toContain('try_files {path} frankenphp-worker.php')
             ->and(substr_count($caddyfile, 'worker {'))->toBe(1)
@@ -661,4 +661,30 @@ it('AC-7 --url prints the URL the active server answers on', function (): void {
 
     expect(trim(($this->server)('--url')->getOutput()))->toBe('https://interview.ddev.site:8091')
         ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
+});
+
+it('switching servers removes bench overlays so they never carry over to another server', function (): void {
+    mkdir($this->root.'/.ddev/web-entrypoint.d', 0777, true);
+    mkdir($this->root.'/.ddev/nginx_full', 0777, true);
+    file_put_contents($this->root.'/.ddev/config.zzz-bench-concurrency.yaml', "override_config: true\n");
+    file_put_contents($this->root.'/.ddev/web-entrypoint.d/zz-bench-fpm.sh', "#!/bin/sh\n");
+    file_put_contents($this->root.'/.ddev/nginx_full/nginx-site.conf', "edited\n");
+    file_put_contents($this->root.'/.ddev/nginx_full/nginx-site.conf.bench-orig', "#ddev-generated\noriginal\n");
+
+    $process = ($this->server)('apache-fpm');
+
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
+        ->and(file_exists($this->root.'/.ddev/config.zzz-bench-concurrency.yaml'))->toBeFalse()
+        ->and(file_exists($this->root.'/.ddev/web-entrypoint.d/zz-bench-fpm.sh'))->toBeFalse()
+        ->and(file_get_contents($this->root.'/.ddev/nginx_full/nginx-site.conf'))->toBe("#ddev-generated\noriginal\n");
+});
+
+it('re-running the active server with a leftover bench overlay resets it instead of saying already active', function (): void {
+    file_put_contents($this->root.'/.ddev/config.zzz-bench-concurrency.yaml', "override_config: true\n");
+
+    $process = ($this->server)('nginx-fpm');
+
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
+        ->and($process->getOutput())->not->toContain('already active')
+        ->and(file_exists($this->root.'/.ddev/config.zzz-bench-concurrency.yaml'))->toBeFalse();
 });

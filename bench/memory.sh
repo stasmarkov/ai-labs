@@ -68,6 +68,10 @@ esac
 BASE_URL="${BENCH_BASE_URL:-$(ddev server --url)}"
 DATE="${BENCH_DATE:-$(date -u +%Y-%m-%d)}"
 RESULT="$APPROOT/bench/results/$DATE/memory-$server.json"
+if [[ -n "$(git -C "$APPROOT" ls-files -- "bench/results/$DATE" 2>/dev/null)" ]]; then
+  echo "bench/results/$DATE already holds committed results. Set BENCH_DATE to a new folder name, e.g. BENCH_DATE=$(date -u +%Y-%m-%d)-classic-vs-worker." >&2
+  exit 2
+fi
 COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 WORK="$(mktemp -d)"
 env_switched=0
@@ -95,14 +99,15 @@ set_env_value() {
   cat "$WORK/env.new" > "$ENV_FILE"
 }
 
+# Waits up to SETTLE seconds of wall-clock time (SECONDS), however long each curl attempt takes.
 wait_ready() {
-  local i status
-  for ((i = 0; i <= SETTLE; i++)); do
-    status="$(curl -ksS --max-time 10 -H 'Accept: application/json' -o /dev/null -w '%{http_code}' "$BASE_URL/debug/worker" 2>/dev/null)" || status=000
+  local status deadline=$((SECONDS + SETTLE))
+  while true; do
+    status="$(curl -ksS --max-time 5 -H 'Accept: application/json' -o /dev/null -w '%{http_code}' "$BASE_URL/debug/worker" 2>/dev/null)" || status=000
     [[ "$status" == "200" ]] && return 0
+    [[ "$SECONDS" -lt "$deadline" ]] || return 1
     sleep 1
   done
-  return 1
 }
 
 check_conditions() {
@@ -186,9 +191,6 @@ run_case() {
 
   jq -s -c --arg case "$case_id" --arg mode "$mode" --argjson max "${max:-null}" \
     --argjson classic "$classic" "$JQ_CASE" "$WORK/samples.ndjson" >> "$WORK/cases.ndjson"
-  mkdir -p "$(dirname "$RESULT")"
-  jq -s --arg server "$server" --arg commit "$COMMIT" --arg date "$DATE" \
-    '{server: $server, commit: $commit, date: $date, cases: .}' "$WORK/cases.ndjson" > "$RESULT"
   return 0
 }
 
@@ -211,4 +213,9 @@ else
   run_case B fixed "$NO_RECYCLING"
   run_case C leak "$RECYCLING"
 fi
+# Written only once every case has succeeded, so a failed later case never replaces a complete file.
+mkdir -p "$(dirname "$RESULT")"
+jq -s --arg server "$server" --arg commit "$COMMIT" --arg date "$DATE" \
+  '{server: $server, commit: $commit, date: $date, cases: .}' "$WORK/cases.ndjson" > "$WORK/result.json"
+mv "$WORK/result.json" "$RESULT"
 echo "wrote $RESULT"

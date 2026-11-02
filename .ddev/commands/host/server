@@ -139,9 +139,34 @@ missing_stash_file() {
   done < <(stash_files "$1")
 }
 
+# Bench overlays (bench/concurrency.sh, timeouts.sh, leaks.sh) tune one server; they must never survive a
+# switch, or e.g. an Octane daemon overlay would take over the next server.
+bench_overlays() {
+  local path
+  for path in "$APPROOT"/.ddev/config.zz*-bench-*.yaml "$APPROOT"/.ddev/docker-compose.bench-*.yaml \
+    "$APPROOT"/.ddev/web-entrypoint.d/zz-bench-*.sh "$APPROOT"/.ddev/php/zz-bench-*.ini \
+    "$APPROOT"/.ddev/bench-concurrency "$APPROOT"/.ddev/bench-timeouts "$APPROOT"/.ddev/nginx_full/nginx-site.conf.bench-orig; do
+    [[ -e "$path" ]] && printf '%s\n' "$path"
+  done
+  return 0
+}
+
+clear_bench_overlays() {
+  local path
+  while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    if [[ "$path" == *nginx-site.conf.bench-orig ]]; then
+      mv "$path" "${path%.bench-orig}"
+    else
+      rm -rf "$path"
+    fi
+  done < <(bench_overlays)
+}
+
 # True when the overlay and every activated file already match what the server would write.
 is_current() {
   local file
+  [[ -z "$(bench_overlays)" ]] || return 1
   if [[ ! -f "$OVERLAY" ]]; then
     # Active through config.yaml alone: current only for a server with no activated files.
     [[ -z "$(activated_files "$1")" ]]
@@ -238,6 +263,7 @@ abort_switch() {
 }
 trap abort_switch ERR INT TERM
 
+clear_bench_overlays
 deactivate_others "$target"
 activate "$target"
 printf '%s\n' "$content" > "$OVERLAY"

@@ -59,12 +59,13 @@
 
 		worker {
 			file {$DDEV_APPROOT}/{$DDEV_DOCROOT}/frankenphp-worker.php
-			num 4
+			# Sized by environment so bench/concurrency.sh can change it without editing this file.
+			num {$WORKER_NUM:4}
 			env FRANKENPHP_WORKER 1
 			env APP_BASE_PATH /var/www/html
 			env APP_PUBLIC_PATH /var/www/html/public
 			env LARAVEL_OCTANE 1
-			env MAX_REQUESTS 500
+			env MAX_REQUESTS {$WORKER_MAX_REQUESTS:500}
 			env REQUEST_MAX_EXECUTION_TIME 30
 		}
 	}

@@ -198,3 +198,17 @@ it('AC-3 refuses with exit 2 when the view cache is not built', function (): voi
         ->and(file_get_contents($this->dir.'/.env'))->toBe($this->envBefore)
         ->and(array_slice(($this->log)(), -2))->toContain('concurrency default');
 });
+
+it('MNC-1 refuses with exit 2 when the results folder already holds committed results', function (): void {
+    mkdir($this->dir.'/bench/results/2030-01-01', 0777, true);
+    file_put_contents($this->dir.'/bench/results/2030-01-01/memory-frankenphp-worker.json', '{}');
+    (new Process(['git', 'init', '-q'], $this->dir))->mustRun();
+    (new Process(['git', 'add', 'bench/results'], $this->dir))->mustRun();
+
+    $process = ($this->memory)('frankenphp-worker', ['--requests', '200']);
+
+    expect($process->getExitCode())->toBe(2)
+        ->and($process->getErrorOutput())->toContain('already holds committed results')
+        ->and(file_get_contents($this->dir.'/bench/results/2030-01-01/memory-frankenphp-worker.json'))->toBe('{}')
+        ->and(array_filter(($this->log)(), fn (string $line): bool => str_starts_with($line, 'concurrency ')))->toBe([]);
+});

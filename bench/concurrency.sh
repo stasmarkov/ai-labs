@@ -9,8 +9,10 @@
 ## FrankenPHP num_threads n and max_threads n (FRANKENPHP_CONFIG in a config.zz-*.yaml overlay).
 ## frankenphp-octane: the daemon command of the stash, copied to config.zzz-bench-concurrency.yaml with
 ## --workers=n and --max-requests=m and override_config: true, so it replaces the active daemon. m defaults to
-## 1000000, "no recycling": Octane's worker script treats 0 as "stop at once". frankenphp-worker: the stash Caddyfile with "num n" and "env MAX_REQUESTS m", written to
-## .ddev/web-build/Caddyfile.frankenphp (the file `ddev server` activates); default copies the stash file back.
+## 1000000, "no recycling": Octane's worker script treats 0 as "stop at once". frankenphp-worker: the stash
+## Caddyfile reads `num {$WORKER_NUM:4}` and `MAX_REQUESTS {$WORKER_MAX_REQUESTS:500}`, so this script only writes
+## those two variables to config.zzz-bench-concurrency.yaml (web_environment); the activated Caddyfile is never edited.
+## `ddev server` removes every bench overlay when it switches, so settings never leak to another server.
 ## --max-requests <m> is accepted for these two servers only.
 ## All overlays are gitignored and written under .ddev/; .ddev/config.yaml is never touched.
 ## --show prints "<n> workers" or "default"; on frankenphp-octane and frankenphp-worker it prints
@@ -51,13 +53,7 @@ write_octane() {
 }
 
 write_worker() {
-  mkdir -p "$(dirname "$CADDYFILE")"
-  sed -E "s/^([[:space:]]*num )[0-9]+\$/\1$1/; s/^([[:space:]]*env MAX_REQUESTS )[0-9]+\$/\1$2/" "$CADDYFILE_SOURCE" > "$CADDYFILE"
-}
-
-restore_worker() {
-  mkdir -p "$(dirname "$CADDYFILE")"
-  cp "$CADDYFILE_SOURCE" "$CADDYFILE"
+  printf '# bench: %s workers, max-requests %s\nweb_environment:\n  - WORKER_NUM=%s\n  - WORKER_MAX_REQUESTS=%s\n' "$1" "$2" "$1" "$2" > "$OCTANE_OVERLAY"
 }
 
 show_worker_server() {
@@ -69,9 +65,12 @@ show_worker_server() {
       echo "$(sed -n 's/.*--workers=\([0-9]*\).*/\1/p' "$file" | head -n 1) workers, max-requests $(sed -n 's/.*--max-requests=\([0-9]*\).*/\1/p' "$file" | head -n 1)"
       ;;
     frankenphp-worker)
-      file="$CADDYFILE"
-      [[ -f "$file" ]] || file="$CADDYFILE_SOURCE"
-      echo "$(sed -n 's/^[[:space:]]*num \([0-9]*\)$/\1/p' "$file" | head -n 1) workers, max-requests $(sed -n 's/^[[:space:]]*env MAX_REQUESTS \([0-9]*\)$/\1/p' "$file" | head -n 1)"
+      if [[ -f "$OCTANE_OVERLAY" ]]; then
+        echo "$(sed -n 's/^  - WORKER_NUM=//p' "$OCTANE_OVERLAY") workers, max-requests $(sed -n 's/^  - WORKER_MAX_REQUESTS=//p' "$OCTANE_OVERLAY")"
+      else
+        # Defaults written in the Caddyfile placeholders, e.g. {$WORKER_NUM:4}.
+        echo "$(sed -n 's/.*{\$WORKER_NUM:\([0-9]*\)}.*/\1/p' "$CADDYFILE_SOURCE" | head -n 1) workers, max-requests $(sed -n 's/.*{\$WORKER_MAX_REQUESTS:\([0-9]*\)}.*/\1/p' "$CADDYFILE_SOURCE" | head -n 1)"
+      fi
       ;;
   esac
 }
@@ -145,8 +144,10 @@ if [[ -n "$max_requests" && "$server" != "frankenphp-octane" && "$server" != "fr
   usage
 fi
 remove_overlays
+# Older harness versions edited the activated Caddyfile in place; put the stash copy back on default.
 if [[ "$server" == "frankenphp-worker" && -z "$value" ]]; then
-  restore_worker
+  mkdir -p "$(dirname "$CADDYFILE")"
+  cp "$CADDYFILE_SOURCE" "$CADDYFILE"
 fi
 if [[ -n "$value" ]]; then
   case "$server" in

@@ -22,8 +22,12 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --quick) quick_args=(--quick) ;;
     --servers)
+      if [[ $# -lt 2 || -z "${2:-}" ]]; then
+        echo "--servers needs a comma separated list, e.g. --servers frankenphp,frankenphp-octane" >&2
+        exit 2
+      fi
       servers_given=1
-      IFS=',' read -r -a SERVERS <<< "${2:-}"
+      IFS=',' read -r -a SERVERS <<< "$2"
       shift
       ;;
     *)
@@ -60,13 +64,13 @@ if [[ $servers_given -eq 1 ]]; then
       exit 2
     fi
   done
-  if in_list nginx-fpm "${SERVERS[@]}"; then
-    BASELINE_SERVER=nginx-fpm
-  elif in_list frankenphp "${SERVERS[@]}"; then
+  # Baseline for ratios (SL-08 spec): frankenphp if listed, otherwise nginx-fpm, otherwise the first server.
+  if in_list frankenphp "${SERVERS[@]}"; then
     BASELINE_SERVER=frankenphp
+  elif in_list nginx-fpm "${SERVERS[@]}"; then
+    BASELINE_SERVER=nginx-fpm
   else
-    echo "--servers must include nginx-fpm or frankenphp as the baseline." >&2
-    exit 2
+    BASELINE_SERVER="${SERVERS[0]}"
   fi
   ordered=("$BASELINE_SERVER")
   for entry in "${SERVERS[@]}"; do
@@ -86,6 +90,12 @@ if [[ $servers_given -eq 0 ]]; then
       exit 2
     fi
   done
+fi
+
+# Never write into a results folder that already holds committed results (e.g. SL-06's dated folder).
+if [[ -n "$(cd "$APPROOT" && git ls-files -- "bench/results/$BENCH_DATE" 2>/dev/null)" ]]; then
+  echo "bench/results/$BENCH_DATE already holds committed results. Set BENCH_DATE to a new folder name, e.g. BENCH_DATE=$(date -u +%Y-%m-%d)-classic-vs-worker." >&2
+  exit 2
 fi
 
 marker="$(mktemp)"

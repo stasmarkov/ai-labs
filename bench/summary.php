@@ -277,7 +277,15 @@ function benchTables(string $directory): string
 
     $known = ['nginx-fpm', 'apache-fpm', 'openlitespeed', 'frankenphp', 'frankenphp-octane', 'frankenphp-worker'];
     $servers = array_values(array_filter($known, fn (string $server): bool => isset($present[$server])));
-    $baseline = in_array('nginx-fpm', $servers, true) ? 'nginx-fpm' : 'frankenphp';
+    // The baseline each summary was compared with is recorded in it; fall back to the old rule.
+    $baseline = null;
+    foreach ($documents as $name => $document) {
+        if (preg_match('/-(?:ping|search)-(?:fair|tuned)$/', (string) $name) === 1 && ($document['baseline_server'] ?? null) !== null) {
+            $baseline = (string) $document['baseline_server'];
+            break;
+        }
+    }
+    $baseline ??= in_array('nginx-fpm', $servers, true) ? 'nginx-fpm' : 'frankenphp';
 
     $header = "| Server | Setting | RPS | p50 ms | p95 ms | p99 ms | Errors % | Peak MiB (serving) | CPU % (serving) | Spread | RPS vs {$baseline} | Notes |\n"
         ."|---|---|---|---|---|---|---|---|---|---|---|---|\n";
@@ -345,8 +353,7 @@ function benchTables(string $directory): string
 
     $out .= benchMemoryTable($known, $documents);
 
-    $out .= "\n### Timeouts: GET /debug/sleep/30\n\n"
-        ."| Server | Timeouts | Status | Seconds | Ended by |\n|---|---|---|---|---|\n";
+    $timeoutRows = '';
 
     foreach ($servers as $server) {
         $document = $documents["timeouts-{$server}"] ?? null;
@@ -356,8 +363,14 @@ function benchTables(string $directory): string
                 continue;
             }
 
-            $out .= "| {$server} | {$run['label']} | {$run['status']} | ".number_format((float) $run['seconds'], 1)." | {$run['ending_layer']} |\n";
+            $timeoutRows .= "| {$server} | {$run['label']} | {$run['status']} | ".number_format((float) $run['seconds'], 1)." | {$run['ending_layer']} |\n";
         }
+    }
+
+    // Only folders with timeout results get the table (the SL-08 runs skip the timeout step).
+    if ($timeoutRows !== '') {
+        $out .= "\n### Timeouts: GET /debug/sleep/30\n\n"
+            ."| Server | Timeouts | Status | Seconds | Ended by |\n|---|---|---|---|---|\n".$timeoutRows;
     }
 
     return $out;

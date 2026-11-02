@@ -62,12 +62,19 @@ WORK="$(mktemp -d)"
 SAMPLER_PID=""
 env_switched=0
 
+worker_restarted=0
+
 restore_env() {
   [[ -n "$SAMPLER_PID" ]] && kill "$SAMPLER_PID" 2>/dev/null || true
   if [[ "$env_switched" == "1" && -f "$BACKUP" ]]; then
     cp -p "$BACKUP" "$ENV_FILE"
     rm -f "$BACKUP"
     ddev artisan optimize:clear >/dev/null 2>&1 || true
+    # Worker servers keep the benchmark config (production, DEBUG_ROUTES=true) in memory until they
+    # boot again, so restoring .env alone would leave /debug/* reachable.
+    if [[ "$worker_restarted" == "1" ]]; then
+      ddev restart >/dev/null 2>&1 || true
+    fi
   fi
   rm -rf "$WORK"
 }
@@ -108,11 +115,12 @@ ddev artisan optimize >/dev/null
 READY_TIMEOUT="${BENCH_READY_TIMEOUT:-120}"
 if [[ "$server" == "frankenphp-octane" || "$server" == "frankenphp-worker" ]]; then
   ddev restart >/dev/null
-  waited=0
-  until [[ "$(curl -ksS --max-time 30 -H 'Accept: application/json' -o /dev/null -w '%{http_code}' "$BASE_URL/debug/runtime" 2>/dev/null || true)" == "200" ]]; do
-    [[ "$waited" -lt "$READY_TIMEOUT" ]] || refuse "$server did not answer /debug/runtime with 200 within ${READY_TIMEOUT}s after the restart"
+  worker_restarted=1
+  # SECONDS counts wall-clock time, so a slow curl attempt cannot stretch the limit.
+  ready_deadline=$((SECONDS + READY_TIMEOUT))
+  until [[ "$(curl -ksS --max-time 10 -H 'Accept: application/json' -o /dev/null -w '%{http_code}' "$BASE_URL/debug/runtime" 2>/dev/null || true)" == "200" ]]; do
+    [[ "$SECONDS" -lt "$ready_deadline" ]] || refuse "$server did not answer /debug/runtime with 200 within ${READY_TIMEOUT}s after the restart"
     sleep 1
-    waited=$((waited + 1))
   done
 fi
 
@@ -261,7 +269,8 @@ parse_generator() {
   fi
 }
 
-if [[ "$quick" == "0" && "$SETTLE" != "0" ]]; then
+# Fresh containers before measuring; skipped when a worker server was just restarted for the .env switch.
+if [[ "$quick" == "0" && "$SETTLE" != "0" && "$worker_restarted" == "0" ]]; then
   ddev restart >/dev/null
 fi
 sleep "$SETTLE"

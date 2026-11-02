@@ -245,3 +245,20 @@ it('AC-2 classic servers are not restarted before run conditions in quick mode',
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
         ->and(file_get_contents($this->root.'/calls.log'))->not->toContain('ddev restart');
 });
+
+it('AC-2 worker servers are restarted again after .env is restored', function (string $server): void {
+    $process = ($this->bench)(['STUB_SERVER' => $server, 'STUB_RELOAD_REQUIRED' => '1', 'BENCH_READY_TIMEOUT' => '5'], 'ping', '--quick');
+    $log = file_get_contents($this->root.'/calls.log');
+
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
+        ->and(file_get_contents($this->root.'/app/.env'))->toContain('APP_ENV=local')
+        ->and(strrpos($log, 'ddev restart'))->toBeGreaterThan(strrpos($log, 'ddev artisan optimize:clear'));
+})->with(['frankenphp-octane', 'frankenphp-worker']);
+
+it('AC-2 classic servers are not restarted after .env is restored', function (): void {
+    $process = ($this->bench)([], 'ping', '--quick');
+
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
+        ->and(file_get_contents($this->root.'/calls.log'))->toContain('ddev artisan optimize:clear')
+        ->not->toContain('ddev restart');
+});

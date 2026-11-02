@@ -135,11 +135,10 @@ it('AC-1 worker servers get their worker count and no recycling, and default res
         ->and(($this->concurrency)('frankenphp-octane', '--show')->getOutput())->toBe("4 workers, max-requests 500\n");
 
     $set = ($this->concurrency)('frankenphp-worker', '8');
-    $edited = file_get_contents($workerCaddyfile);
     expect($set->getExitCode())->toBe(0, $set->getErrorOutput())
-        ->and($edited)->toContain("\t\t\tnum 8\n", "\t\t\tenv MAX_REQUESTS 1000000\n")
-        ->and($edited)->not->toContain('num 4', 'MAX_REQUESTS 500')
-        ->and(str_replace(["num 8\n", 'MAX_REQUESTS 1000000'], ["num 4\n", 'MAX_REQUESTS 500'], $edited))->toBe(file_get_contents($caddyfile))
+        // The activated Caddyfile is never edited: sizing goes through environment placeholders.
+        ->and(file_get_contents($workerCaddyfile))->toBe(file_get_contents($caddyfile))
+        ->and(file_get_contents($octaneOverlay))->toContain("WORKER_NUM=8\n", "WORKER_MAX_REQUESTS=1000000\n")
         ->and(file_exists($ddev.'/config.zz-bench-concurrency.yaml'))->toBeFalse()
         ->and(($this->concurrency)('frankenphp-worker', '--show')->getOutput())->toBe("8 workers, max-requests 1000000\n");
 
@@ -150,6 +149,7 @@ it('AC-1 worker servers get their worker count and no recycling, and default res
     $restore = ($this->concurrency)('frankenphp-worker', 'default');
     expect($restore->getExitCode())->toBe(0, $restore->getErrorOutput())
         ->and(file_get_contents($workerCaddyfile))->toBe(file_get_contents($caddyfile))
+        ->and(file_exists($octaneOverlay))->toBeFalse()
         ->and(($this->concurrency)('frankenphp-worker', '--show')->getOutput())->toBe("4 workers, max-requests 500\n")
         ->and(substr_count(($this->ddevCalls)(), 'ddev restart'))->toBe(6);
 });

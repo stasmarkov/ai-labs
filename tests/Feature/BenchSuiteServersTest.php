@@ -79,18 +79,30 @@ it('AC-2 suite skips the timeout step in --servers runs', function (): void {
     expect(array_values(array_filter($log, fn (string $line): bool => $line === 'timeouts run')))->toHaveCount(0);
 });
 
-it('AC-2 suite prefers nginx-fpm as the baseline and runs it first', function (): void {
-    ($this->suite)(['--servers', 'frankenphp,nginx-fpm']);
+it('AC-2 suite uses frankenphp as the baseline when it is listed, and runs it first', function (): void {
+    ($this->suite)(['--servers', 'nginx-fpm,frankenphp']);
     $log = ($this->log)();
 
-    expect(array_values(array_filter($log, fn (string $line): bool => str_starts_with($line, 'ddev server ')))[0])->toBe('ddev server nginx-fpm')
-        ->and($log)->toContain('summary ping-fair-1.json --baseline=nginx-fpm-ping-fair.json --write=frankenphp-ping-fair.json');
+    expect(array_values(array_filter($log, fn (string $line): bool => str_starts_with($line, 'ddev server ')))[0])->toBe('ddev server frankenphp')
+        ->and($log)->toContain('summary ping-fair-1.json --baseline=frankenphp-ping-fair.json --write=nginx-fpm-ping-fair.json');
 });
 
-it('AC-2 suite rejects a list without a baseline server and unknown names', function (): void {
-    expect(($this->suite)(['--servers', 'frankenphp-octane'])->getExitCode())->toBe(2)
-        ->and(($this->suite)(['--servers', 'frankenphp,bogus'])->getExitCode())->toBe(2)
-        ->and(($this->log)())->toBe([]);
+it('AC-2 suite falls back to nginx-fpm, then to the first listed server, as the baseline', function (): void {
+    ($this->suite)(['--servers', 'apache-fpm,nginx-fpm']);
+    expect(array_values(array_filter(($this->log)(), fn (string $line): bool => str_starts_with($line, 'ddev server ')))[0])->toBe('ddev server nginx-fpm');
+});
+
+it('AC-2 suite with only worker servers uses the first one as the baseline', function (): void {
+    $process = ($this->suite)(['--servers', 'frankenphp-octane,frankenphp-worker']);
+
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
+        ->and(array_values(array_filter(($this->log)(), fn (string $line): bool => str_starts_with($line, 'ddev server ')))[0])->toBe('ddev server frankenphp-octane');
+});
+
+it('AC-2 suite rejects unknown server names and a missing --servers value', function (): void {
+    expect(($this->suite)(['--servers', 'frankenphp,bogus'])->getExitCode())->toBe(2)
+        ->and(($this->suite)(['--servers'])->getExitCode())->toBe(2)
+        ->and(($this->suite)(['--servers'])->getErrorOutput())->toContain('needs a comma separated list');
 });
 
 it('MNC-1 suite without --servers runs the default four classic servers in order', function (): void {

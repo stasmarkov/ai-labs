@@ -51,3 +51,17 @@ it('AC-5 suite refuses a worker server with exit code 2', function (): void {
     expect($process->getExitCode())->toBe(2)
         ->and($process->getErrorOutput())->toContain('frankenphp-octane');
 });
+
+it('MNC-1 suite refuses a results folder that already holds committed results', function (): void {
+    file_put_contents($this->dir.'/bin/ddev', "#!/usr/bin/env bash\necho \"ddev \$*\" >> \"$this->dir/log\"\n[[ \"\$*\" == 'server --current' ]] && echo nginx-fpm\nexit 0\n");
+    chmod($this->dir.'/bin/ddev', 0755);
+    $process = new Process(['bash', base_path('bench/suite.sh'), '--servers', 'frankenphp'], null, [
+        'PATH' => $this->dir.'/bin:'.getenv('PATH'),
+        'BENCH_DATE' => '2026-11-01',
+    ]);
+    $process->run();
+
+    expect($process->getExitCode())->toBe(2)
+        ->and($process->getErrorOutput())->toContain('already holds committed results')
+        ->and((string) @file_get_contents($this->dir.'/log'))->not->toContain('ddev server frankenphp');
+});
