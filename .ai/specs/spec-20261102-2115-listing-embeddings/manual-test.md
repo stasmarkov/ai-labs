@@ -53,7 +53,7 @@ Expected:
 - The first command prints how many batches it queued (50 000 / 256 = 196).
 - After the worker stops, the embedded count is `50000` and the only dimension group is `1024 | 50000`.
 - The `ai_runs` query shows one row per batch with `inputs` at most 256.
-- The second `listings:embed` queues nothing and reports 0 model calls (AC-4). With no `--batch`, the size comes from config (256 by default; the spec text still says 64, see task 12).
+- The second `listings:embed` queues nothing and reports 0 model calls (AC-4). With no `--batch`, the size comes from config (256 by default).
 - `pgrep` prints nothing, so no worker is left running.
 
 Re-embed only what changed (AC-4):
@@ -92,13 +92,13 @@ grep -n -i 'ollama\|batch\|recall\|p95\|index' BENCHMARKS.md | head -40
 Expected: result files exist for the sweep (`embed-16-2000.json`, `embed-64-2000.json`, `embed-256-2000.json`), the full run, and `search-bench.json`. Check each of these is present:
 - the model and Ollama version;
 - embeddings/s for each batch size;
-- the full run's embeddings/s and total time at the best batch size (`embed-256-all.json`);
+- the full run's embeddings/s and total time at the best batch size (`embed-256-all.json`: 48.98 embeddings/s, 1 020.8 s);
 - the HNSW build time (`index_build_seconds` not null) and index size;
 - the table size;
 - p50 and p95 latency with embedding time and database time shown separately;
 - recall@10 over 20 queries.
 
-Known gaps (task 12): `embed-256-all.json` does not exist yet, `index_build_seconds` is null, and the only full run is batch 64. This step fails until `listings:embed --fresh --batch=256 --wait` and `listings:search-bench --index` are re-run and BENCHMARKS.md is updated.
+Also check `ef_sweep` in `search-bench.json` lists recall and database p50 for `ef_search` 40, 100, 200 and 400 (recorded: 0.405, 0.485, 0.605, 0.795).
 
 To refresh the numbers, start one worker in a second terminal (`ddev exec php artisan queue:work --queue=embeddings --timeout=300`), run `ddev artisan listings:embed --fresh --batch=256 --wait`, then `ddev artisan listings:search-bench --index`, then stop the worker with Ctrl-C.
 
