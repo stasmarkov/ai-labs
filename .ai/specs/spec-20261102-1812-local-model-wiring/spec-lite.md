@@ -4,7 +4,7 @@ title: Run the car-description agent on the local model (Ollama, qwen3.5:9b)
 type: feature
 size: M
 priority: P2
-status: in-progress
+status: done
 ticket:
 stakeholders: [Stanislav Markov]
 approved_by: Stas Markov (standing approval)

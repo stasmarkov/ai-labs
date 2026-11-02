@@ -38,11 +38,11 @@
 
 ## Phase 4: Docs and gates
 
-- [ ] 6. Guide section 10, `.env.example`, ADR note, gates (docs, all)
+- [x] 6. Guide section 10, `.env.example`, ADR note, gates (docs, all)
   Covers: AC-8, MNC-2, MNC-4
   - [x] 6.1 Failing doc test: section "10. Running the model locally" with links to ADR 0001, the code, the spec, the Ollama docs and the Laravel AI SDK docs
   - [x] 6.2 Write the section with the measured numbers (table per server) and the recommendation to turn off "Expose Ollama to the network"; document the AI keys in `.env.example`; add a dated note to ADR 0001 (host-gateway, nvfp4/MLX, thinking default, context kept by a loaded model); update the guide's status line and Planned list
-  - [ ] 6.3 **Verify**: Pint, PHPStan, full suite green; `bench/run.sh ping --quick` passes on nginx-fpm (clean tree)
+  - [x] 6.3 **Verify**: Pint, PHPStan, full suite green; `bench/run.sh ping --quick` passes on nginx-fpm (clean tree)
 
 ## Traceability
 
@@ -66,10 +66,10 @@
 - backend: `ddev exec vendor/bin/pint --dirty --format agent`, `ddev exec vendor/bin/phpstan analyse`, `ddev artisan test --compact`
 
 ## Done when
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
-- [ ] Project on nginx-fpm; `.env` on `AI_PROVIDER=ollama` with the other AI keys at their defaults
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
+- [x] Project on nginx-fpm; `.env` on `AI_PROVIDER=ollama` with the other AI keys at their defaults
 
 ## Phase: Gaps (converge round 1)
 
