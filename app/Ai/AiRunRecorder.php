@@ -16,18 +16,34 @@ final class AiRunRecorder
 {
     private const MAX_MESSAGE_LENGTH = 1000;
 
-    /** @var array<string, array{agent: string, provider: string, model: string, promptVersion: ?string, startedAt: int, firstTokenAt: ?int}> */
+    /** @var array<string, array{agent: string, provider: string, model: string, promptVersion: ?string, inputs: ?int, startedAt: int, firstTokenAt: ?int}> */
     private array $runs = [];
+
+    private ?string $embeddingsAgent = null;
 
     public function __construct(private readonly AiRunRepositoryInterface $repository) {}
 
-    public function started(string $invocationId, string $agent, string $provider, string $model, ?string $promptVersion): void
+    /**
+     * Names the agent of the next embeddings call, so search queries are told apart from indexing batches.
+     */
+    public function nextEmbeddingsAgent(?string $agent): void
+    {
+        $this->embeddingsAgent = $agent;
+    }
+
+    public function embeddingsAgent(string $default): string
+    {
+        return $this->embeddingsAgent ?? $default;
+    }
+
+    public function started(string $invocationId, string $agent, string $provider, string $model, ?string $promptVersion, ?int $inputs = null): void
     {
         $this->runs[$invocationId] = [
             'agent' => $agent,
             'provider' => $provider,
             'model' => $model,
             'promptVersion' => $promptVersion,
+            'inputs' => $inputs,
             'startedAt' => hrtime(true),
             'firstTokenAt' => null,
         ];
@@ -40,7 +56,7 @@ final class AiRunRecorder
         }
     }
 
-    public function completed(string $invocationId, int $tokensIn, int $tokensOut): void
+    public function completed(string $invocationId, ?int $tokensIn, ?int $tokensOut): void
     {
         $this->finish($invocationId, 'completed', $tokensIn, $tokensOut);
     }
@@ -85,6 +101,7 @@ final class AiRunRecorder
             status: $status,
             errorClass: $errorClass,
             errorMessage: $errorMessage,
+            inputs: $run['inputs'],
         )));
     }
 

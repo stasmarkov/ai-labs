@@ -16,6 +16,39 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Default Embeddings Provider
+    |--------------------------------------------------------------------------
+    |
+    | The provider used for embeddings; its "models.embeddings" entry names
+    | the model and the vector size.
+    |
+    */
+
+    'default_for_embeddings' => env('AI_EMBEDDINGS_PROVIDER') ?: 'ollama',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Embedding Batches
+    |--------------------------------------------------------------------------
+    |
+    | Descriptions sent per model call by listings:embed, and the queue its
+    | jobs run on.
+    |
+    */
+
+    'embeddings' => [
+        'batch' => max(1, min(1024, (int) (env('AI_EMBED_BATCH') ?: 256))),
+        'queue' => 'embeddings',
+        // HTTP timeout of one embedding call; below the batch job's 300 s.
+        'timeout' => max(1, (int) (env('AI_EMBED_TIMEOUT') ?: 120)),
+        // HNSW candidates searched per query: more = better recall, slower (see BENCHMARKS.md).
+        'ef_search' => max(1, min(1000, (int) (env('AI_EF_SEARCH') ?: 100))),
+    ],
+
+    'semantic_per_minute' => filled(env('AI_SEMANTIC_PER_MINUTE')) ? (int) env('AI_SEMANTIC_PER_MINUTE') : 60,
+
+    /*
+    |--------------------------------------------------------------------------
     | Prompts
     |--------------------------------------------------------------------------
     |
@@ -74,6 +107,7 @@ return [
             'url' => env('OLLAMA_URL') ?: 'http://host.docker.internal:11434',
             'max_tokens' => filled(env('AI_MAX_TOKENS')) ? (int) env('AI_MAX_TOKENS') : 400,
             'timeout' => filled(env('AI_TIMEOUT')) ? (int) env('AI_TIMEOUT') : 120,
+            'num_parallel' => filled(env('OLLAMA_NUM_PARALLEL')) ? (int) env('OLLAMA_NUM_PARALLEL') : null,
             'request_options' => [
                 'think' => filter_var(env('AI_THINK', false), FILTER_VALIDATE_BOOL),
                 // Ollama reads a string as a Go duration ("10m"); unitless values such as -1 or 3600 must be numbers.
@@ -82,6 +116,7 @@ return [
             ],
             'models' => [
                 'text' => ['default' => env('OLLAMA_MODEL') ?: 'qwen3.5:9b'],
+                'embeddings' => ['default' => env('OLLAMA_EMBED_MODEL') ?: 'bge-m3', 'dimensions' => 1024],
             ],
         ],
 

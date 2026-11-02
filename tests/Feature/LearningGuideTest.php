@@ -52,7 +52,7 @@ test('AC-9 learning guide explains streaming an AI answer with links', function 
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–10');
+    expect($guide)->toContain('sections 1–11');
 });
 
 test('AC-8 learning guide explains running the model locally', function (): void {
@@ -92,6 +92,37 @@ test('AC-8 learning guide explains running the model locally', function (): void
 
     expect($section)->toContain('| Server | Tokens in |');
 
-    expect($guide)->toContain('sections 1–10');
+    expect($guide)->toContain('sections 1–11');
     expect($guide)->not->toContain('running models locally (SL-22)');
+});
+
+test('AC-9 learning guide explains embeddings and vector search', function (): void {
+    $guide = file_get_contents(base_path('docs/learning-guide.md'));
+
+    preg_match('/^## 11\. Embeddings and vector search\n(.*?)(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->not->toBe('');
+
+    foreach (['embedding', 'bge-m3', 'cosine', 'normalised', 'HNSW', 'ef_search', 'seed', '43.37', '391 MB', '2.9 ms', 'recall@10'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    foreach ([
+        '../docs/adr/0001-local-model-server-models-php-client.md',
+        '../app/Services/',
+        '../.ai/specs/spec-20261102-2115-listing-embeddings/',
+        '../bench/results/2026-11-02-embeddings/',
+        'https://github.com/pgvector/pgvector',
+        'https://huggingface.co/BAAI/bge-m3',
+    ] as $link) {
+        expect($section)->toContain("]($link");
+    }
+
+    foreach (['../docs/adr/0001-local-model-server-models-php-client.md', '../app/Services/', '../.ai/specs/spec-20261102-2115-listing-embeddings/', '../bench/results/2026-11-02-embeddings/'] as $path) {
+        expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
+    }
+
+    expect($guide)->toContain('sections 1–11');
+    expect($guide)->not->toContain('embeddings and vector search (SL-24)');
 });

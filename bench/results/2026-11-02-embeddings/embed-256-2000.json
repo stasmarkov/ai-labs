@@ -1,0 +1,18 @@
+{
+    "model": "bge-m3",
+    "provider": "ollama",
+    "ollama_version": "0.40.13",
+    "ollama_num_parallel": null,
+    "batch": 256,
+    "limit": 2000,
+    "listings_embedded": 2000,
+    "model_calls": 8,
+    "failed_batches": 0,
+    "started_at": "2026-11-02T20:31:13+00:00",
+    "finished_at": "2026-11-02T20:31:53+00:00",
+    "seconds": 40.029,
+    "embeddings_per_second": 49.96,
+    "table_bytes": 22290432,
+    "index_bytes": 422100992,
+    "total_bytes": 756465664
+}

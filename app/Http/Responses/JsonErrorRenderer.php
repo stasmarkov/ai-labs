@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Responses;
 
+use App\Exceptions\SemanticSearchUnavailableException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,6 +30,7 @@ final class JsonErrorRenderer
 
         return match (true) {
             $e instanceof ValidationException => ApiResponse::error(422, 'Validation failed', $e->errors()),
+            $e instanceof SemanticSearchUnavailableException => ApiResponse::error(503, $e->getMessage()),
             $e instanceof ModelNotFoundException => ApiResponse::error(404, 'Not found'),
             $e instanceof HttpExceptionInterface => ApiResponse::error(
                 $e->getStatusCode(),

@@ -19,5 +19,6 @@ final readonly class AiRunRecord
         public string $status,
         public ?string $errorClass = null,
         public ?string $errorMessage = null,
+        public ?int $inputs = null,
     ) {}
 }

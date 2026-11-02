@@ -55,3 +55,28 @@ it('BR-05 seeds exactly 500 dealers and 50 000 listings', function (): void {
         ->and(DB::table('listings')->min('id'))->toBe(1)
         ->and(DB::table('listings')->max('id'))->toBe(50_000);
 });
+
+it('AC-1 seeding writes one listing_documents row per listing and a second seed leaves no orphans', function (): void {
+    seedSmall();
+
+    expect(DB::table('listing_documents')->count())->toBe(200);
+
+    seedSmall();
+
+    $orphans = DB::table('listing_documents')
+        ->leftJoin('listings', 'listings.id', '=', 'listing_documents.listing_id')
+        ->whereNull('listings.id')
+        ->count();
+
+    expect(DB::table('listing_documents')->count())->toBe(200)
+        ->and($orphans)->toBe(0);
+});
+
+it('MNC-1 a full seed gives the known listings hash', function (): void {
+    $this->seed();
+
+    $hash = DB::selectOne("SELECT md5(string_agg(listings::text, ',' ORDER BY id)) AS hash FROM listings")->hash;
+
+    expect($hash)->toBe('6a0f96d2c7139919cc215a520072d3f7')
+        ->and(DB::table('listing_documents')->count())->toBe(50_000);
+});

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\Fuel;
+use App\Services\ListingDocumentService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -23,7 +24,7 @@ class ListingSeeder extends Seeder
         $makes = array_keys(Catalog::MODELS_BY_MAKE);
         $fuels = Fuel::cases();
 
-        DB::statement('TRUNCATE TABLE listings RESTART IDENTITY');
+        DB::statement('TRUNCATE TABLE listings RESTART IDENTITY CASCADE');
 
         $rows = [];
 
@@ -51,5 +52,7 @@ class ListingSeeder extends Seeder
         foreach (array_chunk($rows, 1000) as $chunk) {
             DB::table('listings')->insert($chunk);
         }
+
+        app(ListingDocumentService::class)->describeAll();
     }
 }

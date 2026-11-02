@@ -1,0 +1,37 @@
+{
+    "model": "bge-m3",
+    "provider": "ollama",
+    "pgvector": "0.8.7",
+    "ollama_version": "0.40.13",
+    "ollama_num_parallel": null,
+    "queries": 20,
+    "repeat": 5,
+    "samples": 100,
+    "embed_ms": {
+        "p50": 16.375,
+        "p95": 33.764,
+        "mean": 19.704
+    },
+    "db_ms": {
+        "p50": 2.608,
+        "p95": 5.509,
+        "mean": 2.971
+    },
+    "total_ms": {
+        "p50": 19.037,
+        "p95": 37.593,
+        "mean": 22.675
+    },
+    "recall_at_10": 0.37,
+    "ef_search": 40,
+    "index_build_seconds": null,
+    "index_bytes": 423723008,
+    "probe": {
+        "query": "family car with a big boot",
+        "total": 10,
+        "matching": 10,
+        "body_types": {
+            "estate": 10
+        }
+    }
+}

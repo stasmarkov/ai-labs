@@ -19,10 +19,11 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $status
  * @property string|null $error_class
  * @property string|null $error_message
+ * @property int|null $inputs
  */
 #[Fillable([
     'invocation_id', 'agent', 'provider', 'model', 'prompt_version', 'tokens_in', 'tokens_out',
-    'ttft_ms', 'latency_ms', 'status', 'error_class', 'error_message',
+    'ttft_ms', 'latency_ms', 'status', 'error_class', 'error_message', 'inputs',
 ])]
 class AiRun extends Model
 {
@@ -38,6 +39,7 @@ class AiRun extends Model
             'tokens_out' => 'integer',
             'ttft_ms' => 'integer',
             'latency_ms' => 'integer',
+            'inputs' => 'integer',
         ];
     }
 }

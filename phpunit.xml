@@ -29,7 +29,14 @@
         <env name="AI_DESCRIBE_PER_MINUTE" value=""/>
         <env name="OLLAMA_URL" value=""/>
         <env name="OLLAMA_MODEL" value=""/>
+        <env name="AI_EMBEDDINGS_PROVIDER" value=""/>
+        <env name="OLLAMA_EMBED_MODEL" value=""/>
+        <env name="AI_EMBED_BATCH" value=""/>
+        <env name="AI_EMBED_TIMEOUT" value=""/>
+        <env name="AI_EF_SEARCH" value=""/>
+        <env name="AI_SEMANTIC_PER_MINUTE" value=""/>
         <env name="OLLAMA_KEEP_ALIVE" value=""/>
+        <env name="OLLAMA_NUM_PARALLEL" value=""/>
         <env name="OLLAMA_NUM_CTX" value=""/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

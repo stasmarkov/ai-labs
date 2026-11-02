@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Ai\AiRunRecorder;
 use App\Ai\FakeStreamProvider;
 use App\Ai\RecordAiRun;
+use App\Ai\RecordEmbeddingsRun;
 use App\Contracts\AiRunRepositoryInterface;
 use App\Repositories\EloquentAiRunRepository;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -19,6 +20,9 @@ use Illuminate\Support\ServiceProvider;
 use Laravel\Ai\AiManager;
 use Laravel\Ai\Events\AgentFailed;
 use Laravel\Ai\Events\AgentStreamed;
+use Laravel\Ai\Events\EmbeddingsFailed;
+use Laravel\Ai\Events\EmbeddingsGenerated;
+use Laravel\Ai\Events\GeneratingEmbeddings;
 use Laravel\Ai\Events\StreamingAgent;
 
 class AiServiceProvider extends ServiceProvider
@@ -40,15 +44,19 @@ class AiServiceProvider extends ServiceProvider
     }
 
     /**
-     * Log every streamed agent run to ai_runs.
+     * Log every streamed agent run and every embeddings call to ai_runs.
      */
     public function boot(): void
     {
         Event::listen(StreamingAgent::class, [RecordAiRun::class, 'onStreaming']);
         Event::listen(AgentStreamed::class, [RecordAiRun::class, 'onStreamed']);
         Event::listen(AgentFailed::class, [RecordAiRun::class, 'onFailed']);
+        Event::listen(GeneratingEmbeddings::class, [RecordEmbeddingsRun::class, 'onGenerating']);
+        Event::listen(EmbeddingsGenerated::class, [RecordEmbeddingsRun::class, 'onGenerated']);
+        Event::listen(EmbeddingsFailed::class, [RecordEmbeddingsRun::class, 'onFailed']);
 
         // Each describe call holds a PHP worker and the GPU for seconds, so callers are limited per IP.
         RateLimiter::for('describe', fn (Request $request): Limit => Limit::perMinute((int) config('ai.describe_per_minute'))->by((string) $request->ip()));
+        RateLimiter::for('semantic-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.semantic_per_minute'))->by((string) $request->ip()));
     }
 }

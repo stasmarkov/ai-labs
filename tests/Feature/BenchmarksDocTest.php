@@ -212,3 +212,42 @@ test('AC-4 BENCHMARKS.md has Expectations (classic vs worker) with the five pred
         ->toContain('case C')
         ->toContain('500');
 });
+
+test('AC-8 BENCHMARKS.md records the embeddings and vector search measurements', function (): void {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+
+    preg_match('/^## Embeddings and vector search \(\d{4}-\d{2}-\d{2}\)\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->toContain('bge-m3')
+        ->toContain('Ollama 0.40.13')
+        ->toContain('pgvector 0.8.7')
+        ->toContain('| 16 |')
+        ->toContain('| 64 |')
+        ->toContain('| 256 |')
+        ->toContain('embeddings/s')
+        ->toContain('HNSW build')
+        ->toContain('p50')
+        ->toContain('p95')
+        ->toContain('recall@10')
+        ->toContain('bench/results/2026-11-02-embeddings/');
+
+    foreach (['embed-16-2000', 'embed-64-2000', 'embed-256-2000', 'embed-64-all', 'search-bench'] as $file) {
+        expect(base_path("bench/results/2026-11-02-embeddings/{$file}.json"))->toBeFile();
+    }
+});
+
+test('AC-8 BENCHMARKS.md names one best batch size and the sweep files carry the Ollama version', function (): void {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+
+    expect(preg_match_all('/\*\*Best batch size: (\d+)\*\*/', $doc, $matches))->toBe(1)
+        ->and((int) $matches[1][0])->toBe((int) config('ai.embeddings.batch'));
+
+    foreach ([16, 64, 256] as $batch) {
+        $summary = json_decode(file_get_contents(base_path("bench/results/2026-11-02-embeddings/embed-{$batch}-2000.json")), true, flags: JSON_THROW_ON_ERROR);
+
+        expect($summary['ollama_version'])->toBe('0.40.13')
+            ->and($summary)->toHaveKey('ollama_num_parallel')
+            ->and(fmod($summary['seconds'], 1.0))->not->toBe(0.0);
+    }
+});
