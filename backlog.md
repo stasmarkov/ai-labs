@@ -414,20 +414,22 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 
 ### SL-32 · Docs chatbot with RAG and citations
 
-- **Outcome:** The developer asks questions about this repo's docs (README, BENCHMARKS.md, specs) and gets answers from the local model that cite the chunks they came from, or "I don't know" when nothing relevant is retrieved.
+- **Outcome:** The developer asks questions about this repo's docs (README, BENCHMARKS.md, specs) and the Laravel 13 docs, and gets answers from the local model that cite the chunks they came from, or "I don't know" when nothing relevant is retrieved; prompt-injection attempts in the question or in a document do not change the bot's rules.
 - **Entry point:** docs chat endpoint, `docs:index` command
-- **Size:** M
-- **BRs:** BR-98, BR-90, BR-27
+- **Size:** L (split into indexing and answering if the spec passes 12 tasks)
+- **BRs:** BR-98, BR-100, BR-90, BR-27
+- **Notes:** structure-aware chunks (300–500 tokens, 50–80 overlap, headings → paragraphs → sentences, tables and code never split, "document › section" prefix, per-document hash for idempotent re-indexing); vector-only retrieval first, then hybrid vector + full text fused with RRF, compared by SL-33; chunks passed as marked data with their source; embedding model and its query/document prefixes stored with each document; ingest runs as queued jobs on a dedicated low-concurrency queue; the trace row adds retrieved chunk ids and cache hit. Reference design: `.ai/research/ai-chatbot-reference.md` (owner input 2026-11-02).
 - **Depends on:** SL-22, SL-24
 - **Blocked by:** none
 - **Status:** proposed
 - **Spec:** —
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
-- **Run:** `/sdd "SL-32: chunk and embed this repo's markdown docs with the local text embedding model into pgvector, retrieve top-k for a question, answer with citations to the chunks, and say "I don't know" below the relevance threshold (BR-98, BR-90, BR-27). Rules in product-brief.md."`
+- **Run:** `/sdd "SL-32: docs chatbot — queued ingest of this repo's markdown docs and the Laravel 13 docs into structure-aware chunks embedded with the local model into pgvector, vector then hybrid (vector + full text, RRF) top-k retrieval, answers with citations, "I don't know" below the relevance threshold, retrieved text marked as data plus an input/output guard (BR-98, BR-100, BR-90, BR-27). Rules in product-brief.md; design in .ai/research/ai-chatbot-reference.md."`
 
 ### SL-33 · RAG evaluation harness
 
-- **Outcome:** The developer runs one command over 30 hand-written question/answer pairs and gets correctness and groundedness scores per run, graded by a second model call, so chunk size, top-k and model can be compared.
+- **Outcome:** The developer runs one command over 30 hand-written question/answer pairs (plus, optionally, the rag-mini-wikipedia set) and gets retrieval recall@k first, then correctness and groundedness scores graded by a second model call, so chunker settings, top-k, vector vs hybrid retrieval and model can be compared.
+- **Notes:** recall@k needs no model (does the expected answer appear in the top-k chunks?) and is re-run after every chunker or embedding change. Reference design: `.ai/research/ai-chatbot-reference.md` (owner input 2026-11-02).
 - **Entry point:** `rag:eval` command
 - **Size:** S
 - **BRs:** BR-26, BR-27
@@ -436,11 +438,12 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Status:** proposed
 - **Spec:** —
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
-- **Run:** `/sdd "SL-33: RAG eval harness — 30 labelled Q/A pairs, an Artisan command that runs them through the docs chatbot and grades correctness and groundedness with a second model call, results table per chunk size / k / model (BR-26, BR-27). Rules in product-brief.md."`
+- **Run:** `/sdd "SL-33: RAG eval harness — 30 labelled Q/A pairs, an Artisan command that reports retrieval recall@k, then runs them through the docs chatbot and grades correctness and groundedness with a second model call, results table per chunk size / k / vector-vs-hybrid / model (BR-26, BR-27). Rules in product-brief.md."`
 
 ### SL-34 · Admin assistant with a hand-written agent loop
 
 - **Outcome:** The developer chats with an assistant that calls listing tools (search, get, update title, add tag) through an agent loop written by hand, confirms every write before it runs, and sees each step logged.
+- **Notes:** each tool checks what it may do in PHP before it runs (never in the prompt) and returns a capped result (row limit, long fields truncated). Reference design: `.ai/research/ai-chatbot-reference.md` (owner input 2026-11-02).
 - **Entry point:** admin assistant endpoint
 - **Size:** M
 - **BRs:** BR-97, BR-94, BR-90, BR-27
@@ -454,6 +457,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 ### SL-35 · MCP server for the listing tools
 
 - **Outcome:** The developer connects Claude Code or Claude Desktop to a Laravel MCP server and uses the same listing tools as the admin assistant from that client.
+- **Notes:** built on the already-installed `laravel/mcp`; one server per data domain, the server only groups and describes tools. Reference design: `.ai/research/ai-chatbot-reference.md` (owner input 2026-11-02).
 - **Entry point:** MCP server (local transport)
 - **Size:** S
 - **BRs:** BR-97, BR-27
@@ -518,7 +522,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 
 ### SL-40 · Semantic cache for the chatbot
 
-- **Outcome:** When the developer asks the docs chatbot a question nearly identical to an earlier one, the cached answer comes back at once, marked as cached, and hit rate and saved latency are recorded.
+- **Outcome:** When the developer asks the docs chatbot the same or a nearly identical question, the cached answer comes back at once, marked as cached, and hit rate and saved latency are recorded.
+- **Notes:** exact cache first (hash of normalised question + prompt version), semantic cache second; the threshold is calibrated on paraphrase and near-miss pairs for the chosen embedding model, not copied. Reference design: `.ai/research/ai-chatbot-reference.md` (owner input 2026-11-02).
 - **Entry point:** docs chat endpoint
 - **Size:** S
 - **BRs:** BR-99, BR-90, BR-27
@@ -532,6 +537,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 ### SL-41 · Streaming chat UI with stop
 
 - **Outcome:** The developer chats with the docs chatbot in a page that shows the answer token by token and has a stop button that cancels generation on the server.
+- **Notes:** direct SSE (BR-95); the reference design's queued job + Reverb stream is the dropped queued variant and stays out unless the owner reopens that non-goal.
 - **Entry point:** docs chat page
 - **Size:** S
 - **BRs:** BR-95, BR-27
@@ -608,3 +614,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 | 2026-10-30 | Stanislav Markov | Guide must explain all AI features built | New slice (scope) | SL-44 outcome lists every AI slice and its concepts |
 | 2026-11-01 | Stanislav Markov | Drop optional/non-learning slices | Scope change | SL-18, SL-19, SL-21, SL-29, SL-30, SL-31 dropped; BR-80 retired |
 | 2026-11-01 | Stanislav Markov | Start the learning guide now and grow it per slice | BR change | BR-27 widened; SL-44 becomes the final polish (S) |
+| 2026-11-02 | Stanislav Markov, "Laravel LLM chatbot" design doc | Chunking, hybrid search, MCP tools, guards, exact + semantic cache, tracing, eval data | Detail for existing slices | SL-32, SL-33, SL-34, SL-35, SL-40, SL-41 notes; `.ai/research/ai-chatbot-reference.md` |
+| 2026-11-02 | same | Input/output guard against prompt injection | BR change | BR-100 (draft); cited by SL-32 |
+| 2026-11-02 | same | Prism client, Ollama + qwen2.5:7b + nomic-embed-text | Question | Q-01 widened (client per slice, candidates) |
+| 2026-11-02 | same | Tenants, per-tool policies, queued job + Reverb streaming | Non-goal | logged only: no accounts; queued streaming dropped 2026-11-01 |

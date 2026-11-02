@@ -138,6 +138,7 @@ moves to `docs/context/business-rules.md` with the same ids.
 - **BR-97** An AI assistant never performs a write action (changing a title, adding a tag) without the developer's explicit confirmation in the same conversation; every tool step is logged, and a question takes at most the BR-94 step limit. Source: intake 2026-10-30.
 - **BR-98** A RAG answer cites the source chunks it used; when retrieval returns nothing above the relevance threshold, the chatbot says it does not know instead of answering. Source: intake 2026-10-30.
 - **BR-99** The semantic cache returns a stored answer only when the new question's similarity to a cached question is above its threshold, and the response is marked as cached. Source: intake 2026-10-30.
+- **BR-100** Text retrieved for a model (document chunks, tool results) is passed as marked data, never as instructions; a question matching a known prompt-injection pattern is refused with a stated reason, and an answer that contains the system prompt is replaced by a refusal. Both refusals are logged with the BR-90 fields. Source: reference design, 2026-11-02, Stanislav Markov.
 
 ## Success metrics
 
@@ -155,7 +156,7 @@ moves to `docs/context/business-rules.md` with the same ids.
 
 ## Open questions
 
-- [ ] **Q-01** Which local open-weight models (text + tool calling, vision for car photos, text embeddings, and an image encoder such as CLIP or SigLIP) and which local server (Ollama, LM Studio, MLX, vLLM-metal, or a small sidecar for the image encoder, since LM Studio's embeddings endpoint serves text models) fit a MacBook Pro M3 Max with 36 GB? Decides: tech-research ADR. Blocks: SL-22 (and through it every AI slice). Source: widened by intake 2026-10-30.
+- [ ] **Q-01** Which local open-weight models (text + tool calling, vision for car photos, text embeddings, and an image encoder such as CLIP or SigLIP) and which local server (Ollama, LM Studio, MLX, vLLM-metal, or a small sidecar for the image encoder, since LM Studio's embeddings endpoint serves text models) fit a MacBook Pro M3 Max with 36 GB? The ADR also records which client each slice uses: the installed Laravel AI SDK (`laravel/ai`), a hand-written HTTP client for the agent-loop lesson, or another library (Prism in the 2026-11-02 reference design). Candidates from that design: Ollama with qwen2.5:7b and nomic-embed-text, sized for a 16 GB machine. Decides: tech-research ADR. Blocks: SL-22 (and through it every AI slice). Source: widened by intake 2026-10-30 and 2026-11-02.
 - [x] **Q-02** Is a result valid only when RPS varies less than 5 % across the 3 repeats? — **Answered** (Stanislav Markov, 2026-10-30): yes; spread = (max − min) / median of the 3 runs' RPS. Above 5 %, rerun the scenario once; still above, record the median marked `noisy` with its spread. Blocks: nothing now.
 - [ ] **Q-03** Embedding vector size follows the embedding model chosen in Q-01. Decides: Q-01 ADR. Blocks: SL-24.
 - [ ] **Q-04** Without cloud providers, what is the failover target: a second local server (e.g. LM Studio behind Ollama) or none? Decides: Stanislav Markov. Blocks: SL-28.
