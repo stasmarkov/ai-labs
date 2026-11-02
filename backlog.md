@@ -264,8 +264,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-90, BR-91, BR-95
 - **Depends on:** SL-01
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261102-1552-streamed-car-description
 - **Source:** brief (Phase 10)
 - **Run:** `/sdd "SL-20: Laravel AI SDK agent that describes a car from its specs, streamed as SSE from GET /listings/{id}/describe, a fake streaming provider (token every 50 ms for 10 s) for tests and load, and an AI-run log (provider, model, prompt version, tokens, latency) (BR-90, BR-91, BR-95). Rules in product-brief.md."`
 
