@@ -4,11 +4,12 @@
 
 ## Phase 1: Foundation
 
-- [ ] 0. Make the old CSS build reproducible and re-baseline parity (frontend, bench)
+- [x] 0. Make the old CSS build reproducible and re-baseline parity (frontend, bench)
   Covers: MNC-1
-  - [ ] 0.1 `app.css`: `@import 'tailwindcss' source(none);` plus explicit `@source` for the Blade views (excluding `views/ai`), `js/app.js` and the two existing lines; add `bench/asset-fingerprint.sh`
-  - [ ] 0.2 Build twice with an unrelated markdown change in between: the fingerprint must not change; check `/listings/1` renders the same Tailwind classes it uses (visual check of the detail page)
-  - [ ] 0.3 Re-capture `bench/parity/<server>.txt` on all six servers and commit it alone with the reason (non-reproducible CSS from automatic source detection); record the fingerprint
+  - [x] 0.1 `app.css`: `@import 'tailwindcss' source(none);` plus explicit `@source` for the Blade views (excluding `views/ai`), `js/app.js` and the two existing lines; add `bench/asset-fingerprint.sh`
+  - [x] 0.2 Build twice with an unrelated markdown change in between: the fingerprint must not change; check `/listings/1` renders the same Tailwind classes it uses (visual check of the detail page)
+  - Result (2026-11-03): `storage/framework/views/*.php` dropped from the sources as well: it was empty here, and once the lab's Blade view is compiled it would leak lab classes into `app.css`. Build with a markdown change holding new class names in between: fingerprint unchanged, `app-CjRfEL-0.css` sha256 `82042c94…ce71`, `app-BvRk9kiK.js` sha256 `e3b0c442…b855` (empty file). 40 class names generated only from markdown are gone; every class used on `/` (143) and `/listings/1` (20) has a rule (checked in the browser). Parity: only the `/listings/1` hash changed, six servers identical to each other
+  - [x] 0.3 Re-capture `bench/parity/<server>.txt` on all six servers and commit it alone with the reason (non-reproducible CSS from automatic source detection); record the fingerprint
 
 - [ ] 1. Inertia, Vue and the separate entry (frontend, backend)
   Covers: MNC-1, MNC-2
