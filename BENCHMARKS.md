@@ -531,6 +531,61 @@ Both budgets hold on at least 10 samples each. `docs:cache --stats` after this r
 
 I put an exact and a semantic cache in front of a RAG chatbot and measured the threshold before choosing it. Questions with a different intent ("retry" against "delete") scored up to 0.930 while true paraphrases topped out at 0.906, so no threshold gave a hit without a wrong answer, and I set the default to 0.94, the zero-false-hit side. An exact repeat then took 46.5 ms against 6071 ms for a fresh answer, and a semantic hit 126 ms. I also checked whether someone could plant an answer: a question with an injected instruction scored at most 0.881 against the clean one, under the threshold, so the threshold is the security boundary as well as the quality one. The review found two bugs I would not have seen in a demo: answers computed during re-indexing would have been cached as current, and the first hit-rate figure (2.6%) counted the evaluation runs.
 
+## Stop and cancel per server mode (2026-11-03)
+
+What the server does when the client presses Stop in the docs chat (SL-41), on all six server modes. Raw files: [`bench/results/chat-stop/2026-11-03/`](bench/results/chat-stop/2026-11-03/), one JSON per mode; the follow-up retrieval examples are in `followups.md` and `followups.json` next to them. Reproduce with `bench/chat-stop.sh --modes nginx-fpm,apache-fpm,openlitespeed,frankenphp,frankenphp-octane,frankenphp-worker --runs 5`.
+
+Versions and settings: this repository at commit `a7549a1` plus the uncommitted working tree of this slice; model `qwen3.5:9b` on Ollama on the host (`OLLAMA_NUM_PARALLEL` not set in the app's environment, recorded as `metadata.ollama_num_parallel: "default"` in every mode file; Ollama's own log shows it resolved to `OLLAMA_NUM_PARALLEL:1` and `n_seq_max = 1`, one generation slot); prompt `docs-answer@v1`; cache off (`"cache": false`). Each run asks one question, closes the connection after 20 `text_delta` events, then reads the `ai_runs` row with the invocation id from that stream's `stream_start` event. Right after the close the script sends a 1-token request straight to Ollama (`/api/generate`, `num_predict` 1) and times it. The idle baseline is the median of 5 such probes taken before that mode's runs. The script switches servers with `ddev server` and ends on nginx-fpm.
+
+Before this slice (probe of 2026-11-03, one stream aborted after 1.5 s): nginx-fpm wrote no `ai_runs` row at all, because PHP-FPM kills the script at its next write once the client has gone; frankenphp-octane finished the answer anyway, a `completed` row with 320 tokens written 22 224 ms after the client left.
+
+### Results per mode
+
+Five runs per mode, re-run after the review fix pass (2026-11-03 21:09–21:16 UTC) with the script matching each row by its invocation id and closing after 20 `text_delta` events (the spec's default). "Tokens after Stop" is the delta lag: the row's `tokens_out` minus the deltas the client had actually received before it closed (20 to 25, because curl may already hold a few more in its buffer when the reader kills it). "Probe after Stop" is the time a 1-token request to Ollama needed right after the close; the idle probe is the same request before the runs.
+
+| Mode | Stopped rows | Median tokens after Stop | Idle probe | Probe after Stop |
+|------|--------------|--------------------------|------------|------------------|
+| nginx-fpm | 5/5 | 1 | 65 ms | 113 ms |
+| apache-fpm | 5/5 | 4 | 40 ms | 115 ms |
+| openlitespeed | 5/5 | 3 | 41 ms | 144 ms |
+| frankenphp | 5/5 | 1 | 40 ms | 75 ms |
+| frankenphp-octane | 5/5 | 1 | 41 ms | 80 ms |
+| frankenphp-worker | 5/5 | 1 | 41 ms | 79 ms |
+
+The row itself, median of 5:
+
+| Mode | `tokens_out` | First token to abort (ms) | Probe range (min to max) |
+|------|--------------|--------------------|--------------------------|
+| nginx-fpm | 23 | 333 | 106 to 134 ms |
+| apache-fpm | 27 | 373 | 106 to 141 ms |
+| openlitespeed | 26 | 439 | 78 to 180 ms |
+| frankenphp | 23 | 388 | 63 to 110 ms |
+| frankenphp-octane | 23 | 339 | 74 to 115 ms |
+| frankenphp-worker | 23 | 384 | 62 to 108 ms |
+
+NFR-1 (reported, not a gate): median probe after Stop at most 1.5 times the idle median plus 1 s, and median delta lag at most 10. Every mode is within both: the worst probe is 144 ms against a limit of 1061 ms, and the worst lag is 4 tokens. Ollama's log for the same window has 30 `POST /api/chat` lines and 30 `Request terminated … context canceled` lines ([`ollama-log.txt`](bench/results/chat-stop/2026-11-03/ollama-log.txt)). A first run with a 10-delta abort and row matching by "latest row" gave the same picture (30 of 30 stopped, lag at most 4); it is replaced because the review showed that matching could credit a late row to the wrong run.
+
+### What the numbers say
+
+- Every mode detected the abort: 30 of 30 runs wrote a `stopped` row. On nginx-fpm that is a row where there was none, and on frankenphp-octane the answer now ends after about 1 token instead of running 320.
+- The model is free again within about 100 ms of the idle figure. A probe after Stop took 75 to 144 ms (median per mode) against 40 to 65 ms idle; with one generation slot, a model still generating a 300-token answer would have made the probe wait for seconds.
+- Ollama confirms it directly. Its server log has one `POST /api/chat` per run and, for each, `msg="Request terminated" error="context canceled"`: 30 of 30 during the bench window (`ollama-log.txt` next to the results). The probe is the indirect evidence; the log is the direct one. The review had questioned the probe because the parallel setting was "default", and the log settles it: one slot, every request cancelled.
+- The delta lag is 1 token on the four nginx and FrankenPHP modes, 3 on openlitespeed and 4 on apache-fpm. The loop checks right after each flush, so at most one more event should be read. Apache and OpenLiteSpeed notice the disconnect a few events later; the cause was not investigated (probably buffering between PHP and the client).
+- The time from the first token to the abort being noticed is 333 to 439 ms (median), roughly the time the model needs for the 20 deltas the client waited for, not a cost of cancelling.
+- History makes follow-ups ask a harder question than retrieval can answer. In three real two-turn chats, 1 of 3 answers was right (`followups.md`): retrieval runs on the latest question only, so "how do I undo it?" had no subject to search for.
+
+### Surprises
+
+- **The old loop never ran on php-fpm.** The first cancel attempt hooked the parent's callback. On php-fpm Laravel's wrapper echoes and flushes the generator itself and returns nothing, so the loop that was supposed to check `connection_aborted()` only worked under Octane. `SseProtocol` now builds the chunk generator itself and works under both.
+- **Without `ignore_user_abort(true)` nothing is logged.** PHP-FPM ends the script at the next write after the client leaves, before the recorder can write the row. The stream sets it for its own duration and restores it afterwards, so no other request changes.
+- **The proof came from the model server's log, not the app.** Ollama reports no token count for a cancelled request, so the app cannot tell how much the model generated after the close. Ollama's own log line `Request terminated … context canceled` is the evidence that the HTTP close reached the model.
+- **The detection differs little between servers.** The expectation was that some mode might fail to see the disconnect (FPM after a write, FrankenPHP threads, Octane's callback). None did; the only trace is 2 to 3 more tokens on apache-fpm and openlitespeed.
+- **The token count is an approximation.** Ollama reports no `eval_count` once the connection is closed, so `tokens_out` on a stopped row counts the text deltas PHP received (about one per token) and `tokens_in` stays null.
+
+### Interview story
+
+A Stop button only hides the answer unless the server also stops, so I measured what each server did when the client left. On nginx-fpm the run left no row at all and on Octane the model kept generating 320 tokens for nobody, 22 s after the client had gone. I made the stream ignore the abort for its own duration, check `connection_aborted()` after every flush and release the model stream, which closes the connection to Ollama. On all six server modes 30 of 30 runs then wrote a `stopped` row, the delta lag was at most 4 tokens, a 1-token probe to Ollama answered in 75 to 144 ms against 40 to 65 ms idle, and Ollama's own log showed 30 of 30 requests cancelled. The same work found that my first version never ran on php-fpm, because the framework's wrapper flushes the stream itself.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

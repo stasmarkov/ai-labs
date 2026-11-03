@@ -4,7 +4,7 @@ This guide explains how everything in this project works, in the order it was bu
 
 It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan and its order are in [`backlog.md`](../backlog.md).
 
-**Status (2026-11-03):** sections 1–15 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24, SL-32, SL-33, SL-45 and SL-46. Section 16 is a map of all the AI code: every file and its purpose, four requests traced end to end, and how to handle common feature requests. Section 17 (SL-40) explains the exact and semantic answer cache. Planned sections are listed at the end.
+**Status (2026-11-03):** sections 1–15 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24, SL-32, SL-33, SL-45 and SL-46. Section 16 is a map of all the AI code: every file and its purpose, four requests traced end to end, and how to handle common feature requests. Section 17 (SL-40) explains the exact and semantic answer cache. Section 18 (SL-41) explains how Stop cancels generation on every server mode and how the chat sends history. Planned sections are listed at the end.
 
 ---
 
@@ -592,6 +592,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`DocsAnswerAgent`](../app/Ai/DocsAnswerAgent.php) | Answers a docs question from retrieved chunks; builds the escaped `<context><doc>` message and appends the per-request canary | SL-45 |
 | [`RagGraderAgent`](../app/Ai/RagGraderAgent.php) | Grades an answer's correctness and groundedness (0–2) with structured output; prompt `rag-grader.v2.md` | SL-33 |
 | [`SseProtocol`](../app/Ai/SseProtocol.php) | One `data:` line per SDK event, then `[DONE]`; masks provider errors; drains the generator so FrankenPHP workers send a body | SL-20 |
+| [`AbortWatcher`](../app/Ai/AbortWatcher.php), [`ConnectionAbortWatcher`](../app/Ai/ConnectionAbortWatcher.php) | Tells the stream whether the client has gone; checked after every flush so a Stop ends the model call and writes a `stopped` row | SL-46 |
 | [`DocsAnswerProtocol`](../app/Ai/DocsAnswerProtocol.php) | The answer stream: `sources` first, output guard on every delta, reasoning dropped, `citations` last | SL-45 |
 | [`SseEventsResponse`](../app/Ai/SseEventsResponse.php) | The same framing for outcomes that never call the model (`no_context`, input refusal) | SL-45 |
 | [`AiRunRecorder`](../app/Ai/AiRunRecorder.php) | Times each run (start, first token, end) and writes the `ai_runs` row; also writes rows for refused and `no_context` outcomes | SL-20, SL-45 |
@@ -622,8 +623,18 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`DocsIndexService`](../app/Services/DocsIndexService.php), [`EmbedDocsBatchJob`](../app/Jobs/EmbedDocsBatchJob.php), [`DocsEmbeddingService`](../app/Services/DocsEmbeddingService.php) | Re-chunk only changed files (hash includes chunker version and settings), queue embeddings for new chunks | SL-32 |
 | [`DocsSearchService`](../app/Services/DocsSearchService.php) | Vector, full-text and hybrid (RRF) search over chunks | SL-32 |
 | [`DocsAnswerService`](../app/Services/DocsAnswerService.php) | The RAG pipeline: input guard → (cache lookups) → retrieve → gate → budget → agent; `ask()` streams, `answer()` returns a result and never reads the cache | SL-45, SL-33, SL-40 |
+| [`DocsChatTurn`](../app/DTOs/DocsChatTurn.php) | One validated history turn (`user` or `assistant`); the request's `history` becomes a list of these, escaped into a `<history>` block by the agent. Needs `docs-answer@v2` ([`resources/prompts/docs-answer.v2.md`](../resources/prompts/docs-answer.v2.md)) | SL-41 |
 | [`DocsAnswerContext`](../app/Services/DocsAnswerContext.php) | The relevance gate (similarity or operator-free full-text hit) and the 4 000-token budget | SL-45 |
 | [`PromptInjectionGuard`](../app/Services/PromptInjectionGuard.php) | Matches a question against the pattern file before any retrieval | SL-45 |
+
+**Stop and conversations (section 18)**
+
+| File | Purpose | Slice |
+|---|---|---|
+| [`bench/chat-stop.sh`](../bench/chat-stop.sh) | Per server mode: ask, close the connection after N deltas, read the `stopped` row, time a 1-token probe to Ollama against an idle baseline | SL-41 |
+| [`bench/results/chat-stop/2026-11-03/`](../bench/results/chat-stop/2026-11-03/) | One JSON per mode, plus `followups.md` with three measured follow-up chats | SL-41 |
+| [`add_stop_columns_to_ai_runs_table`](../database/migrations/2026_11_03_210000_add_stop_columns_to_ai_runs_table.php) | `history_turns` and `stopped_after_ms` on `ai_runs`; the `stopped` status | SL-41 |
+| [`StreamCancelTest`](../tests/Feature/StreamCancelTest.php), [`DocsChatHistoryTest`](../tests/Feature/DocsChatHistoryTest.php) | Cancel with a fake watcher and a fake stream; history validation, escaping, guards, prompt v2, no cache | SL-41 |
 
 **Answer cache (section 17)**
 
@@ -693,12 +704,12 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 3. The repository runs two queries, the nearest vectors and a `websearch_to_tsquery` rank, each 20 deep. RRF fuses the two lists and keeps the top k.
 
 **Ask the docs** (`POST /api/docs/ask`, JSON):
-1. `DocsAskRequest` rejects anything that is not JSON, then validates the question.
-2. `DocsAnswerService::ask()` runs `PromptInjectionGuard` first. A match writes a `refused` row and returns `SseEventsResponse`, with no embedding.
-3. Unless `cache` is false or the cache is off, `DocsAnswerCache::lookupExact()` checks the normalized question (no embedding). On a miss the question is embedded once and `lookupSemantic()` looks for the nearest current entry at or above the threshold. A hit streams `sources`, `cache_hit`, one `text_delta`, `citations`, `[DONE]` and writes a `cached` row (section 17).
+1. `DocsAskRequest` rejects anything that is not JSON, then validates the question and the optional `history` (alternating turns, at most 6, section 18).
+2. `DocsAnswerService::ask()` runs `PromptInjectionGuard` first, over the latest question and every `user` turn of the history. A match writes a `refused` row and returns `SseEventsResponse`, with no embedding.
+3. Unless `cache` is false, the cache is off or `history` is present (a follow-up never reads or writes the cache), `DocsAnswerCache::lookupExact()` checks the normalized question (no embedding). On a miss the question is embedded once and `lookupSemantic()` looks for the nearest current entry at or above the threshold. A hit streams `sources`, `cache_hit`, one `text_delta`, `citations`, `[DONE]` and writes a `cached` row (section 17).
 4. Otherwise it retrieves hybrid top 6 with the same question vector, applies the gate and the budget in `DocsAnswerContext`, and returns `no_context` when nothing passes.
-5. `DocsAnswerAgent` builds the marked context with a fresh canary and streams.
-6. `DocsAnswerProtocol` sends `sources`, checks the text with `OutputGuard` after each delta, and parses `[n]` with `CitationParser` at the end.
+5. `DocsAnswerAgent` builds the marked context with a fresh canary and streams. With history it adds an escaped `<history>` block before `<context>` and uses prompt `docs-answer@v2`; retrieval still ran on the latest question only.
+6. `DocsAnswerProtocol` sends `sources`, checks the text with `OutputGuard` after each delta, and parses `[n]` with `CitationParser` at the end. `SseProtocol` flushes each event and asks the `AbortWatcher` (`connection_aborted()`) right after: on a Stop it writes a `stopped` row and releases the model stream.
 7. The recorder adds the retrieved and cited chunk ids to the row, and after `citations` a completed, cited answer is stored by `DocsAnswerCache::store()`.
 
 ### Common feature requests and where they land
@@ -716,7 +727,8 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | "Switch the embedding model" | `config('ai.embeddings')`, then re-index everything: vectors from two models cannot be compared, and the stored `embedding_model` keeps them apart | `docs:search-bench` and `rag:eval` before and after |
 | "Log something new about each call" | A nullable column on `ai_runs`, a field on `AiRunRecord`, set it from the recorder (`annotate()` for per-request data) | a feature test on the row |
 | "Show it in the lab" | A Vue page in `resources/js/ai/Pages/Lab/`, a `ShowLab*Controller` returning `Inertia::render`, a capability in `LabOverviewService` (navigation follows) | a page props test like `AiLabChatTest`; typecheck and build |
-| "Stop button / cancel" | The client already aborts with `AbortController`; what the server does depends on the server mode (section 9 and SL-41) | a browser check |
+| "Stop doesn't stop" / "Stop button / cancel" | The client aborts with `AbortController`; the server side lives in `SseProtocol` and `AbortWatcher` (section 18). Check `ai_runs` for a `stopped` row first, then run `bench/chat-stop.sh` for the mode in question. A new stream type must go through `SseProtocol` to get the cancel. | a case in `StreamCancelTest` with a fake watcher; a `bench/chat-stop.sh` run per mode |
+| "Let the chat remember earlier turns" | `history` in the request (`DocsChatTurn`, `max_history_turns`), prompt `docs-answer.v2.md`. Never add history to the output guard's allowed texts, and never cache a turn that has history. A follow-up that retrieves badly needs query rewriting, not a bigger history (section 18). | `DocsChatHistoryTest`: validation, escaping, a forged turn |
 
 ### Testing patterns used everywhere
 
@@ -753,7 +765,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 
 **Invalidation: a filter, not deletes.** An entry is served only while its prompt version, answer model, embedding model and index version all equal the current ones. The index version is a hash over the indexed documents' source, path and hash, plus the embedding model; it is memoized for 60 s and `docs:index` forgets it when a document changes. While any chunk still waits for its vector, the hash also carries the pending count and nothing is stored, because an answer given during re-indexing was retrieved from a half-embedded index. The versions are read once when the request is planned and stored with the answer, so an answer cannot be filed under an index version that appeared while it was streaming. Re-indexing, a new prompt file or a model change therefore makes every older entry a miss with no manual step and no hook that could be forgotten. Stale rows stay inert until the TTL (`ai.docs.cache.ttl_hours`, default 168) or `docs:cache --prune` removes them with their exact keys.
 
-**Measuring it.** `docs:cache --stats` prints hit rate (cached over cached plus completed, endpoint rows only), hits by kind, saved latency sum and median, and current against stale entries. `bench/docs-cache.sh` asks 10 eval questions fresh, verbatim and reworded:
+**Measuring it.** `docs:cache --stats` prints hit rate (cached over cached plus completed, endpoint rows only, follow-up turns excluded because they can never be served from the cache), hits by kind, saved latency sum and median, and current against stale entries. `bench/docs-cache.sh` asks 10 eval questions fresh, verbatim and reworded:
 
 | Path | Result |
 |---|---|
@@ -776,9 +788,67 @@ Both budgets hold (exact under 100 ms, semantic under 300 ms; the 18-question la
 
 ---
 
+## 18. Stop that really stops, and conversations
+
+**What it is.** Section 13 gave the lab a Stop button: it calls `abort()` on the `fetch`, so the browser closes the connection. That only hides the answer. Whether the server stops depends on what PHP does when it notices the client has gone, and on a streaming endpoint that is easy to get wrong. This slice (SL-41) makes the server stop too, measures it on all six server modes, and turns `/ai/chat` into a conversation that sends earlier turns as marked history.
+
+**What was wrong (probe of 2026-11-03, one stream aborted after 1.5 s).**
+- **nginx-fpm:** no `ai_runs` row at all. PHP-FPM kills the script at its next write once the client has left (`ignore_user_abort` is off), so the code that writes the row never runs. That breaks the rule that every model call is logged.
+- **frankenphp-octane:** the server finished the answer anyway: a `completed` row with 320 tokens, written 22 224 ms after the client had gone. The model and a worker thread stayed busy for 20 s for nobody.
+
+**How the cancel works.**
+1. The stream sets `ignore_user_abort(true)` for its own duration. Without it FPM ends the script mid-loop and nothing is logged; with it the loop survives to notice and clean up. It is set and restored in code (`finally`), not in php.ini, so no other request changes.
+2. After each flushed event the stream asks an `AbortWatcher` (the real one, `ConnectionAbortWatcher`, answers `connection_aborted()`). A test swaps in a fake that reports an abort after N events, so no test opens a real socket.
+3. On abort the recorder writes a `stopped` row, the loop breaks, and the generators are unset. Releasing the SDK generator releases the HTTP body, which closes the connection to Ollama, and Ollama stops generating. Nothing more is sent to the client.
+4. A stopped answer is never cached: the store step runs only when the loop resumes the stream after the `citations` flush, and the loop resumes only if the watcher said the client is still there.
+5. Three edges, each found in review:
+   - **Stop while the model is thinking** (`AI_THINK=true`). Reasoning is never sent, so there was nothing to flush and nothing to check. The protocol now writes an SSE comment (`: keepalive`) per reasoning event; the browser's parser ignores comment lines, and the flush gives the watcher its chance. The one window left is the model reading the prompt before its first event.
+   - **Stop before the model started.** A client that leaves during retrieval was caught at the first flush (`sources`), before the SDK had opened a run, so no row was written. The protocol now records a `stopped` row from the planned metadata, with null tokens and TTFT.
+   - **Stop noticed after the end.** If the abort is seen right after `stream_end`, the model had finished: the run is logged `completed` (or `failed` after the masked error), not `stopped`, so stop counts are not inflated.
+
+**The row.** Status `stopped`; `tokens_out` counts the text deltas PHP received (about one per token; Ollama reports no `eval_count` once the connection is closed, and `tokens_in` stays null); `stopped_after_ms` is the time from the first token to the abort being noticed; TTFT, `stopped_after_ms` and `tokens_out` are all null if the abort came before the first token. Nothing about a stopped run is ever cached, and the partial text is never sent back as history.
+
+**A bug worth knowing.** The first version hooked the parent's callback. On php-fpm Laravel's wrapper echoes and flushes the generator itself and returns nothing, so the loop checking `connection_aborted()` never ran there; it only worked under Octane. `SseProtocol::response()` now builds the chunk generator itself, with the parent's masked-error logic copied into a private method, and works under both. Describe uses the same protocol, so it gets the same cancel; its events and masked errors are unchanged.
+
+**What each server mode does (committed under [`bench/results/chat-stop/2026-11-03/`](../bench/results/chat-stop/2026-11-03/), `bench/chat-stop.sh`, 5 runs per mode, abort after 20 deltas, qwen3.5:9b).** The bench closes its connection after 20 `text_delta` events, reads the row with that stream's invocation id, and immediately sends a 1-token request straight to Ollama.
+- The primary figure is whether the model is **free** again ("model free"): the time that probe needed, against the median of 5 idle probes taken before the runs. A model still generating a long answer would make it wait for seconds.
+- The secondary figure is the **delta lag** ("delta lag"): the row's `tokens_out` minus the deltas the client had actually received (20 to 25, since curl may hold a few more when the reader stops it), i.e. how many more deltas PHP read before noticing.
+- The direct evidence is **Ollama's own log**: for every one of the 30 runs it logged `Request terminated … context canceled` ([`ollama-log.txt`](../bench/results/chat-stop/2026-11-03/ollama-log.txt)). Ollama ran with one generation slot (`OLLAMA_NUM_PARALLEL:1`), so the fast probe and the log agree. The app cannot see this itself: a cancelled request returns no token count.
+
+| Mode | Median tokens after Stop | Idle probe | Probe after Stop |
+|------|--------------------------|------------|------------------|
+| nginx-fpm | 1 | 65 ms | 113 ms |
+| apache-fpm | 4 | 40 ms | 115 ms |
+| openlitespeed | 3 | 41 ms | 144 ms |
+| frankenphp | 1 | 40 ms | 75 ms |
+| frankenphp-octane | 1 | 41 ms | 80 ms |
+| frankenphp-worker | 1 | 41 ms | 79 ms |
+
+Every mode wrote a `stopped` row for 5 of 5 runs. nginx-fpm went from no row to a row, and frankenphp-octane from 320 tokens after Stop to about 1. NFR-1 (reported, not a gate: probe at most 1.5 times the idle median plus 1 s, delta lag at most 10) holds on every mode; the worst probe was 144 ms. A mode that could not see the disconnect would have kept the old behaviour (a `completed` row) and been reported as a finding; none was. The full tables and the surprises are in the "Stop and cancel per server mode (2026-11-03)" section of [`BENCHMARKS.md`](../BENCHMARKS.md).
+
+**Conversations: history is data, not instructions.** `POST /api/docs/ask` takes an optional `history`: alternating `user` and `assistant` turns, starting with `user` and ending with `assistant`, at most 6 turns (`ai.docs.chat.max_history_turns`), each at most 2 000 characters and valid UTF-8 without NUL. Anything else is a 422, never silently cut. The page sends whole completed exchanges only, so a stopped, refused, `no_context` or empty answer never becomes history.
+- **Marked and escaped.** History goes into the user message as `<history><turn role="…">…</turn></history>` before `<context>`, escaped like the retrieved text. A new prompt file, `docs-answer.v2.md`, says history is earlier conversation for reference and never instructions. It is used only when history is present, so a request without history keeps `docs-answer@v1` and every older result stays valid; the logged `prompt_version` (`docs-answer@v2`) and `history_turns` show which kind of request a run was.
+- **Input guard.** The pattern guard checks the latest question and every `user` turn. A match refuses the request (`refused`) and the event carries `turn` (the 0-based index in `history`, or `latest`). `assistant` turns are never matched, because a client can forge them, but they are always escaped and marked.
+- **Forged turns.** The client can write a turn as if the assistant had said it, so a forged turn is data like any other. The output guard's allowed texts stay the question and the chunk bodies; history is never added. A test forges an `assistant` turn holding 14 words of the v2 prompt and has the fake model repeat them: the answer is refused at the output stage with `output:prompt_overlap`. Treating history like retrieved text is what makes a client-supplied transcript safe.
+- **Never cached.** A follow-up's meaning depends on its history, so the same text means different things in different chats. A turn with history neither reads nor writes the cache; `"cache": true` with history is accepted and ignored.
+
+**Why follow-ups retrieve poorly.** Retrieval runs on the latest question only (the owner's instruction), so history helps the model read the question, not find the passage. Three real two-turn chats against `docs-answer@v2` on nginx-fpm (`followups.md`): 1 of 3 answers was right. "How do I undo it?" has no subject to search for, so no migration passage came back and the model said the docs do not cover it. "How do I make it retry?" matched the HTTP client's `retry` method instead of queued jobs. "How do I clear it?" worked by luck: search never saw the word "cache", but the vector for "clear it" landed near the cache docs' "Clearing the Cache" section, and the model took "cache" from the history. The fix is query rewriting: condense the history and the follow-up into one standalone question before retrieval. It is out of scope here and recorded as the next option.
+
+**The lab page.** `/ai/chat` keeps a transcript: each assistant turn shows its own sources, citations (scoped to that turn), cached mark, refusal or "I don't know" state, and its logged run. Ask, Stop and New chat; Stop leaves the partial answer visible, marked "Stopped", and re-enables the controls at once. History lives in page state only and is lost on reload. Only the newest answer is an `aria-live` region, so a screen reader does not re-read the whole transcript.
+
+**In this repo.**
+- Code: [`SseProtocol`](../app/Ai/SseProtocol.php), [`AbortWatcher`](../app/Ai/AbortWatcher.php), [`ConnectionAbortWatcher`](../app/Ai/ConnectionAbortWatcher.php), [`DocsChatTurn`](../app/DTOs/DocsChatTurn.php), [`DocsAnswerAgent`](../app/Ai/DocsAnswerAgent.php), [`AiRunRecorder`](../app/Ai/AiRunRecorder.php).
+- Tests: `StreamCancelTest`, `DocsChatHistoryTest`, `BenchChatStopTest`, `ChatFollowupNoteTest`, `AiLabChatTranscriptTest`.
+- Measurements: [`bench/chat-stop.sh`](../bench/chat-stop.sh), [`bench/results/chat-stop/2026-11-03/`](../bench/results/chat-stop/2026-11-03/), [`followups.md`](../bench/results/chat-stop/2026-11-03/followups.md).
+- Spec: [`.ai/specs/spec-20261103-2118-chat-stop-multiturn/`](../.ai/specs/spec-20261103-2118-chat-stop-multiturn/).
+
+**Read next.** [PHP: ignore_user_abort](https://www.php.net/manual/en/function.ignore-user-abort.php) · [PHP: connection handling](https://www.php.net/manual/en/features.connection-handling.php) · [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md)
+
+---
+
 ## Planned sections
 
 Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):
 
 - **Server track:** slow I/O and thread autoscaling (SL-09), Early Hints and compression (SL-10), file downloads offloaded to the web server (SL-11), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
-- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; structured output (SL-23); tool calling (SL-25); evals (SL-26); vision (SL-27); model comparison (SL-28); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39, shown on the `/ai/photos` placeholder); streaming chat UI (SL-41, on the `/ai/chat` placeholder from SL-46); a research agent (SL-42); a prompt playground (SL-43).
+- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; structured output (SL-23); tool calling (SL-25); evals (SL-26); vision (SL-27); model comparison (SL-28); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39, shown on the `/ai/photos` placeholder); a research agent (SL-42); a prompt playground (SL-43).

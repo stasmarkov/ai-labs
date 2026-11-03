@@ -381,3 +381,34 @@ test('AC-11 BENCHMARKS.md records the answer cache runs with ids only and number
     expect(count($sentences))->toBeGreaterThanOrEqual(3)->toBeLessThanOrEqual(6)
         ->and($story[1] ?? '')->toMatch('/\d/');
 });
+
+test('AC-8 BENCHMARKS.md reports Stop and cancel for every server mode from the committed results', function (): void {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+
+    preg_match('/^## Stop and cancel per server mode \(2026-11-03\)\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $section = $matches[1] ?? '';
+    expect($section)->not->toBe('');
+
+    foreach (['### What the numbers say', '### Surprises', '### Interview story', 'bench/results/chat-stop/2026-11-03/', 'bench/chat-stop.sh', 'followups.md'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    foreach (['nginx-fpm', 'apache-fpm', 'openlitespeed', 'frankenphp', 'frankenphp-octane', 'frankenphp-worker'] as $mode) {
+        $result = json_decode((string) file_get_contents(base_path("bench/results/chat-stop/2026-11-03/{$mode}.json")), true, flags: JSON_THROW_ON_ERROR);
+        $row = sprintf(
+            '| %s | %d/%d | %s | %s ms | %s ms |',
+            $mode,
+            $result['stopped_rows'],
+            $result['metadata']['runs'],
+            $result['median_tokens_after_stop'],
+            $result['median_idle_probe_ms'],
+            $result['median_probe_ms_after_stop'],
+        );
+        expect($section)->toContain($row);
+    }
+
+    preg_match('/### Interview story\n(.*?)(?=^##|\z)/ms', $section, $story);
+    $sentences = preg_split('/(?<=[.!?])\s+(?=[A-Z])/', trim($story[1] ?? '')) ?: [];
+    expect(count($sentences))->toBeGreaterThanOrEqual(3)->toBeLessThanOrEqual(6)
+        ->and($story[1] ?? '')->toMatch('/\d/');
+});

@@ -15,6 +15,7 @@ use App\DTOs\DocsAnswerResult;
 use App\DTOs\DocsCacheCandidate;
 use App\DTOs\DocsCacheHit;
 use App\DTOs\DocsCacheVersions;
+use App\DTOs\DocsChatTurn;
 use App\DTOs\DocsMatch;
 use App\Enums\DocsAnswerOutcome;
 use App\Enums\DocsCacheMode;
@@ -48,22 +49,26 @@ final readonly class DocsAnswerService
     /**
      * Input guard, answer cache, retrieval, relevance gate, then the model. A question the guard refuses, or that
      * retrieval finds nothing relevant for, is answered without a model call, and so is one the cache can serve. The
-     * guard always runs first. Everything before the stream runs now, so a failure is a normal HTTP error and
+     * guard always runs first, over the question and every user turn of the history; the refusal then names the
+     * offending turn (its index, or "latest" for the question itself). Everything before the stream runs now, so a failure is a normal HTTP error and
      * Server-Timing covers it.
      *
      * @param  bool  $useCache  false skips both lookups; a qualifying answer is still stored
+     * @param  list<DocsChatTurn>  $history  earlier turns of the conversation; with any, retrieval still runs on the
+     *                                       question alone, and the cache is neither read nor written
      *
      * @throws DocsAnswerUnavailableException when the question cannot be embedded.
      */
-    public function ask(string $question, bool $useCache = true): Responsable
+    public function ask(string $question, bool $useCache = true, array $history = []): Responsable
     {
         $startedAt = hrtime(true);
         $mode = match (true) {
+            $history !== [] => DocsCacheMode::Off,
             ! config('ai.docs.cache.enabled') => DocsCacheMode::Off,
             $useCache => DocsCacheMode::Lookup,
             default => DocsCacheMode::Bypass,
         };
-        $plan = $this->plan($question, null, $mode, $startedAt, self::ORIGIN_API);
+        $plan = $this->plan($question, null, $mode, $startedAt, self::ORIGIN_API, $history);
 
         if ($plan->hit !== null) {
             return $this->serveHit($plan, $plan->hit, $startedAt);
@@ -72,9 +77,13 @@ final readonly class DocsAnswerService
         $early = $plan->early;
 
         if ($early?->outcome === DocsAnswerOutcome::RefusedInput) {
-            return new SseEventsResponse([
-                ['type' => 'refused', 'stage' => 'input', 'reason' => self::INPUT_REFUSAL, 'pattern' => $plan->pattern, 'replace' => false, 'invocation_id' => $early->invocationId],
-            ]);
+            $refusal = ['type' => 'refused', 'stage' => 'input', 'reason' => self::INPUT_REFUSAL, 'pattern' => $plan->pattern, 'replace' => false, 'invocation_id' => $early->invocationId];
+
+            if ($history !== []) {
+                $refusal['turn'] = $plan->turn;
+            }
+
+            return new SseEventsResponse([$refusal]);
         }
 
         if ($early !== null) {
@@ -83,8 +92,14 @@ final readonly class DocsAnswerService
 
         $recorder = app(AiRunRecorder::class);
         $stream = $plan->agent->stream($plan->agent->promptFor($question, $plan->sources))
-            ->usingProtocol(new DocsAnswerProtocol($recorder, $plan->sources, $plan->guard, $this->storeHook($question, $plan, $startedAt)));
-        $recorder->annotate($stream->invocationId, self::ids($plan->sources), origin: self::ORIGIN_API);
+            ->usingProtocol(new DocsAnswerProtocol(
+                $recorder,
+                $plan->sources,
+                $plan->guard,
+                $this->storeHook($question, $plan, $startedAt),
+                onStoppedBeforeRun: fn (): string => $this->recordOutcome($recorder, $plan->agent, 'stopped', $startedAt, null, self::ids($plan->sources), self::ORIGIN_API, $history === [] ? null : count($history)),
+            ));
+        $recorder->annotate($stream->invocationId, self::ids($plan->sources), origin: self::ORIGIN_API, historyTurns: $history === [] ? null : count($history));
 
         return $stream;
     }
@@ -153,20 +168,34 @@ final readonly class DocsAnswerService
      * The steps ask() and answer() share: input guard, retrieval, relevance gate and budget, then the agent and output
      * guard. The two outcomes without a model call are recorded here and come back as the plan's early result.
      *
+     * @param  list<DocsChatTurn>  $history
+     *
      * @throws DocsAnswerUnavailableException when the question cannot be embedded.
      */
-    private function plan(string $question, ?string $model = null, DocsCacheMode $mode = DocsCacheMode::Off, ?int $startedAt = null, string $origin = self::ORIGIN_EVAL): DocsAnswerPlan
+    private function plan(string $question, ?string $model = null, DocsCacheMode $mode = DocsCacheMode::Off, ?int $startedAt = null, string $origin = self::ORIGIN_EVAL, array $history = []): DocsAnswerPlan
     {
         $startedAt ??= hrtime(true);
         $recorder = app(AiRunRecorder::class);
-        $agent = new DocsAnswerAgent($this->canaries->generate(), $model);
+        $agent = new DocsAnswerAgent($this->canaries->generate(), $model, $history);
 
         $pattern = $this->guard->match($question);
+        $turn = $history === [] ? null : 'latest';
+
+        if ($pattern === null) {
+            foreach ($history as $index => $earlier) {
+                if ($earlier->role === 'user' && ($pattern = $this->guard->match($earlier->content)) !== null) {
+                    $turn = $index;
+
+                    break;
+                }
+            }
+        }
 
         if ($pattern !== null) {
-            $invocationId = $this->recordOutcome($recorder, $agent, 'refused', $startedAt, 'input:'.$this->guardVersion().':'.$pattern, origin: $origin);
+            $suffix = $history === [] ? '' : ':'.($turn === 'latest' ? 'latest' : 'turn'.$turn);
+            $invocationId = $this->recordOutcome($recorder, $agent, 'refused', $startedAt, 'input:'.$this->guardVersion().':'.$pattern.$suffix, origin: $origin, historyTurns: $history === [] ? null : count($history));
 
-            return new DocsAnswerPlan($agent, [], null, new DocsAnswerResult(DocsAnswerOutcome::RefusedInput, self::INPUT_REFUSAL, [], [], $invocationId), $pattern);
+            return new DocsAnswerPlan($agent, [], null, new DocsAnswerResult(DocsAnswerOutcome::RefusedInput, self::INPUT_REFUSAL, [], [], $invocationId), $pattern, turn: $turn);
         }
 
         $vector = null;
@@ -199,7 +228,7 @@ final readonly class DocsAnswerService
         $sources = $this->context->limit($retrieved, $question);
 
         if ($sources === []) {
-            $invocationId = $this->recordOutcome($recorder, $agent, 'no_context', $startedAt, null, self::ids($retrieved), $origin);
+            $invocationId = $this->recordOutcome($recorder, $agent, 'no_context', $startedAt, null, self::ids($retrieved), $origin, $history === [] ? null : count($history));
 
             return new DocsAnswerPlan($agent, [], null, new DocsAnswerResult(DocsAnswerOutcome::NoContext, self::NO_CONTEXT_MESSAGE, [], [], $invocationId), vector: $vector, versions: $versions);
         }
@@ -294,7 +323,8 @@ final readonly class DocsAnswerService
 
     /**
      * The step that offers a finished answer to the cache; DocsAnswerCache::store() refuses what must not be stored.
-     * Null when the cache is off.
+     * Null when the cache is off. It runs only for a client that is still connected: the transport asks the abort
+     * watcher after every flushed chunk and before resuming the protocol generator that calls it.
      *
      * @return Closure(string, string, list<int>): void|null
      */
@@ -319,7 +349,6 @@ final readonly class DocsAnswerService
                 versions: $plan->versions,
                 sourceInvocationId: $invocationId,
                 sourceLatencyMs: $recorder->latencyOf($invocationId) ?? intdiv(hrtime(true) - $startedAt, 1_000_000),
-                aborted: connection_aborted() === 1,
             ));
         };
     }
@@ -330,7 +359,7 @@ final readonly class DocsAnswerService
      *
      * @param  list<int>|null  $retrieved
      */
-    private function recordOutcome(AiRunRecorder $recorder, DocsAnswerAgent $agent, string $status, int $startedAt, ?string $reason, ?array $retrieved = null, ?string $origin = null): string
+    private function recordOutcome(AiRunRecorder $recorder, DocsAnswerAgent $agent, string $status, int $startedAt, ?string $reason, ?array $retrieved = null, ?string $origin = null, ?int $historyTurns = null): string
     {
         return $recorder->recordOutcome(
             $status,
@@ -342,6 +371,7 @@ final readonly class DocsAnswerService
             $reason,
             $retrieved,
             $origin,
+            $historyTurns,
         );
     }
 

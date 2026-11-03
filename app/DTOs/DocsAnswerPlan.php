@@ -27,5 +27,7 @@ final readonly class DocsAnswerPlan
         public ?array $vector = null,
         /** the cache versions read once when the request was planned; null when the cache is off or unreadable */
         public ?DocsCacheVersions $versions = null,
+        /** the index of the history turn the input guard refused, or "latest" for the question itself; null without history */
+        public int|string|null $turn = null,
     ) {}
 }

@@ -28,12 +28,15 @@ use Illuminate\Database\Eloquent\Model;
  * @property int|null $cache_entry_id
  * @property int|null $saved_latency_ms
  * @property string|null $origin
+ * @property int|null $history_turns
+ * @property int|null $stopped_after_ms
  */
 #[Fillable([
     'invocation_id', 'agent', 'provider', 'model', 'prompt_version', 'tokens_in', 'tokens_out',
     'ttft_ms', 'latency_ms', 'status', 'error_class', 'error_message', 'inputs',
     'retrieved_chunk_ids', 'cited_chunk_ids', 'refusal_reason',
     'cache_kind', 'cache_similarity', 'cache_entry_id', 'saved_latency_ms', 'origin',
+    'history_turns', 'stopped_after_ms',
 ])]
 class AiRun extends Model
 {
@@ -55,6 +58,8 @@ class AiRun extends Model
             'cache_similarity' => 'float',
             'cache_entry_id' => 'integer',
             'saved_latency_ms' => 'integer',
+            'history_turns' => 'integer',
+            'stopped_after_ms' => 'integer',
         ];
     }
 }

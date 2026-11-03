@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Ai;
 
+use App\DTOs\DocsChatTurn;
 use App\DTOs\DocsMatch;
 use Illuminate\Support\Str;
 use Laravel\Ai\Contracts\Agent;
@@ -20,8 +21,9 @@ final class DocsAnswerAgent implements Agent, HasProviderOptions, VersionedPromp
     /**
      * @param  string|null  $canary  a per-request marker appended to the system prompt; random when omitted
      * @param  string|null  $model  a text model of the active provider to use instead of its default
+     * @param  list<DocsChatTurn>  $history  earlier turns of the conversation; a non-empty list selects the history prompt
      */
-    public function __construct(?string $canary = null, private readonly ?string $model = null)
+    public function __construct(?string $canary = null, private readonly ?string $model = null, private readonly array $history = [])
     {
         $this->canary = $canary ?? 'ap-canary-'.Str::lower(bin2hex(random_bytes(8)));
     }
@@ -62,11 +64,12 @@ final class DocsAnswerAgent implements Agent, HasProviderOptions, VersionedPromp
 
     private function promptName(): string
     {
-        return (string) config('ai.prompts.docs_answer');
+        return (string) config($this->history === [] ? 'ai.prompts.docs_answer' : 'ai.prompts.docs_answer_history');
     }
 
     /**
-     * The user message: the chunks as escaped <doc> elements inside <context>, then the question outside it.
+     * The user message: the history as escaped <turn> elements inside <history> when there is any, the chunks as escaped
+     * <doc> elements inside <context>, then the question outside it.
      *
      * @param  list<DocsMatch>  $matches  in citation order; the first is source 1
      */
@@ -85,7 +88,21 @@ final class DocsAnswerAgent implements Agent, HasProviderOptions, VersionedPromp
             );
         }
 
-        return "<context>\n".implode("\n", $docs)."\n</context>\nQuestion: ".$question;
+        return $this->historyBlock()."<context>\n".implode("\n", $docs)."\n</context>\nQuestion: ".$question;
+    }
+
+    private function historyBlock(): string
+    {
+        if ($this->history === []) {
+            return '';
+        }
+
+        $turns = array_map(
+            fn (DocsChatTurn $turn): string => sprintf('<turn role="%s">%s</turn>', self::escape($turn->role), self::escape($turn->content)),
+            $this->history,
+        );
+
+        return "<history>\n".implode("\n", $turns)."\n</history>\n";
     }
 
     private static function escape(string $text): string

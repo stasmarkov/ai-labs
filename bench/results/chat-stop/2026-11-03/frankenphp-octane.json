@@ -1,0 +1,76 @@
+{
+  "metadata": {
+    "mode": "frankenphp-octane",
+    "model": "qwen3.5:9b",
+    "ollama_num_parallel": "default",
+    "generated_at": "2026-11-03T21:14:43+00:00",
+    "git_commit": "a7549a10e5a797cc9767c8179fb32ebed02956f6",
+    "runs": 5,
+    "abort_after_events": 20
+  },
+  "idle_probe_ms": [
+    39,
+    40,
+    41,
+    43,
+    41
+  ],
+  "median_idle_probe_ms": 41,
+  "median_probe_ms_after_stop": 80,
+  "median_tokens_after_stop": 1,
+  "stopped_rows": 5,
+  "probe_within_budget": true,
+  "lag_within_budget": true,
+  "requests": [
+    {
+      "run": 1,
+      "invocation_id": "01a1a343-2b96-7223-94dd-a0a48924fc5d",
+      "events_received": 22,
+      "status": "stopped",
+      "tokens_out": 23,
+      "tokens_after_stop": 1,
+      "stopped_after_ms": 321,
+      "probe_ms": 100
+    },
+    {
+      "run": 2,
+      "invocation_id": "01a1a343-469c-711a-81f5-74b3572721e1",
+      "events_received": 22,
+      "status": "stopped",
+      "tokens_out": 23,
+      "tokens_after_stop": 1,
+      "stopped_after_ms": 399,
+      "probe_ms": 80
+    },
+    {
+      "run": 3,
+      "invocation_id": "01a1a343-5f60-7079-a5d9-36378d2df87b",
+      "events_received": 20,
+      "status": "stopped",
+      "tokens_out": 21,
+      "tokens_after_stop": 1,
+      "stopped_after_ms": 316,
+      "probe_ms": 115
+    },
+    {
+      "run": 4,
+      "invocation_id": "01a1a343-7e05-730e-92e5-5c4c4b36b97a",
+      "events_received": 20,
+      "status": "stopped",
+      "tokens_out": 21,
+      "tokens_after_stop": 1,
+      "stopped_after_ms": 339,
+      "probe_ms": 74
+    },
+    {
+      "run": 5,
+      "invocation_id": "01a1a343-9552-722c-9dde-4ed36662f662",
+      "events_received": 24,
+      "status": "stopped",
+      "tokens_out": 25,
+      "tokens_after_stop": 1,
+      "stopped_after_ms": 437,
+      "probe_ms": 78
+    }
+  ]
+}

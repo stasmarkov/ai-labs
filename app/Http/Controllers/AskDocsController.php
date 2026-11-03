@@ -12,6 +12,6 @@ final class AskDocsController extends Controller
 {
     public function __invoke(DocsAskRequest $request, DocsAnswerService $service): Responsable
     {
-        return $service->ask($request->question(), $request->useCache());
+        return $service->ask($request->question(), $request->useCache(), $request->history());
     }
 }

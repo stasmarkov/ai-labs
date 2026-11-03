@@ -19,6 +19,8 @@ final class ShowLabChatController extends Controller
             'runUrl' => route('ai.runs.show', ['invocationId' => self::ID_PLACEHOLDER], false),
             'idPlaceholder' => self::ID_PLACEHOLDER,
             'maxQuestionLength' => DocsAskRequest::MAX_QUESTION_LENGTH,
+            'maxTurnLength' => DocsAskRequest::MAX_TURN_LENGTH,
+            'maxHistoryTurns' => (int) config('ai.docs.chat.max_history_turns'),
         ]);
     }
 }

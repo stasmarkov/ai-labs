@@ -18,7 +18,9 @@ use Laravel\Ai\Streaming\Events\TextDelta;
 /**
  * The docs answer stream: the sources the model was given first, the SDK events as they come, the output guard on the
  * text so far, and the citations found in the finished answer last. Reasoning events (AI_THINK=true) are not sent: a
- * model's thinking often restates its instructions, and the output guard only checks the answer text.
+ * model's thinking often restates its instructions, and the output guard only checks the answer text. Each skipped
+ * reasoning event is replaced by one SSE comment line, so the transport writes, flushes and checks for a client that
+ * has left; without it a Stop during the thinking would go unnoticed until the first answer token.
  */
 final class DocsAnswerProtocol extends SseProtocol
 {
@@ -29,14 +31,17 @@ final class DocsAnswerProtocol extends SseProtocol
     /**
      * @param  list<DocsMatch>  $sources  in citation order; the first is source 1
      * @param  Closure(string, string, list<int>): void|null  $onCompleted  called with the invocation id, the answer and the cited chunk ids once the citations are sent
+     * @param  Closure(): mixed|null  $onStoppedBeforeRun  called when the client left before the SDK started the run, to record that stop
      */
     public function __construct(
         AiRunRecorder $recorder,
         private readonly array $sources,
         private readonly OutputGuard $guard,
         private readonly ?Closure $onCompleted = null,
+        ?AbortWatcher $watcher = null,
+        private readonly ?Closure $onStoppedBeforeRun = null,
     ) {
-        parent::__construct($recorder);
+        parent::__construct($recorder, $watcher);
     }
 
     protected function parts(StreamableAgentResponse $response): Generator
@@ -47,6 +52,8 @@ final class DocsAnswerProtocol extends SseProtocol
         $citations = null;
 
         foreach ($response as $event) {
+            $this->observe($event);
+
             if ($event instanceof Error) {
                 yield from $this->maskedErrorOnce();
 
@@ -54,12 +61,16 @@ final class DocsAnswerProtocol extends SseProtocol
             }
 
             if ($event instanceof ReasoningStart || $event instanceof ReasoningDelta || $event instanceof ReasoningEnd) {
+                // Nothing of the reasoning is sent, but a comment line is, so the abort check runs for every reasoning event.
+                yield self::KEEPALIVE;
+
                 continue;
             }
 
             if ($event instanceof TextDelta) {
                 $this->recorder->firstToken($response->invocationId);
                 $text .= $event->delta;
+                $this->textDeltas++;
             }
 
             $refusal = $event instanceof TextDelta || $event instanceof StreamEnd ? self::refusalReason($this->guard, $text) : null;
@@ -91,7 +102,8 @@ final class DocsAnswerProtocol extends SseProtocol
         if ($citations !== null && ! $this->errored) {
             yield ['type' => 'citations', 'cited' => $citations['cited'], 'unknown' => $citations['unknown']];
 
-            // The consumer has written and flushed the citations by now, so a disconnect is visible to the hook.
+            // The transport asks the abort watcher after flushing the citations and before resuming here (SseProtocol::response()),
+            // so this hook never runs for a client that has gone.
             if ($this->onCompleted !== null) {
                 ($this->onCompleted)($response->invocationId, $text, array_column($citations['cited'], 'id'));
             }
@@ -101,6 +113,14 @@ final class DocsAnswerProtocol extends SseProtocol
     protected function maskedErrorParts(): Generator
     {
         yield ['type' => 'error', 'message' => self::ERROR_MESSAGE];
+    }
+
+    #[\Override]
+    protected function recordStoppedBeforeRun(StreamableAgentResponse $response): void
+    {
+        if ($this->onStoppedBeforeRun !== null) {
+            ($this->onStoppedBeforeRun)();
+        }
     }
 
     /**

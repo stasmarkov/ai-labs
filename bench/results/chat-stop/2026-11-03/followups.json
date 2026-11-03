@@ -1,0 +1,88 @@
+{
+  "generated_at": "2026-11-03",
+  "model": "qwen3.5:9b",
+  "server": "nginx-fpm",
+  "prompt": "docs-answer@v2",
+  "chats": [
+    {
+      "chat": "undo-migration",
+      "history": [
+        {
+          "role": "user",
+          "content": "how do I run a migration?"
+        },
+        {
+          "role": "assistant",
+          "content": "Run php artisan migrate."
+        }
+      ],
+      "question": "how do I undo it?",
+      "retrieved_paths": [
+        "docs/getting-started.md",
+        "queues.md",
+        "dusk.md",
+        "verification.md",
+        "ai-sdk.md",
+        "passwords.md"
+      ],
+      "retrieved_on": "latest question only",
+      "answer_right": false,
+      "verdict": "wrong: the answer says the docs do not cover undoing migrations; none of the six passages is about migrations (docs/getting-started.md is the nearest, by keyword only)",
+      "answer_excerpt": "The documentation does not provide instructions on how to undo migrations. It mentions `ddev artisan optimize:clear` only as an action to undo caching commands, not migrations."
+    },
+    {
+      "chat": "queue-retry",
+      "history": [
+        {
+          "role": "user",
+          "content": "how do I dispatch a job to a queue?"
+        },
+        {
+          "role": "assistant",
+          "content": "Call the dispatch method on the job class, for example ProcessPodcast::dispatch($podcast)."
+        }
+      ],
+      "question": "how do I make it retry?",
+      "retrieved_paths": [
+        "http-client.md",
+        "http-client.md",
+        "http-client.md",
+        "rate-limiting.md",
+        "http-client.md",
+        "queues.md"
+      ],
+      "retrieved_on": "latest question only",
+      "answer_right": false,
+      "verdict": "wrong: answers about the HTTP client retry method; the question was about retrying a queued job",
+      "answer_excerpt": "You can use the `retry` method on the `Http` facade to automatically retry an HTTP request if a client or server error occurs. The method accepts the maximum number of attempts and the number of milliseconds to wait between attempts, like this:\n\n```php\n$response = Http::retry(3, 100)->post(/* ... */"
+    },
+    {
+      "chat": "cache-clear",
+      "history": [
+        {
+          "role": "user",
+          "content": "how do I cache a value in Laravel?"
+        },
+        {
+          "role": "assistant",
+          "content": "Use Cache::put('key', 'value', 600) or Cache::remember()."
+        }
+      ],
+      "question": "how do I clear it?",
+      "retrieved_paths": [
+        "queues.md",
+        "cache.md",
+        "horizon.md",
+        "prompts.md",
+        "queues.md",
+        "dusk.md"
+      ],
+      "retrieved_on": "latest question only",
+      "answer_right": true,
+      "verdict": "right: cache.md is retrieved and the answer gives Cache::flush(); the queue and Horizon passages add noise",
+      "answer_excerpt": "To clear the entire cache, use the `Cache::flush()` method [2]. If you specifically need to clear all atomic locks in the cache, use the `Cache::flushLocks()` method [2]. Additionally, you can clear all jobs from a specific queue using the `php artisan queue:clear --queue=emails` command [1], or cle"
+    }
+  ],
+  "right": 1,
+  "total": 3
+}

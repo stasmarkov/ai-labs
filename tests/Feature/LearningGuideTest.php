@@ -379,3 +379,46 @@ test('AC-11 learning guide section 16 maps every answer cache file and the cache
     expect($section)->toContain('Ask the docs')->toContain('lookupExact')->toContain('lookupSemantic')->toContain('cache_hit')
         ->toContain('tune the cache');
 });
+
+test('AC-8 learning guide section 18 explains Stop that really stops and conversations', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+
+    preg_match('/^## 18\. Stop that really stops, and conversations\n(.*?)(?=^---$|^## \d+\. |^## Planned sections|\z)/ms', $guide, $matches);
+    $section = $matches[1] ?? '';
+    expect($section)->not->toBe('');
+
+    foreach (['ignore_user_abort', 'connection_aborted()', 'AbortWatcher', 'stopped', 'stopped_after_ms', 'tokens_out', '320 tokens', '22 224 ms', 'no `ai_runs` row', 'model free', 'delta lag', 'nginx-fpm', 'apache-fpm', 'openlitespeed', 'frankenphp-octane', 'frankenphp-worker', 'docs-answer@v2', 'history_turns', '<history>', 'forged', 'output:prompt_overlap', 'refused', 'turn', 'retrieval', 'query rewriting', '1 of 3', 'undo it', 'never cached', 'bench/chat-stop.sh', 'NFR-1', 'aria-live'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    foreach (['../bench/chat-stop.sh', '../app/Ai/AbortWatcher.php', '../app/Ai/SseProtocol.php', '../bench/results/chat-stop/2026-11-03/', '../bench/results/chat-stop/2026-11-03/followups.md', '../.ai/specs/spec-20261103-2118-chat-stop-multiturn/', '../BENCHMARKS.md'] as $link) {
+        expect($section)->toContain($link);
+        expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$link))->toBeTrue("missing: {$link}");
+    }
+
+    foreach (['nginx-fpm', 'apache-fpm', 'openlitespeed', 'frankenphp', 'frankenphp-octane', 'frankenphp-worker'] as $mode) {
+        $result = json_decode((string) file_get_contents(base_path("bench/results/chat-stop/2026-11-03/{$mode}.json")), true, flags: JSON_THROW_ON_ERROR);
+        expect($section)->toContain('| '.$mode.' | '.$result['median_tokens_after_stop'].' | '.$result['median_idle_probe_ms'].' ms | '.$result['median_probe_ms_after_stop'].' ms |');
+    }
+
+    expect($guide)->toContain('Section 18');
+});
+
+test('AC-8 learning guide section 16 maps the Stop and conversation files, flow and feature request', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+    $start = (int) strpos($guide, '## 16. How the AI features are built: a map of the code');
+    $section = substr($guide, $start, (int) strpos($guide, '## 17. ') - $start);
+
+    foreach ([
+        'app/Ai/AbortWatcher.php', 'app/Ai/ConnectionAbortWatcher.php', 'app/DTOs/DocsChatTurn.php',
+        'resources/prompts/docs-answer.v2.md', 'bench/chat-stop.sh', 'bench/results/chat-stop/2026-11-03/',
+        'database/migrations/2026_11_03_210000_add_stop_columns_to_ai_runs_table.php',
+        'tests/Feature/StreamCancelTest.php', 'tests/Feature/DocsChatHistoryTest.php',
+    ] as $file) {
+        expect($section)->toContain('../'.$file);
+        expect(file_exists(base_path($file)))->toBeTrue("missing: {$file}");
+    }
+
+    expect($section)->toContain('history')->toContain('docs-answer@v2')->toContain('connection_aborted()')
+        ->toContain('Stop doesn\'t stop')->toContain('section 18');
+});

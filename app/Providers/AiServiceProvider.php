@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Ai\AbortWatcher;
 use App\Ai\AiRunRecorder;
+use App\Ai\ConnectionAbortWatcher;
 use App\Ai\FakeStreamProvider;
 use App\Ai\RecordAiRun;
 use App\Ai\RecordEmbeddingsRun;
@@ -35,6 +37,7 @@ class AiServiceProvider extends ServiceProvider
     {
         $this->app->bind(AiRunRepositoryInterface::class, EloquentAiRunRepository::class);
         $this->app->scoped(AiRunRecorder::class);
+        $this->app->bind(AbortWatcher::class, ConnectionAbortWatcher::class);
         $this->app->singleton(PromptInjectionGuard::class, fn (): PromptInjectionGuard => PromptInjectionGuard::fromFile((string) config('ai.docs.answer.guard')));
 
         $this->callAfterResolving(AiManager::class, function (AiManager $manager): void {

@@ -88,6 +88,10 @@ return [
             'per_minute' => filled(env('AI_DOCS_ANSWER_PER_MINUTE')) ? (int) env('AI_DOCS_ANSWER_PER_MINUTE') : 10,
             'guard' => env('AI_DOCS_ANSWER_GUARD') ?: resource_path('guards/prompt-injection.v1.php'),
         ],
+        'chat' => [
+            // Most earlier turns (user and assistant messages) a follow-up question may carry; 6 is three exchanges.
+            'max_history_turns' => max(2, (int) (env('AI_DOCS_CHAT_MAX_HISTORY_TURNS') ?: 6)),
+        ],
         'cache' => [
             // Whole-answer cache for POST /api/docs/ask: exact keys in "store", nearest question by cosine in docs_answer_cache.
             // min_similarity 0.94: the highest near-miss of the committed pair set (0.930409) rounded up to 2 decimals. The ranges overlap, so 0 of 24 paraphrases reach it (TPR 0, FPR 0); source: bench/results/docs-cache/2026-11-03/run/calibration.json.
@@ -119,6 +123,7 @@ return [
     'prompts' => [
         'car_description' => env('AI_PROMPT_CAR_DESCRIPTION') ?: 'car-description.v1',
         'docs_answer' => env('AI_PROMPT_DOCS_ANSWER') ?: 'docs-answer.v1',
+        'docs_answer_history' => env('AI_PROMPT_DOCS_ANSWER_HISTORY') ?: 'docs-answer.v2',
         'rag_grader' => env('AI_PROMPT_RAG_GRADER') ?: 'rag-grader.v2',
     ],
 

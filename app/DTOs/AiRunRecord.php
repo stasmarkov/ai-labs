@@ -30,5 +30,7 @@ final readonly class AiRunRecord
         public ?int $cacheEntryId = null,
         public ?int $savedLatencyMs = null,
         public ?string $origin = null,
+        public ?int $historyTurns = null,
+        public ?int $stoppedAfterMs = null,
     ) {}
 }

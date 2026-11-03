@@ -38,14 +38,22 @@ final readonly class EloquentAiRunRepository implements AiRunRepositoryInterface
             'cache_entry_id' => $record->cacheEntryId,
             'saved_latency_ms' => $record->savedLatencyMs,
             'origin' => $record->origin,
+            'history_turns' => $record->historyTurns,
+            'stopped_after_ms' => $record->stoppedAfterMs,
         ]);
     }
 
+    /**
+     * The counts behind the cache hit rate: runs the cache could have served or stored. A request with history never
+     * reads or writes the cache, so rows with history_turns are left out; so are stopped first-turn runs (the user
+     * left, nothing could be served or stored), refused and no_context rows. Only completed and cached rows count.
+     */
     public function docsCacheRuns(?CarbonImmutable $since): DocsCacheRunCounts
     {
         $runs = fn () => AiRun::query()
             ->where('agent', 'DocsAnswerAgent')
             ->where('origin', 'api')
+            ->whereNull('history_turns')
             ->when($since !== null, fn ($query) => $query->where('created_at', '>=', $since));
 
         $cached = $runs()->where('status', 'cached');

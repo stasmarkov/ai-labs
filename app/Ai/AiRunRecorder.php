@@ -20,10 +20,10 @@ final class AiRunRecorder
 
     private const MAX_REASON_LENGTH = 120;
 
-    /** @var array<string, array{agent: string, provider: string, model: string, promptVersion: ?string, inputs: ?int, startedAt: int, firstTokenAt: ?int, retrieved: ?list<int>, cited: ?list<int>, origin: ?string}> */
+    /** @var array<string, array{agent: string, provider: string, model: string, promptVersion: ?string, inputs: ?int, startedAt: int, firstTokenAt: ?int, retrieved: ?list<int>, cited: ?list<int>, origin: ?string, historyTurns: ?int}> */
     private array $runs = [];
 
-    /** @var array<string, array{retrieved: list<int>, cited: ?list<int>, origin: ?string}> */
+    /** @var array<string, array{retrieved: list<int>, cited: ?list<int>, origin: ?string, historyTurns: ?int}> */
     private array $pendingAnnotations = [];
 
     private ?string $embeddingsAgent = null;
@@ -70,6 +70,7 @@ final class AiRunRecorder
             'retrieved' => $this->pendingAnnotations[$invocationId]['retrieved'] ?? null,
             'cited' => $this->pendingAnnotations[$invocationId]['cited'] ?? null,
             'origin' => $this->pendingAnnotations[$invocationId]['origin'] ?? null,
+            'historyTurns' => $this->pendingAnnotations[$invocationId]['historyTurns'] ?? null,
         ];
         unset($this->pendingAnnotations[$invocationId]);
     }
@@ -81,17 +82,20 @@ final class AiRunRecorder
      * @param  list<int>  $retrieved
      * @param  list<int>|null  $cited
      * @param  string|null  $origin  "api" or "eval"; an annotation without one keeps the origin already set
+     * @param  int|null  $historyTurns  the number of earlier turns the request carried; null keeps the value already set
      */
-    public function annotate(string $invocationId, array $retrieved, ?array $cited = null, ?string $origin = null): void
+    public function annotate(string $invocationId, array $retrieved, ?array $cited = null, ?string $origin = null, ?int $historyTurns = null): void
     {
         if (! isset($this->runs[$invocationId])) {
             $origin ??= $this->pendingAnnotations[$invocationId]['origin'] ?? null;
-            $this->pendingAnnotations[$invocationId] = ['retrieved' => $retrieved, 'cited' => $cited, 'origin' => $origin];
+            $historyTurns ??= $this->pendingAnnotations[$invocationId]['historyTurns'] ?? null;
+            $this->pendingAnnotations[$invocationId] = ['retrieved' => $retrieved, 'cited' => $cited, 'origin' => $origin, 'historyTurns' => $historyTurns];
 
             return;
         }
 
         $this->runs[$invocationId]['origin'] = $origin ?? $this->runs[$invocationId]['origin'];
+        $this->runs[$invocationId]['historyTurns'] = $historyTurns ?? $this->runs[$invocationId]['historyTurns'];
         $this->runs[$invocationId]['retrieved'] = $retrieved;
         $this->runs[$invocationId]['cited'] = $cited ?? $this->runs[$invocationId]['cited'];
     }
@@ -119,6 +123,7 @@ final class AiRunRecorder
         ?string $refusalReason = null,
         ?array $retrieved = null,
         ?string $origin = null,
+        ?int $historyTurns = null,
     ): string {
         $invocationId = (string) Str::uuid();
 
@@ -136,6 +141,7 @@ final class AiRunRecorder
             retrievedChunkIds: $retrieved,
             refusalReason: $refusalReason === null ? null : mb_substr($refusalReason, 0, self::MAX_REASON_LENGTH),
             origin: $origin,
+            historyTurns: $historyTurns,
         )));
 
         return $invocationId;
@@ -241,6 +247,16 @@ final class AiRunRecorder
         $this->finish($invocationId, 'completed', $tokensIn, $tokensOut);
     }
 
+    /**
+     * Finishes a run the client stopped before it ended. The SDK never finishes it, because the stream is abandoned.
+     * The tokens are the output tokens sent so far; the input tokens are only known when the model finishes.
+     * stopped_after_ms runs from the first token to the abort being noticed, and is null when no token had arrived.
+     */
+    public function stopped(string $invocationId, ?int $tokensOut): void
+    {
+        $this->finish($invocationId, 'stopped', tokensOut: $tokensOut, stopped: true);
+    }
+
     public function failed(string $invocationId, Throwable $exception): void
     {
         $this->finish(
@@ -259,6 +275,7 @@ final class AiRunRecorder
         ?string $errorClass = null,
         ?string $errorMessage = null,
         ?string $refusalReason = null,
+        bool $stopped = false,
     ): void {
         $run = $this->runs[$invocationId] ?? null;
 
@@ -268,7 +285,9 @@ final class AiRunRecorder
 
         unset($this->runs[$invocationId]);
 
-        $latencyMs = $this->millisecondsSince($run['startedAt'], hrtime(true));
+        $endedAt = hrtime(true);
+        $latencyMs = $this->millisecondsSince($run['startedAt'], $endedAt);
+
         $this->finishedLatencies = array_slice([...$this->finishedLatencies, $invocationId => $latencyMs], -self::KEPT_LATENCIES, null, true);
 
         // The SDK finishes a run inside the stream, before "[DONE]": a failed insert is reported, not sent to the client.
@@ -290,6 +309,8 @@ final class AiRunRecorder
             citedChunkIds: $run['cited'],
             refusalReason: $refusalReason === null ? null : mb_substr($refusalReason, 0, self::MAX_REASON_LENGTH),
             origin: $run['origin'],
+            historyTurns: $run['historyTurns'],
+            stoppedAfterMs: $stopped && $run['firstTokenAt'] !== null ? $this->millisecondsSince($run['firstTokenAt'], $endedAt) : null,
         )));
     }
 
