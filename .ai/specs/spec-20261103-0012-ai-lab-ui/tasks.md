@@ -49,9 +49,9 @@
 
 ## Phase 3: Check
 
-- [ ] 7. Browser and gates (all)
+- [x] 7. Browser and gates (all)
   Covers: AC-9, MNC-1, MNC-2, MNC-3
-  - [ ] 7.1 **Verify**: every lab page at 1440×900 and 390×844: no horizontal scroll, no console errors, visible focus, contrast checked; Pint, PHPStan, Pest, `npm run typecheck`, `npm run build` green; asset fingerprint unchanged; parity identical on six servers; after committing, `bench/run.sh ping --quick` passes
+  - [x] 7.1 **Verify**: every lab page at 1440×900 and 390×844: no horizontal scroll, no console errors, visible focus, contrast checked; Pint, PHPStan, Pest, `npm run typecheck`, `npm run build` green; asset fingerprint unchanged; parity identical on six servers; after committing, `bench/run.sh ping --quick` passes
 
 ## Traceability
 
