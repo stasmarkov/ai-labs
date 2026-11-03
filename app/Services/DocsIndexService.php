@@ -18,6 +18,7 @@ final readonly class DocsIndexService
         private MarkdownChunker $chunker,
         private DocsIndexRepositoryInterface $index,
         private DocsEmbeddingService $embedding,
+        private DocsIndexVersion $version,
     ) {}
 
     /**
@@ -71,6 +72,12 @@ final readonly class DocsIndexService
         }
 
         $ids = $this->index->staleChunkIds($this->embedding->modelLabel());
+
+        // The version covers the documents and the chunks still waiting for a vector, so either one changes it.
+        if ($changed > 0 || $removed > 0 || $ids !== []) {
+            $this->version->forget();
+        }
+
         $batches = array_chunk($ids, $this->embedding->batch());
 
         foreach ($batches as $chunkIds) {

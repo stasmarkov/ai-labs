@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\DTOs\RagEvalQuestion;
+use App\Services\DocsCachePairSet;
 use App\Services\DocsCorpus;
 use App\Services\RagEvalSet;
 
@@ -35,7 +36,7 @@ function indexedCorpusTexts(): array
 }
 
 /**
- * Eval text that must not occur in an indexed file: every question, and every on-topic answer of 6 or more words
+ * Eval text that must not occur in an indexed file: every question, every cache pair text, and every on-topic answer of 6 or more words
  * (shorter answers only as a whole line). Off-topic answers are the fixed "I don't know." and are exempt.
  *
  * @return array<string, string> label => normalized text
@@ -50,6 +51,11 @@ function guardedEvalTexts(): array
         if ($question->type === RagEvalQuestion::ON_TOPIC) {
             $guarded["{$question->id} answer"] = RagEvalSet::normalizeText($question->answer);
         }
+    }
+
+    foreach ((new DocsCachePairSet)->load() as $pair) {
+        $guarded["{$pair->id} a"] = RagEvalSet::normalizeText($pair->a);
+        $guarded["{$pair->id} b"] = RagEvalSet::normalizeText($pair->b);
     }
 
     return $guarded;

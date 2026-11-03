@@ -321,3 +321,63 @@ test('AC-9 AC-2 BENCHMARKS.md records the RAG evaluation with ids only and numbe
     preg_match('/### Interview story\n(.*?)(?=^##|\z)/ms', $section, $story);
     expect($story[1] ?? '')->toMatch('/\d/');
 });
+
+test('AC-11 BENCHMARKS.md records the answer cache runs with ids only and numbers from the committed files', function (): void {
+    $doc = (string) file_get_contents(base_path('BENCHMARKS.md'));
+
+    preg_match('/^## Answer cache \(2026-11-03\)\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->not->toBe('');
+
+    foreach (['### What the numbers say', '### Surprises', '### Interview story', 'bench/results/docs-cache/2026-11-03/', 'docs:cache-calibrate', 'bench/docs-cache.sh', 'Youden', 'zero-false-hit', 'bge-m3', '0.94', 'lv-schedule-overlap', 'lv-migrate-rollback-step'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    $calibration = json_decode((string) file_get_contents(base_path('bench/results/docs-cache/2026-11-03/run/calibration.json')), true, flags: JSON_THROW_ON_ERROR);
+    $hitMiss = json_decode((string) file_get_contents(base_path('bench/results/docs-cache/2026-11-03/hit-miss/hit-miss.json')), true, flags: JSON_THROW_ON_ERROR);
+
+    foreach (['paraphrase', 'near_miss'] as $label) {
+        foreach (['min', 'median', 'max'] as $stat) {
+            expect($section)->toContain(number_format($calibration[$label][$stat], 3));
+        }
+    }
+    expect($section)->toContain((string) $calibration['best']['threshold'])
+        ->toContain(number_format($calibration['best']['tpr'], 3))
+        ->toContain(number_format($calibration['best']['fpr'], 3))
+        ->toContain($calibration['suggested_default']['lost_paraphrases'].' of 24');
+
+    foreach (['fresh', 'exact', 'paraphrase'] as $step) {
+        foreach ($hitMiss['paths'][$step]['median_ms_by_path'] as $median) {
+            expect($section)->toContain($median.' ms');
+        }
+    }
+
+    $latency = json_decode((string) file_get_contents(base_path('bench/results/docs-cache/2026-11-03/latency/hit-miss.json')), true, flags: JSON_THROW_ON_ERROR);
+    expect($section)->toContain('bench/results/docs-cache/2026-11-03/latency/')
+        ->toContain($latency['paths']['exact']['by_path']['exact'].' exact hits')
+        ->toContain($latency['paths']['paraphrase']['by_path']['semantic'].' semantic hits')
+        ->toContain($latency['paths']['exact']['median_ms_by_path']['exact'].' ms')
+        ->toContain($latency['paths']['paraphrase']['median_ms_by_path']['semantic'].' ms');
+    expect($section)->toContain(number_format($hitMiss['hit_rate'] * 100, 1).'%')
+        ->toContain('2.6%')
+        ->toContain('10 of 30');
+
+    $texts = array_merge(
+        array_map(fn ($question): string => $question->question, (new RagEvalSet)->load()),
+        array_column(array_map(fn (string $line): array => json_decode($line, true, flags: JSON_THROW_ON_ERROR), file(base_path('bench/rag-eval/cache-hitmiss-paraphrases.v1.jsonl'), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)), 'paraphrase'),
+        array_column(array_map(fn (string $line): array => json_decode($line, true, flags: JSON_THROW_ON_ERROR), file(base_path('bench/rag-eval/cache-latency-paraphrases.v1.jsonl'), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)), 'paraphrase'),
+    );
+    foreach (file(base_path('bench/rag-eval/cache-pairs.v1.jsonl'), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        $pair = json_decode($line, true, flags: JSON_THROW_ON_ERROR);
+        array_push($texts, $pair['a'], $pair['b']);
+    }
+    foreach ($texts as $text) {
+        expect(RagEvalSet::normalizeText($section))->not->toContain(RagEvalSet::normalizeText($text));
+    }
+
+    preg_match('/### Interview story\n(.*?)(?=^##|\z)/ms', $section, $story);
+    $sentences = preg_split('/(?<=[.!?])\s+(?=[A-Z])/', trim($story[1] ?? '')) ?: [];
+    expect(count($sentences))->toBeGreaterThanOrEqual(3)->toBeLessThanOrEqual(6)
+        ->and($story[1] ?? '')->toMatch('/\d/');
+});

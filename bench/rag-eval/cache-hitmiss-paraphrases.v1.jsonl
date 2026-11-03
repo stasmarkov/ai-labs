@@ -1,0 +1,10 @@
+{"id": "lv-schedule-overlap", "paraphrase": "What stops a scheduled task from launching a second time if the last run has not finished yet?"}
+{"id": "lv-schedule-five", "paraphrase": "Is there a quick method to run a scheduled task every 5 minutes?"}
+{"id": "lv-queue-unique", "paraphrase": "What makes sure the queue holds just one instance of a particular job?"}
+{"id": "lv-queue-failed-table", "paraphrase": "After a queued job exhausts all of its attempts, where is it stored?"}
+{"id": "lv-queue-after-commit", "paraphrase": "How can a job wait until the database transaction around it is committed before it runs?"}
+{"id": "lv-cache-stale", "paraphrase": "Is it possible for the cache to serve an expired value while a new one is being computed behind the scenes?"}
+{"id": "lv-migrate-fresh", "paraphrase": "Which Artisan command wipes all tables and then migrates everything from scratch?"}
+{"id": "lv-migrate-rollback-step", "paraphrase": "How do I roll back just the final five migrations and not the full batch?"}
+{"id": "lv-model-uuid", "paraphrase": "How can an Eloquent model use a UUID as its primary key rather than an incrementing integer?"}
+{"id": "lv-model-upsert", "paraphrase": "Which single call updates a row when it exists and inserts it when it does not?"}

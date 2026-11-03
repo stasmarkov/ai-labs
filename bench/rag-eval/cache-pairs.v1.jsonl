@@ -1,0 +1,48 @@
+{"id":"para-01","label":"paraphrase","a":"How do I retry a failed queue job?","b":"What is the way to run a failed queued job again?"}
+{"id":"para-02","label":"paraphrase","a":"How can I stop a scheduled task from overlapping with its previous run?","b":"Which option keeps a scheduled command from starting while the last run is going?"}
+{"id":"para-03","label":"paraphrase","a":"How do I limit requests per minute to a route?","b":"What is the way to cap how many hits a route accepts each minute?"}
+{"id":"para-04","label":"paraphrase","a":"How do I validate that an email field is unique in the users table?","b":"How can I make sure a submitted email is not already used by another user row?"}
+{"id":"para-05","label":"paraphrase","a":"How do I define a one-to-many relationship in Eloquent?","b":"What is the way to declare that a model has many related models?"}
+{"id":"para-06","label":"paraphrase","a":"How do I eager load relationships to avoid N+1 queries?","b":"How can I preload related models so each row does not trigger another query?"}
+{"id":"para-07","label":"paraphrase","a":"How do I hash a password before saving it?","b":"What is the way to store a password as a hash rather than plain text?"}
+{"id":"para-08","label":"paraphrase","a":"How do I send an email using a mailable class?","b":"How can I deliver a message by building a mailable?"}
+{"id":"para-09","label":"paraphrase","a":"How do I flash a message to the session for the next request?","b":"What is the way to keep a temporary session value for only the following request?"}
+{"id":"para-10","label":"paraphrase","a":"How do I cache the result of an expensive database query?","b":"How can I remember a slow query result so it is not run on every call?"}
+{"id":"para-11","label":"paraphrase","a":"How do I run a database migration rollback?","b":"What command undoes the last batch of migrations?"}
+{"id":"para-12","label":"paraphrase","a":"How do I create a custom validation rule?","b":"How can I write my own rule object to check input?"}
+{"id":"para-13","label":"paraphrase","a":"How do I upload a file and store it on disk?","b":"What is the way to save an uploaded file to the filesystem?"}
+{"id":"para-14","label":"paraphrase","a":"How do I protect routes so only logged in users can see them?","b":"How can I require authentication before a route is reachable?"}
+{"id":"para-15","label":"paraphrase","a":"How do I dispatch a job to a specific queue?","b":"What is the way to send a job onto a named queue?"}
+{"id":"para-16","label":"paraphrase","a":"How do I listen for a model event such as creating?","b":"How can I react when an Eloquent model is about to be created?"}
+{"id":"para-17","label":"paraphrase","a":"How do I paginate query results?","b":"What is the way to split a long result set into pages?"}
+{"id":"para-18","label":"paraphrase","a":"How do I return a JSON response from a controller?","b":"How can a controller send back JSON to the client?"}
+{"id":"para-19","label":"paraphrase","a":"How do I write a feature test that makes an HTTP request?","b":"What is the way to test a route by calling it from a test?"}
+{"id":"para-20","label":"paraphrase","a":"How do I use a soft delete on a model?","b":"How can a model be marked as deleted without removing the row?"}
+{"id":"para-21","label":"paraphrase","a":"How do I bind an interface to a class in the service container?","b":"What is the way to tell the container which class implements an interface?"}
+{"id":"para-22","label":"paraphrase","a":"How do I schedule a command to run daily?","b":"How can I make an artisan command run once every day?"}
+{"id":"para-23","label":"paraphrase","a":"How do I register middleware for a group of routes?","b":"What is the way to apply middleware to several routes at once?"}
+{"id":"para-24","label":"paraphrase","a":"How do I broadcast an event to a channel?","b":"How can I push an event to subscribers over a broadcast channel?"}
+{"id":"miss-01","label":"near_miss","a":"How do I retry a failed queue job?","b":"How do I delete a failed queue job?"}
+{"id":"miss-02","label":"near_miss","a":"How do I schedule a queued job?","b":"How do I cancel a queued job?"}
+{"id":"miss-03","label":"near_miss","a":"How do I limit requests per minute to a route?","b":"How do I remove the rate limit from a route?"}
+{"id":"miss-04","label":"near_miss","a":"How do I validate that an email field is unique?","b":"How do I validate that an email field is required?"}
+{"id":"miss-05","label":"near_miss","a":"How do I define a one-to-many relationship in Eloquent?","b":"How do I query a one-to-many relationship in Eloquent?"}
+{"id":"miss-06","label":"near_miss","a":"How do I eager load relationships?","b":"How do I lazy load relationships?"}
+{"id":"miss-07","label":"near_miss","a":"How do I hash a password before saving it?","b":"How do I verify a password against its hash?"}
+{"id":"miss-08","label":"near_miss","a":"How do I send an email using a mailable class?","b":"How do I preview an email using a mailable class?"}
+{"id":"miss-09","label":"near_miss","a":"How do I flash a message to the session?","b":"How do I clear a message from the session?"}
+{"id":"miss-10","label":"near_miss","a":"How do I cache the result of a database query?","b":"How do I clear the cached result of a database query?"}
+{"id":"miss-11","label":"near_miss","a":"How do I run a database migration?","b":"How do I roll back a database migration?"}
+{"id":"miss-12","label":"near_miss","a":"How do I create a custom validation rule?","b":"How do I test a custom validation rule?"}
+{"id":"miss-13","label":"near_miss","a":"How do I upload a file and store it?","b":"How do I download a file from storage?"}
+{"id":"miss-14","label":"near_miss","a":"How do I protect routes so only logged in users can see them?","b":"How do I let guests see routes that logged in users cannot?"}
+{"id":"miss-15","label":"near_miss","a":"How do I dispatch a job to a specific queue?","b":"How do I run a worker for a specific queue?"}
+{"id":"miss-16","label":"near_miss","a":"How do I listen for a model event?","b":"How do I fire a model event by hand?"}
+{"id":"miss-17","label":"near_miss","a":"How do I paginate query results?","b":"How do I sort query results?"}
+{"id":"miss-18","label":"near_miss","a":"How do I return a JSON response from a controller?","b":"How do I return a redirect response from a controller?"}
+{"id":"miss-19","label":"near_miss","a":"How do I write a feature test?","b":"How do I skip a feature test?"}
+{"id":"miss-20","label":"near_miss","a":"How do I use a soft delete on a model?","b":"How do I permanently delete a soft deleted model?"}
+{"id":"miss-21","label":"near_miss","a":"How do I bind an interface in the service container?","b":"How do I resolve an interface from the service container?"}
+{"id":"miss-22","label":"near_miss","a":"How do I schedule a command to run daily?","b":"How do I list the scheduled commands?"}
+{"id":"miss-23","label":"near_miss","a":"How do I register middleware for a group of routes?","b":"How do I disable middleware for a group of routes in tests?"}
+{"id":"miss-24","label":"near_miss","a":"How do I broadcast an event to a channel?","b":"How do I authorize access to a broadcast channel?"}

@@ -62,3 +62,51 @@ it('AC-10 the chat page links each known number in a comma-list citation marker'
 
     expect($source)->toContain('\\[(\\d+(?:\\s*,\\s*\\d+)*)\\]');
 });
+
+it('AC-10 the chat page sends the use-cache checkbox as the cache field, on by default', function (): void {
+    $source = file_get_contents(resource_path('js/ai/Pages/Lab/Chat.vue'));
+
+    expect($source)
+        ->toContain('id="chat-use-cache"')
+        ->toContain('useCache = ref(true)')
+        ->toContain('cache: useCache.value');
+});
+
+it('AC-10 the chat page shows the cached mark and looks the run up from cache_hit', function (): void {
+    $source = file_get_contents(resource_path('js/ai/Pages/Lab/Chat.vue'));
+
+    expect($source)
+        ->toContain("event.type === 'cache_hit'")
+        ->toContain('data-state="cache-hit"')
+        ->toContain('cacheHit.value?.invocation_id')
+        ->toContain('Matched an earlier question')
+        ->not->toContain('cached_question')
+        ->toContain('saved_latency_ms')
+        ->toContain('similarity.toFixed(3)');
+});
+
+it('AC-10 the overview types and colours the cached run status', function (): void {
+    $source = file_get_contents(resource_path('js/ai/Pages/Lab/Overview.vue'));
+
+    expect($source)->toContain("'cached'");
+});
+
+it('AC-10 the overview lists a cached run as text', function (): void {
+    app(AiRunRepositoryInterface::class)->save(new AiRunRecord(
+        invocationId: 'run-cached',
+        agent: 'DocsAnswerAgent',
+        provider: 'fake-stream',
+        model: 'fake-slow-1',
+        promptVersion: 'docs-answer.v1',
+        tokensIn: null,
+        tokensOut: null,
+        ttftMs: null,
+        latencyMs: 12,
+        status: 'cached',
+        errorMessage: null,
+    ));
+
+    Http::fake(['*/api/version' => Http::response(['version' => '0.12.0'])]);
+
+    $this->get('/ai')->assertOk()->assertInertia(fn (Assert $page) => $page->where('recentRuns.0.status', 'cached'));
+});

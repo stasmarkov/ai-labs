@@ -6,6 +6,7 @@ namespace App\Jobs;
 
 use App\Exceptions\InvalidEmbeddingException;
 use App\Services\DocsEmbeddingService;
+use App\Services\DocsIndexVersion;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -31,13 +32,16 @@ final class EmbedDocsBatchJob implements ShouldQueue
      */
     public function __construct(public readonly array $chunkIds) {}
 
-    public function handle(DocsEmbeddingService $service): void
+    public function handle(DocsEmbeddingService $service, DocsIndexVersion $version): void
     {
         try {
             $service->embedBatch($this->chunkIds);
         } catch (InvalidEmbeddingException $exception) {
             // A wrong answer from the model repeats on retry, so fail at once.
             $this->fail($exception);
+        } finally {
+            // The number of chunks without a vector is part of the index version, and this batch just changed it.
+            $version->forget();
         }
     }
 }

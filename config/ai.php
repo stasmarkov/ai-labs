@@ -88,6 +88,14 @@ return [
             'per_minute' => filled(env('AI_DOCS_ANSWER_PER_MINUTE')) ? (int) env('AI_DOCS_ANSWER_PER_MINUTE') : 10,
             'guard' => env('AI_DOCS_ANSWER_GUARD') ?: resource_path('guards/prompt-injection.v1.php'),
         ],
+        'cache' => [
+            // Whole-answer cache for POST /api/docs/ask: exact keys in "store", nearest question by cosine in docs_answer_cache.
+            // min_similarity 0.94: the highest near-miss of the committed pair set (0.930409) rounded up to 2 decimals. The ranges overlap, so 0 of 24 paraphrases reach it (TPR 0, FPR 0); source: bench/results/docs-cache/2026-11-03/run/calibration.json.
+            'enabled' => filter_var(env('AI_DOCS_CACHE_ENABLED', true), FILTER_VALIDATE_BOOL),
+            'store' => env('AI_DOCS_CACHE_STORE') ?: 'redis',
+            'ttl_hours' => max(1, (int) (env('AI_DOCS_CACHE_TTL_HOURS') ?: 168)),
+            'min_similarity' => filled(env('AI_DOCS_CACHE_MIN_SIMILARITY')) ? (float) env('AI_DOCS_CACHE_MIN_SIMILARITY') : 0.94,
+        ],
     ],
 
     'semantic_per_minute' => filled(env('AI_SEMANTIC_PER_MINUTE')) ? (int) env('AI_SEMANTIC_PER_MINUTE') : 60,

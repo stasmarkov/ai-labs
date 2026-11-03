@@ -19,6 +19,13 @@ interface DocsIndexRepositoryInterface
     public function documentHashes(string $source): array;
 
     /**
+     * One "source|path|hash" line per stored document, ordered by source then path.
+     *
+     * @return list<string>
+     */
+    public function documentVersionLines(): array;
+
+    /**
      * Replace the chunks of one document in a transaction. A new chunk takes the vector of an
      * old chunk of the same document with the same text hash and the same model.
      *
@@ -40,6 +47,11 @@ interface DocsIndexRepositoryInterface
      * @return list<int>
      */
     public function staleChunkIds(string $model): array;
+
+    /**
+     * How many chunks still have no vector for this model.
+     */
+    public function pendingEmbeddingCount(string $model): int;
 
     /**
      * The given chunks that still have no vector for this model.

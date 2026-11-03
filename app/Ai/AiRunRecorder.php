@@ -6,6 +6,7 @@ namespace App\Ai;
 
 use App\Contracts\AiRunRepositoryInterface;
 use App\DTOs\AiRunRecord;
+use App\Enums\DocsCacheKind;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -19,15 +20,29 @@ final class AiRunRecorder
 
     private const MAX_REASON_LENGTH = 120;
 
-    /** @var array<string, array{agent: string, provider: string, model: string, promptVersion: ?string, inputs: ?int, startedAt: int, firstTokenAt: ?int, retrieved: ?list<int>, cited: ?list<int>}> */
+    /** @var array<string, array{agent: string, provider: string, model: string, promptVersion: ?string, inputs: ?int, startedAt: int, firstTokenAt: ?int, retrieved: ?list<int>, cited: ?list<int>, origin: ?string}> */
     private array $runs = [];
 
-    /** @var array<string, array{retrieved: list<int>, cited: ?list<int>}> */
+    /** @var array<string, array{retrieved: list<int>, cited: ?list<int>, origin: ?string}> */
     private array $pendingAnnotations = [];
 
     private ?string $embeddingsAgent = null;
 
+    private const KEPT_LATENCIES = 50;
+
+    /** @var array<string, int> latency_ms written with a finished run, by invocation id; the newest few are kept */
+    private array $finishedLatencies = [];
+
     public function __construct(private readonly AiRunRepositoryInterface $repository) {}
+
+    /**
+     * The latency_ms the finished run was logged with (its stream start to its end), or null for a run that has not
+     * finished here. The answer cache stores it as the source latency of an entry.
+     */
+    public function latencyOf(string $invocationId): ?int
+    {
+        return $this->finishedLatencies[$invocationId] ?? null;
+    }
 
     /**
      * Names the agent of the next embeddings call, so search queries are told apart from indexing batches.
@@ -54,6 +69,7 @@ final class AiRunRecorder
             'firstTokenAt' => null,
             'retrieved' => $this->pendingAnnotations[$invocationId]['retrieved'] ?? null,
             'cited' => $this->pendingAnnotations[$invocationId]['cited'] ?? null,
+            'origin' => $this->pendingAnnotations[$invocationId]['origin'] ?? null,
         ];
         unset($this->pendingAnnotations[$invocationId]);
     }
@@ -64,15 +80,18 @@ final class AiRunRecorder
      *
      * @param  list<int>  $retrieved
      * @param  list<int>|null  $cited
+     * @param  string|null  $origin  "api" or "eval"; an annotation without one keeps the origin already set
      */
-    public function annotate(string $invocationId, array $retrieved, ?array $cited = null): void
+    public function annotate(string $invocationId, array $retrieved, ?array $cited = null, ?string $origin = null): void
     {
         if (! isset($this->runs[$invocationId])) {
-            $this->pendingAnnotations[$invocationId] = ['retrieved' => $retrieved, 'cited' => $cited];
+            $origin ??= $this->pendingAnnotations[$invocationId]['origin'] ?? null;
+            $this->pendingAnnotations[$invocationId] = ['retrieved' => $retrieved, 'cited' => $cited, 'origin' => $origin];
 
             return;
         }
 
+        $this->runs[$invocationId]['origin'] = $origin ?? $this->runs[$invocationId]['origin'];
         $this->runs[$invocationId]['retrieved'] = $retrieved;
         $this->runs[$invocationId]['cited'] = $cited ?? $this->runs[$invocationId]['cited'];
     }
@@ -99,6 +118,7 @@ final class AiRunRecorder
         int $latencyMs,
         ?string $refusalReason = null,
         ?array $retrieved = null,
+        ?string $origin = null,
     ): string {
         $invocationId = (string) Str::uuid();
 
@@ -115,6 +135,51 @@ final class AiRunRecorder
             status: $status,
             retrievedChunkIds: $retrieved,
             refusalReason: $refusalReason === null ? null : mb_substr($refusalReason, 0, self::MAX_REASON_LENGTH),
+            origin: $origin,
+        )));
+
+        return $invocationId;
+    }
+
+    /**
+     * Writes the row of a cached answer that was served. Returns its invocation id.
+     *
+     * @param  list<int>  $retrieved
+     * @param  list<int>  $cited
+     */
+    public function recordCacheHit(
+        string $agent,
+        string $provider,
+        string $model,
+        ?string $promptVersion,
+        int $latencyMs,
+        DocsCacheKind $kind,
+        float $similarity,
+        int $entryId,
+        int $savedLatencyMs,
+        array $retrieved,
+        array $cited,
+    ): string {
+        $invocationId = (string) Str::uuid();
+
+        rescue(fn () => $this->repository->save(new AiRunRecord(
+            invocationId: $invocationId,
+            agent: $agent,
+            provider: $provider,
+            model: $model,
+            promptVersion: $promptVersion,
+            tokensIn: null,
+            tokensOut: null,
+            ttftMs: null,
+            latencyMs: $latencyMs,
+            status: 'cached',
+            retrievedChunkIds: $retrieved,
+            citedChunkIds: $cited,
+            cacheKind: $kind->value,
+            cacheSimilarity: $similarity,
+            cacheEntryId: $entryId,
+            savedLatencyMs: $savedLatencyMs,
+            origin: 'api',
         )));
 
         return $invocationId;
@@ -203,6 +268,9 @@ final class AiRunRecorder
 
         unset($this->runs[$invocationId]);
 
+        $latencyMs = $this->millisecondsSince($run['startedAt'], hrtime(true));
+        $this->finishedLatencies = array_slice([...$this->finishedLatencies, $invocationId => $latencyMs], -self::KEPT_LATENCIES, null, true);
+
         // The SDK finishes a run inside the stream, before "[DONE]": a failed insert is reported, not sent to the client.
         rescue(fn () => $this->repository->save(new AiRunRecord(
             invocationId: $invocationId,
@@ -213,7 +281,7 @@ final class AiRunRecorder
             tokensIn: $tokensIn,
             tokensOut: $tokensOut,
             ttftMs: $run['firstTokenAt'] === null ? null : $this->millisecondsSince($run['startedAt'], $run['firstTokenAt']),
-            latencyMs: $this->millisecondsSince($run['startedAt'], hrtime(true)),
+            latencyMs: $latencyMs,
             status: $status,
             errorClass: $errorClass,
             errorMessage: $errorMessage,
@@ -221,6 +289,7 @@ final class AiRunRecorder
             retrievedChunkIds: $run['retrieved'],
             citedChunkIds: $run['cited'],
             refusalReason: $refusalReason === null ? null : mb_substr($refusalReason, 0, self::MAX_REASON_LENGTH),
+            origin: $run['origin'],
         )));
     }
 

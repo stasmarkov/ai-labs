@@ -23,11 +23,17 @@ use Illuminate\Database\Eloquent\Model;
  * @property list<int>|null $retrieved_chunk_ids
  * @property list<int>|null $cited_chunk_ids
  * @property string|null $refusal_reason
+ * @property string|null $cache_kind
+ * @property float|null $cache_similarity
+ * @property int|null $cache_entry_id
+ * @property int|null $saved_latency_ms
+ * @property string|null $origin
  */
 #[Fillable([
     'invocation_id', 'agent', 'provider', 'model', 'prompt_version', 'tokens_in', 'tokens_out',
     'ttft_ms', 'latency_ms', 'status', 'error_class', 'error_message', 'inputs',
     'retrieved_chunk_ids', 'cited_chunk_ids', 'refusal_reason',
+    'cache_kind', 'cache_similarity', 'cache_entry_id', 'saved_latency_ms', 'origin',
 ])]
 class AiRun extends Model
 {
@@ -46,6 +52,9 @@ class AiRun extends Model
             'inputs' => 'integer',
             'retrieved_chunk_ids' => 'array',
             'cited_chunk_ids' => 'array',
+            'cache_similarity' => 'float',
+            'cache_entry_id' => 'integer',
+            'saved_latency_ms' => 'integer',
         ];
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Ai;
 
 use App\DTOs\DocsMatch;
+use Closure;
 use Generator;
 use Laravel\Ai\Responses\StreamableAgentResponse;
 use Laravel\Ai\Streaming\Events\Error;
@@ -27,11 +28,13 @@ final class DocsAnswerProtocol extends SseProtocol
 
     /**
      * @param  list<DocsMatch>  $sources  in citation order; the first is source 1
+     * @param  Closure(string, string, list<int>): void|null  $onCompleted  called with the invocation id, the answer and the cited chunk ids once the citations are sent
      */
     public function __construct(
         AiRunRecorder $recorder,
         private readonly array $sources,
         private readonly OutputGuard $guard,
+        private readonly ?Closure $onCompleted = null,
     ) {
         parent::__construct($recorder);
     }
@@ -87,6 +90,11 @@ final class DocsAnswerProtocol extends SseProtocol
 
         if ($citations !== null && ! $this->errored) {
             yield ['type' => 'citations', 'cited' => $citations['cited'], 'unknown' => $citations['unknown']];
+
+            // The consumer has written and flushed the citations by now, so a disconnect is visible to the hook.
+            if ($this->onCompleted !== null) {
+                ($this->onCompleted)($response->invocationId, $text, array_column($citations['cited'], 'id'));
+            }
         }
     }
 
@@ -120,9 +128,20 @@ final class DocsAnswerProtocol extends SseProtocol
      */
     private function sourcesEvent(): array
     {
+        return ['type' => 'sources', 'sources' => self::sourcesPayload($this->sources)];
+    }
+
+    /**
+     * The payload of the sources event, which the cache stores to replay it.
+     *
+     * @param  list<DocsMatch>  $matches
+     * @return list<array<string, mixed>>
+     */
+    public static function sourcesPayload(array $matches): array
+    {
         $sources = [];
 
-        foreach ($this->sources as $index => $match) {
+        foreach ($matches as $index => $match) {
             $sources[] = [
                 'n' => $index + 1,
                 'id' => $match->id,
@@ -134,7 +153,7 @@ final class DocsAnswerProtocol extends SseProtocol
             ];
         }
 
-        return ['type' => 'sources', 'sources' => $sources];
+        return $sources;
     }
 
     /**

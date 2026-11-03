@@ -25,5 +25,10 @@ final readonly class AiRunRecord
         /** @var list<int>|null */
         public ?array $citedChunkIds = null,
         public ?string $refusalReason = null,
+        public ?string $cacheKind = null,
+        public ?float $cacheSimilarity = null,
+        public ?int $cacheEntryId = null,
+        public ?int $savedLatencyMs = null,
+        public ?string $origin = null,
     ) {}
 }

@@ -6,8 +6,13 @@ use App\Jobs\EmbedDocsBatchJob;
 use App\Models\AiRun;
 use App\Models\DocsChunk;
 use App\Models\DocsDocument;
+use App\Services\DocsEmbeddingService;
+use App\Services\DocsIndexVersion;
 use App\Services\MarkdownChunker;
+use Illuminate\Cache\ArrayStore;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
@@ -296,4 +301,46 @@ it('AC-7 the chunk settings are part of the document hash and recorded on the do
         ->and($document->content_hash)->toBe(hash('sha256', MarkdownChunker::VERSION.':300:200'."\n".File::get($this->root.'/repo/README.md')))
         ->and($document->chunk_max_tokens)->toBe(300)
         ->and($document->chunk_merge_below_tokens)->toBe(200);
+});
+
+it('SL-40 docs:index still succeeds and reports the error when the cache store cannot forget the index version', function (): void {
+    seedRepoDocs();
+    Queue::fake();
+    Cache::extend('failing', fn () => Cache::repository(new class extends ArrayStore
+    {
+        public function forget($key): bool
+        {
+            throw new RuntimeException('redis down');
+        }
+    }));
+    config(['cache.stores.failing' => ['driver' => 'failing'], 'ai.docs.cache.store' => 'failing']);
+    $reported = [];
+    $this->app->make(ExceptionHandler::class)->reportable(function (Throwable $e) use (&$reported): void {
+        $reported[] = $e->getMessage();
+    });
+
+    $this->artisan('docs:index')->assertSuccessful();
+
+    expect($reported)->toContain('redis down')
+        ->and(DocsDocument::count())->toBeGreaterThan(0);
+    Queue::assertPushed(EmbedDocsBatchJob::class);
+});
+
+it('SL-40 an embed batch forgets the memoized index version when it ends', function (): void {
+    seedRepoDocs();
+    config(['ai.docs.cache.store' => 'array']);
+    Cache::store('array')->flush();
+    $calls = [];
+    fakeDocsEmbeddings($calls);
+    Queue::fake();
+    $this->artisan('docs:index')->assertSuccessful();
+    $version = app(DocsIndexVersion::class);
+    $pending = $version->current();
+    expect($version->hasPendingEmbeddings())->toBeTrue();
+
+    $ids = DocsChunk::query()->orderBy('id')->limit(2)->pluck('id')->all();
+    (new EmbedDocsBatchJob($ids))->handle(app(DocsEmbeddingService::class), $version);
+
+    expect(Cache::store('array')->has('docs-answer:index-version'))->toBeFalse()
+        ->and($version->current())->not->toBe($pending);
 });

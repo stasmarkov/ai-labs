@@ -1,0 +1,289 @@
+{
+  "metadata": {
+    "label": "hit-miss",
+    "generated_at": "2026-11-03T16:17:04+00:00",
+    "git_commit": "0a306c82fd7873fd0178d65ad5b8c7a9696ffc4d",
+    "questions": 10,
+    "eval_set_version": "v1"
+  },
+  "paths": {
+    "exact": {
+      "requests": 10,
+      "by_path": {
+        "exact": 8,
+        "miss": 2
+      },
+      "median_ms_all": 49.5,
+      "median_ms_by_path": {
+        "exact": 46.5,
+        "miss": 5028
+      }
+    },
+    "fresh": {
+      "requests": 10,
+      "by_path": {
+        "miss": 10
+      },
+      "median_ms_all": 6071,
+      "median_ms_by_path": {
+        "miss": 6071
+      }
+    },
+    "paraphrase": {
+      "requests": 10,
+      "by_path": {
+        "miss": 8,
+        "semantic": 2
+      },
+      "median_ms_all": 4763,
+      "median_ms_by_path": {
+        "miss": 4962.5,
+        "semantic": 126
+      }
+    }
+  },
+  "hit_rate": 0.3333333333333333,
+  "requests": [
+    {
+      "id": "lv-schedule-overlap",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 11572,
+      "done": true
+    },
+    {
+      "id": "lv-schedule-overlap",
+      "step": "exact",
+      "path": "miss",
+      "status": 200,
+      "ms": 5158,
+      "done": true
+    },
+    {
+      "id": "lv-schedule-overlap",
+      "step": "paraphrase",
+      "path": "miss",
+      "status": 200,
+      "ms": 5721,
+      "done": true
+    },
+    {
+      "id": "lv-schedule-five",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 5611,
+      "done": true
+    },
+    {
+      "id": "lv-schedule-five",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 36,
+      "done": true
+    },
+    {
+      "id": "lv-schedule-five",
+      "step": "paraphrase",
+      "path": "miss",
+      "status": 200,
+      "ms": 5124,
+      "done": true
+    },
+    {
+      "id": "lv-queue-unique",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 6584,
+      "done": true
+    },
+    {
+      "id": "lv-queue-unique",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 30,
+      "done": true
+    },
+    {
+      "id": "lv-queue-unique",
+      "step": "paraphrase",
+      "path": "miss",
+      "status": 200,
+      "ms": 5740,
+      "done": true
+    },
+    {
+      "id": "lv-queue-failed-table",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 4936,
+      "done": true
+    },
+    {
+      "id": "lv-queue-failed-table",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 45,
+      "done": true
+    },
+    {
+      "id": "lv-queue-failed-table",
+      "step": "paraphrase",
+      "path": "miss",
+      "status": 200,
+      "ms": 4801,
+      "done": true
+    },
+    {
+      "id": "lv-queue-after-commit",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 5272,
+      "done": true
+    },
+    {
+      "id": "lv-queue-after-commit",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 48,
+      "done": true
+    },
+    {
+      "id": "lv-queue-after-commit",
+      "step": "paraphrase",
+      "path": "miss",
+      "status": 200,
+      "ms": 4725,
+      "done": true
+    },
+    {
+      "id": "lv-cache-stale",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 6391,
+      "done": true
+    },
+    {
+      "id": "lv-cache-stale",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 31,
+      "done": true
+    },
+    {
+      "id": "lv-cache-stale",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 130,
+      "done": true
+    },
+    {
+      "id": "lv-migrate-fresh",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 4030,
+      "done": true
+    },
+    {
+      "id": "lv-migrate-fresh",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 61,
+      "done": true
+    },
+    {
+      "id": "lv-migrate-fresh",
+      "step": "paraphrase",
+      "path": "miss",
+      "status": 200,
+      "ms": 4513,
+      "done": true
+    },
+    {
+      "id": "lv-migrate-rollback-step",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 5751,
+      "done": true
+    },
+    {
+      "id": "lv-migrate-rollback-step",
+      "step": "exact",
+      "path": "miss",
+      "status": 200,
+      "ms": 4898,
+      "done": true
+    },
+    {
+      "id": "lv-migrate-rollback-step",
+      "step": "paraphrase",
+      "path": "miss",
+      "status": 200,
+      "ms": 4551,
+      "done": true
+    },
+    {
+      "id": "lv-model-uuid",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 6640,
+      "done": true
+    },
+    {
+      "id": "lv-model-uuid",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 63,
+      "done": true
+    },
+    {
+      "id": "lv-model-uuid",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 122,
+      "done": true
+    },
+    {
+      "id": "lv-model-upsert",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 7351,
+      "done": true
+    },
+    {
+      "id": "lv-model-upsert",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 51,
+      "done": true
+    },
+    {
+      "id": "lv-model-upsert",
+      "step": "paraphrase",
+      "path": "miss",
+      "status": 200,
+      "ms": 6880,
+      "done": true
+    }
+  ],
+  "stats": "+-----------+----------+------+-----------+-------------------------+--------------+-----------------+\n| Window    | Hit rate | Hits | Completed | Hits by kind            | Saved sum ms | Saved median ms |\n+-----------+----------+------+-----------+-------------------------+--------------+-----------------+\n| Last 24 h | 56.9%    | 62   | 47        | exact: 35, semantic: 27 | 429083       | 6449.5          |\n| All time  | 56.9%    | 62   | 47        | exact: 35, semantic: 27 | 429083       | 6449.5          |\n+-----------+----------+------+-----------+-------------------------+--------------+-----------------+\nEntries: 16 current, 0 stale."
+}

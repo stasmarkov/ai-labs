@@ -36,7 +36,13 @@ final class DocsAskRequest extends FormRequest
     {
         return [
             'q' => ['required', 'string', 'max:'.self::MAX_QUESTION_LENGTH, new ValidUtf8Text],
+            'cache' => ['sometimes', 'boolean:strict'],
         ];
+    }
+
+    public function useCache(): bool
+    {
+        return (bool) ($this->validated('cache') ?? true);
     }
 
     public function question(): string

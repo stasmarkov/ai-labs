@@ -7,9 +7,11 @@ use App\Ai\SseProtocol;
 use App\Contracts\AiRunRepositoryInterface;
 use App\DTOs\AiRunDetail;
 use App\DTOs\AiRunRecord;
+use App\DTOs\DocsCacheRunCounts;
 use App\Models\AiRun;
 use App\Models\Dealer;
 use App\Models\Listing;
+use Carbon\CarbonImmutable;
 use Laravel\Ai\Exceptions\StreamErrorException;
 use Laravel\Ai\Responses\StreamableAgentResponse;
 use Laravel\Ai\Streaming\Events\Error;
@@ -56,6 +58,11 @@ it('AC-5 a failed ai_runs insert is reported and the stream still ends with [DON
         public function findByInvocationId(string $invocationId): ?AiRunDetail
         {
             return null;
+        }
+
+        public function docsCacheRuns(?CarbonImmutable $since): DocsCacheRunCounts
+        {
+            return new DocsCacheRunCounts(0, [], []);
         }
     });
     $listing = Listing::factory()->for(Dealer::factory())->create();

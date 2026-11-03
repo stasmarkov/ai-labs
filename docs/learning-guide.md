@@ -4,7 +4,7 @@ This guide explains how everything in this project works, in the order it was bu
 
 It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan and its order are in [`backlog.md`](../backlog.md).
 
-**Status (2026-11-03):** sections 1–15 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24, SL-32, SL-33, SL-45 and SL-46. Section 16 is a map of all the AI code: every file and its purpose, four requests traced end to end, and how to handle common feature requests. Planned sections are listed at the end.
+**Status (2026-11-03):** sections 1–15 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24, SL-32, SL-33, SL-45 and SL-46. Section 16 is a map of all the AI code: every file and its purpose, four requests traced end to end, and how to handle common feature requests. Section 17 (SL-40) explains the exact and semantic answer cache. Planned sections are listed at the end.
 
 ---
 
@@ -571,12 +571,12 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | Prompts and guard data | Versioned text files; the version is logged with every run | [`resources/prompts/`](../resources/prompts/), [`resources/guards/`](../resources/guards/) |
 | Agents | One class per model task: instructions, provider options, output shape | [`app/Ai/`](../app/Ai/) `*Agent.php` |
 | Services | The steps around the model: lookup, retrieval, gates, guards, scoring | [`app/Services/`](../app/Services/) |
-| Data access | Repositories behind interfaces; pgvector and full-text SQL live here | [`app/Repositories/`](../app/Repositories/), [`app/Contracts/`](../app/Contracts/) |
+| Data access | Repositories behind interfaces; pgvector, full-text and answer-cache SQL live here | [`app/Repositories/`](../app/Repositories/), [`app/Contracts/`](../app/Contracts/) |
 | Streaming | SSE framing, masked errors, Octane-safe flushing, guard on the stream | [`SseProtocol`](../app/Ai/SseProtocol.php), [`DocsAnswerProtocol`](../app/Ai/DocsAnswerProtocol.php) |
 | HTTP edge | Validation, throttles, `Server-Timing` | [`routes/catalog.php`](../routes/catalog.php), [`app/Http/Requests/`](../app/Http/Requests/), [`AddServerTimingHeader`](../app/Http/Middleware/AddServerTimingHeader.php) |
 | Tracing | One `ai_runs` row per model or embeddings call (BR-90) | [`AiRunRecorder`](../app/Ai/AiRunRecorder.php), [`RecordAiRun`](../app/Ai/RecordAiRun.php), [`RecordEmbeddingsRun`](../app/Ai/RecordEmbeddingsRun.php) |
 | Background work | Embedding batches on the queue, never in a request | [`app/Jobs/`](../app/Jobs/) |
-| Commands | Indexing, benchmarks, evaluation | [`app/Console/Commands/`](../app/Console/Commands/) |
+| Commands | Indexing, benchmarks, evaluation, cache statistics and calibration | [`app/Console/Commands/`](../app/Console/Commands/) |
 | UI | The AI lab: Inertia + Vue pages at `/ai` | [`resources/js/ai/`](../resources/js/ai/), [`routes/web.php`](../routes/web.php) |
 | Test doubles | Fake providers and SDK fakes, so the suite runs without a network | [`FakeStreamProvider`](../app/Ai/FakeStreamProvider.php), [`FakeStreamGateway`](../app/Ai/FakeStreamGateway.php) |
 
@@ -621,9 +621,27 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`MarkdownChunker`](../app/Services/MarkdownChunker.php) | Splits a file by heading, paragraph and sentence; tables and code whole; size from config | SL-32, SL-33 |
 | [`DocsIndexService`](../app/Services/DocsIndexService.php), [`EmbedDocsBatchJob`](../app/Jobs/EmbedDocsBatchJob.php), [`DocsEmbeddingService`](../app/Services/DocsEmbeddingService.php) | Re-chunk only changed files (hash includes chunker version and settings), queue embeddings for new chunks | SL-32 |
 | [`DocsSearchService`](../app/Services/DocsSearchService.php) | Vector, full-text and hybrid (RRF) search over chunks | SL-32 |
-| [`DocsAnswerService`](../app/Services/DocsAnswerService.php) | The RAG pipeline: input guard → retrieve → gate → budget → agent; `ask()` streams, `answer()` returns a result | SL-45, SL-33 |
+| [`DocsAnswerService`](../app/Services/DocsAnswerService.php) | The RAG pipeline: input guard → (cache lookups) → retrieve → gate → budget → agent; `ask()` streams, `answer()` returns a result and never reads the cache | SL-45, SL-33, SL-40 |
 | [`DocsAnswerContext`](../app/Services/DocsAnswerContext.php) | The relevance gate (similarity or operator-free full-text hit) and the 4 000-token budget | SL-45 |
 | [`PromptInjectionGuard`](../app/Services/PromptInjectionGuard.php) | Matches a question against the pattern file before any retrieval | SL-45 |
+
+**Answer cache (section 17)**
+
+| File | Purpose | Slice |
+|---|---|---|
+| [`DocsAnswerCache`](../app/Services/DocsAnswerCache.php) | `lookupExact`, `lookupSemantic`, `recordHit` and `store`: normalization, the exact key, the threshold and the store rules | SL-40 |
+| [`DocsIndexVersion`](../app/Services/DocsIndexVersion.php) | Hash of the indexed documents plus the embedding model, memoized 60 s; part of every entry's validity | SL-40 |
+| [`DocsAnswerCacheRepositoryInterface`](../app/Contracts/DocsAnswerCacheRepositoryInterface.php), [`EloquentDocsAnswerCacheRepository`](../app/Repositories/EloquentDocsAnswerCacheRepository.php) | The `docs_answer_cache` table: nearest question by cosine, upsert, version filter, prune | SL-40 |
+| [`DocsCacheCalibrator`](../app/Services/DocsCacheCalibrator.php), [`DocsCachePairScorer`](../app/Services/DocsCachePairScorer.php), [`DocsCachePairSet`](../app/Services/DocsCachePairSet.php) | Load and validate the labelled pairs, score each by cosine, pick the Youden and zero-false-hit thresholds and the default | SL-40 |
+| [`DocsCacheMaintenance`](../app/Services/DocsCacheMaintenance.php) | The numbers behind `docs:cache --stats` and the pruning behind `--prune` | SL-40 |
+| [`DocsCacheKind`](../app/Enums/DocsCacheKind.php), [`DocsCacheMode`](../app/Enums/DocsCacheMode.php), [`DocsCachePairException`](../app/Exceptions/DocsCachePairException.php) | Exact or semantic; off, store only or lookup and store; a pair-file error that names the line | SL-40 |
+| [`DocsCacheCandidate`](../app/DTOs/DocsCacheCandidate.php), [`DocsCacheNewEntry`](../app/DTOs/DocsCacheNewEntry.php), [`DocsCacheEntry`](../app/DTOs/DocsCacheEntry.php), [`DocsCacheHit`](../app/DTOs/DocsCacheHit.php), [`DocsCacheVersions`](../app/DTOs/DocsCacheVersions.php) | A finished ask offered to the cache, the row to write, the stored entry, a served hit, and the four versions that gate it | SL-40 |
+| [`DocsCachePair`](../app/DTOs/DocsCachePair.php), [`DocsCacheCalibration`](../app/DTOs/DocsCacheCalibration.php) | One labelled pair; the calibration result | SL-40 |
+| [`DocsCacheStats`](../app/DTOs/DocsCacheStats.php), [`DocsCacheWindowStats`](../app/DTOs/DocsCacheWindowStats.php), [`DocsCacheRunCounts`](../app/DTOs/DocsCacheRunCounts.php) | What `docs:cache --stats` prints: hit rate, hits by kind, saved latency | SL-40 |
+| [`DocsCacheCommand`](../app/Console/Commands/DocsCacheCommand.php), [`DocsCacheCalibrateCommand`](../app/Console/Commands/DocsCacheCalibrateCommand.php) | `docs:cache --stats \| --prune`, `docs:cache-calibrate` | SL-40 |
+| [`bench/docs-cache.sh`](../bench/docs-cache.sh), [`cache-pairs.v1.jsonl`](../bench/rag-eval/cache-pairs.v1.jsonl) | The hit/miss latency run and the 48 labelled pairs | SL-40 |
+| [`cache-hitmiss-paraphrases.v1.jsonl`](../bench/rag-eval/cache-hitmiss-paraphrases.v1.jsonl), [`cache-latency-paraphrases.v1.jsonl`](../bench/rag-eval/cache-latency-paraphrases.v1.jsonl) | The rewordings `bench/docs-cache.sh` asks after the fresh and exact rounds: hard paraphrases for the hit/miss run, one- or two-word changes for the latency run | SL-40 |
+| [`ThresholdMath`](../app/Services/ThresholdMath.php) | The shared TPR/FPR sweep, Youden pick and per-group stats behind both calibrators (SL-33's relevance gate and SL-40's cache), with one comparison rule (`>=`, the same as the lookups) | SL-40 |
 
 **Evaluation**
 
@@ -653,7 +671,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`useEventStream.ts`](../resources/js/ai/composables/useEventStream.ts) | Reads SSE with `fetch` + `ReadableStream`, Stop via `AbortController`, TTFT and tokens/s | SL-46 |
 | [`Pages/Lab/`](../resources/js/ai/Pages/Lab/) | Overview, Describe, Semantic, Docs, Chat, Photos | SL-46, SL-45 |
 
-**Schema.** [`ai_runs`](../database/migrations/2026_11_02_160000_create_ai_runs_table.php) (one row per call; [chunk ids and refusals](../database/migrations/2026_11_03_110000_add_answer_columns_to_ai_runs_table.php) added in SL-45), [`docs_documents`](../database/migrations/2026_11_03_090000_create_docs_documents_table.php) and [`docs_chunks`](../database/migrations/2026_11_03_090100_create_docs_chunks_table.php) (vector, `tsvector`, HNSW and GIN indexes), [chunk settings](../database/migrations/2026_11_03_120000_add_chunk_settings_to_docs_documents_table.php) (SL-33), and [pgvector](../database/migrations/2026_10_28_193241_enable_pgvector_extension.php).
+**Schema.** [`docs_answer_cache`](../database/migrations/2026_11_03_170000_create_docs_answer_cache_table.php) (question, vector with HNSW, answer, sources, the four versions; SL-40) and [cache columns on `ai_runs`](../database/migrations/2026_11_03_170100_add_cache_columns_to_ai_runs_table.php) (`cache_kind`, `cache_similarity`, `cache_entry_id`, `saved_latency_ms`, `origin`), then [`ai_runs`](../database/migrations/2026_11_02_160000_create_ai_runs_table.php) (one row per call; [chunk ids and refusals](../database/migrations/2026_11_03_110000_add_answer_columns_to_ai_runs_table.php) added in SL-45), [`docs_documents`](../database/migrations/2026_11_03_090000_create_docs_documents_table.php) and [`docs_chunks`](../database/migrations/2026_11_03_090100_create_docs_chunks_table.php) (vector, `tsvector`, HNSW and GIN indexes), [chunk settings](../database/migrations/2026_11_03_120000_add_chunk_settings_to_docs_documents_table.php) (SL-33), and [pgvector](../database/migrations/2026_10_28_193241_enable_pgvector_extension.php).
 
 ### Four requests, end to end
 
@@ -677,10 +695,11 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 **Ask the docs** (`POST /api/docs/ask`, JSON):
 1. `DocsAskRequest` rejects anything that is not JSON, then validates the question.
 2. `DocsAnswerService::ask()` runs `PromptInjectionGuard` first. A match writes a `refused` row and returns `SseEventsResponse`, with no embedding.
-3. Otherwise it retrieves hybrid top 6, applies the gate and the budget in `DocsAnswerContext`, and returns `no_context` when nothing passes.
-4. `DocsAnswerAgent` builds the marked context with a fresh canary and streams.
-5. `DocsAnswerProtocol` sends `sources`, checks the text with `OutputGuard` after each delta, and parses `[n]` with `CitationParser` at the end.
-6. The recorder adds the retrieved and cited chunk ids to the row.
+3. Unless `cache` is false or the cache is off, `DocsAnswerCache::lookupExact()` checks the normalized question (no embedding). On a miss the question is embedded once and `lookupSemantic()` looks for the nearest current entry at or above the threshold. A hit streams `sources`, `cache_hit`, one `text_delta`, `citations`, `[DONE]` and writes a `cached` row (section 17).
+4. Otherwise it retrieves hybrid top 6 with the same question vector, applies the gate and the budget in `DocsAnswerContext`, and returns `no_context` when nothing passes.
+5. `DocsAnswerAgent` builds the marked context with a fresh canary and streams.
+6. `DocsAnswerProtocol` sends `sources`, checks the text with `OutputGuard` after each delta, and parses `[n]` with `CitationParser` at the end.
+7. The recorder adds the retrieved and cited chunk ids to the row, and after `citations` a completed, cited answer is stored by `DocsAnswerCache::store()`.
 
 ### Common feature requests and where they land
 
@@ -692,6 +711,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | "Block this injection phrasing" | Add a named pattern to a new guard file version (`prompt-injection.v2.php`), point `ai.docs.answer.guard` at it | a hit case and a benign near-miss in `PromptInjectionGuardTest` (both directions fail in practice) |
 | "It says I don't know too often" / "too rarely" | `AI_DOCS_ANSWER_MIN_SIMILARITY`, but only after `rag:eval` shows the trade (section 15); add the failing question to the eval set first | a new eval line; the calibration numbers |
 | "Answers miss this part of the docs" | Check retrieval first: `docs:search "…" --mode=vector` and `rag:eval` recall. Then chunk size (`AI_DOCS_CHUNK_MAX_TOKENS`, re-index) or k (`AI_DOCS_ANSWER_K`) | an eval question with its evidence phrase |
+| "Make answers cacheable" / "tune the cache" | Behaviour is in `config('ai.docs.cache')`: `AI_DOCS_CACHE_ENABLED`, `AI_DOCS_CACHE_TTL_HOURS`, `AI_DOCS_CACHE_MIN_SIMILARITY`. Never lower the threshold without running `docs:cache-calibrate`: add the pair that fails to `cache-pairs.v1.jsonl` first (new pairs must not appear in an indexed file). A new thing that changes the answer (another prompt, model) must be part of the entry's version check in `DocsAnswerCache`. | a case in `DocsAnswerCacheTest` per version; a `DocsCacheCalibrateTest` fixture; `docs:cache --stats` after a run (section 17) |
 | "Index a new folder of docs" | `DocsCorpus` lists the paths. Never add a folder holding eval questions (the contamination test will fail, as intended) | a `DocsCorpus` test case |
 | "Switch the embedding model" | `config('ai.embeddings')`, then re-index everything: vectors from two models cannot be compared, and the stored `embedding_model` keeps them apart | `docs:search-bench` and `rag:eval` before and after |
 | "Log something new about each call" | A nullable column on `ai_runs`, a field on `AiRunRecord`, set it from the recorder (`annotate()` for per-request data) | a feature test on the row |
@@ -709,9 +729,56 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 
 ---
 
+## 17. Caching answers: exact keys, semantic neighbours and invalidation
+
+**What it is.** Section 14 spends a full model call on every question: a median of 6102 ms in the cache run, 8997 ms in section 15. This slice (SL-40) puts a cache in front of `POST /api/docs/ask` so a repeated or reworded question is served from a stored answer. There are two lookups. **Exact:** a key in the cache store (Redis) over the normalized question, which costs no embedding. **Semantic:** the nearest stored question in a pgvector table, accepted only at or above a similarity threshold. A hit streams the stored answer at once; a miss runs the section 14 pipeline unchanged and stores its answer afterwards.
+
+**Why a near-miss hit is worse than a miss.** A miss costs seconds. A wrong hit costs a wrong answer, delivered fast, with the original answer's sources and citations, so it looks as trustworthy as a fresh one. Two questions can share almost every word and still ask for different things, and an embedding model scores such a pair high because it measures topic, not intent. That is why the threshold is measured, not guessed.
+
+**The measured gap (committed under `bench/results/docs-cache/2026-11-03/`).** `docs:cache-calibrate` embeds 24 paraphrase pairs and 24 near-miss pairs once each and scores every pair by cosine similarity.
+- Paraphrases ran from 0.536 to 0.906 (median 0.792); near-misses from 0.714 to 0.930 (median 0.832). The ranges overlap: the most similar near-miss (0.930) scores above the most similar paraphrase (0.906).
+- So the zero-false-hit threshold (the lowest paraphrase strictly above the highest near-miss) does not exist: "none". The Youden-best cut, 0.893558, serves 3 of 24 paraphrases and also 1 of 24 near-misses.
+- The rule for the default is the highest near-miss rounded up to 2 decimals: **0.94**, set through `AI_DOCS_CACHE_MIN_SIMILARITY`. It serves no near-miss (FPR 0) and, on this pair set, no paraphrase either (24 of 24 lost). The earlier spec probe had a gap of only 0.028 between the groups and a common default of 0.95 would have missed most paraphrases; 0.85 would have served near-misses.
+- A small set is a safety bound, not a forecast. In the hit/miss run, 2 of 10 reworded questions were still served semantically at 0.94 (and all 18 light rewordings of the latency run), although none of the 24 pair-set paraphrases reaches it.
+
+**One request, step by step** (`POST /api/docs/ask`, cache on):
+1. **Validate.** `DocsAskRequest` accepts an optional boolean `cache`; a non-boolean is a 422.
+2. **Input guard first.** The input guard (`PromptInjectionGuard`) runs before the cache, before any lookup. If it ran after the cache, a refused phrasing could be served as soon as a similar honest question was cached, and the refusal would never be logged. Refusals are never stored either, so they cannot be replayed.
+3. **Exact lookup.** The question is normalized (lowercase, whitespace collapsed, every trailing run of spaces and `?!.` removed, so `How do I retry? ?` matches `how do i retry`) and hashed with the prompt version, answer model and index version. A hit re-checks the row: a key that points at a deleted, stale or expired row is dropped.
+4. **One embedding.** On an exact miss the raw question is embedded once (one embedding per request). That vector serves both the semantic lookup and the retrieval step, so a miss costs only the extra database query, not a second embedding.
+5. **Semantic lookup.** The nearest current entry by cosine; served at or above the threshold (equal passes).
+6. **On a hit.** The stream is `sources`, `cache_hit` (kind, similarity, `cached_at`, `saved_latency_ms`, `invocation_id`, `source_invocation_id`; not the stored question's text, which another client typed), one `text_delta` with the full answer, `citations`, `[DONE]`. No model stream exists, so there is no `stream_start` or `stream_end`. The answer is one burst on purpose: replaying fake token timing would misrepresent what happened. An `ai_runs` row with status `cached` records the kind, similarity, entry id and `saved_latency_ms` (the source run's logged `latency_ms` minus this one's, floored at 0), so the hit rate and the time saved are queryable.
+7. **On a miss.** Retrieval, gate, budget and the agent run as in section 14. After `citations` is sent and the client is still connected, the store hook writes the entry, only for an outcome that is completed and cited. Refused, `no_context`, failed, uncited and stopped answers are never stored. A storing failure is reported, never thrown at the client.
+8. **Bypass.** `cache:false` (the body field `"cache": false`) skips both lookups and still stores a qualifying answer, so the lab can compare a fresh answer with a cached one. `DocsAnswerService::answer()` never touches the cache, so `rag:eval` measures the model and not the cache.
+
+**Invalidation: a filter, not deletes.** An entry is served only while its prompt version, answer model, embedding model and index version all equal the current ones. The index version is a hash over the indexed documents' source, path and hash, plus the embedding model; it is memoized for 60 s and `docs:index` forgets it when a document changes. While any chunk still waits for its vector, the hash also carries the pending count and nothing is stored, because an answer given during re-indexing was retrieved from a half-embedded index. The versions are read once when the request is planned and stored with the answer, so an answer cannot be filed under an index version that appeared while it was streaming. Re-indexing, a new prompt file or a model change therefore makes every older entry a miss with no manual step and no hook that could be forgotten. Stale rows stay inert until the TTL (`ai.docs.cache.ttl_hours`, default 168) or `docs:cache --prune` removes them with their exact keys.
+
+**Measuring it.** `docs:cache --stats` prints hit rate (cached over cached plus completed, endpoint rows only), hits by kind, saved latency sum and median, and current against stale entries. `bench/docs-cache.sh` asks 10 eval questions fresh, verbatim and reworded:
+
+| Path | Result |
+|---|---|
+| fresh (miss) | 6071 ms median, 10 of 10 misses |
+| exact repeat | 8 hits, 46.5 ms median |
+| reworded | 2 semantic hits, 126 ms median |
+| overall | 10 of 30 requests served from the cache |
+
+Both budgets hold (exact under 100 ms, semantic under 300 ms; the 18-question latency run: 51 ms and 86 ms). Both exact misses follow a fresh answer without a citation, which the store rule refuses (checked in `ai_runs`). The first run printed a stats hit rate of 2.6% because it divided by every completed row, `rag:eval` answers included; the stats now count endpoint rows only (`origin = api`), and the re-run printed 56.9% over the day.
+
+**Two review findings worth remembering.** A global cache on a public endpoint is shared state between strangers. The first `cache_hit` event sent the stored question's text, so a client could read what someone else had asked; it now sends only the similarity. And a cached answer is replayed to everyone, so a question carrying an injected instruction must never match a clean one: measured, such questions scored 0.827–0.881 against the clean version, under the 0.94 threshold. The threshold is the security boundary as well as the quality one.
+
+**In this repo.**
+- Code: [`DocsAnswerCache`](../app/Services/DocsAnswerCache.php), [`DocsIndexVersion`](../app/Services/DocsIndexVersion.php), [`DocsCacheCalibrator`](../app/Services/DocsCacheCalibrator.php), [`DocsCacheCommand`](../app/Console/Commands/DocsCacheCommand.php), [`DocsCacheCalibrateCommand`](../app/Console/Commands/DocsCacheCalibrateCommand.php).
+- Tests: `DocsCacheTest`, `DocsAnswerCacheTest`, `DocsCacheCalibrateTest`, `DocsCacheCommandTest`, `DocsCacheCommittedResultsTest`; `DocsAskTest` is unchanged because the cache is off in `phpunit.xml`.
+- Data and results: [`cache-pairs.v1.jsonl`](../bench/rag-eval/cache-pairs.v1.jsonl), [`bench/results/docs-cache/2026-11-03/`](../bench/results/docs-cache/2026-11-03/) and the "Answer cache (2026-11-03)" section of [`BENCHMARKS.md`](../BENCHMARKS.md).
+- Spec: [`.ai/specs/spec-20261103-1616-docs-semantic-cache/`](../.ai/specs/spec-20261103-1616-docs-semantic-cache/).
+
+**Read next.** [Redis: vector search](https://redis.io/docs/latest/develop/get-started/vector-database/) · [pgvector](https://github.com/pgvector/pgvector) · [Laravel: cache](https://laravel.com/docs/13.x/cache)
+
+---
+
 ## Planned sections
 
 Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):
 
 - **Server track:** slow I/O and thread autoscaling (SL-09), Early Hints and compression (SL-10), file downloads offloaded to the web server (SL-11), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
-- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; structured output (SL-23); tool calling (SL-25); evals (SL-26); vision (SL-27); model comparison (SL-28); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39, shown on the `/ai/photos` placeholder); semantic caching (SL-40); streaming chat UI (SL-41, on the `/ai/chat` placeholder from SL-46); a research agent (SL-42); a prompt playground (SL-43).
+- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; structured output (SL-23); tool calling (SL-25); evals (SL-26); vision (SL-27); model comparison (SL-28); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39, shown on the `/ai/photos` placeholder); streaming chat UI (SL-41, on the `/ai/chat` placeholder from SL-46); a research agent (SL-42); a prompt playground (SL-43).

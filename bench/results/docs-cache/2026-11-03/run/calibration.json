@@ -1,0 +1,238 @@
+{
+    "metadata": {
+        "label": "run",
+        "generated_at": "2026-11-03T14:56:50+00:00",
+        "pair_set_version": "v1",
+        "pairs": 48,
+        "embedding_model": "ollama/bge-m3",
+        "configured_threshold": 0.94,
+        "git_commit": "0a306c82fd7873fd0178d65ad5b8c7a9696ffc4d",
+        "git_dirty": true
+    },
+    "pairs": {
+        "para-01": {
+            "label": "paraphrase",
+            "similarity": 0.893558
+        },
+        "para-02": {
+            "label": "paraphrase",
+            "similarity": 0.737416
+        },
+        "para-03": {
+            "label": "paraphrase",
+            "similarity": 0.815118
+        },
+        "para-04": {
+            "label": "paraphrase",
+            "similarity": 0.762223
+        },
+        "para-05": {
+            "label": "paraphrase",
+            "similarity": 0.536362
+        },
+        "para-06": {
+            "label": "paraphrase",
+            "similarity": 0.706879
+        },
+        "para-07": {
+            "label": "paraphrase",
+            "similarity": 0.877785
+        },
+        "para-08": {
+            "label": "paraphrase",
+            "similarity": 0.819642
+        },
+        "para-09": {
+            "label": "paraphrase",
+            "similarity": 0.732915
+        },
+        "para-10": {
+            "label": "paraphrase",
+            "similarity": 0.704896
+        },
+        "para-11": {
+            "label": "paraphrase",
+            "similarity": 0.679668
+        },
+        "para-12": {
+            "label": "paraphrase",
+            "similarity": 0.799114
+        },
+        "para-13": {
+            "label": "paraphrase",
+            "similarity": 0.896317
+        },
+        "para-14": {
+            "label": "paraphrase",
+            "similarity": 0.784461
+        },
+        "para-15": {
+            "label": "paraphrase",
+            "similarity": 0.88277
+        },
+        "para-16": {
+            "label": "paraphrase",
+            "similarity": 0.741688
+        },
+        "para-17": {
+            "label": "paraphrase",
+            "similarity": 0.70642
+        },
+        "para-18": {
+            "label": "paraphrase",
+            "similarity": 0.906493
+        },
+        "para-19": {
+            "label": "paraphrase",
+            "similarity": 0.643379
+        },
+        "para-20": {
+            "label": "paraphrase",
+            "similarity": 0.738356
+        },
+        "para-21": {
+            "label": "paraphrase",
+            "similarity": 0.810142
+        },
+        "para-22": {
+            "label": "paraphrase",
+            "similarity": 0.807412
+        },
+        "para-23": {
+            "label": "paraphrase",
+            "similarity": 0.847198
+        },
+        "para-24": {
+            "label": "paraphrase",
+            "similarity": 0.863717
+        },
+        "miss-01": {
+            "label": "near_miss",
+            "similarity": 0.863802
+        },
+        "miss-02": {
+            "label": "near_miss",
+            "similarity": 0.823224
+        },
+        "miss-03": {
+            "label": "near_miss",
+            "similarity": 0.718479
+        },
+        "miss-04": {
+            "label": "near_miss",
+            "similarity": 0.84779
+        },
+        "miss-05": {
+            "label": "near_miss",
+            "similarity": 0.889473
+        },
+        "miss-06": {
+            "label": "near_miss",
+            "similarity": 0.82166
+        },
+        "miss-07": {
+            "label": "near_miss",
+            "similarity": 0.871219
+        },
+        "miss-08": {
+            "label": "near_miss",
+            "similarity": 0.855751
+        },
+        "miss-09": {
+            "label": "near_miss",
+            "similarity": 0.780562
+        },
+        "miss-10": {
+            "label": "near_miss",
+            "similarity": 0.884255
+        },
+        "miss-11": {
+            "label": "near_miss",
+            "similarity": 0.829205
+        },
+        "miss-12": {
+            "label": "near_miss",
+            "similarity": 0.930409
+        },
+        "miss-13": {
+            "label": "near_miss",
+            "similarity": 0.805743
+        },
+        "miss-14": {
+            "label": "near_miss",
+            "similarity": 0.836895
+        },
+        "miss-15": {
+            "label": "near_miss",
+            "similarity": 0.87628
+        },
+        "miss-16": {
+            "label": "near_miss",
+            "similarity": 0.713839
+        },
+        "miss-17": {
+            "label": "near_miss",
+            "similarity": 0.810525
+        },
+        "miss-18": {
+            "label": "near_miss",
+            "similarity": 0.834046
+        },
+        "miss-19": {
+            "label": "near_miss",
+            "similarity": 0.766035
+        },
+        "miss-20": {
+            "label": "near_miss",
+            "similarity": 0.886685
+        },
+        "miss-21": {
+            "label": "near_miss",
+            "similarity": 0.866125
+        },
+        "miss-22": {
+            "label": "near_miss",
+            "similarity": 0.781753
+        },
+        "miss-23": {
+            "label": "near_miss",
+            "similarity": 0.779417
+        },
+        "miss-24": {
+            "label": "near_miss",
+            "similarity": 0.776732
+        }
+    },
+    "paraphrase": {
+        "count": 24,
+        "min": 0.536362,
+        "median": 0.791788,
+        "max": 0.906493
+    },
+    "near_miss": {
+        "count": 24,
+        "min": 0.713839,
+        "median": 0.831625,
+        "max": 0.930409
+    },
+    "best": {
+        "threshold": 0.893558,
+        "tpr": 0.125,
+        "fpr": 0.041667,
+        "j": 0.083333
+    },
+    "zero_false_hit": null,
+    "suggested_default": {
+        "threshold": 0.94,
+        "tpr": 0,
+        "fpr": 0,
+        "j": 0,
+        "lost_paraphrases": 24
+    },
+    "configured": {
+        "threshold": 0.94,
+        "tpr": 0,
+        "fpr": 0,
+        "j": 0
+    }
+}

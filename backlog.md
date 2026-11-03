@@ -557,8 +557,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-99, BR-90, BR-27
 - **Depends on:** SL-45
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261103-1616-docs-semantic-cache
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-40: semantic cache in front of the docs chatbot — embed the question, return a stored answer above a similarity threshold, mark it cached, record hit rate and latency saved (BR-99, BR-90, BR-27). Rules in product-brief.md."`
 

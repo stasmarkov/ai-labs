@@ -1,0 +1,18 @@
+{"id": "lv-schedule-overlap", "paraphrase": "How do I stop a scheduled task from starting again while its earlier run is still going?"}
+{"id": "lv-schedule-five", "paraphrase": "What is the shortcut for running a scheduled task every 5 minutes?"}
+{"id": "lv-queue-unique", "paraphrase": "How can I make sure only one copy of a given job sits in the queue at a time?"}
+{"id": "lv-queue-failed-table", "paraphrase": "Where do queued jobs end up once they have used up all of their attempts?"}
+{"id": "lv-queue-after-commit", "paraphrase": "How do I keep a job from running before the surrounding database transaction has been committed?"}
+{"id": "lv-cache-stale", "paraphrase": "Can the cache hand out an expired value while a fresh one is computed in the background process?"}
+{"id": "lv-migrate-fresh", "paraphrase": "Which Artisan command drops every table and then runs all of the migrations again?"}
+{"id": "lv-migrate-rollback-step", "paraphrase": "How do I undo only the last 5 migrations instead of the whole batch?"}
+{"id": "lv-model-uuid", "paraphrase": "How do I give an Eloquent model a UUID primary key instead of an auto-incrementing integer id?"}
+{"id": "lv-model-upsert", "paraphrase": "What is the one-call way to update a record if it exists and create it if not?"}
+{"id": "lv-relation-count", "paraphrase": "How can I get the number of related rows without loading them all into memory?"}
+{"id": "lv-prevent-lazy", "paraphrase": "How do I make the app complain whenever a relationship gets lazy loaded by accident?"}
+{"id": "lv-middleware-exclude", "paraphrase": "How do I leave out one middleware for a single route that sits inside of a group?"}
+{"id": "lv-route-list", "paraphrase": "How can I see all of the routes the application defines?"}
+{"id": "lv-http-fake", "paraphrase": "How do I stop outgoing HTTP calls in a test and return canned responses instead?"}
+{"id": "lv-storage-link", "paraphrase": "How do I make the files kept in storage reachable from the web?"}
+{"id": "lv-env-types", "paraphrase": "Why does a plain false in the env file not come back as a boolean value?"}
+{"id": "lv-make-policy", "paraphrase": "Which command generates a policy class and where does it put that file?"}

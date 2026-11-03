@@ -47,6 +47,14 @@ interface RunRow {
     status: string;
 }
 
+interface CacheHit {
+    kind: 'exact' | 'semantic';
+    similarity: number;
+    cached_at: string;
+    saved_latency_ms: number;
+    invocation_id: string;
+}
+
 type Segment = { text: string; n: number | null };
 
 const props = defineProps<{
@@ -66,6 +74,8 @@ const noContext = ref<string | null>(null);
 const refusal = ref<Refusal | null>(null);
 const timings = ref<ServerTimings | null>(null);
 const sourcesAtMs = ref<number | null>(null);
+const useCache = ref(true);
+const cacheHit = ref<CacheHit | null>(null);
 const run = ref<RunRow | null>(null);
 const runMessage = ref<string | null>(null);
 let lookupToken = 0;
@@ -76,6 +86,14 @@ function onEvent(event: StreamEvent): void {
         sourcesAtMs.value = stream.events.value.at(-1)?.atMs ?? null;
     } else if (event.type === 'citations') {
         citations.value = { cited: (event.cited ?? []) as Citations['cited'], unknown: (event.unknown ?? []) as number[] };
+    } else if (event.type === 'cache_hit') {
+        cacheHit.value = {
+            kind: event.kind === 'semantic' ? 'semantic' : 'exact',
+            similarity: Number(event.similarity ?? 0),
+            cached_at: String(event.cached_at ?? ''),
+            saved_latency_ms: Number(event.saved_latency_ms ?? 0),
+            invocation_id: String(event.invocation_id ?? ''),
+        };
     } else if (event.type === 'no_context' && typeof event.message === 'string') {
         noContext.value = event.message;
     } else if (event.type === 'refused') {
@@ -178,6 +196,23 @@ const segments = computed<Segment[]>(() => {
     return parts;
 });
 
+/**
+ * How long ago an ISO-8601 time was, in the largest whole unit; "just now" under a minute.
+ */
+function ageLabel(iso: string): string {
+    const seconds = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+
+    if (Number.isNaN(seconds) || seconds < 60) {
+        return 'just now';
+    }
+
+    const units: Array<[string, number]> = [['day', 86400], ['hour', 3600], ['minute', 60]];
+    const [name, size] = units.find(([, size]) => seconds >= size) ?? units[2];
+    const count = Math.floor(seconds / size);
+
+    return `${count} ${name}${count === 1 ? '' : 's'} ago`;
+}
+
 function sourceLabel(source: Source): string {
     return source.heading ? `${source.path} › ${source.heading}` : source.path;
 }
@@ -230,6 +265,7 @@ function ask(): void {
     lookupToken++;
     sources.value = [];
     citations.value = null;
+    cacheHit.value = null;
     noContext.value = null;
     refusal.value = null;
     timings.value = null;
@@ -239,7 +275,7 @@ function ask(): void {
     void stream.start(props.askUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: question.value.trim() }),
+        body: JSON.stringify({ q: question.value.trim(), cache: useCache.value }),
     });
 }
 
@@ -252,8 +288,10 @@ watch(stream.status, (status) => {
         return;
     }
 
-    if (stream.invocationId.value !== null) {
-        void loadRun(stream.invocationId.value);
+    const invocationId = cacheHit.value?.invocation_id || stream.invocationId.value;
+
+    if (invocationId) {
+        void loadRun(invocationId);
     } else if (status === 'done') {
         runMessage.value = 'Logged without a stream id: see the runs table on the overview.';
     }
@@ -285,6 +323,10 @@ onBeforeUnmount(() => {
             <p id="chat-question-count" class="m-0 text-[13px]" :class="tooLong ? 'font-medium text-danger' : 'text-muted'">
                 {{ length }} / {{ maxQuestionLength }} characters
             </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <input id="chat-use-cache" v-model="useCache" type="checkbox" class="size-4 accent-signal" />
+            <label for="chat-use-cache" class="text-[13px] font-medium text-muted">Use cache</label>
         </div>
         <div class="flex gap-2">
             <LabButton type="submit" :disabled="!canAsk">{{ isStreaming ? 'Asking…' : 'Ask' }}</LabButton>
@@ -318,6 +360,13 @@ onBeforeUnmount(() => {
 
     <section aria-labelledby="chat-answer-title" class="mt-8 border-t border-rule pt-6">
         <h2 id="chat-answer-title" class="m-0 text-[18px]">Answer</h2>
+        <div v-if="cacheHit" class="mt-3 min-w-0 border-l-2 border-signal pl-3 text-[13px]" data-state="cache-hit">
+            <p class="m-0 font-semibold text-signal">Cached <span class="font-normal text-muted">({{ cacheHit.kind }})</span></p>
+            <p class="m-0 mt-1 text-muted">Matched an earlier question</p>
+            <p class="m-0 mt-1 text-muted">
+                Similarity {{ cacheHit.similarity.toFixed(3) }} · stored {{ ageLabel(cacheHit.cached_at) }} · saved {{ cacheHit.saved_latency_ms }} ms
+            </p>
+        </div>
         <output
             aria-live="polite"
             class="mt-3 block min-h-24 whitespace-pre-wrap break-words text-[15px] leading-relaxed"

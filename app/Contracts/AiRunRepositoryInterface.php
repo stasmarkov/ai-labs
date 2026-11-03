@@ -7,6 +7,8 @@ namespace App\Contracts;
 use App\DTOs\AiRunDetail;
 use App\DTOs\AiRunRecord;
 use App\DTOs\AiRunSummary;
+use App\DTOs\DocsCacheRunCounts;
+use Carbon\CarbonImmutable;
 
 interface AiRunRepositoryInterface
 {
@@ -20,4 +22,9 @@ interface AiRunRepositoryInterface
     public function recent(int $limit): array;
 
     public function findByInvocationId(string $invocationId): ?AiRunDetail;
+
+    /**
+     * Completed and cached DocsAnswerAgent runs created at or after $since (all of them when null).
+     */
+    public function docsCacheRuns(?CarbonImmutable $since): DocsCacheRunCounts;
 }

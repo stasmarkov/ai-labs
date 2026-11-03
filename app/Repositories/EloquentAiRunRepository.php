@@ -8,7 +8,9 @@ use App\Contracts\AiRunRepositoryInterface;
 use App\DTOs\AiRunDetail;
 use App\DTOs\AiRunRecord;
 use App\DTOs\AiRunSummary;
+use App\DTOs\DocsCacheRunCounts;
 use App\Models\AiRun;
+use Carbon\CarbonImmutable;
 
 final readonly class EloquentAiRunRepository implements AiRunRepositoryInterface
 {
@@ -31,7 +33,30 @@ final readonly class EloquentAiRunRepository implements AiRunRepositoryInterface
             'retrieved_chunk_ids' => $record->retrievedChunkIds,
             'cited_chunk_ids' => $record->citedChunkIds,
             'refusal_reason' => $record->refusalReason,
+            'cache_kind' => $record->cacheKind,
+            'cache_similarity' => $record->cacheSimilarity,
+            'cache_entry_id' => $record->cacheEntryId,
+            'saved_latency_ms' => $record->savedLatencyMs,
+            'origin' => $record->origin,
         ]);
+    }
+
+    public function docsCacheRuns(?CarbonImmutable $since): DocsCacheRunCounts
+    {
+        $runs = fn () => AiRun::query()
+            ->where('agent', 'DocsAnswerAgent')
+            ->where('origin', 'api')
+            ->when($since !== null, fn ($query) => $query->where('created_at', '>=', $since));
+
+        $cached = $runs()->where('status', 'cached');
+
+        return new DocsCacheRunCounts(
+            completed: $runs()->where('status', 'completed')->count(),
+            hitsByKind: (clone $cached)->selectRaw('cache_kind, count(*) as total')->groupBy('cache_kind')->pluck('total', 'cache_kind')
+                ->map(fn ($total): int => (int) $total)->all(),
+            savedLatenciesMs: $cached->whereNotNull('saved_latency_ms')->orderBy('saved_latency_ms')->pluck('saved_latency_ms')
+                ->map(fn ($ms): int => (int) $ms)->all(),
+        );
     }
 
     public function recent(int $limit): array

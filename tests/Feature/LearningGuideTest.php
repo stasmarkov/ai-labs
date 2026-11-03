@@ -303,3 +303,79 @@ test('the learning guide maps every AI file, request flow and feature recipe, an
         expect($section)->toContain('../app/Ai/'.basename($file));
     }
 });
+
+test('AC-11 learning guide section 17 explains caching answers', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+
+    preg_match('/^## 17\. Caching answers: exact keys, semantic neighbours and invalidation\n(.*?)(?=^---$|^## \d+\. |^## Planned sections|\z)/ms', $guide, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->not->toBe('');
+
+    foreach (['docs:cache-calibrate', 'docs:cache', 'near-miss', 'paraphrase', 'wrong hit', '0.930', '0.906', '0.94', 'zero-false-hit', 'index version', 'prompt version', 'filter', 'prune', 'TTL', 'cache_hit', 'cached', 'saved_latency_ms', 'ai_runs', 'input guard', 'before the cache', 'one embedding', 'cache:false', 'rag:eval', '46.5 ms', '126 ms', '6071 ms', '10 of 30', 'AI_DOCS_CACHE_MIN_SIMILARITY'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    foreach ([
+        '../app/Services/DocsAnswerCache.php',
+        '../app/Services/DocsIndexVersion.php',
+        '../app/Services/DocsCacheCalibrator.php',
+        '../app/Console/Commands/DocsCacheCommand.php',
+        '../app/Console/Commands/DocsCacheCalibrateCommand.php',
+        '../bench/results/docs-cache/2026-11-03/',
+        '../bench/rag-eval/cache-pairs.v1.jsonl',
+        '../BENCHMARKS.md',
+        '../.ai/specs/spec-20261103-1616-docs-semantic-cache/',
+        'https://redis.io/docs/latest/develop/get-started/vector-database/',
+        'https://github.com/pgvector/pgvector',
+    ] as $link) {
+        expect($section)->toContain("]($link");
+    }
+
+    preg_match_all('/\]\((\.\.\/[^)#]+)/', $section, $links);
+    foreach ($links[1] as $link) {
+        expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$link))->toBeTrue("missing: {$link}");
+    }
+
+    foreach ((new RagEvalSet)->load() as $question) {
+        expect(RagEvalSet::normalizeText($section))->not->toContain(RagEvalSet::normalizeText($question->question));
+    }
+    foreach (file(base_path('bench/rag-eval/cache-pairs.v1.jsonl'), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        $pair = json_decode($line, true, flags: JSON_THROW_ON_ERROR);
+        expect(RagEvalSet::normalizeText($section))->not->toContain(RagEvalSet::normalizeText($pair['a']))
+            ->not->toContain(RagEvalSet::normalizeText($pair['b']));
+    }
+
+    expect($guide)->toContain('sections 1–15')->toContain('Section 17');
+});
+
+test('AC-11 learning guide section 16 maps every answer cache file and the cache flow', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+    $start = (int) strpos($guide, '## 16. How the AI features are built: a map of the code');
+    $section = substr($guide, $start, (int) strpos($guide, '## 17. ') - $start);
+
+    $files = [
+        'app/Services/DocsAnswerCache.php', 'app/Services/DocsIndexVersion.php', 'app/Services/DocsCacheCalibrator.php',
+        'app/Services/DocsCacheMaintenance.php', 'app/Services/DocsCachePairScorer.php', 'app/Services/DocsCachePairSet.php',
+        'app/Contracts/DocsAnswerCacheRepositoryInterface.php', 'app/Repositories/EloquentDocsAnswerCacheRepository.php',
+        'app/Console/Commands/DocsCacheCommand.php', 'app/Console/Commands/DocsCacheCalibrateCommand.php',
+        'app/Enums/DocsCacheKind.php', 'app/Enums/DocsCacheMode.php', 'app/Exceptions/DocsCachePairException.php',
+        'bench/docs-cache.sh', 'bench/rag-eval/cache-pairs.v1.jsonl', 'bench/rag-eval/cache-hitmiss-paraphrases.v1.jsonl', 'bench/rag-eval/cache-latency-paraphrases.v1.jsonl', 'app/Services/ThresholdMath.php',
+    ];
+    foreach (glob(base_path('app/DTOs/DocsCache*.php')) ?: [] as $dto) {
+        $files[] = 'app/DTOs/'.basename($dto);
+    }
+    foreach (glob(base_path('database/migrations/*docs_answer_cache*.php')) ?: [] as $migration) {
+        $files[] = 'database/migrations/'.basename($migration);
+    }
+    foreach (glob(base_path('database/migrations/*cache_columns_to_ai_runs*.php')) ?: [] as $migration) {
+        $files[] = 'database/migrations/'.basename($migration);
+    }
+
+    foreach ($files as $file) {
+        expect($section)->toContain('../'.$file);
+    }
+
+    expect($section)->toContain('Ask the docs')->toContain('lookupExact')->toContain('lookupSemantic')->toContain('cache_hit')
+        ->toContain('tune the cache');
+});

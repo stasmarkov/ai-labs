@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\DTOs\DocsMatch;
 use App\Enums\DocsSearchMode;
+use App\Exceptions\DocsSearchUnavailableException;
 
 final readonly class DocsAnswerContext
 {
@@ -24,11 +25,24 @@ final readonly class DocsAnswerContext
     /**
      * What hybrid search returns for the question, before the relevance gate and the budget.
      *
+     * @param  list<float>|null  $queryVector  the question already embedded
      * @return list<DocsMatch>
      */
-    public function retrieve(string $question): array
+    public function retrieve(string $question, ?array $queryVector = null): array
     {
-        return $this->search->search($question, DocsSearchMode::Hybrid, max(1, (int) config('ai.docs.answer.k')));
+        return $this->search->search($question, DocsSearchMode::Hybrid, max(1, (int) config('ai.docs.answer.k')), $queryVector);
+    }
+
+    /**
+     * The question vector, computed once so the cache lookup and retrieval share it.
+     *
+     * @return list<float>
+     *
+     * @throws DocsSearchUnavailableException when the question cannot be embedded.
+     */
+    public function embed(string $question): array
+    {
+        return $this->search->embedQuery($question);
     }
 
     /**

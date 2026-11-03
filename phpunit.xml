@@ -38,6 +38,8 @@
         <env name="OLLAMA_KEEP_ALIVE" value=""/>
         <env name="OLLAMA_NUM_PARALLEL" value=""/>
         <env name="OLLAMA_NUM_CTX" value=""/>
+        <env name="AI_DOCS_CACHE_ENABLED" value="false"/>
+        <env name="AI_DOCS_CACHE_STORE" value="array"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

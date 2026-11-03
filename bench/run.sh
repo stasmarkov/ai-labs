@@ -218,6 +218,11 @@ stop_sampler() {
   kill "$SAMPLER_PID" 2>/dev/null || true
   wait "$SAMPLER_PID" 2>/dev/null || true
   SAMPLER_PID=""
+  # A very short window can end before the stream wrote its first line; take one reading so the
+  # result never has empty memory and CPU maps.
+  if ! grep -q '%' "$WORK/samples.tsv" 2>/dev/null; then
+    sample_once >> "$WORK/samples.tsv"
+  fi
 }
 
 # Prints {"peak": {name: MiB}, "cpu": {name: avg %}} from a samples file.

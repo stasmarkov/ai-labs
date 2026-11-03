@@ -21,6 +21,16 @@ final readonly class EloquentDocsIndexRepository implements DocsIndexRepositoryI
         return DocsDocument::query()->where('source', $source)->pluck('content_hash', 'path')->all();
     }
 
+    public function documentVersionLines(): array
+    {
+        return DocsDocument::query()
+            ->orderBy('source')
+            ->orderBy('path')
+            ->get(['source', 'path', 'content_hash'])
+            ->map(fn (DocsDocument $document): string => $document->source.'|'.$document->path.'|'.$document->content_hash)
+            ->all();
+    }
+
     public function replaceDocument(IndexedDocument $document, string $model, CarbonImmutable $indexedAt): int
     {
         return DB::transaction(function () use ($document, $model, $indexedAt): int {
@@ -98,6 +108,11 @@ final readonly class EloquentDocsIndexRepository implements DocsIndexRepositoryI
             ->pluck('id')
             ->map(fn (mixed $id): int => (int) $id)
             ->all();
+    }
+
+    public function pendingEmbeddingCount(string $model): int
+    {
+        return DocsChunk::query()->whereRaw(self::STALE, [$model])->count();
     }
 
     public function staleChunks(array $chunkIds, string $model): array

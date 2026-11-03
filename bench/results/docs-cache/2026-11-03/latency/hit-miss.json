@@ -1,0 +1,479 @@
+{
+  "metadata": {
+    "label": "latency",
+    "generated_at": "2026-11-03T16:22:33+00:00",
+    "git_commit": "0a306c82fd7873fd0178d65ad5b8c7a9696ffc4d",
+    "questions": 18,
+    "eval_set_version": "v1"
+  },
+  "paths": {
+    "exact": {
+      "requests": 18,
+      "by_path": {
+        "exact": 17,
+        "miss": 1
+      },
+      "median_ms_all": 53.5,
+      "median_ms_by_path": {
+        "exact": 51,
+        "miss": 6848
+      }
+    },
+    "fresh": {
+      "requests": 18,
+      "by_path": {
+        "miss": 18
+      },
+      "median_ms_all": 5687,
+      "median_ms_by_path": {
+        "miss": 5687
+      }
+    },
+    "paraphrase": {
+      "requests": 18,
+      "by_path": {
+        "semantic": 18
+      },
+      "median_ms_all": 86,
+      "median_ms_by_path": {
+        "semantic": 86
+      }
+    }
+  },
+  "hit_rate": 0.6481481481481481,
+  "requests": [
+    {
+      "id": "lv-schedule-overlap",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 5432,
+      "done": true
+    },
+    {
+      "id": "lv-schedule-overlap",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 56,
+      "done": true
+    },
+    {
+      "id": "lv-schedule-overlap",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 105,
+      "done": true
+    },
+    {
+      "id": "lv-schedule-five",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 5649,
+      "done": true
+    },
+    {
+      "id": "lv-schedule-five",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 32,
+      "done": true
+    },
+    {
+      "id": "lv-schedule-five",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 73,
+      "done": true
+    },
+    {
+      "id": "lv-queue-unique",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 6885,
+      "done": true
+    },
+    {
+      "id": "lv-queue-unique",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 37,
+      "done": true
+    },
+    {
+      "id": "lv-queue-unique",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 77,
+      "done": true
+    },
+    {
+      "id": "lv-queue-failed-table",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 5350,
+      "done": true
+    },
+    {
+      "id": "lv-queue-failed-table",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 63,
+      "done": true
+    },
+    {
+      "id": "lv-queue-failed-table",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 143,
+      "done": true
+    },
+    {
+      "id": "lv-queue-after-commit",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 5339,
+      "done": true
+    },
+    {
+      "id": "lv-queue-after-commit",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 46,
+      "done": true
+    },
+    {
+      "id": "lv-queue-after-commit",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 77,
+      "done": true
+    },
+    {
+      "id": "lv-cache-stale",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 5682,
+      "done": true
+    },
+    {
+      "id": "lv-cache-stale",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 65,
+      "done": true
+    },
+    {
+      "id": "lv-cache-stale",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 129,
+      "done": true
+    },
+    {
+      "id": "lv-migrate-fresh",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 4002,
+      "done": true
+    },
+    {
+      "id": "lv-migrate-fresh",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 51,
+      "done": true
+    },
+    {
+      "id": "lv-migrate-fresh",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 258,
+      "done": true
+    },
+    {
+      "id": "lv-migrate-rollback-step",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 5692,
+      "done": true
+    },
+    {
+      "id": "lv-migrate-rollback-step",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 71,
+      "done": true
+    },
+    {
+      "id": "lv-migrate-rollback-step",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 69,
+      "done": true
+    },
+    {
+      "id": "lv-model-uuid",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 6477,
+      "done": true
+    },
+    {
+      "id": "lv-model-uuid",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 73,
+      "done": true
+    },
+    {
+      "id": "lv-model-uuid",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 95,
+      "done": true
+    },
+    {
+      "id": "lv-model-upsert",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 8439,
+      "done": true
+    },
+    {
+      "id": "lv-model-upsert",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 43,
+      "done": true
+    },
+    {
+      "id": "lv-model-upsert",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 71,
+      "done": true
+    },
+    {
+      "id": "lv-relation-count",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 8252,
+      "done": true
+    },
+    {
+      "id": "lv-relation-count",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 41,
+      "done": true
+    },
+    {
+      "id": "lv-relation-count",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 102,
+      "done": true
+    },
+    {
+      "id": "lv-prevent-lazy",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 6829,
+      "done": true
+    },
+    {
+      "id": "lv-prevent-lazy",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 51,
+      "done": true
+    },
+    {
+      "id": "lv-prevent-lazy",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 74,
+      "done": true
+    },
+    {
+      "id": "lv-middleware-exclude",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 6434,
+      "done": true
+    },
+    {
+      "id": "lv-middleware-exclude",
+      "step": "exact",
+      "path": "miss",
+      "status": 200,
+      "ms": 6848,
+      "done": true
+    },
+    {
+      "id": "lv-middleware-exclude",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 77,
+      "done": true
+    },
+    {
+      "id": "lv-route-list",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 4688,
+      "done": true
+    },
+    {
+      "id": "lv-route-list",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 172,
+      "done": true
+    },
+    {
+      "id": "lv-route-list",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 117,
+      "done": true
+    },
+    {
+      "id": "lv-http-fake",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 9167,
+      "done": true
+    },
+    {
+      "id": "lv-http-fake",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 62,
+      "done": true
+    },
+    {
+      "id": "lv-http-fake",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 77,
+      "done": true
+    },
+    {
+      "id": "lv-storage-link",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 6204,
+      "done": true
+    },
+    {
+      "id": "lv-storage-link",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 30,
+      "done": true
+    },
+    {
+      "id": "lv-storage-link",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 70,
+      "done": true
+    },
+    {
+      "id": "lv-env-types",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 5130,
+      "done": true
+    },
+    {
+      "id": "lv-env-types",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 35,
+      "done": true
+    },
+    {
+      "id": "lv-env-types",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 186,
+      "done": true
+    },
+    {
+      "id": "lv-make-policy",
+      "step": "fresh",
+      "path": "miss",
+      "status": 200,
+      "ms": 3933,
+      "done": true
+    },
+    {
+      "id": "lv-make-policy",
+      "step": "exact",
+      "path": "exact",
+      "status": 200,
+      "ms": 64,
+      "done": true
+    },
+    {
+      "id": "lv-make-policy",
+      "step": "paraphrase",
+      "path": "semantic",
+      "status": 200,
+      "ms": 97,
+      "done": true
+    }
+  ],
+  "stats": "+-----------+----------+------+-----------+-------------------------+--------------+-----------------+\n| Window    | Hit rate | Hits | Completed | Hits by kind            | Saved sum ms | Saved median ms |\n+-----------+----------+------+-----------+-------------------------+--------------+-----------------+\n| Last 24 h | 59.5%    | 97   | 66        | exact: 52, semantic: 45 | 636023       | 6100            |\n| All time  | 59.5%    | 97   | 66        | exact: 52, semantic: 45 | 636023       | 6100            |\n+-----------+----------+------+-----------+-------------------------+--------------+-----------------+\nEntries: 18 current, 0 stale."
+}

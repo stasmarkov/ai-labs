@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Contracts\DocsAnswerCacheRepositoryInterface;
 use App\Contracts\DocsBenchRepositoryInterface;
 use App\Contracts\DocsIndexRepositoryInterface;
 use App\Contracts\DocsSearchRepositoryInterface;
@@ -11,6 +12,7 @@ use App\Contracts\ListingRepositoryInterface;
 use App\Contracts\RagEvalRepositoryInterface;
 use App\Contracts\SemanticBenchRepositoryInterface;
 use App\Contracts\SemanticSearchRepositoryInterface;
+use App\Repositories\EloquentDocsAnswerCacheRepository;
 use App\Repositories\EloquentDocsBenchRepository;
 use App\Repositories\EloquentDocsIndexRepository;
 use App\Repositories\EloquentDocsSearchRepository;
@@ -43,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(SemanticBenchRepositoryInterface::class, EloquentSemanticBenchRepository::class);
         $this->app->bind(DocsIndexRepositoryInterface::class, EloquentDocsIndexRepository::class);
         $this->app->bind(DocsSearchRepositoryInterface::class, EloquentDocsSearchRepository::class);
+        $this->app->bind(DocsAnswerCacheRepositoryInterface::class, EloquentDocsAnswerCacheRepository::class);
         $this->app->bind(DocsBenchRepositoryInterface::class, EloquentDocsBenchRepository::class);
         $this->app->bind(RagEvalRepositoryInterface::class, EloquentRagEvalRepository::class);
         $this->app->bind(EmbeddingStatsRepositoryInterface::class, EloquentEmbeddingStatsRepository::class);
