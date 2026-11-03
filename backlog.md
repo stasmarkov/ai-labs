@@ -449,7 +449,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Notes:** split from the original SL-32 on 2026-11-02. Chunks passed as marked data with their source; input/output guard; the trace row adds retrieved chunk ids. Reference design: `.ai/research/ai-chatbot-reference.md`.
 - **Depends on:** SL-32, SL-20
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261103-1028-docs-chat-answer
 - **Source:** split from SL-32, 2026-11-02 (Stanislav Markov's request to build the chatbot sooner)
 - **Run:** `/sdd "SL-45: docs chatbot answering — stream an answer from qwen3.5:9b over the SL-32 retrieval with citations to the chunks used, \"I don't know\" below the relevance threshold, retrieved text marked as data plus an input/output guard, retrieved chunk ids in ai_runs (BR-98, BR-100, BR-90, BR-95, BR-27). Rules in product-brief.md; design in .ai/research/ai-chatbot-reference.md."`

@@ -96,9 +96,9 @@
 
 ## Done when
 
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run (manual steps 1–4, 6, 7, 9, 10 run live on 2026-11-03; step 5 covered by the overlap and canary feature tests)
+- [x] Gates green (601 tests; parity identical on 6 servers; fingerprint unchanged; `bench/run.sh ping --quick` exit 0 on a clean tree; ask stream checked on frankenphp-octane)
 
 ## Phase: Gaps (converge round 1)
 
