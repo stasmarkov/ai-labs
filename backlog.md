@@ -571,7 +571,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-95, BR-27
 - **Depends on:** SL-45, SL-46
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261103-2118-chat-stop-multiturn
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-41: chat page streaming the docs chatbot's tokens over SSE into the AI lab Vue chat page, with a stop button that cancels generation server-side (BR-95, BR-27). Rules in product-brief.md."`
