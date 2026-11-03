@@ -463,8 +463,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-26, BR-27
 - **Depends on:** SL-45
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261103-1204-rag-eval-harness
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-33: RAG eval harness — 30 labelled Q/A pairs, an Artisan command that reports retrieval recall@k, then runs them through the docs chatbot and grades correctness and groundedness with a second model call, results table per chunk size / k / vector-vs-hybrid / model (BR-26, BR-27). Rules in product-brief.md."`
 

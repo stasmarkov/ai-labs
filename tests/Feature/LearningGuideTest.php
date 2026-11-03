@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Services\RagEvalSet;
+
 test('AC-10 learning guide explains state leaks with links', function (): void {
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
 
@@ -52,7 +54,7 @@ test('AC-9 learning guide explains streaming an AI answer with links', function 
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–14');
+    expect($guide)->toContain('sections 1–15');
 });
 
 test('AC-8 learning guide explains running the model locally', function (): void {
@@ -92,7 +94,7 @@ test('AC-8 learning guide explains running the model locally', function (): void
 
     expect($section)->toContain('| Server | Tokens in |');
 
-    expect($guide)->toContain('sections 1–14');
+    expect($guide)->toContain('sections 1–15');
     expect($guide)->not->toContain('running models locally (SL-22)');
 });
 
@@ -123,7 +125,7 @@ test('AC-9 learning guide explains embeddings and vector search', function (): v
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–14');
+    expect($guide)->toContain('sections 1–15');
     expect($guide)->not->toContain('embeddings and vector search (SL-24)');
 });
 
@@ -155,7 +157,7 @@ test('AC-9 learning guide explains chunking and hybrid retrieval', function (): 
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–14');
+    expect($guide)->toContain('sections 1–15');
     expect($guide)->not->toContain('RAG with citations (SL-32)');
 });
 
@@ -188,7 +190,7 @@ test('AC-8 learning guide explains the AI lab UI', function (): void {
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–14');
+    expect($guide)->toContain('sections 1–15');
 });
 
 test('AC-11 learning guide documents docs answering', function (): void {
@@ -219,7 +221,7 @@ test('AC-11 learning guide documents docs answering', function (): void {
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–14');
+    expect($guide)->toContain('sections 1–15');
     expect($guide)->not->toContain('RAG with citations (SL-45, on top of the index from SL-32)');
 });
 
@@ -231,5 +233,73 @@ test('AC-1 NFR-1 learning guide records the live docs answering run', function (
 
     foreach (['Live run: five questions', 'tokens/s', 'no_context', '1695', '2290', '2595', '2587', '1758', '1766', '4072', '5270', '4600', '500 ms'] as $needle) {
         expect($section)->toContain($needle);
+    }
+});
+
+test('AC-10 learning guide section 15 explains measuring RAG', function (): void {
+    $guide = file_get_contents(base_path('docs/learning-guide.md'));
+
+    preg_match('/^## 15\. Measuring RAG: recall@k, calibration and LLM grading\n(.*?)(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->not->toBe('');
+
+    foreach (['rag:eval', 'recall@k', 'MRR', 'Youden', 'overfit', 'self-grading', 'contamination', 'RagEvalContaminationTest', 'chunk size', '0.581951', '0.875', '300/180', 'false don\'t-know', 'off-python-sort', 'rag-grader@v1', 'ai_runs'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    foreach ([
+        '../app/Console/Commands/RagEvalCommand.php',
+        '../app/Services/ThresholdCalibrator.php',
+        '../app/Services/RagRetrievalEvaluator.php',
+        '../app/Ai/RagGraderAgent.php',
+        '../.ai/specs/spec-20261103-1204-rag-eval-harness/',
+        '../bench/results/rag-eval/2026-11-03/',
+        '../BENCHMARKS.md',
+        'https://en.wikipedia.org/wiki/Youden%27s_J_statistic',
+        'https://en.wikipedia.org/wiki/Mean_reciprocal_rank',
+        'https://arxiv.org/abs/2306.05685',
+    ] as $link) {
+        expect($section)->toContain("]($link");
+    }
+
+    foreach (['../app/Console/Commands/RagEvalCommand.php', '../app/Services/ThresholdCalibrator.php', '../app/Services/RagRetrievalEvaluator.php', '../app/Ai/RagGraderAgent.php', '../.ai/specs/spec-20261103-1204-rag-eval-harness/', '../bench/results/rag-eval/2026-11-03/'] as $path) {
+        expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
+    }
+
+    foreach ((new RagEvalSet)->load() as $question) {
+        expect(RagEvalSet::normalizeText($section))->not->toContain(RagEvalSet::normalizeText($question->question));
+    }
+
+    foreach (['answers-qwen-500-300', 'answers-gemma-500-300', 'answers-qwen-300-180'] as $label) {
+        $report = json_decode(file_get_contents(base_path("bench/results/rag-eval/2026-11-03/{$label}/answers.json")), true, flags: JSON_THROW_ON_ERROR)['models'][0];
+
+        expect($section)->toContain((string) $report['median_ttft_ms']);
+    }
+
+    expect($section)->not->toContain('is empty in the result files');
+
+    expect($guide)->toContain('sections 1–15');
+});
+
+test('the learning guide maps every AI file, request flow and feature recipe, and every linked file exists', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+    $start = strpos($guide, '## 16. How the AI features are built: a map of the code');
+    expect($start)->not->toBeFalse();
+    $section = substr($guide, (int) $start, strpos($guide, '## Planned sections') - (int) $start);
+
+    foreach (['### The layers', '### Every file and its purpose', '### Four requests, end to end', '### Common feature requests and where they land', '### Testing patterns used everywhere'] as $heading) {
+        expect($section)->toContain($heading);
+    }
+
+    preg_match_all('/\]\((\.\.\/[^)#]+)/', $section, $links);
+    expect(count($links[1]))->toBeGreaterThan(60);
+
+    foreach ($links[1] as $link) {
+        expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$link))->toBeTrue("missing: {$link}");
+    }
+
+    foreach (glob(base_path('app/Ai/*.php')) ?: [] as $file) {
+        expect($section)->toContain('../app/Ai/'.basename($file));
     }
 });

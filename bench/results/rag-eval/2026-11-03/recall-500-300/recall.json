@@ -1,0 +1,227 @@
+{
+    "metadata": {
+        "label": "recall-500-300",
+        "generated_at": "2026-11-03T10:38:37+00:00",
+        "eval_set_version": "v1",
+        "chunk_settings": {
+            "max_tokens": 500,
+            "merge_below_tokens": 300,
+            "mixed": false,
+            "found": [
+                {
+                    "max_tokens": 500,
+                    "merge_below_tokens": 300
+                }
+            ]
+        },
+        "embedding_model": "ollama/bge-m3",
+        "answer_models": [],
+        "grader_model": null,
+        "repeat": null,
+        "prompt_versions": {
+            "docs_answer": "docs-answer@v1",
+            "rag_grader": "rag-grader@v1"
+        },
+        "git_commit": "ff301f682916856923ec4eae39b0b7ac19b5e1c8",
+        "git_dirty": true,
+        "k": [
+            3,
+            6,
+            10
+        ],
+        "modes": [
+            "vector",
+            "text",
+            "hybrid"
+        ]
+    },
+    "cells": [
+        {
+            "mode": "vector",
+            "k": 3,
+            "questions": 24,
+            "hits": 18,
+            "recall": 0.75,
+            "mrr": 0.666667,
+            "missed": [
+                "lv-cache-stale",
+                "lv-model-upsert",
+                "repo-ef-search",
+                "repo-rrf",
+                "repo-gate-skip-model",
+                "repo-model-host"
+            ]
+        },
+        {
+            "mode": "vector",
+            "k": 6,
+            "questions": 24,
+            "hits": 21,
+            "recall": 0.875,
+            "mrr": 0.69375,
+            "missed": [
+                "repo-rrf",
+                "repo-gate-skip-model",
+                "repo-model-host"
+            ]
+        },
+        {
+            "mode": "vector",
+            "k": 10,
+            "questions": 24,
+            "hits": 21,
+            "recall": 0.875,
+            "mrr": 0.69375,
+            "missed": [
+                "repo-rrf",
+                "repo-gate-skip-model",
+                "repo-model-host"
+            ]
+        },
+        {
+            "mode": "text",
+            "k": 3,
+            "questions": 24,
+            "hits": 0,
+            "recall": 0,
+            "mrr": 0,
+            "missed": [
+                "lv-schedule-overlap",
+                "lv-schedule-five",
+                "lv-queue-unique",
+                "lv-queue-failed-table",
+                "lv-queue-after-commit",
+                "lv-cache-stale",
+                "lv-migrate-fresh",
+                "lv-migrate-rollback-step",
+                "lv-model-uuid",
+                "lv-model-upsert",
+                "lv-relation-count",
+                "lv-prevent-lazy",
+                "lv-middleware-exclude",
+                "lv-route-list",
+                "lv-http-fake",
+                "lv-storage-link",
+                "lv-env-types",
+                "lv-make-policy",
+                "repo-apache-buffer",
+                "repo-ef-search",
+                "repo-rrf",
+                "repo-gate-skip-model",
+                "repo-model-host",
+                "repo-octane-connection"
+            ]
+        },
+        {
+            "mode": "text",
+            "k": 6,
+            "questions": 24,
+            "hits": 0,
+            "recall": 0,
+            "mrr": 0,
+            "missed": [
+                "lv-schedule-overlap",
+                "lv-schedule-five",
+                "lv-queue-unique",
+                "lv-queue-failed-table",
+                "lv-queue-after-commit",
+                "lv-cache-stale",
+                "lv-migrate-fresh",
+                "lv-migrate-rollback-step",
+                "lv-model-uuid",
+                "lv-model-upsert",
+                "lv-relation-count",
+                "lv-prevent-lazy",
+                "lv-middleware-exclude",
+                "lv-route-list",
+                "lv-http-fake",
+                "lv-storage-link",
+                "lv-env-types",
+                "lv-make-policy",
+                "repo-apache-buffer",
+                "repo-ef-search",
+                "repo-rrf",
+                "repo-gate-skip-model",
+                "repo-model-host",
+                "repo-octane-connection"
+            ]
+        },
+        {
+            "mode": "text",
+            "k": 10,
+            "questions": 24,
+            "hits": 0,
+            "recall": 0,
+            "mrr": 0,
+            "missed": [
+                "lv-schedule-overlap",
+                "lv-schedule-five",
+                "lv-queue-unique",
+                "lv-queue-failed-table",
+                "lv-queue-after-commit",
+                "lv-cache-stale",
+                "lv-migrate-fresh",
+                "lv-migrate-rollback-step",
+                "lv-model-uuid",
+                "lv-model-upsert",
+                "lv-relation-count",
+                "lv-prevent-lazy",
+                "lv-middleware-exclude",
+                "lv-route-list",
+                "lv-http-fake",
+                "lv-storage-link",
+                "lv-env-types",
+                "lv-make-policy",
+                "repo-apache-buffer",
+                "repo-ef-search",
+                "repo-rrf",
+                "repo-gate-skip-model",
+                "repo-model-host",
+                "repo-octane-connection"
+            ]
+        },
+        {
+            "mode": "hybrid",
+            "k": 3,
+            "questions": 24,
+            "hits": 17,
+            "recall": 0.708333,
+            "mrr": 0.638889,
+            "missed": [
+                "lv-queue-failed-table",
+                "lv-cache-stale",
+                "lv-model-upsert",
+                "repo-ef-search",
+                "repo-rrf",
+                "repo-gate-skip-model",
+                "repo-model-host"
+            ]
+        },
+        {
+            "mode": "hybrid",
+            "k": 6,
+            "questions": 24,
+            "hits": 21,
+            "recall": 0.875,
+            "mrr": 0.676389,
+            "missed": [
+                "repo-rrf",
+                "repo-gate-skip-model",
+                "repo-model-host"
+            ]
+        },
+        {
+            "mode": "hybrid",
+            "k": 10,
+            "questions": 24,
+            "hits": 21,
+            "recall": 0.875,
+            "mrr": 0.676389,
+            "missed": [
+                "repo-rrf",
+                "repo-gate-skip-model",
+                "repo-model-host"
+            ]
+        }
+    ]
+}

@@ -20,15 +20,26 @@ final readonly class MarkdownChunker
     /** Raise when the chunking rules change, so docs:index re-chunks files whose text did not change. */
     public const VERSION = 2;
 
-    private const MAX_TOKENS = 500;
-
-    private const MERGE_BELOW_TOKENS = 300;
-
     private const OVERLAP_MIN_TOKENS = 50;
 
     private const OVERLAP_MAX_TOKENS = 80;
 
     private const INTRODUCTION = 'Introduction';
+
+    public function __construct(
+        private int $maxTokens = 500,
+        private int $mergeBelowTokens = 300,
+    ) {}
+
+    public function maxTokens(): int
+    {
+        return $this->maxTokens;
+    }
+
+    public function mergeBelowTokens(): int
+    {
+        return $this->mergeBelowTokens;
+    }
 
     public function chunk(string $markdown, string $fileName): ChunkedDocument
     {
@@ -282,7 +293,7 @@ final readonly class MarkdownChunker
      */
     private function bodyLimit(string $title, string $heading): int
     {
-        return max(1, self::MAX_TOKENS * 4 - mb_strlen($this->prefix($title, $heading)) - 2);
+        return max(1, $this->maxTokens * 4 - mb_strlen($this->prefix($title, $heading)) - 2);
     }
 
     private function tokens(string $text): int
@@ -425,8 +436,8 @@ final readonly class MarkdownChunker
             $prefixLength = mb_strlen($this->prefix($title, $current['heading'])) + 2;
 
             if (
-                $this->tokens(str_repeat('x', $prefixLength + $this->bodyLength($current['atoms']))) < self::MERGE_BELOW_TOKENS
-                && $prefixLength + $this->bodyLength($combined) <= self::MAX_TOKENS * 4
+                $this->tokens(str_repeat('x', $prefixLength + $this->bodyLength($current['atoms']))) < $this->mergeBelowTokens
+                && $prefixLength + $this->bodyLength($combined) <= $this->maxTokens * 4
             ) {
                 $current['atoms'] = $combined;
 

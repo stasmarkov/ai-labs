@@ -59,11 +59,11 @@ final class DocsAnswerProtocol extends SseProtocol
                 $text .= $event->delta;
             }
 
-            $leak = $event instanceof TextDelta || $event instanceof StreamEnd ? $this->guard->leak($text) : null;
+            $refusal = $event instanceof TextDelta || $event instanceof StreamEnd ? self::refusalReason($this->guard, $text) : null;
 
-            if ($leak !== null) {
+            if ($refusal !== null) {
                 // Returning abandons the SDK stream, so the run is finished here instead of by the SDK.
-                $this->recorder->refused($response->invocationId, 'output:'.$leak);
+                $this->recorder->refused($response->invocationId, $refusal);
 
                 yield [
                     'type' => 'refused',
@@ -77,9 +77,9 @@ final class DocsAnswerProtocol extends SseProtocol
             }
 
             if ($event instanceof StreamEnd) {
-                $citations = $this->citations($text);
+                $citations = self::citations($text, $this->sources);
                 // The SDK completes the run when it is asked for the event after this one, so the ids go in now.
-                $this->recorder->annotate($response->invocationId, $this->sourceIds(), array_column($citations['cited'], 'id'));
+                $this->recorder->annotate($response->invocationId, self::sourceIds($this->sources), array_column($citations['cited'], 'id'));
             }
 
             yield $event->toArray();
@@ -96,11 +96,23 @@ final class DocsAnswerProtocol extends SseProtocol
     }
 
     /**
+     * The run's refusal reason when the text so far repeats the instructions or the canary, else null. The streamed
+     * protocol and the drained answer() both ask this.
+     */
+    public static function refusalReason(?OutputGuard $guard, string $text): ?string
+    {
+        $leak = $guard?->leak($text);
+
+        return $leak === null ? null : 'output:'.$leak;
+    }
+
+    /**
+     * @param  list<DocsMatch>  $sources
      * @return list<int>
      */
-    private function sourceIds(): array
+    public static function sourceIds(array $sources): array
     {
-        return array_map(fn (DocsMatch $match): int => $match->id, $this->sources);
+        return array_map(fn (DocsMatch $match): int => $match->id, $sources);
     }
 
     /**
@@ -126,16 +138,12 @@ final class DocsAnswerProtocol extends SseProtocol
     }
 
     /**
+     * @param  list<DocsMatch>  $sources
      * @return array{cited: list<array{n: int, id: int}>, unknown: list<int>}
      */
-    private function citations(string $answer): array
+    public static function citations(string $answer, array $sources): array
     {
-        $found = CitationParser::parse($answer, count($this->sources));
-
-        return [
-            'cited' => array_map(fn (int $n): array => ['n' => $n, 'id' => $this->sources[$n - 1]->id], $found['used']),
-            'unknown' => $found['unknown'],
-        ];
+        return CitationParser::cite($answer, $sources);
     }
 
     private function maskedErrorOnce(): Generator

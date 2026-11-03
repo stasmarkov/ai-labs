@@ -87,8 +87,8 @@ final readonly class DocsIndexService
     private function indexFile(CorpusFile $file, array $stored): bool
     {
         $markdown = $this->corpus->read($file);
-        // The chunker version is part of the hash, so a change to the chunking rules re-chunks every file.
-        $hash = hash('sha256', MarkdownChunker::VERSION."\n".$markdown);
+        // The chunker version and chunk sizes are part of the hash, so a change to the chunking rules or sizes re-chunks every file.
+        $hash = hash('sha256', MarkdownChunker::VERSION.':'.$this->chunker->maxTokens().':'.$this->chunker->mergeBelowTokens()."\n".$markdown);
 
         if (($stored[$file->path] ?? null) === $hash) {
             return false;
@@ -97,7 +97,7 @@ final readonly class DocsIndexService
         $chunked = $this->chunker->chunk($markdown, basename($file->path));
 
         $this->index->replaceDocument(
-            new IndexedDocument($file->source, $file->path, $chunked->title, $hash, $chunked->chunks),
+            new IndexedDocument($file->source, $file->path, $chunked->title, $hash, $chunked->chunks, $this->chunker->maxTokens(), $this->chunker->mergeBelowTokens()),
             $this->embedding->modelLabel(),
             CarbonImmutable::now(),
         );

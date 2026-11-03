@@ -1,0 +1,51 @@
+{
+    "metadata": {
+        "label": "answers-gemma-500-300",
+        "generated_at": "2026-11-03T12:29:22+00:00",
+        "eval_set_version": "v1",
+        "chunk_settings": {
+            "max_tokens": 500,
+            "merge_below_tokens": 300,
+            "mixed": false,
+            "found": [
+                {
+                    "max_tokens": 500,
+                    "merge_below_tokens": 300
+                }
+            ]
+        },
+        "embedding_model": "ollama/bge-m3",
+        "answer_models": [
+            "gemma4:12b"
+        ],
+        "grader_model": "qwen3.5:9b",
+        "repeat": 3,
+        "prompt_versions": {
+            "docs_answer": "docs-answer@v1",
+            "rag_grader": "rag-grader@v1"
+        },
+        "git_commit": "ff301f682916856923ec4eae39b0b7ac19b5e1c8",
+        "git_dirty": true,
+        "k": [
+            6
+        ],
+        "modes": [
+            "hybrid"
+        ]
+    },
+    "cells": [
+        {
+            "mode": "hybrid",
+            "k": 6,
+            "questions": 24,
+            "hits": 21,
+            "recall": 0.875,
+            "mrr": 0.676389,
+            "missed": [
+                "repo-rrf",
+                "repo-gate-skip-model",
+                "repo-model-host"
+            ]
+        }
+    ]
+}

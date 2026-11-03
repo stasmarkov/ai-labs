@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Services\RagEvalSet;
+
 test('AC-12 BENCHMARKS.md versions table has one nginx-fpm and one apache-fpm row', function (): void {
     $doc = file_get_contents(base_path('BENCHMARKS.md'));
 
@@ -280,4 +282,42 @@ test('MNC-4 bench/asset-fingerprint.sh prints the lines recorded in BENCHMARKS.m
     expect($exit)->toBe(0)
         ->and($recorded[0])->toHaveCount(2)
         ->and($output)->toBe($recorded[0]);
+});
+
+test('AC-9 AC-2 BENCHMARKS.md records the RAG evaluation with ids only and numbers from the committed files', function (): void {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+
+    preg_match('/^## RAG evaluation \(2026-11-03\)\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->not->toBe('');
+
+    foreach (['### What the numbers say', '### Surprises', '### Interview story', 'recall@6', 'MRR', 'Youden', 'qwen3.5:9b', 'gemma4:12b', 'repo-rrf', 'repo-gate-skip-model', 'repo-model-host', 'off-python-sort', '300/180', '500/300', 'bench/results/rag-eval/2026-11-03/', '0.581951', '0.875', 'median_ttft_ms'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    foreach ((new RagEvalSet)->load() as $question) {
+        expect(RagEvalSet::normalizeText($section))->not->toContain(RagEvalSet::normalizeText($question->question));
+    }
+
+    $recall = json_decode(file_get_contents(base_path('bench/results/rag-eval/2026-11-03/recall-500-300/recall.json')), true, flags: JSON_THROW_ON_ERROR);
+    $hybrid6 = collect($recall['cells'])->first(fn (array $cell): bool => $cell['mode'] === 'hybrid' && $cell['k'] === 6);
+
+    expect($hybrid6['hits'])->toBe(21)
+        ->and($section)->toContain('21/24')
+        ->and($section)->toContain(number_format($hybrid6['mrr'], 3));
+
+    foreach (['answers-qwen-500-300', 'answers-gemma-500-300', 'answers-qwen-300-180'] as $label) {
+        $report = json_decode(file_get_contents(base_path("bench/results/rag-eval/2026-11-03/{$label}/answers.json")), true, flags: JSON_THROW_ON_ERROR)['models'][0];
+
+        expect($report['median_ttft_ms'])->toBeNumeric()->toBeGreaterThan(0)
+            ->and($section)->toContain($report['median_ttft_ms'].' ms')
+            ->and($section)->toContain($report['median_latency_ms'].' ms');
+    }
+
+    expect($section)->not->toContain('TTFT is empty')
+        ->and($section)->not->toContain('`null`');
+
+    preg_match('/### Interview story\n(.*?)(?=^##|\z)/ms', $section, $story);
+    expect($story[1] ?? '')->toMatch('/\d/');
 });

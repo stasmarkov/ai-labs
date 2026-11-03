@@ -117,7 +117,7 @@ it('AC-3 docs tables have the columns, constraints and indexes', function (): vo
     ))->keyBy('column_name')->all();
 
     $documents = $columns('docs_documents');
-    expect(array_keys($documents))->toEqualCanonicalizing(['id', 'source', 'path', 'title', 'content_hash', 'indexed_at', 'created_at', 'updated_at']);
+    expect(array_keys($documents))->toEqualCanonicalizing(['id', 'source', 'path', 'title', 'content_hash', 'chunk_max_tokens', 'chunk_merge_below_tokens', 'indexed_at', 'created_at', 'updated_at']);
 
     $chunks = $columns('docs_chunks');
     expect(array_keys($chunks))->toEqualCanonicalizing([

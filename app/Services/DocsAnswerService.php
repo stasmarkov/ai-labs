@@ -10,10 +10,18 @@ use App\Ai\DocsAnswerAgent;
 use App\Ai\DocsAnswerProtocol;
 use App\Ai\OutputGuard;
 use App\Ai\SseEventsResponse;
+use App\DTOs\DocsAnswerPlan;
+use App\DTOs\DocsAnswerResult;
 use App\DTOs\DocsMatch;
+use App\Enums\DocsAnswerOutcome;
 use App\Exceptions\DocsAnswerUnavailableException;
 use App\Exceptions\DocsSearchUnavailableException;
 use Illuminate\Contracts\Support\Responsable;
+use Laravel\Ai\Streaming\Events\Error;
+use Laravel\Ai\Streaming\Events\StreamEnd;
+use Laravel\Ai\Streaming\Events\TextDelta;
+use RuntimeException;
+use Throwable;
 
 final readonly class DocsAnswerService
 {
@@ -36,18 +44,105 @@ final readonly class DocsAnswerService
      */
     public function ask(string $question): Responsable
     {
+        $plan = $this->plan($question);
+        $early = $plan->early;
+
+        if ($early?->outcome === DocsAnswerOutcome::RefusedInput) {
+            return new SseEventsResponse([
+                ['type' => 'refused', 'stage' => 'input', 'reason' => self::INPUT_REFUSAL, 'pattern' => $plan->pattern, 'replace' => false, 'invocation_id' => $early->invocationId],
+            ]);
+        }
+
+        if ($early !== null) {
+            return new SseEventsResponse([['type' => 'no_context', 'message' => self::NO_CONTEXT_MESSAGE, 'invocation_id' => $early->invocationId]]);
+        }
+
+        $recorder = app(AiRunRecorder::class);
+        $stream = $plan->agent->stream($plan->agent->promptFor($question, $plan->sources))
+            ->usingProtocol(new DocsAnswerProtocol($recorder, $plan->sources, $plan->guard));
+        $recorder->annotate($stream->invocationId, self::ids($plan->sources));
+
+        return $stream;
+    }
+
+    /**
+     * The same steps as ask(), but the model answer is read whole instead of streamed, and the result is a value. A
+     * model of the active provider other than its default can be named; the run row records the model used.
+     *
+     * @throws DocsAnswerUnavailableException when the question cannot be embedded. A failing model call comes back as a Failed result.
+     */
+    public function answer(string $question, ?string $model = null): DocsAnswerResult
+    {
+        $plan = $this->plan($question, $model);
+
+        if ($plan->early !== null) {
+            return $plan->early;
+        }
+
+        $recorder = app(AiRunRecorder::class);
+        $agent = $plan->agent;
+        $stream = $agent->stream($agent->promptFor($question, $plan->sources), model: $model);
+        $recorder->annotate($stream->invocationId, DocsAnswerProtocol::sourceIds($plan->sources));
+
+        $text = '';
+
+        try {
+            foreach ($stream as $event) {
+                if ($event instanceof Error) {
+                    throw new RuntimeException(DocsAnswerProtocol::ERROR_MESSAGE);
+                }
+
+                if ($event instanceof TextDelta) {
+                    $recorder->firstToken($stream->invocationId);
+                    $text .= $event->delta;
+                }
+
+                if (! $event instanceof TextDelta && ! $event instanceof StreamEnd) {
+                    continue;
+                }
+
+                $refusal = DocsAnswerProtocol::refusalReason($plan->guard, $text);
+
+                if ($refusal !== null) {
+                    $recorder->refused($stream->invocationId, $refusal);
+
+                    return new DocsAnswerResult(DocsAnswerOutcome::RefusedOutput, DocsAnswerProtocol::OUTPUT_REFUSAL, $plan->sources, [], $stream->invocationId);
+                }
+
+                if ($event instanceof StreamEnd) {
+                    $cited = array_column(DocsAnswerProtocol::citations($text, $plan->sources)['cited'], 'id');
+                    $recorder->annotate($stream->invocationId, DocsAnswerProtocol::sourceIds($plan->sources), $cited);
+                }
+            }
+        } catch (Throwable $e) {
+            // An in-stream Error event abandons the SDK generator, so neither AgentStreamed nor AgentFailed fires. Finishing
+            // the run here writes its failed row; it does nothing when the SDK already finished the run itself.
+            $recorder->failed($stream->invocationId, $e);
+
+            return new DocsAnswerResult(DocsAnswerOutcome::Failed, DocsAnswerProtocol::ERROR_MESSAGE, $plan->sources, [], $stream->invocationId);
+        }
+
+        return new DocsAnswerResult(DocsAnswerOutcome::Answered, $text, $plan->sources, $cited ?? [], $stream->invocationId);
+    }
+
+    /**
+     * The steps ask() and answer() share: input guard, retrieval, relevance gate and budget, then the agent and output
+     * guard. The two outcomes without a model call are recorded here and come back as the plan's early result.
+     *
+     * @throws DocsAnswerUnavailableException when the question cannot be embedded.
+     */
+    private function plan(string $question, ?string $model = null): DocsAnswerPlan
+    {
         $startedAt = hrtime(true);
         $recorder = app(AiRunRecorder::class);
-        $agent = new DocsAnswerAgent($this->canaries->generate());
+        $agent = new DocsAnswerAgent($this->canaries->generate(), $model);
 
         $pattern = $this->guard->match($question);
 
         if ($pattern !== null) {
             $invocationId = $this->recordOutcome($recorder, $agent, 'refused', $startedAt, 'input:'.$this->guardVersion().':'.$pattern);
 
-            return new SseEventsResponse([
-                ['type' => 'refused', 'stage' => 'input', 'reason' => self::INPUT_REFUSAL, 'pattern' => $pattern, 'replace' => false, 'invocation_id' => $invocationId],
-            ]);
+            return new DocsAnswerPlan($agent, [], null, new DocsAnswerResult(DocsAnswerOutcome::RefusedInput, self::INPUT_REFUSAL, [], [], $invocationId), $pattern);
         }
 
         try {
@@ -61,7 +156,7 @@ final readonly class DocsAnswerService
         if ($sources === []) {
             $invocationId = $this->recordOutcome($recorder, $agent, 'no_context', $startedAt, null, self::ids($retrieved));
 
-            return new SseEventsResponse([['type' => 'no_context', 'message' => self::NO_CONTEXT_MESSAGE, 'invocation_id' => $invocationId]]);
+            return new DocsAnswerPlan($agent, [], null, new DocsAnswerResult(DocsAnswerOutcome::NoContext, self::NO_CONTEXT_MESSAGE, [], [], $invocationId));
         }
 
         $guard = new OutputGuard(
@@ -70,11 +165,7 @@ final readonly class DocsAnswerService
             [$question, ...array_map(fn (DocsMatch $match): string => $match->body, $sources)],
         );
 
-        $stream = $agent->stream($agent->promptFor($question, $sources))
-            ->usingProtocol(new DocsAnswerProtocol($recorder, $sources, $guard));
-        $recorder->annotate($stream->invocationId, self::ids($sources));
-
-        return $stream;
+        return new DocsAnswerPlan($agent, $sources, $guard);
     }
 
     /**

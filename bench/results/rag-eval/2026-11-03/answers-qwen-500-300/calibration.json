@@ -1,0 +1,177 @@
+{
+    "metadata": {
+        "label": "answers-qwen-500-300",
+        "generated_at": "2026-11-03T12:00:58+00:00",
+        "eval_set_version": "v1",
+        "chunk_settings": {
+            "max_tokens": 500,
+            "merge_below_tokens": 300,
+            "mixed": false,
+            "found": [
+                {
+                    "max_tokens": 500,
+                    "merge_below_tokens": 300
+                }
+            ]
+        },
+        "embedding_model": "ollama/bge-m3",
+        "answer_models": [
+            "qwen3.5:9b"
+        ],
+        "grader_model": "gemma4:12b",
+        "repeat": 3,
+        "prompt_versions": {
+            "docs_answer": "docs-answer@v1",
+            "rag_grader": "rag-grader@v1"
+        },
+        "git_commit": "ff301f682916856923ec4eae39b0b7ac19b5e1c8",
+        "git_dirty": true,
+        "configured_threshold": 0.5
+    },
+    "questions": {
+        "lv-schedule-overlap": {
+            "type": "on_topic",
+            "top_similarity": 0.682192
+        },
+        "lv-schedule-five": {
+            "type": "on_topic",
+            "top_similarity": 0.682451
+        },
+        "lv-queue-unique": {
+            "type": "on_topic",
+            "top_similarity": 0.672653
+        },
+        "lv-queue-failed-table": {
+            "type": "on_topic",
+            "top_similarity": 0.617386
+        },
+        "lv-queue-after-commit": {
+            "type": "on_topic",
+            "top_similarity": 0.704941
+        },
+        "lv-cache-stale": {
+            "type": "on_topic",
+            "top_similarity": 0.630111
+        },
+        "lv-migrate-fresh": {
+            "type": "on_topic",
+            "top_similarity": 0.646589
+        },
+        "lv-migrate-rollback-step": {
+            "type": "on_topic",
+            "top_similarity": 0.677438
+        },
+        "lv-model-uuid": {
+            "type": "on_topic",
+            "top_similarity": 0.798823
+        },
+        "lv-model-upsert": {
+            "type": "on_topic",
+            "top_similarity": 0.652768
+        },
+        "lv-relation-count": {
+            "type": "on_topic",
+            "top_similarity": 0.594922
+        },
+        "lv-prevent-lazy": {
+            "type": "on_topic",
+            "top_similarity": 0.683109
+        },
+        "lv-middleware-exclude": {
+            "type": "on_topic",
+            "top_similarity": 0.6677
+        },
+        "lv-route-list": {
+            "type": "on_topic",
+            "top_similarity": 0.655722
+        },
+        "lv-http-fake": {
+            "type": "on_topic",
+            "top_similarity": 0.625858
+        },
+        "lv-storage-link": {
+            "type": "on_topic",
+            "top_similarity": 0.665756
+        },
+        "lv-env-types": {
+            "type": "on_topic",
+            "top_similarity": 0.581951
+        },
+        "lv-make-policy": {
+            "type": "on_topic",
+            "top_similarity": 0.697683
+        },
+        "repo-apache-buffer": {
+            "type": "on_topic",
+            "top_similarity": 0.646286
+        },
+        "repo-ef-search": {
+            "type": "on_topic",
+            "top_similarity": 0.603127
+        },
+        "repo-rrf": {
+            "type": "on_topic",
+            "top_similarity": 0.660823
+        },
+        "repo-gate-skip-model": {
+            "type": "on_topic",
+            "top_similarity": 0.587046
+        },
+        "repo-model-host": {
+            "type": "on_topic",
+            "top_similarity": 0.609132
+        },
+        "repo-octane-connection": {
+            "type": "on_topic",
+            "top_similarity": 0.651754
+        },
+        "off-weather": {
+            "type": "off_topic",
+            "top_similarity": 0.409143
+        },
+        "off-capital": {
+            "type": "off_topic",
+            "top_similarity": 0.339171
+        },
+        "off-pancakes": {
+            "type": "off_topic",
+            "top_similarity": 0.452545
+        },
+        "off-python-sort": {
+            "type": "off_topic",
+            "top_similarity": 0.619145
+        },
+        "off-guitar": {
+            "type": "off_topic",
+            "top_similarity": 0.472862
+        },
+        "off-marathon": {
+            "type": "off_topic",
+            "top_similarity": 0.467113
+        }
+    },
+    "on_topic": {
+        "count": 24,
+        "min": 0.581951,
+        "median": 0.654245,
+        "max": 0.798823
+    },
+    "off_topic": {
+        "count": 6,
+        "min": 0.339171,
+        "median": 0.459829,
+        "max": 0.619145
+    },
+    "best": {
+        "threshold": 0.581951,
+        "tpr": 1,
+        "fpr": 0.166667,
+        "j": 0.833333
+    },
+    "configured": {
+        "threshold": 0.5,
+        "tpr": 1,
+        "fpr": 0.166667,
+        "j": 0.833333
+    }
+}

@@ -264,3 +264,25 @@ it('AC-2 HTML tags are removed but autolinks and generic types stay', function (
 
     expect($document->chunks[0]->body)->toBe('See <https://example.com>, <dev@example.com> and Collection<int, User> or Collection<User> here.');
 });
+
+it('AC-7 a chunk size of 300 gives no paragraph chunk over 300 estimated tokens', function (): void {
+    $paragraph = paragraphOf(array_fill(0, 40, sentence('word', 25)));
+    $markdown = "# Doc\n\n## A\n\n{$paragraph}\n\n## B\n\n{$paragraph}\n";
+
+    $default = (new MarkdownChunker)->chunk($markdown, 'sample.md');
+    $small = (new MarkdownChunker(maxTokens: 300, mergeBelowTokens: 200))->chunk($markdown, 'sample.md');
+
+    expect(max(array_map(fn ($chunk) => $chunk->tokenEstimate, $default->chunks)))->toBeGreaterThan(300)
+        ->and(count($small->chunks))->toBeGreaterThan(count($default->chunks));
+
+    foreach ($small->chunks as $chunk) {
+        expect($chunk->oversize)->toBeFalse()
+            ->and(estimateTokens($chunk->content))->toBeLessThanOrEqual(300);
+    }
+});
+
+it('MNC-2 the default settings are 500 and 300', function (): void {
+    $chunker = new MarkdownChunker;
+
+    expect($chunker->maxTokens())->toBe(500)->and($chunker->mergeBelowTokens())->toBe(300);
+});

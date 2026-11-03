@@ -372,6 +372,93 @@ AC-7 asks hybrid for at least 4 of 5 in each group: met, 5 of 5 and 5 of 5.
 
 I indexed 121 markdown files into 2 706 chunks of about 400 tokens and searched them three ways. I expected exact identifiers to need full text and meaning questions to need vectors, so I wrote ten queries before running anything and promised hybrid at least 4 of 5 in each group. The result was less tidy: bge-m3 alone found all 10, full text found 7 of 10 and failed three questions worded differently from the docs (8 of 10 on the re-run, but only because this file now quotes the queries), and hybrid found 10 of 10, losing one place on a question where full text was confidently wrong. My own `characters / 4` token estimate was 18 % low on real text, so the "500 token" chunks are about 600 in the model's eyes. And my first write-up said the biggest chunk was a code block; a query of the rows showed a base64 screenshot of 8 780 tokens, more than the model reads. Lessons: measure the estimate you build on, describe the data from the data, not from the rule, and do not assume the textbook weakness of vector search shows up on a small corpus. It needs the larger set in SL-33 to show.
 
+## RAG evaluation (2026-11-03)
+
+A labelled set of 30 questions (24 on-topic: 18 Laravel docs, 6 this repo; 6 off-topic) run against the docs index from SL-32 and the answering pipeline from SL-45 (SL-33). Raw files: [`bench/results/rag-eval/2026-11-03/`](bench/results/rag-eval/2026-11-03/), one folder per run, each with `recall.json`, `calibration.json` and (for answer runs) `answers.json`. Questions are in `bench/rag-eval/questions.v1.jsonl`; this section names them by id only. Reproduce with `ddev artisan rag:eval --k=3,6,10 --modes=vector,text,hybrid --label=<name>`, adding `--answer --models=<model> --grader=<model> --repeat=3` for the answer runs.
+
+Versions: this repository at commit `ff301f6` plus the uncommitted working tree of this slice (every result file records `git_dirty: true`); bge-m3 on Ollama; chunker version 2; eval set `v1`; answer prompt `docs-answer@v1`; grader prompt `rag-grader@v1`. Chunk size 500/300 means a maximum of 500 and a merge-below of 300 estimated tokens (2 752 chunks); 300/180 is the reduced run.
+
+### Retrieval: recall@k and MRR
+
+Recall@k is the share of the 24 on-topic questions whose expected evidence phrase appears in a top-k chunk; MRR is the mean of 1 / rank of the first such chunk. Index at 500/300 (`recall-500-300`).
+
+| Mode | k | Recall | Hits | MRR | Missed ids |
+|------|---|--------|------|-----|------------|
+| vector | 3 | 0.750 | 18/24 | 0.667 | `lv-cache-stale`, `lv-model-upsert`, `repo-ef-search`, `repo-rrf`, `repo-gate-skip-model`, `repo-model-host` |
+| vector | 6 | 0.875 | 21/24 | 0.694 | `repo-rrf`, `repo-gate-skip-model`, `repo-model-host` |
+| vector | 10 | 0.875 | 21/24 | 0.694 | `repo-rrf`, `repo-gate-skip-model`, `repo-model-host` |
+| text | 3, 6, 10 | 0.000 | 0/24 | 0.000 | all 24 |
+| hybrid | 3 | 0.708 | 17/24 | 0.639 | `lv-queue-failed-table`, `lv-cache-stale`, `lv-model-upsert`, `repo-ef-search`, `repo-rrf`, `repo-gate-skip-model`, `repo-model-host` |
+| hybrid | 6 | 0.875 | 21/24 | 0.676 | `repo-rrf`, `repo-gate-skip-model`, `repo-model-host` |
+| hybrid | 10 | 0.875 | 21/24 | 0.676 | `repo-rrf`, `repo-gate-skip-model`, `repo-model-host` |
+
+The whole recall and calibration stage (30 question embeddings and a search per question and mode) took 1.9 s with Ollama warm, inside the 30 s budget.
+
+### Relevance threshold
+
+Top-1 vector similarity per question, and the gate threshold (`ai.docs.answer.min_similarity`). Cut-offs are tested on the same 30 questions that produced the numbers (`calibration.json`).
+
+| Measure | On-topic (24) | Off-topic (6) |
+|---------|---------------|---------------|
+| min | 0.582 | 0.339 |
+| median | 0.654 | 0.460 |
+| max | 0.799 | 0.619 |
+
+| Threshold | TPR | FPR | Youden's J |
+|-----------|-----|-----|------------|
+| 0.581951 (best) | 1.000 | 0.167 | 0.833 |
+| 0.5 (configured) | 1.000 | 0.167 | 0.833 |
+
+The ranges overlap (the lowest on-topic score, `lv-env-types`, is below the highest off-topic score, `off-python-sort`), so no cut separates the two groups. The single false positive at both thresholds is `off-python-sort`.
+
+### Answers at 500/300
+
+`--repeat=3`, k 6, hybrid. Scores are 0 to 2 from a second model; each cell is the median of the three run means with the range in brackets. Latency and TTFT are the medians of `ai_runs.latency_ms` and `ai_runs.ttft_ms` over the questions that reached the answer model (completed, withheld by the output guard, or failed) in all repeats (`median_latency_ms`, `median_ttft_ms` in the files). A `no_context` or input-refused question makes no model call and is left out of both medians.
+
+| Answer model (grader) | Correctness | Groundedness | Cited | Declined correctly | False don't-know | Median TTFT | Median latency |
+|-----------------------|-------------|--------------|-------|--------------------|------------------|-------------|----------------|
+| qwen3.5:9b (gemma4:12b) | 1.97 (1.90-1.97) | 2.00 (1.88-2.00) | 0.96 (0.92-1.00) | 5/6 | 0/24 | 7042 ms | 8997 ms |
+| gemma4:12b (qwen3.5:9b) | 1.93 (1.93-1.97) | 1.84 (1.84-1.92) | 0.96 (0.96-0.96) | 5/6 | 0/24 | 9073 ms | 10690 ms |
+
+Two figures were recomputed after a review fix, without re-running any model. The first version of the latency median also counted the `no_context` questions, which make no model call, while the TTFT median did not, so the two covered different rows. The medians were recomputed from the same `ai_runs` rows with the model-call filter; TTFT did not change, because those rows have no TTFT. Median latency, old to new: qwen3.5:9b at 500/300 8641 to 8997 ms, gemma4:12b at 500/300 9928.5 to 10690 ms, qwen3.5:9b at 300/180 5094 to 5398 ms.
+
+The committed answer runs were graded with the prompt `rag-grader@v1`. The grader prompt was changed afterwards (`rag-grader@v2` states the expected behaviour for an off-topic question explicitly); v2 applies to future runs only and none of the committed scores was re-graded.
+
+### Chunk size 300/180
+
+Re-indexed at 300/180 (`answers-qwen-300-180`, answers with `--repeat=1`), then restored to 500/300.
+
+| Measure | 500/300 | 300/180 |
+|---------|---------|---------|
+| vector and hybrid recall@3 | 0.750 / 0.708 | 0.792 / 0.792 |
+| vector MRR at k 3 | 0.667 | 0.722 |
+| vector and hybrid recall@6 | 0.875 | 0.875 |
+| best threshold (TPR / FPR) | 0.581951 (1.000 / 0.167) | 0.574947 (1.000 / 0.167) |
+| qwen3.5:9b correctness | 1.97 | 1.97 |
+| qwen3.5:9b groundedness | 2.00 | 2.00 |
+| median TTFT | 7042 ms | 4032 ms |
+| median latency | 8997 ms | 5398 ms |
+
+### What the numbers say
+
+- Retrieval is good enough at k 6 and no better at k 10: recall stays at 21/24 (0.875) for vector and hybrid, and the same three ids (`repo-rrf`, `repo-gate-skip-model`, `repo-model-host`) are missed at k 3, 6 and 10 alike. A larger k does not find them, so the gap is in the index or the chunk, not in how many chunks are returned.
+- Hybrid is not better than vector here: MRR 0.676 against 0.694 at k 6, and recall@3 0.708 against 0.750. RRF gave the full-text list an equal say, and that list found nothing.
+- Smaller chunks help ranking, not coverage: at 300/180 recall@3 rises from 0.750 to 0.792 and MRR from 0.667 to 0.722, while recall@6 is unchanged. The qwen3.5:9b correctness score is the same, 1.97, and it answered faster (median TTFT 4032 against 7042 ms) probably because less context is in the prompt (not measured separately). The 300/180 run has one repeat and the 500/300 repeats ranged from 1.90 to 1.97, so the answer scores cannot tell the two sizes apart.
+- The relevance gate stays at 0.5. The Youden cut (0.581951) has the same TPR and FPR as 0.5 on these 30 questions, and the best cut sits at the lowest on-topic score, so any higher value would reject an on-topic question; there is no measured reason to move it. The threshold is a comment in `config/ai.php` and `.env.example`, not a change.
+- Both models answer nearly everything correctly (1.97 and 1.93 of 2) with no false don't-know in 24 on-topic questions. qwen3.5:9b scored higher on correctness and groundedness (2.00 against 1.84), and gemma4:12b waited longer for the first token (9073 against 7042 ms) and for the whole answer (10690 against 8997 ms). Each is graded by the other, so neither score is self-grading.
+- The only off-topic question not declined is `off-python-sort`: its similarity (0.619) is above the gate, so the model is asked. This is the 5/6 in every run.
+
+### Surprises
+
+- **Full-text search found nothing.** The full-text list was meant to help with exact names. Measured: text mode scores 0/24 at every k. The whole question is passed to `websearch_to_tsquery`, which joins the words with AND, so a full sentence matches no chunk. Hybrid therefore equals vector with a slightly worse order.
+- **The threshold could not be improved.** Calibration was meant to find a better default. Measured: the best cut has the same TPR and FPR as 0.5. With 24 and 6 questions one question changes FPR by 0.167, so any shift would be fitting noise.
+- **Most of the wait is before the first token.** Median TTFT is 7042 ms of 8997 ms for qwen3.5:9b and 9073 of 10690 ms for gemma4:12b, so reading the retrieved context costs far more than writing the answer. The first answer run recorded no TTFT because `answer()` did not stream; it now does, and the runs were repeated.
+- **The same three questions are missed in every working mode at every k.** Raising k from 6 to 10 changed nothing for them, which points at the chunk or the question wording, not at how many results are returned. The cause was not investigated.
+
+### Interview story
+
+I built a harness that measures a RAG chatbot instead of eyeballing it: 30 labelled questions, recall@k and MRR for retrieval, a second model that grades correctness and groundedness from 0 to 2, and a guard test that fails if any question or answer leaks into the indexed files. The measured result changed what I believed. Hybrid search scored 0.676 MRR at k 6 against 0.694 for vector alone, because full-text search returned nothing for whole-sentence questions (0 of 24). Calibrating the relevance threshold on the same questions gave a best cut of 0.58 with the same 100 % TPR and 16.7 % FPR as the existing 0.5, so I left it alone: with 6 off-topic questions one question moves FPR by 17 points. Splitting the chunks smaller (300 instead of 500 tokens) raised recall@3 from 0.75 to 0.79 without changing recall@6. The lesson is that a small eval set is for catching regressions and comparing settings, not for tuning a threshold to the second decimal.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

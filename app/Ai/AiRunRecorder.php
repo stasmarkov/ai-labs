@@ -120,6 +120,50 @@ final class AiRunRecorder
         return $invocationId;
     }
 
+    /**
+     * Writes the row of a model call that was not streamed. Returns its invocation id, the SDK's when it has one.
+     *
+     * @param  list<int>  $retrieved
+     * @param  list<int>|null  $cited
+     */
+    public function recordRun(
+        string $status,
+        string $agent,
+        string $provider,
+        string $model,
+        ?string $promptVersion,
+        int $latencyMs,
+        array $retrieved,
+        ?array $cited = null,
+        ?int $tokensIn = null,
+        ?int $tokensOut = null,
+        ?string $invocationId = null,
+        ?Throwable $exception = null,
+        ?string $refusalReason = null,
+    ): string {
+        $invocationId ??= (string) Str::uuid();
+
+        rescue(fn () => $this->repository->save(new AiRunRecord(
+            invocationId: $invocationId,
+            agent: $agent,
+            provider: $provider,
+            model: $model,
+            promptVersion: $promptVersion,
+            tokensIn: $tokensIn,
+            tokensOut: $tokensOut,
+            ttftMs: null,
+            latencyMs: $latencyMs,
+            status: $status,
+            errorClass: $exception === null ? null : $exception::class,
+            errorMessage: $exception === null ? null : mb_substr($exception->getMessage(), 0, self::MAX_MESSAGE_LENGTH),
+            retrievedChunkIds: $retrieved,
+            citedChunkIds: $cited,
+            refusalReason: $refusalReason === null ? null : mb_substr($refusalReason, 0, self::MAX_REASON_LENGTH),
+        )));
+
+        return $invocationId;
+    }
+
     public function firstToken(string $invocationId): void
     {
         if (isset($this->runs[$invocationId]) && $this->runs[$invocationId]['firstTokenAt'] === null) {

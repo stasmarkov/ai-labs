@@ -15,5 +15,7 @@ final readonly class IndexedDocument
         public string $title,
         public string $contentHash,
         public array $chunks,
+        public ?int $chunkMaxTokens = null,
+        public ?int $chunkMergeBelowTokens = null,
     ) {}
 }

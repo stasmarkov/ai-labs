@@ -19,8 +19,9 @@ final class DocsAnswerAgent implements Agent, HasProviderOptions, VersionedPromp
 
     /**
      * @param  string|null  $canary  a per-request marker appended to the system prompt; random when omitted
+     * @param  string|null  $model  a text model of the active provider to use instead of its default
      */
-    public function __construct(?string $canary = null)
+    public function __construct(?string $canary = null, private readonly ?string $model = null)
     {
         $this->canary = $canary ?? 'ap-canary-'.Str::lower(bin2hex(random_bytes(8)));
     }
@@ -45,7 +46,7 @@ final class DocsAnswerAgent implements Agent, HasProviderOptions, VersionedPromp
 
     public function modelName(): string
     {
-        return (string) ($this->activeProviderEntry()['models']['text']['default'] ?? '');
+        return $this->model ?? (string) ($this->activeProviderEntry()['models']['text']['default'] ?? '');
     }
 
     /**

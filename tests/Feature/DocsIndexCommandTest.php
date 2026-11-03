@@ -89,7 +89,7 @@ it('AC-3 the first run stores documents and chunks and queues jobs in batches', 
 
     $document = DocsDocument::where('path', 'README.md')->firstOrFail();
     expect($document->title)->toBe('Readme')
-        ->and($document->content_hash)->toBe(hash('sha256', MarkdownChunker::VERSION."\n".File::get($this->root.'/repo/README.md')))
+        ->and($document->content_hash)->toBe(hash('sha256', MarkdownChunker::VERSION.':500:300'."\n".File::get($this->root.'/repo/README.md')))
         ->and($document->indexed_at)->not->toBeNull();
 });
 
@@ -136,7 +136,7 @@ it('AC-3 changing one file re-chunks only it and keeps the vectors of unchanged 
     $kept = DocsChunk::whereHas('document', fn ($query) => $query->where('path', 'docs/guide.md'))->where('content_hash', $sameSection->content_hash)->firstOrFail();
     expect($kept->embedding_model)->toBe('ollama/bge-m3')
         ->and(DB::scalar('SELECT vector_dims(embedding) FROM docs_chunks WHERE id = ?', [$kept->id]))->toBe(1024)
-        ->and(DocsDocument::where('path', 'docs/guide.md')->value('content_hash'))->toBe(hash('sha256', MarkdownChunker::VERSION."\n".File::get($this->root.'/repo/docs/guide.md')));
+        ->and(DocsDocument::where('path', 'docs/guide.md')->value('content_hash'))->toBe(hash('sha256', MarkdownChunker::VERSION.':500:300'."\n".File::get($this->root.'/repo/docs/guide.md')));
 });
 
 it('AC-3 deleting a file removes its document and chunks', function (): void {
@@ -275,4 +275,25 @@ it('AC-4 a change of the configured model re-embeds every chunk', function (): v
 
     expect(array_sum(array_map('count', array_slice($calls, $callsBefore))))->toBe($total)
         ->and(DocsChunk::where('embedding_model', 'ollama/other-embed')->count())->toBe($total);
+});
+
+it('AC-7 the chunk settings are part of the document hash and recorded on the document', function (): void {
+    docsFile('repo/README.md', docsMarkdown('Readme', 2));
+    $calls = [];
+    fakeDocsEmbeddings($calls);
+
+    expect(config('ai.docs.chunk.max_tokens'))->toBe(500)->and(config('ai.docs.chunk.merge_below_tokens'))->toBe(300);
+    $this->artisan('docs:index')->assertSuccessful();
+    $document = DocsDocument::where('path', 'README.md')->firstOrFail();
+    $firstHash = $document->content_hash;
+    expect($document->chunk_max_tokens)->toBe(500)->and($document->chunk_merge_below_tokens)->toBe(300);
+
+    config(['ai.docs.chunk.max_tokens' => 300, 'ai.docs.chunk.merge_below_tokens' => 200]);
+    $this->artisan('docs:index')->assertSuccessful();
+
+    $document->refresh();
+    expect($document->content_hash)->not->toBe($firstHash)
+        ->and($document->content_hash)->toBe(hash('sha256', MarkdownChunker::VERSION.':300:200'."\n".File::get($this->root.'/repo/README.md')))
+        ->and($document->chunk_max_tokens)->toBe(300)
+        ->and($document->chunk_merge_below_tokens)->toBe(200);
 });

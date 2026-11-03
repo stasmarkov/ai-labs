@@ -26,7 +26,13 @@ final readonly class EloquentDocsIndexRepository implements DocsIndexRepositoryI
         return DB::transaction(function () use ($document, $model, $indexedAt): int {
             $row = DocsDocument::query()->updateOrCreate(
                 ['source' => $document->source, 'path' => $document->path],
-                ['title' => $document->title, 'content_hash' => $document->contentHash, 'indexed_at' => $indexedAt],
+                [
+                    'title' => $document->title,
+                    'content_hash' => $document->contentHash,
+                    'chunk_max_tokens' => $document->chunkMaxTokens,
+                    'chunk_merge_below_tokens' => $document->chunkMergeBelowTokens,
+                    'indexed_at' => $indexedAt,
+                ],
             );
 
             $kept = [];

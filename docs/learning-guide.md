@@ -4,7 +4,7 @@ This guide explains how everything in this project works, in the order it was bu
 
 It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan and its order are in [`backlog.md`](../backlog.md).
 
-**Status (2026-11-03):** sections 1–14 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24, SL-32, SL-45 and SL-46. Planned sections are listed at the end.
+**Status (2026-11-03):** sections 1–15 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24, SL-32, SL-33, SL-45 and SL-46. Section 16 is a map of all the AI code: every file and its purpose, four requests traced end to end, and how to handle common feature requests. Planned sections are listed at the end.
 
 ---
 
@@ -520,9 +520,198 @@ When one trips, the triggering delta is withheld, the run is logged as `refused`
 
 ---
 
+## 15. Measuring RAG: recall@k, calibration and LLM grading
+
+**What it is.** Section 14 answers from retrieved chunks. This slice (SL-33) measures how well it does that, so a change to chunk size, k, search mode or model is a number instead of an impression. The tool is one Artisan command, `rag:eval`, and a set of 30 labelled questions in `bench/rag-eval/questions.v1.jsonl`: 24 on-topic (18 about the Laravel docs, 6 about this repo) and 6 off-topic. Each on-topic question has a reference answer and an evidence phrase, a short quote that a retrieved chunk must contain for the question to count as found. It measures three separate things: did retrieval find the evidence, where should the relevance gate sit, and did the model answer correctly and from the sources.
+
+**One run, step by step.**
+1. **Load and check.** `RagEvalSet` reads the file line by line; a bad line stops the run and the message names the line number. The command also refuses to run on an index with no embedded chunks, on a partly embedded one, or on chunk sizes that differ from the config (unless `--force`).
+2. **Recall.** For each on-topic question the command embeds it once, searches at the largest k in each mode (`vector`, `text`, `hybrid`) and cuts the smaller k from that list. A question is a hit at k when one of the top k chunks contains its evidence phrase. This stage calls the embedding model and the database, not the answer model, and took 1.9 s with Ollama warm.
+3. **Calibration.** For every question, on-topic or not, it records the top-1 vector similarity, then sweeps possible thresholds and reports TPR, FPR and Youden's J at the best one and at the configured `min_similarity`.
+4. **Answers** (only with `--answer`). `DocsAnswerService::answer()` runs the same guard, retrieval, gate and agent steps as the HTTP endpoint and writes the same `ai_runs` row. Each answered result goes to the grader, `RagGraderAgent`, which returns correctness 0 to 2, groundedness 0 to 2 and a reason of at most 300 characters through structured output (prompt `rag-grader@v1`, temperature 0). A reply that does not match that shape is retried once, then counted as ungraded and left out of the means. With `--repeat=3` the whole stage runs three times and the report gives the median of the run means and their range.
+5. **Write.** `recall.json`, `calibration.json` and `answers.json` go to a temporary directory that is renamed into place, so a failed run leaves no partial results. Every file records the chunk settings read from the index, the embedding, answer and grader models, the prompt versions, the eval-set version and the git commit with a dirty flag. Two runs on the same index give identical recall and calibration.
+
+**Recall@k and MRR.** In short, recall@k is the share of questions that are hits at k: 21 of 24 (0.875) means three questions had no chunk with their evidence in the top k. It says nothing about order, so MRR (mean reciprocal rank) adds it: the first matching chunk at rank 1 scores 1, at rank 2 scores 0.5, at rank 4 scores 0.25, and a miss scores 0. Recall decides whether the model can see the evidence at all; MRR decides how early, which matters when the prompt is cut or the model reads the top of the context best.
+
+**Calibration, Youden's J and overfitting.** The relevance gate refuses to ask the model when the best chunk is not similar enough. For a threshold t, TPR is the share of on-topic questions at or above t (kept) and FPR the share of off-topic questions at or above t (wrongly kept). Youden's J = TPR - FPR; the threshold with the highest J is the cut that separates the two groups best. Measured at 500/300: on-topic top similarity ran from 0.582 to 0.799, off-topic from 0.339 to 0.619, so the groups overlap. The best cut was 0.581951 with TPR 1.000 and FPR 0.167, identical to the configured 0.5, so the default stayed at 0.5. A cut chosen on 30 questions overfits: there are only 6 off-topic questions, so one question moves FPR by 0.167, and the "best" threshold is partly a description of those particular 30 sentences. The result is a check that 0.5 is not obviously wrong, not a precise optimum. The one off-topic question above the gate is `off-python-sort` (0.619): the model is asked, and it is the 1 of 6 that is not declined in every answer run.
+
+**Grading with a second model, and self-grading bias.** Correctness (does the answer match the reference) and groundedness (is every claim supported by the retrieved sources) are judged by an LLM, because exact-match scoring cannot compare two correct sentences. A model grading its own answers tends to rate its own phrasing and mistakes favourably, so each answer model is graded by the other: qwen3.5:9b by gemma4:12b and gemma4:12b by qwen3.5:9b. The answers also count how often an on-topic question ends in no_context (a false don't-know) or a refusal (a false refusal), and how often an off-topic one is declined; those are decided from the outcome, not by the grader. Grader calls are logged as `ai_runs` rows for `RagGraderAgent`, so their cost and failures can be inspected like any other call.
+
+**Contamination, and how the guard test prevents it.** Test contamination means the eval text leaks into the system under test. If the questions or reference answers were also in the indexed files, retrieval would find them by copying and the scores would measure the test, not the system. The corpus indexes this repository's markdown, which includes this guide and `BENCHMARKS.md`, so the risk is real. `RagEvalContaminationTest` loads the eval set and fails if any question, or any on-topic reference answer, appears (lowercased, whitespace collapsed) in any file `DocsCorpus` would index. Evidence phrases are exempt, because they are quotes from the corpus by design. That is why the write-ups of the results name questions by id only.
+
+**What it found (committed under `bench/results/rag-eval/2026-11-03/`).**
+- Vector and hybrid reach recall@6 of 0.875 and stay there at k=10; the same three repo questions (`repo-rrf`, `repo-gate-skip-model`, `repo-model-host`) are missed at every k.
+- Text mode scored 0 of 24: the question goes to `websearch_to_tsquery` as a whole, the words are joined with AND, and no chunk matches. Hybrid is therefore vector with a slightly worse order (MRR 0.676 against 0.694 at k=6).
+- Chunk size: at 300/180 instead of 500/300, recall@3 rose from 0.750 to 0.792 for vector and from 0.708 to 0.792 for hybrid, and MRR from 0.667 to 0.722, while recall@6 stayed at 0.875.
+- Answers at 500/300, three repeats: qwen3.5:9b correctness 1.97, groundedness 2.00, cited 0.96, median TTFT 7042 ms, median latency 8997 ms; gemma4:12b correctness 1.93, groundedness 1.84, cited 0.96, median TTFT 9073 ms, median latency 10690 ms; both with 0 of 24 false don't-know and 5 of 6 off-topic declined.
+- Time to first token is the larger part of the wait: 7042 of 8997 ms for qwen3.5:9b and 9073 of 10690 ms for gemma4:12b. At 300/180 qwen3.5:9b needed 4032 ms to the first token and scored the same correctness (1.97), probably because the prompt carries less context (not measured separately).
+
+**In this repo.**
+- Code: [`RagEvalCommand`](../app/Console/Commands/RagEvalCommand.php), [`RagRetrievalEvaluator`](../app/Services/RagRetrievalEvaluator.php), [`ThresholdCalibrator`](../app/Services/ThresholdCalibrator.php), [`RagGraderAgent`](../app/Ai/RagGraderAgent.php).
+- Tests: `RagEvalCommandTest`, `RagEvalSetTest`, `RagEvalContaminationTest`, `RagGraderAgentTest`, `RagEvalCommittedResultsTest`.
+- Results and tables: [`bench/results/rag-eval/2026-11-03/`](../bench/results/rag-eval/2026-11-03/) and the "RAG evaluation (2026-11-03)" section of [`BENCHMARKS.md`](../BENCHMARKS.md).
+- Spec: [`.ai/specs/spec-20261103-1204-rag-eval-harness/`](../.ai/specs/spec-20261103-1204-rag-eval-harness/).
+
+**Read next.** [Youden's J statistic](https://en.wikipedia.org/wiki/Youden%27s_J_statistic) · [Mean reciprocal rank](https://en.wikipedia.org/wiki/Mean_reciprocal_rank) · [Judging LLM-as-a-judge with MT-Bench and Chatbot Arena](https://arxiv.org/abs/2306.05685) · [Laravel: Artisan console](https://laravel.com/docs/13.x/artisan)
+
+---
+
+## 16. How the AI features are built: a map of the code
+
+**What it is.** Sections 9–15 explain one mechanism each. This section is the map across all of them. It shows which files make up the AI features, what each one is for, how four requests flow through them, and where to make a change for the feature requests that come up most. Keep it current: every AI slice updates this map (`LearningGuideTest` checks that every file linked here exists).
+
+### The layers
+
+One rule runs through all of it: **a model call is just another I/O call.** It sits behind a service, it is configured rather than hard-coded, it is logged, and it is faked in tests.
+
+| Layer | What it does | Where |
+|---|---|---|
+| Configuration | Provider, models, timeouts, limits, thresholds, chunk sizes, prompt files; all from env (BR-91) | [`config/ai.php`](../config/ai.php), [`.env.example`](../.env.example) |
+| Wiring | Scoped run recorder, SDK event listeners, rate limiters | [`AiServiceProvider`](../app/Providers/AiServiceProvider.php) |
+| Prompts and guard data | Versioned text files; the version is logged with every run | [`resources/prompts/`](../resources/prompts/), [`resources/guards/`](../resources/guards/) |
+| Agents | One class per model task: instructions, provider options, output shape | [`app/Ai/`](../app/Ai/) `*Agent.php` |
+| Services | The steps around the model: lookup, retrieval, gates, guards, scoring | [`app/Services/`](../app/Services/) |
+| Data access | Repositories behind interfaces; pgvector and full-text SQL live here | [`app/Repositories/`](../app/Repositories/), [`app/Contracts/`](../app/Contracts/) |
+| Streaming | SSE framing, masked errors, Octane-safe flushing, guard on the stream | [`SseProtocol`](../app/Ai/SseProtocol.php), [`DocsAnswerProtocol`](../app/Ai/DocsAnswerProtocol.php) |
+| HTTP edge | Validation, throttles, `Server-Timing` | [`routes/catalog.php`](../routes/catalog.php), [`app/Http/Requests/`](../app/Http/Requests/), [`AddServerTimingHeader`](../app/Http/Middleware/AddServerTimingHeader.php) |
+| Tracing | One `ai_runs` row per model or embeddings call (BR-90) | [`AiRunRecorder`](../app/Ai/AiRunRecorder.php), [`RecordAiRun`](../app/Ai/RecordAiRun.php), [`RecordEmbeddingsRun`](../app/Ai/RecordEmbeddingsRun.php) |
+| Background work | Embedding batches on the queue, never in a request | [`app/Jobs/`](../app/Jobs/) |
+| Commands | Indexing, benchmarks, evaluation | [`app/Console/Commands/`](../app/Console/Commands/) |
+| UI | The AI lab: Inertia + Vue pages at `/ai` | [`resources/js/ai/`](../resources/js/ai/), [`routes/web.php`](../routes/web.php) |
+| Test doubles | Fake providers and SDK fakes, so the suite runs without a network | [`FakeStreamProvider`](../app/Ai/FakeStreamProvider.php), [`FakeStreamGateway`](../app/Ai/FakeStreamGateway.php) |
+
+### Every file and its purpose
+
+**Model plumbing (`app/Ai/`)**
+
+| File | Purpose | Slice |
+|---|---|---|
+| [`VersionedPrompt`](../app/Ai/VersionedPrompt.php) | Interface: an agent tells the recorder its prompt name and version (`car-description@v1`) | SL-20 |
+| [`UsesActiveProvider`](../app/Ai/UsesActiveProvider.php) | Trait: provider options, `max_tokens` and timeout from the active config entry, shared by all agents | SL-45 |
+| [`CarDescriptionAgent`](../app/Ai/CarDescriptionAgent.php) | Writes a listing's ad text from its facts; prompt `car-description.v1.md` | SL-20 |
+| [`DocsAnswerAgent`](../app/Ai/DocsAnswerAgent.php) | Answers a docs question from retrieved chunks; builds the escaped `<context><doc>` message and appends the per-request canary | SL-45 |
+| [`RagGraderAgent`](../app/Ai/RagGraderAgent.php) | Grades an answer's correctness and groundedness (0–2) with structured output; prompt `rag-grader.v2.md` | SL-33 |
+| [`SseProtocol`](../app/Ai/SseProtocol.php) | One `data:` line per SDK event, then `[DONE]`; masks provider errors; drains the generator so FrankenPHP workers send a body | SL-20 |
+| [`DocsAnswerProtocol`](../app/Ai/DocsAnswerProtocol.php) | The answer stream: `sources` first, output guard on every delta, reasoning dropped, `citations` last | SL-45 |
+| [`SseEventsResponse`](../app/Ai/SseEventsResponse.php) | The same framing for outcomes that never call the model (`no_context`, input refusal) | SL-45 |
+| [`AiRunRecorder`](../app/Ai/AiRunRecorder.php) | Times each run (start, first token, end) and writes the `ai_runs` row; also writes rows for refused and `no_context` outcomes | SL-20, SL-45 |
+| [`RecordAiRun`](../app/Ai/RecordAiRun.php) | Listens to the SDK's streaming events and drives the recorder | SL-20 |
+| [`RecordEmbeddingsRun`](../app/Ai/RecordEmbeddingsRun.php) | The same for embeddings calls, so query and indexing embeddings are logged | SL-24 |
+| [`OutputGuard`](../app/Ai/OutputGuard.php) | Detects a leaked prompt: the canary or 12 copied prompt words not found in the context | SL-45 |
+| [`CanaryGenerator`](../app/Ai/CanaryGenerator.php) | Makes the random `ap-canary-…` string; tests pass a fixed one | SL-45 |
+| [`CitationParser`](../app/Ai/CitationParser.php) | Finds `[n]`, `[n, m]` and `[2][3]` markers, skipping code, links and indexes | SL-45 |
+| [`OllamaServerInfo`](../app/Ai/OllamaServerInfo.php) | Asks Ollama whether it is reachable and which version runs, for the lab top bar | SL-24 |
+| [`FakeStreamProvider`](../app/Ai/FakeStreamProvider.php), [`FakeStreamGateway`](../app/Ai/FakeStreamGateway.php) | A provider that streams canned text with a delay, can fail after N tokens, or replay `AI_FAKE_TEXT` | SL-20, SL-45 |
+
+**Listings: description and semantic search**
+
+| File | Purpose | Slice |
+|---|---|---|
+| [`ListingDescriptionService`](../app/Services/ListingDescriptionService.php) | Looks the listing up, then streams `CarDescriptionAgent` through `SseProtocol` | SL-20 |
+| [`ListingDocumentGenerator`](../app/Services/ListingDocumentGenerator.php), [`ListingDocumentService`](../app/Services/ListingDocumentService.php) | Turn a listing's facts into the text that gets embedded | SL-24 |
+| [`ListingEmbeddingService`](../app/Services/ListingEmbeddingService.php), [`EmbedListingBatchJob`](../app/Jobs/EmbedListingBatchJob.php) | Embed descriptions in queued batches and check vector count and length | SL-24 |
+| [`SemanticSearchService`](../app/Services/SemanticSearchService.php) | Embeds a query (with `Server-Timing` `embed`) and asks pgvector for the nearest listings (`db`) | SL-24 |
+| [`SemanticBenchService`](../app/Services/SemanticBenchService.php) | Measures semantic search for `BENCHMARKS.md` | SL-24 |
+
+**Docs: index, search, answer**
+
+| File | Purpose | Slice |
+|---|---|---|
+| [`DocsCorpus`](../app/Services/DocsCorpus.php) | Decides which markdown files are indexed (root files, `docs/`, done spec-lites, the Laravel docs) | SL-32 |
+| [`MarkdownChunker`](../app/Services/MarkdownChunker.php) | Splits a file by heading, paragraph and sentence; tables and code whole; size from config | SL-32, SL-33 |
+| [`DocsIndexService`](../app/Services/DocsIndexService.php), [`EmbedDocsBatchJob`](../app/Jobs/EmbedDocsBatchJob.php), [`DocsEmbeddingService`](../app/Services/DocsEmbeddingService.php) | Re-chunk only changed files (hash includes chunker version and settings), queue embeddings for new chunks | SL-32 |
+| [`DocsSearchService`](../app/Services/DocsSearchService.php) | Vector, full-text and hybrid (RRF) search over chunks | SL-32 |
+| [`DocsAnswerService`](../app/Services/DocsAnswerService.php) | The RAG pipeline: input guard → retrieve → gate → budget → agent; `ask()` streams, `answer()` returns a result | SL-45, SL-33 |
+| [`DocsAnswerContext`](../app/Services/DocsAnswerContext.php) | The relevance gate (similarity or operator-free full-text hit) and the 4 000-token budget | SL-45 |
+| [`PromptInjectionGuard`](../app/Services/PromptInjectionGuard.php) | Matches a question against the pattern file before any retrieval | SL-45 |
+
+**Evaluation**
+
+| File | Purpose | Slice |
+|---|---|---|
+| [`RagEvalSet`](../app/Services/RagEvalSet.php) | Loads and validates the 30 labelled questions in [`bench/rag-eval/`](../bench/rag-eval/) | SL-33 |
+| [`RagRetrievalEvaluator`](../app/Services/RagRetrievalEvaluator.php) | recall@k and MRR per k and mode, and each question's top similarity | SL-33 |
+| [`ThresholdCalibrator`](../app/Services/ThresholdCalibrator.php) | Picks the threshold with the best TPR − FPR (Youden's J) | SL-33 |
+| [`RagAnswerEvaluator`](../app/Services/RagAnswerEvaluator.php), [`RagAnswerGrader`](../app/Services/RagAnswerGrader.php) | Run every question through `answer()` per model and repeat; score or grade each outcome | SL-33 |
+| [`RagEvalIndexInspector`](../app/Services/RagEvalIndexInspector.php) | Refuses to measure a half-embedded index or one built with other chunk settings | SL-33 |
+| [`RagEvalResultWriter`](../app/Services/RagEvalResultWriter.php) | Writes result files atomically, only inside the results root | SL-33 |
+
+**HTTP, commands and UI**
+
+| File | Purpose | Slice |
+|---|---|---|
+| [`DescribeListingController`](../app/Http/Controllers/DescribeListingController.php) | `GET /listings/{id}/describe`, the SSE description | SL-20 |
+| [`SemanticSearchController`](../app/Http/Controllers/SemanticSearchController.php) | `GET /api/listings/semantic` | SL-24 |
+| [`SearchDocsController`](../app/Http/Controllers/SearchDocsController.php) | `GET /api/docs/search` | SL-32 |
+| [`AskDocsController`](../app/Http/Controllers/AskDocsController.php), [`DocsAskRequest`](../app/Http/Requests/DocsAskRequest.php) | `POST /api/docs/ask` (JSON only), the SSE answer | SL-45 |
+| [`ValidUtf8Text`](../app/Rules/ValidUtf8Text.php) | Rejects NUL bytes and invalid UTF-8 before PostgreSQL sees them | SL-32 |
+| [`AddServerTimingHeader`](../app/Http/Middleware/AddServerTimingHeader.php), [`ServerTiming`](../app/Support/ServerTiming.php) | Collect `embed` and `db` durations and send them as a header | SL-46 |
+| [`IndexDocsCommand`](../app/Console/Commands/IndexDocsCommand.php), [`FetchLaravelDocsCommand`](../app/Console/Commands/FetchLaravelDocsCommand.php), [`SearchDocsCommand`](../app/Console/Commands/SearchDocsCommand.php), [`SearchDocsBenchCommand`](../app/Console/Commands/SearchDocsBenchCommand.php) | `docs:index`, `docs:fetch-laravel`, `docs:search`, `docs:search-bench` | SL-32 |
+| [`EmbedListingsCommand`](../app/Console/Commands/EmbedListingsCommand.php), [`DescribeAllListingsCommand`](../app/Console/Commands/DescribeAllListingsCommand.php) | `listings:embed`, `listings:describe-all` | SL-24 |
+| [`RagEvalCommand`](../app/Console/Commands/RagEvalCommand.php) | `rag:eval`: retrieval, calibration, graded answers | SL-33 |
+| [`LabOverviewService`](../app/Services/LabOverviewService.php), [`LabDescribeService`](../app/Services/LabDescribeService.php), `ShowLab*Controller` | Props for the lab pages: capabilities, navigation, recent runs, one run's detail | SL-46 |
+| [`useEventStream.ts`](../resources/js/ai/composables/useEventStream.ts) | Reads SSE with `fetch` + `ReadableStream`, Stop via `AbortController`, TTFT and tokens/s | SL-46 |
+| [`Pages/Lab/`](../resources/js/ai/Pages/Lab/) | Overview, Describe, Semantic, Docs, Chat, Photos | SL-46, SL-45 |
+
+**Schema.** [`ai_runs`](../database/migrations/2026_11_02_160000_create_ai_runs_table.php) (one row per call; [chunk ids and refusals](../database/migrations/2026_11_03_110000_add_answer_columns_to_ai_runs_table.php) added in SL-45), [`docs_documents`](../database/migrations/2026_11_03_090000_create_docs_documents_table.php) and [`docs_chunks`](../database/migrations/2026_11_03_090100_create_docs_chunks_table.php) (vector, `tsvector`, HNSW and GIN indexes), [chunk settings](../database/migrations/2026_11_03_120000_add_chunk_settings_to_docs_documents_table.php) (SL-33), and [pgvector](../database/migrations/2026_10_28_193241_enable_pgvector_extension.php).
+
+### Four requests, end to end
+
+**Describe a listing** (`GET /listings/1/describe`):
+1. `throttle:describe` checks the per-IP limit.
+2. `DescribeListingController` hands off to `ListingDescriptionService`, which loads the listing (an unknown id is a 404 before any stream starts).
+3. `CarDescriptionAgent::stream()` asks the SDK for a stream, and the SDK fires `StreamingAgent`. `RecordAiRun` then starts a run in the scoped `AiRunRecorder`.
+4. `SseProtocol` writes each event as `data:` and reports the first `text_delta` (TTFT).
+5. At the end the SDK fires `AgentStreamed`, and the recorder writes the `ai_runs` row.
+
+**Semantic listing search** (`GET /api/listings/semantic?q=…`):
+1. `SemanticSearchRequest` validates the query.
+2. `SemanticSearchService` embeds it, which `RecordEmbeddingsRun` logs; that time goes into `Server-Timing` as `embed`.
+3. The repository runs a pgvector `<=>` query on the HNSW index (`db`), and the controller returns JSON.
+
+**Docs search** (`GET /api/docs/search?q=…&mode=hybrid`):
+1. `DocsSearchRequest` validates the query.
+2. `DocsSearchService` embeds the query once.
+3. The repository runs two queries, the nearest vectors and a `websearch_to_tsquery` rank, each 20 deep. RRF fuses the two lists and keeps the top k.
+
+**Ask the docs** (`POST /api/docs/ask`, JSON):
+1. `DocsAskRequest` rejects anything that is not JSON, then validates the question.
+2. `DocsAnswerService::ask()` runs `PromptInjectionGuard` first. A match writes a `refused` row and returns `SseEventsResponse`, with no embedding.
+3. Otherwise it retrieves hybrid top 6, applies the gate and the budget in `DocsAnswerContext`, and returns `no_context` when nothing passes.
+4. `DocsAnswerAgent` builds the marked context with a fresh canary and streams.
+5. `DocsAnswerProtocol` sends `sources`, checks the text with `OutputGuard` after each delta, and parses `[n]` with `CitationParser` at the end.
+6. The recorder adds the retrieved and cited chunk ids to the row.
+
+### Common feature requests and where they land
+
+| Request | What to change | Test to add |
+|---|---|---|
+| "Use another model" / "use OpenAI-compatible server X" | `.env` only: `AI_PROVIDER`, `AI_MODEL`, the provider entry in `config/ai.php` (BR-91). No code. | none; run `rag:eval --answer --models=…` to compare |
+| "Make the bot answer differently" | Copy the prompt to a new version (`docs-answer.v2.md`), point `config('ai.prompts.*')` at it. The old file stays for old runs' provenance. | a test on the built message; a `rag:eval` run before and after |
+| "A new AI feature" (summarise, classify, extract) | A new agent in `app/Ai/` using `UsesActiveProvider` and `VersionedPrompt`, a prompt file, a service that calls it, a controller and route with a throttle. Structured output → implement `HasStructuredOutput` like `RagGraderAgent`. Streaming → reuse `SseProtocol`. | feature test with the fake provider (`AI_FAKE_TEXT`) or the SDK fake; assert the `ai_runs` row |
+| "Block this injection phrasing" | Add a named pattern to a new guard file version (`prompt-injection.v2.php`), point `ai.docs.answer.guard` at it | a hit case and a benign near-miss in `PromptInjectionGuardTest` (both directions fail in practice) |
+| "It says I don't know too often" / "too rarely" | `AI_DOCS_ANSWER_MIN_SIMILARITY`, but only after `rag:eval` shows the trade (section 15); add the failing question to the eval set first | a new eval line; the calibration numbers |
+| "Answers miss this part of the docs" | Check retrieval first: `docs:search "…" --mode=vector` and `rag:eval` recall. Then chunk size (`AI_DOCS_CHUNK_MAX_TOKENS`, re-index) or k (`AI_DOCS_ANSWER_K`) | an eval question with its evidence phrase |
+| "Index a new folder of docs" | `DocsCorpus` lists the paths. Never add a folder holding eval questions (the contamination test will fail, as intended) | a `DocsCorpus` test case |
+| "Switch the embedding model" | `config('ai.embeddings')`, then re-index everything: vectors from two models cannot be compared, and the stored `embedding_model` keeps them apart | `docs:search-bench` and `rag:eval` before and after |
+| "Log something new about each call" | A nullable column on `ai_runs`, a field on `AiRunRecord`, set it from the recorder (`annotate()` for per-request data) | a feature test on the row |
+| "Show it in the lab" | A Vue page in `resources/js/ai/Pages/Lab/`, a `ShowLab*Controller` returning `Inertia::render`, a capability in `LabOverviewService` (navigation follows) | a page props test like `AiLabChatTest`; typecheck and build |
+| "Stop button / cancel" | The client already aborts with `AbortController`; what the server does depends on the server mode (section 9 and SL-41) | a browser check |
+
+### Testing patterns used everywhere
+
+- **No network in the suite.** `Embeddings::fake(...)` returns fixed vectors, so tests can pick exact similarities. The `fake-stream` provider streams canned text (`AI_FAKE_TEXT`, `fail_after`). `Http::fake` is used for Ollama's own endpoints.
+- **Fixed randomness.** `CanaryGenerator` takes a factory, so a test knows the canary. Agents read their prompt from a file, so a test can read the same file.
+- **Assert the trace, not just the reply.** Almost every feature test checks the `ai_runs` row: status, prompt version, chunk ids. When a row is missing, that is how a bug in error handling shows up (SL-33's review found one).
+- **Measurements are commands, not tests.** `docs:search-bench`, `listings:embed` and `rag:eval` write JSON under `bench/results/` that `BENCHMARKS.md` quotes. Tests cover the command logic with fakes; the numbers come from real runs.
+
+**Read next.** [Laravel AI SDK](https://laravel.com/docs/13.x/ai-sdk) · [Inertia](https://inertiajs.com/) · [pgvector](https://github.com/pgvector/pgvector) · [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md)
+
+---
+
 ## Planned sections
 
 Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):
 
 - **Server track:** slow I/O and thread autoscaling (SL-09), Early Hints and compression (SL-10), file downloads offloaded to the web server (SL-11), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
-- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; structured output (SL-23); tool calling (SL-25); evals (SL-26, SL-33); vision (SL-27); model comparison (SL-28); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39, shown on the `/ai/photos` placeholder); semantic caching (SL-40); streaming chat UI (SL-41, on the `/ai/chat` placeholder from SL-46); a research agent (SL-42); a prompt playground (SL-43).
+- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; structured output (SL-23); tool calling (SL-25); evals (SL-26); vision (SL-27); model comparison (SL-28); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39, shown on the `/ai/photos` placeholder); semantic caching (SL-40); streaming chat UI (SL-41, on the `/ai/chat` placeholder from SL-46); a research agent (SL-42); a prompt playground (SL-43).

@@ -67,6 +67,13 @@ return [
             'path' => storage_path('app/docs/laravel'),
             'meta_path' => storage_path('app/docs/laravel.json'),
         ],
+        'chunk' => [
+            // Largest chunk in tokens (~4 characters each) and the size below which a section is merged into the next one.
+            'max_tokens' => max(1, (int) (env('AI_DOCS_CHUNK_MAX_TOKENS') ?: 500)),
+            'merge_below_tokens' => max(1, (int) (env('AI_DOCS_CHUNK_MERGE_BELOW_TOKENS') ?: 300)),
+        ],
+        // rag:eval writes its result directories only inside this directory.
+        'eval_results_root' => base_path('bench/results'),
         'embed_batch' => max(1, min(256, (int) (env('AI_DOCS_EMBED_BATCH') ?: 32))),
         'k_default' => max(1, (int) (env('AI_DOCS_K_DEFAULT') ?: 6)),
         'k_max' => max(1, (int) (env('AI_DOCS_K_MAX') ?: 20)),
@@ -74,6 +81,7 @@ return [
         'search_per_minute' => filled(env('AI_DOCS_SEARCH_PER_MINUTE')) ? (int) env('AI_DOCS_SEARCH_PER_MINUTE') : 60,
         'answer' => [
             // Chunks retrieved per question, the cosine similarity a vector-only chunk needs, the context size in tokens (~4 characters each).
+            // 0.5 is kept after rag:eval (500/300, 30 questions): the best cut, 0.58, has TPR 1 and FPR 0.17, the same as 0.5, so it is no improvement.
             'k' => max(1, (int) (env('AI_DOCS_ANSWER_K') ?: 6)),
             'min_similarity' => filled(env('AI_DOCS_ANSWER_MIN_SIMILARITY')) ? (float) env('AI_DOCS_ANSWER_MIN_SIMILARITY') : 0.5,
             'max_context_tokens' => max(1, (int) (env('AI_DOCS_ANSWER_MAX_CONTEXT_TOKENS') ?: 4000)),
@@ -103,6 +111,7 @@ return [
     'prompts' => [
         'car_description' => env('AI_PROMPT_CAR_DESCRIPTION') ?: 'car-description.v1',
         'docs_answer' => env('AI_PROMPT_DOCS_ANSWER') ?: 'docs-answer.v1',
+        'rag_grader' => env('AI_PROMPT_RAG_GRADER') ?: 'rag-grader.v2',
     ],
 
     /*
