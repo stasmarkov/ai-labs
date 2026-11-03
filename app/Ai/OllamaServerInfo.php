@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Ai;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -29,6 +30,26 @@ final readonly class OllamaServerInfo
         }
 
         return is_string($version) && $version !== '' ? $version : null;
+    }
+
+    /**
+     * Whether /api/version answers within one second; the answer is cached for 10 s.
+     */
+    public function reachable(): bool
+    {
+        return Cache::remember('ai-lab:ollama-reachable', 10, function (): bool {
+            try {
+                Http::timeout(1)
+                    ->connectTimeout(1)
+                    ->acceptJson()
+                    ->get(rtrim((string) config('ai.providers.ollama.url'), '/').'/api/version')
+                    ->throw();
+            } catch (Throwable) {
+                return false;
+            }
+
+            return true;
+        });
     }
 
     /**

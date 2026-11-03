@@ -4,7 +4,7 @@ title: AI lab UI with Inertia and Vue
 type: feature
 size: M
 priority: P2
-status: approved
+status: in-progress
 ticket:
 stakeholders: [Stanislav Markov]
 approved_by: Stas Markov (standing approval)

@@ -1,0 +1,83 @@
+/* source(none): scan only the lab's own files, so the old app.css never sees them
+   and the lab never depends on what the old pages use. */
+@import 'tailwindcss' source(none);
+
+@source '../js/ai';
+@source '../views/ai';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+    --color-paper: #f5f2eb;
+    --color-ink: #1a1916;
+    --color-rule: #d8d2c4;
+    --color-muted: #6b665c;
+    --color-signal: #c2410c;
+    --color-success: #2b7a4b;
+    --color-danger: #b42318;
+}
+
+@layer base {
+    body {
+        background-color: var(--color-paper);
+        color: var(--color-ink);
+        font-family: var(--font-sans);
+    }
+}
+
+@layer base {
+    :focus-visible {
+        outline: 2px solid var(--color-ink);
+        outline-offset: 2px;
+    }
+
+    main:focus {
+        outline: none;
+    }
+
+    h1,
+    h2,
+    h3 {
+        font-weight: 600;
+    }
+}
+
+.lab-skip-link {
+    position: absolute;
+    left: 0.5rem;
+    top: -4rem;
+    z-index: 10;
+    padding: 0.5rem 1rem;
+    background: var(--color-ink);
+    color: var(--color-paper);
+}
+
+.lab-skip-link:focus {
+    top: 0.5rem;
+}
+
+@keyframes lab-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.lab-fade-in {
+    animation: lab-fade-in 200ms ease-out 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}

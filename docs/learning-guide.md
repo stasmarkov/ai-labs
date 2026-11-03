@@ -4,7 +4,7 @@ This guide explains how everything in this project works, in the order it was bu
 
 It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan and its order are in [`backlog.md`](../backlog.md).
 
-**Status (2026-11-03):** sections 1–12 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24 and SL-32. Planned sections are listed at the end.
+**Status (2026-11-03):** sections 1–13 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24, SL-32 and SL-46. Planned sections are listed at the end.
 
 ---
 
@@ -403,9 +403,41 @@ Throughput counts from the first model call of a run, not from dispatch: worker 
 
 ---
 
+## 13. The AI lab UI: Inertia, Vue and streams in the browser
+
+**What it is.** `/ai` is a small single-page-style UI for the AI features: the streamed description with a Stop button, semantic listing search, docs search in three modes side by side, and the newest `ai_runs`. It is built with Inertia, Vue 3 and TypeScript, but there is no JSON API for the pages: Laravel controllers still pick the page and pass its data.
+
+**One page visit with Inertia.**
+1. The first visit to `/ai/docs` is a normal full-page request. [`ShowLabDocsController`](../app/Http/Controllers/ShowLabDocsController.php) returns `Inertia::render('Lab/Docs', [...])`. Laravel renders the `ai.app` Blade view once, and the page component name and its props go into a `data-page` attribute as JSON.
+2. `resources/js/ai/app.ts` reads that attribute, mounts Vue, and resolves `Lab/Docs` to `resources/js/ai/Pages/Lab/Docs.vue`. The props become the component's props.
+3. Clicking a lab link does not reload the page. Inertia sends a `fetch` with an `X-Inertia` header; the server sees it and answers with only the JSON (`component`, `props`, `url`, `version`) instead of HTML. Inertia swaps the component, keeps the layout mounted and updates the URL with the History API.
+4. If the asset `version` changed since the first load, the server answers 409 and Inertia does a full reload, so a stale browser tab picks up new JavaScript.
+
+**Why the lab has its own Vite entry.** The existing pages (`/`, the listing pages) ship `app.css` and `app.js`, and their file names and hashes are part of the server parity checks. The lab builds from its own entries (`resources/css/ai.css`, `resources/js/ai/app.ts`) and its own Blade view, so adding Vue, Inertia and the design components changes nothing in the old bundle: `bench/asset-fingerprint.sh` prints the same names and hashes before and after, and `bench/parity.sh` stays `identical`. This is the parity rule applied to the front end.
+
+**How the browser reads an SSE stream.** `EventSource` can only send a `GET` with no custom handling, so the lab uses `fetch`. In [`useEventStream.ts`](../resources/js/ai/composables/useEventStream.ts):
+1. `fetch(url, { signal })` resolves as soon as the response headers arrive, not when the body ends.
+2. `response.body` is a [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) of bytes; `getReader().read()` returns the next chunk whenever the server flushes one.
+3. A `TextDecoder` turns bytes into text. Chunks do not line up with events, so the text is buffered and split on blank lines; a half event stays in the buffer until the rest arrives.
+4. Each `data: {json}` line becomes an event row and text delta; `data: [DONE]` ends the run. Time to first token and tokens per second are measured in the browser with `performance.now()`.
+
+**How Stop works.** Stop calls `abort()` on the [`AbortController`](https://developer.mozilla.org/en-US/docs/Web/API/AbortController) whose `signal` was passed to `fetch`. The browser closes the connection and the pending `read()` rejects with an `AbortError`, which the composable turns into "Stopped after N tokens". The server sees only a closed socket. Whether PHP notices at once depends on the server: it finds out on its next write or flush, and the run may still be logged as finished or not logged at all, which is why the page says "The server may not have logged this run."
+
+**What `Server-Timing` is.** A response header that lets the server report named durations to the browser, for example `Server-Timing: embed;dur=41.2, db;dur=6.8`. Both search endpoints (`/api/listings/semantic` and `/api/docs/search`) send `embed` (time to embed the query) and `db` (the SQL search); text-only docs search sends `db` only. The durations are collected by [`ServerTiming`](../app/Support/ServerTiming.php) and added by a middleware; the response bodies are unchanged. The browser shows the values in the dev tools Network tab, and the search pages read them from `response.headers` to show where the time went.
+
+**In this repo.**
+- Front end: [`resources/js/ai/`](../resources/js/ai/) (pages, layout, design components, composables); first page controller: [`ShowLabOverviewController`](../app/Http/Controllers/ShowLabOverviewController.php).
+- Placeholders: `/ai/chat` (SL-45, SL-41) and `/ai/photos` (SL-36, blocked by Q-06) say what is coming; the real pages are built inside this UI.
+- Tests: `AiLabOverviewTest`, `AiLabDescribeTest`, `AiLabSearchPagesTest`, `AiLabPlaceholderTest`.
+- Spec: [`.ai/specs/spec-20261103-0012-ai-lab-ui/`](../.ai/specs/spec-20261103-0012-ai-lab-ui/).
+
+**Read next.** [Inertia: how it works](https://inertiajs.com/the-protocol) · [Vue 3](https://vuejs.org/guide/introduction.html) · [MDN: `ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) · [MDN: `AbortController`](https://developer.mozilla.org/en-US/docs/Web/API/AbortController) · [MDN: `Server-Timing`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Server-Timing)
+
+---
+
 ## Planned sections
 
 Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):
 
 - **Server track:** slow I/O and thread autoscaling (SL-09), Early Hints and compression (SL-10), file downloads offloaded to the web server (SL-11), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
-- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; structured output (SL-23); tool calling (SL-25); evals (SL-26, SL-33); vision (SL-27); model comparison (SL-28); RAG with citations (SL-45, on top of the index from SL-32); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39); semantic caching (SL-40); streaming chat UI (SL-41); a research agent (SL-42); a prompt playground (SL-43).
+- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; structured output (SL-23); tool calling (SL-25); evals (SL-26, SL-33); vision (SL-27); model comparison (SL-28); RAG with citations (SL-45, on top of the index from SL-32); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39, shown on the `/ai/photos` placeholder); semantic caching (SL-40); streaming chat UI (SL-41, on the `/ai/chat` placeholder from SL-46); a research agent (SL-42); a prompt playground (SL-43).

@@ -52,7 +52,7 @@ test('AC-9 learning guide explains streaming an AI answer with links', function 
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–12');
+    expect($guide)->toContain('sections 1–13');
 });
 
 test('AC-8 learning guide explains running the model locally', function (): void {
@@ -92,7 +92,7 @@ test('AC-8 learning guide explains running the model locally', function (): void
 
     expect($section)->toContain('| Server | Tokens in |');
 
-    expect($guide)->toContain('sections 1–12');
+    expect($guide)->toContain('sections 1–13');
     expect($guide)->not->toContain('running models locally (SL-22)');
 });
 
@@ -123,7 +123,7 @@ test('AC-9 learning guide explains embeddings and vector search', function (): v
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–12');
+    expect($guide)->toContain('sections 1–13');
     expect($guide)->not->toContain('embeddings and vector search (SL-24)');
 });
 
@@ -155,6 +155,38 @@ test('AC-9 learning guide explains chunking and hybrid retrieval', function (): 
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–12');
+    expect($guide)->toContain('sections 1–13');
     expect($guide)->not->toContain('RAG with citations (SL-32)');
+});
+
+test('AC-8 learning guide explains the AI lab UI', function (): void {
+    $guide = file_get_contents(base_path('docs/learning-guide.md'));
+
+    preg_match('/^## 13\. The AI lab UI: Inertia, Vue and streams in the browser\n(.*?)(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->not->toBe('');
+
+    foreach (['X-Inertia', 'props', 'ai.app', 'parity', 'ReadableStream', 'AbortController', 'data: [DONE]', 'Server-Timing', 'embed', 'db'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    foreach ([
+        '../resources/js/ai/',
+        '../app/Http/Controllers/ShowLabOverviewController.php',
+        '../.ai/specs/spec-20261103-0012-ai-lab-ui/',
+        'https://inertiajs.com',
+        'https://vuejs.org',
+        'https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream',
+        'https://developer.mozilla.org/en-US/docs/Web/API/AbortController',
+        'https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Server-Timing',
+    ] as $link) {
+        expect($section)->toContain("]($link");
+    }
+
+    foreach (['../resources/js/ai/', '../app/Http/Controllers/ShowLabOverviewController.php', '../.ai/specs/spec-20261103-0012-ai-lab-ui/'] as $path) {
+        expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
+    }
+
+    expect($guide)->toContain('sections 1–13');
 });

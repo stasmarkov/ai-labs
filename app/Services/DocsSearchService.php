@@ -10,6 +10,7 @@ use App\DTOs\DocsMatch;
 use App\Enums\DocsSearchMode;
 use App\Exceptions\DocsSearchUnavailableException;
 use App\Exceptions\SemanticSearchUnavailableException;
+use App\Support\ServerTiming;
 
 final readonly class DocsSearchService
 {
@@ -21,6 +22,7 @@ final readonly class DocsSearchService
         private DocsSearchRepositoryInterface $chunks,
         private SemanticSearchService $queries,
         private ListingEmbeddingService $embeddings,
+        private ServerTiming $timing,
     ) {}
 
     public function defaultK(): int
@@ -46,8 +48,8 @@ final readonly class DocsSearchService
 
         return match ($mode) {
             DocsSearchMode::Vector => $this->single($this->vectorList($query, $k, $queryVector), true),
-            DocsSearchMode::Text => $this->single($this->chunks->textMatches($query, $k), false),
-            DocsSearchMode::Hybrid => $this->fuse($this->vectorList($query, $depth, $queryVector), $this->chunks->textMatches($query, $depth), $k),
+            DocsSearchMode::Text => $this->single($this->timing->measure('db', fn (): array => $this->chunks->textMatches($query, $k)), false),
+            DocsSearchMode::Hybrid => $this->fuse($this->vectorList($query, $depth, $queryVector), $this->timing->measure('db', fn (): array => $this->chunks->textMatches($query, $depth)), $k),
         };
     }
 
@@ -71,7 +73,9 @@ final readonly class DocsSearchService
      */
     private function vectorList(string $query, int $limit, ?array $queryVector): array
     {
-        return $this->chunks->nearest($queryVector ?? $this->embedQuery($query), $this->embeddings->modelLabel(), $limit, (int) config('ai.embeddings.ef_search'));
+        $vector = $queryVector ?? $this->embedQuery($query);
+
+        return $this->timing->measure('db', fn (): array => $this->chunks->nearest($vector, $this->embeddings->modelLabel(), $limit, (int) config('ai.embeddings.ef_search')));
     }
 
     /**

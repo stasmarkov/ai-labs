@@ -18,6 +18,7 @@ use App\Repositories\EloquentListingDocumentRepository;
 use App\Repositories\EloquentListingRepository;
 use App\Repositories\EloquentSemanticBenchRepository;
 use App\Repositories\EloquentSemanticSearchRepository;
+use App\Support\ServerTiming;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
 
@@ -28,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->scoped(ServerTiming::class);
         $this->app->bind(ListingRepositoryInterface::class, EloquentListingRepository::class);
         $this->app->bind(ListingDocumentRepositoryInterface::class, EloquentListingDocumentRepository::class);
         $this->app->bind(SemanticSearchRepositoryInterface::class, EloquentSemanticSearchRepository::class);

@@ -8,6 +8,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 final class SemanticSearchRequest extends FormRequest
 {
+    public const MAX_QUERY_LENGTH = 200;
+
     public function authorize(): bool
     {
         return true;
@@ -19,7 +21,7 @@ final class SemanticSearchRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'q' => ['required', 'string', 'max:200'],
+            'q' => ['required', 'string', 'max:'.self::MAX_QUERY_LENGTH],
         ];
     }
 

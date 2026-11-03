@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Ai\AiRunRecorder;
 use App\Ai\SseProtocol;
 use App\Contracts\AiRunRepositoryInterface;
+use App\DTOs\AiRunDetail;
 use App\DTOs\AiRunRecord;
 use App\Models\AiRun;
 use App\Models\Dealer;
@@ -45,6 +46,16 @@ it('AC-5 a failed ai_runs insert is reported and the stream still ends with [DON
         public function save(AiRunRecord $record): void
         {
             throw new RuntimeException('database is gone');
+        }
+
+        public function recent(int $limit): array
+        {
+            return [];
+        }
+
+        public function findByInvocationId(string $invocationId): ?AiRunDetail
+        {
+            return null;
         }
     });
     $listing = Listing::factory()->for(Dealer::factory())->create();

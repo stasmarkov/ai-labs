@@ -50,6 +50,17 @@ final readonly class EloquentListingRepository implements ListingRepositoryInter
         );
     }
 
+    public function lowestIds(int $limit): array
+    {
+        return Listing::query()
+            ->select(self::SUMMARY_COLUMNS)
+            ->orderBy('id')
+            ->limit($limit)
+            ->get()
+            ->map(fn (Listing $listing): ListingSummary => $this->toSummary($listing))
+            ->all();
+    }
+
     /**
      * @return Builder<Listing>
      */

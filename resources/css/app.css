@@ -4,6 +4,7 @@
 
 @source '../views';
 @source not '../views/ai';
+@source not '../js/ai';
 @source '../js/app.js';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 

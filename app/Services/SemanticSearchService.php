@@ -9,6 +9,7 @@ use App\Contracts\SemanticSearchRepositoryInterface;
 use App\DTOs\SemanticMatch;
 use App\Exceptions\InvalidEmbeddingException;
 use App\Exceptions\SemanticSearchUnavailableException;
+use App\Support\ServerTiming;
 use Laravel\Ai\Embeddings;
 use Throwable;
 
@@ -21,6 +22,7 @@ final readonly class SemanticSearchService
     public function __construct(
         private SemanticSearchRepositoryInterface $matches,
         private ListingEmbeddingService $embeddings,
+        private ServerTiming $timing,
     ) {}
 
     /**
@@ -30,7 +32,9 @@ final readonly class SemanticSearchService
      */
     public function search(string $query): array
     {
-        return $this->matches->nearest($this->embedQuery($query), self::LIMIT, (int) config('ai.embeddings.ef_search'));
+        $vector = $this->embedQuery($query);
+
+        return $this->timing->measure('db', fn (): array => $this->matches->nearest($vector, self::LIMIT, (int) config('ai.embeddings.ef_search')));
     }
 
     /**
@@ -44,13 +48,14 @@ final readonly class SemanticSearchService
         app(AiRunRecorder::class)->nextEmbeddingsAgent(self::QUERY_AGENT);
 
         try {
-            $vector = array_values(
-                Embeddings::for([$query])
+            $vector = array_values($this->timing->measure(
+                'embed',
+                fn (): array => Embeddings::for([$query])
                     ->dimensions($dimensions)
                     ->timeout((int) config('ai.embeddings.timeout'))
                     ->generate($this->embeddings->provider(), $this->embeddings->model())
                     ->embeddings[0] ?? [],
-            );
+            ));
         } catch (Throwable $e) {
             throw SemanticSearchUnavailableException::because($e);
         } finally {

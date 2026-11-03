@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Contracts\AiRunRepositoryInterface;
+use App\DTOs\AiRunDetail;
 use App\DTOs\AiRunRecord;
+use App\DTOs\AiRunSummary;
 use App\Models\AiRun;
 
 final readonly class EloquentAiRunRepository implements AiRunRepositoryInterface
@@ -27,5 +29,39 @@ final readonly class EloquentAiRunRepository implements AiRunRepositoryInterface
             'error_message' => $record->errorMessage,
             'inputs' => $record->inputs,
         ]);
+    }
+
+    public function recent(int $limit): array
+    {
+        return AiRun::query()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get()
+            ->map(fn (AiRun $run): AiRunSummary => $this->toSummary($run))
+            ->all();
+    }
+
+    public function findByInvocationId(string $invocationId): ?AiRunDetail
+    {
+        $run = AiRun::query()->where('invocation_id', $invocationId)->first();
+
+        return $run === null ? null : new AiRunDetail($this->toSummary($run), $run->prompt_version, $run->error_message);
+    }
+
+    private function toSummary(AiRun $run): AiRunSummary
+    {
+        return new AiRunSummary(
+            invocationId: $run->invocation_id,
+            agent: $run->agent,
+            provider: $run->provider,
+            model: $run->model,
+            tokensIn: $run->tokens_in,
+            tokensOut: $run->tokens_out,
+            ttftMs: $run->ttft_ms,
+            latencyMs: $run->latency_ms,
+            status: $run->status,
+            createdAt: $run->created_at?->utc()->toIso8601String() ?? '',
+        );
     }
 }
