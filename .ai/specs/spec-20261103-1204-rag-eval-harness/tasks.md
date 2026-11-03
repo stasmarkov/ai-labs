@@ -54,10 +54,11 @@
   - [x] 8.2 Guide section 15 per AC-10
   - [x] 8.3 **Verify**: `LearningGuideTest` and `BenchmarksDocTest` needles; `RagEvalContaminationTest` still green with the new text
 
-- [ ] 9. Parity, fingerprint and bench (checks)
+- [x] 9. Parity, fingerprint and bench (checks)
   Covers: MNC-3, MNC-4
-  - [ ] 9.1 Full suite, Pint, PHPStan, typecheck, build green; fingerprint equals BENCHMARKS.md; parity identical on 6 servers; `bench/run.sh ping --quick` exit 0 on a clean tree
-  - [ ] 9.2 **Verify**: outputs recorded here
+  - [x] 9.1 Full suite, Pint, PHPStan, typecheck, build green; fingerprint equals BENCHMARKS.md; parity identical on 6 servers; `bench/run.sh ping --quick` exit 0 on a clean tree
+  - [x] 9.2 **Verify**: outputs recorded here
+    - Result: 705 tests, Pint, PHPStan, typecheck, build green; fingerprint `app-CjRfEL-0.css` / `app-BvRk9kiK.js` unchanged; parity identical on all 6 servers; ask endpoint streams `sources` first; `bench/run.sh ping --quick` exit 0 on a clean tree after commit 6966869.
 
 ## Traceability
 
@@ -90,9 +91,9 @@
 
 ## Done when
 
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
 
 ## Phase: Gaps (converge round 1)
 
