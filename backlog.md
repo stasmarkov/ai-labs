@@ -435,7 +435,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Notes:** Inertia 2 with Vue 3 and TypeScript, a separate Vite entry so the existing pages' built CSS and JS stay byte-identical (parity). Design chosen by Claude (owner: "taste any design by your own"). SL-41 (streaming chat UI) and SL-36 (similar photos) build their pages inside this UI.
 - **Depends on:** SL-20, SL-22, SL-24, SL-32
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261103-0012-ai-lab-ui
 - **Source:** Stanislav Markov, 2026-11-03 ("for the future chat streaming and similar photos I need some UI … use inertia or similar … taste any design by your own")
 - **Run:** `/sdd "SL-46: AI lab UI — Inertia + Vue 3 + TypeScript under /ai with pages for streamed describe (stop button, live event log, TTFT and tokens/s), semantic search, docs search comparing three modes, recent ai_runs, and placeholders for chat and photos; existing pages' assets byte-identical (BR-27, BR-90, BR-95). Rules in product-brief.md."`

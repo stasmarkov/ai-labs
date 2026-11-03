@@ -76,10 +76,10 @@
 - frontend: `ddev npm run typecheck`, `ddev npm run build`
 
 ## Done when
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
-- [ ] Project on nginx-fpm; `npm run build` output present; old asset fingerprint unchanged
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
+- [x] Project on nginx-fpm; `npm run build` output present; old asset fingerprint unchanged
 
 ## Phase: Gaps (converge round 1)
 
@@ -136,11 +136,12 @@
   - Approach: rewrite that sentence: automatic source detection scanned markdown and specs, so rebuilds were not reproducible. Task 0 switched to `source(none)` with explicit sources, which changed the hashed name once. Keep the fingerprint block and the six-server `identical` line as they are
   - [x] 15.1 **Verify**: the paragraph says detection was removed (`source(none)` with explicit `@source`), not gained; `tests/Feature/BenchmarksDocTest.php` "MNC-1 BENCHMARKS.md parity section records the asset fingerprint and the re-baseline" still passes; `bench/asset-fingerprint.sh` output still matches the two recorded lines
 
-- [ ] 16. Re-run the MNC-3 bench gate on the committed round-1 code (bench)
+- [x] 16. Re-run the MNC-3 bench gate on the committed round-1 code (bench)
   Covers: MNC-3
   - Gap: MNC-3's `bench/run.sh ping --quick` passed only in task 7, before tasks 8, 9, 10 and 12. Those tasks changed code that runs on every JSON error and every lab request (`JsonErrorRenderer.php`, `HandleInertiaRequests.php`, `LabOverviewService.php`), and their changes are still uncommitted (git status shows them modified). The bench refuses a dirty tree, so manual step 6's last line has not run on the final code. Task 10 also skipped the full suite
   - Approach: after tasks 13 to 15, commit the round-1 and round-2 work, then run manual-test.md step 6 in full on nginx-fpm: suite, typecheck, build, parity on six servers, and `bench/run.sh ping --quick`. Record the exit code and the test count in the SL-46 report
-  - [ ] 16.1 **Verify**: on a clean tree, `ddev artisan test --compact` is green, `bench/parity.sh compare` prints `identical` six times, and `bench/run.sh ping --quick; echo "exit=$?"` prints `exit=0`, all recorded in the report; the server is back on nginx-fpm
+  - Result (commit d23bb68, clean tree): suite 520 green, `identical` six times, `bench/run.sh ping --quick` exit 0, server back on nginx-fpm, fingerprint unchanged.
+  - [x] 16.1 **Verify**: on a clean tree, `ddev artisan test --compact` is green, `bench/parity.sh compare` prints `identical` six times, and `bench/run.sh ping --quick; echo "exit=$?"` prints `exit=0`, all recorded in the report; the server is back on nginx-fpm
 
 ## Phase: Review fix pass
 
