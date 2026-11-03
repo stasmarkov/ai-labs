@@ -33,6 +33,7 @@ final class FakeStreamGateway implements StepTextGateway
         private readonly int $tokens,
         private readonly int $delayMs,
         private readonly ?int $failAfter,
+        private readonly ?string $text = null,
     ) {}
 
     public function generateTextStep(
@@ -124,12 +125,16 @@ final class FakeStreamGateway implements StepTextGateway
     }
 
     /**
-     * The car named on the prompt's "Car:" line, followed by filler, as exactly the configured number of words.
+     * The configured canned text when set, else the car named on the prompt's "Car:" line, followed by filler, as exactly the configured number of words.
      *
      * @return list<string>
      */
     private function words(string $prompt): array
     {
+        if (filled($this->text)) {
+            return preg_split('/\s+/', trim($this->text), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        }
+
         $words = [];
 
         if (preg_match('/^Car:\s*(.+)$/mi', $prompt, $match) === 1) {

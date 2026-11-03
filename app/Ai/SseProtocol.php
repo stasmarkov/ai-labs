@@ -16,9 +16,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * One "data: <event json>" line per SDK event, then "data: [DONE]", reporting the first text delta to the run recorder.
  */
-final class SseProtocol extends StreamProtocol
+class SseProtocol extends StreamProtocol
 {
-    public function __construct(private readonly AiRunRecorder $recorder) {}
+    public function __construct(protected readonly AiRunRecorder $recorder) {}
 
     /**
      * @return array<string, string>

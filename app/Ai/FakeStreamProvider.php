@@ -41,6 +41,7 @@ final class FakeStreamProvider extends Provider implements TextProvider
             tokens: max(0, (int) ($this->config['tokens'] ?? 200)),
             delayMs: max(0, (int) ($this->config['delay_ms'] ?? 0)),
             failAfter: filled($this->config['fail_after'] ?? null) ? max(0, (int) $this->config['fail_after']) : null,
+            text: filled($this->config['text'] ?? null) ? (string) $this->config['text'] : null,
         );
     }
 

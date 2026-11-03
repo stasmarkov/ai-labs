@@ -6,6 +6,7 @@ namespace App\Ai;
 
 use App\Contracts\AiRunRepositoryInterface;
 use App\DTOs\AiRunRecord;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -16,8 +17,13 @@ final class AiRunRecorder
 {
     private const MAX_MESSAGE_LENGTH = 1000;
 
-    /** @var array<string, array{agent: string, provider: string, model: string, promptVersion: ?string, inputs: ?int, startedAt: int, firstTokenAt: ?int}> */
+    private const MAX_REASON_LENGTH = 120;
+
+    /** @var array<string, array{agent: string, provider: string, model: string, promptVersion: ?string, inputs: ?int, startedAt: int, firstTokenAt: ?int, retrieved: ?list<int>, cited: ?list<int>}> */
     private array $runs = [];
+
+    /** @var array<string, array{retrieved: list<int>, cited: ?list<int>}> */
+    private array $pendingAnnotations = [];
 
     private ?string $embeddingsAgent = null;
 
@@ -46,7 +52,72 @@ final class AiRunRecorder
             'inputs' => $inputs,
             'startedAt' => hrtime(true),
             'firstTokenAt' => null,
+            'retrieved' => $this->pendingAnnotations[$invocationId]['retrieved'] ?? null,
+            'cited' => $this->pendingAnnotations[$invocationId]['cited'] ?? null,
         ];
+        unset($this->pendingAnnotations[$invocationId]);
+    }
+
+    /**
+     * Attaches the retrieved and cited chunk ids to a run; they are written with the row when it finishes. A run that has
+     * not started yet (the SDK starts it when the stream is first read) takes them when it does.
+     *
+     * @param  list<int>  $retrieved
+     * @param  list<int>|null  $cited
+     */
+    public function annotate(string $invocationId, array $retrieved, ?array $cited = null): void
+    {
+        if (! isset($this->runs[$invocationId])) {
+            $this->pendingAnnotations[$invocationId] = ['retrieved' => $retrieved, 'cited' => $cited];
+
+            return;
+        }
+
+        $this->runs[$invocationId]['retrieved'] = $retrieved;
+        $this->runs[$invocationId]['cited'] = $cited ?? $this->runs[$invocationId]['cited'];
+    }
+
+    /**
+     * Finishes a started run the output guard abandoned, so it is not left without a row.
+     */
+    public function refused(string $invocationId, string $reason): void
+    {
+        $this->finish($invocationId, 'refused', refusalReason: $reason);
+    }
+
+    /**
+     * Writes the row of a request that ended without a model call ("refused" or "no_context"). Returns its invocation id.
+     *
+     * @param  list<int>|null  $retrieved
+     */
+    public function recordOutcome(
+        string $status,
+        string $agent,
+        string $provider,
+        string $model,
+        ?string $promptVersion,
+        int $latencyMs,
+        ?string $refusalReason = null,
+        ?array $retrieved = null,
+    ): string {
+        $invocationId = (string) Str::uuid();
+
+        rescue(fn () => $this->repository->save(new AiRunRecord(
+            invocationId: $invocationId,
+            agent: $agent,
+            provider: $provider,
+            model: $model,
+            promptVersion: $promptVersion,
+            tokensIn: null,
+            tokensOut: null,
+            ttftMs: null,
+            latencyMs: $latencyMs,
+            status: $status,
+            retrievedChunkIds: $retrieved,
+            refusalReason: $refusalReason === null ? null : mb_substr($refusalReason, 0, self::MAX_REASON_LENGTH),
+        )));
+
+        return $invocationId;
     }
 
     public function firstToken(string $invocationId): void
@@ -78,6 +149,7 @@ final class AiRunRecorder
         ?int $tokensOut = null,
         ?string $errorClass = null,
         ?string $errorMessage = null,
+        ?string $refusalReason = null,
     ): void {
         $run = $this->runs[$invocationId] ?? null;
 
@@ -102,6 +174,9 @@ final class AiRunRecorder
             errorClass: $errorClass,
             errorMessage: $errorMessage,
             inputs: $run['inputs'],
+            retrievedChunkIds: $run['retrieved'],
+            citedChunkIds: $run['cited'],
+            refusalReason: $refusalReason === null ? null : mb_substr($refusalReason, 0, self::MAX_REASON_LENGTH),
         )));
     }
 

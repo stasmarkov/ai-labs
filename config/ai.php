@@ -72,6 +72,14 @@ return [
         'k_max' => max(1, (int) (env('AI_DOCS_K_MAX') ?: 20)),
         'rrf_depth' => max(1, (int) (env('AI_DOCS_RRF_DEPTH') ?: 20)),
         'search_per_minute' => filled(env('AI_DOCS_SEARCH_PER_MINUTE')) ? (int) env('AI_DOCS_SEARCH_PER_MINUTE') : 60,
+        'answer' => [
+            // Chunks retrieved per question, the cosine similarity a vector-only chunk needs, the context size in tokens (~4 characters each).
+            'k' => max(1, (int) (env('AI_DOCS_ANSWER_K') ?: 6)),
+            'min_similarity' => filled(env('AI_DOCS_ANSWER_MIN_SIMILARITY')) ? (float) env('AI_DOCS_ANSWER_MIN_SIMILARITY') : 0.5,
+            'max_context_tokens' => max(1, (int) (env('AI_DOCS_ANSWER_MAX_CONTEXT_TOKENS') ?: 4000)),
+            'per_minute' => filled(env('AI_DOCS_ANSWER_PER_MINUTE')) ? (int) env('AI_DOCS_ANSWER_PER_MINUTE') : 10,
+            'guard' => env('AI_DOCS_ANSWER_GUARD') ?: resource_path('guards/prompt-injection.v1.php'),
+        ],
     ],
 
     'semantic_per_minute' => filled(env('AI_SEMANTIC_PER_MINUTE')) ? (int) env('AI_SEMANTIC_PER_MINUTE') : 60,
@@ -94,6 +102,7 @@ return [
 
     'prompts' => [
         'car_description' => env('AI_PROMPT_CAR_DESCRIPTION') ?: 'car-description.v1',
+        'docs_answer' => env('AI_PROMPT_DOCS_ANSWER') ?: 'docs-answer.v1',
     ],
 
     /*
@@ -115,6 +124,7 @@ return [
             'tokens' => filled(env('AI_FAKE_TOKENS')) ? (int) env('AI_FAKE_TOKENS') : 200,
             'delay_ms' => filled(env('AI_FAKE_TOKEN_DELAY_MS')) ? (int) env('AI_FAKE_TOKEN_DELAY_MS') : 50,
             'fail_after' => filled(env('AI_FAKE_FAIL_AFTER')) ? (int) env('AI_FAKE_FAIL_AFTER') : null,
+            'text' => filled(env('AI_FAKE_TEXT')) ? (string) env('AI_FAKE_TEXT') : null,
             'models' => [
                 'text' => ['default' => env('AI_MODEL') ?: 'fake-slow-1'],
             ],

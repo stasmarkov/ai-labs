@@ -20,10 +20,14 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $error_class
  * @property string|null $error_message
  * @property int|null $inputs
+ * @property list<int>|null $retrieved_chunk_ids
+ * @property list<int>|null $cited_chunk_ids
+ * @property string|null $refusal_reason
  */
 #[Fillable([
     'invocation_id', 'agent', 'provider', 'model', 'prompt_version', 'tokens_in', 'tokens_out',
     'ttft_ms', 'latency_ms', 'status', 'error_class', 'error_message', 'inputs',
+    'retrieved_chunk_ids', 'cited_chunk_ids', 'refusal_reason',
 ])]
 class AiRun extends Model
 {
@@ -40,6 +44,8 @@ class AiRun extends Model
             'ttft_ms' => 'integer',
             'latency_ms' => 'integer',
             'inputs' => 'integer',
+            'retrieved_chunk_ids' => 'array',
+            'cited_chunk_ids' => 'array',
         ];
     }
 }

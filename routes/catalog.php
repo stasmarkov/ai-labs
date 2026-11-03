@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AskDocsController;
 use App\Http\Controllers\DescribeListingController;
 use App\Http\Controllers\ListListingsController;
 use App\Http\Controllers\SearchDocsController;
@@ -22,3 +23,6 @@ Route::get('/api/listings/semantic', SemanticSearchController::class)
 Route::get('/api/docs/search', SearchDocsController::class)
     ->middleware(['throttle:docs-search', AddServerTimingHeader::class])
     ->name('docs.search');
+Route::post('/api/docs/ask', AskDocsController::class)
+    ->middleware(['throttle:docs-ask', AddServerTimingHeader::class])
+    ->name('docs.ask');

@@ -28,6 +28,9 @@ final readonly class EloquentAiRunRepository implements AiRunRepositoryInterface
             'error_class' => $record->errorClass,
             'error_message' => $record->errorMessage,
             'inputs' => $record->inputs,
+            'retrieved_chunk_ids' => $record->retrievedChunkIds,
+            'cited_chunk_ids' => $record->citedChunkIds,
+            'refusal_reason' => $record->refusalReason,
         ]);
     }
 

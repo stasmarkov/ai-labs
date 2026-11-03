@@ -50,7 +50,7 @@ it('AC-1 the overview shows models, Ollama status, capabilities and recent runs'
                 ->where('status', 'ready')
                 ->where('slice', 'SL-22')
                 ->etc())
-            ->where('capabilities.3.status', 'coming')
+            ->where('capabilities.3.status', 'ready')
             ->where('capabilities.3.slice', 'SL-45')
             ->where('capabilities.4.status', 'coming')
             ->where('capabilities.4.slice', 'SL-36')
@@ -119,14 +119,14 @@ it('AC-1 the shared top bar reports Ollama as not used when no provider uses it'
     Http::assertNothingSent();
 });
 
-it('AC-1 every capability card links to a page that opens, including the coming ones', function (): void {
+it('AC-1 every capability card links to a page that opens, including the one coming', function (): void {
     Http::preventStrayRequests();
     Http::fake(['*/api/version' => Http::response(['version' => '0.12.0'])]);
 
     $cards = collect($this->get('/ai')->assertOk()->inertiaProps('capabilities'));
 
     expect($cards)->toHaveCount(5)
-        ->and($cards->where('status', 'coming')->pluck('route')->all())->toBe(['/ai/chat', '/ai/photos']);
+        ->and($cards->where('status', 'coming')->pluck('route')->all())->toBe(['/ai/photos']);
 
     foreach ($cards as $card) {
         $this->get($card['route'])->assertOk();

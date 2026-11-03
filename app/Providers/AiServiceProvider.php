@@ -10,6 +10,7 @@ use App\Ai\RecordAiRun;
 use App\Ai\RecordEmbeddingsRun;
 use App\Contracts\AiRunRepositoryInterface;
 use App\Repositories\EloquentAiRunRepository;
+use App\Services\PromptInjectionGuard;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
@@ -34,6 +35,7 @@ class AiServiceProvider extends ServiceProvider
     {
         $this->app->bind(AiRunRepositoryInterface::class, EloquentAiRunRepository::class);
         $this->app->scoped(AiRunRecorder::class);
+        $this->app->singleton(PromptInjectionGuard::class, fn (): PromptInjectionGuard => PromptInjectionGuard::fromFile((string) config('ai.docs.answer.guard')));
 
         $this->callAfterResolving(AiManager::class, function (AiManager $manager): void {
             $manager->extend('fake-stream', fn (Application $app, array $config): FakeStreamProvider => new FakeStreamProvider(
@@ -59,5 +61,6 @@ class AiServiceProvider extends ServiceProvider
         RateLimiter::for('describe', fn (Request $request): Limit => Limit::perMinute((int) config('ai.describe_per_minute'))->by((string) $request->ip()));
         RateLimiter::for('semantic-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.semantic_per_minute'))->by((string) $request->ip()));
         RateLimiter::for('docs-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.docs.search_per_minute'))->by((string) $request->ip()));
+        RateLimiter::for('docs-ask', fn (Request $request): Limit => Limit::perMinute((int) config('ai.docs.answer.per_minute'))->by((string) $request->ip()));
     }
 }

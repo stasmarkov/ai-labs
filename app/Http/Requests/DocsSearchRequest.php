@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Enums\DocsSearchMode;
+use App\Rules\ValidUtf8Text;
 use App\Services\DocsSearchService;
-use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -27,12 +27,7 @@ final class DocsSearchRequest extends FormRequest
                 'required',
                 'string',
                 'max:'.DocsSearchService::MAX_QUERY_LENGTH,
-                // PostgreSQL rejects NUL bytes and invalid UTF-8 with an error, so they are a 422 here instead of a 500 there.
-                function (string $attribute, mixed $value, Closure $fail): void {
-                    if (is_string($value) && (str_contains($value, "\0") || ! mb_check_encoding($value, 'UTF-8'))) {
-                        $fail('The :attribute must be valid UTF-8 text.');
-                    }
-                },
+                new ValidUtf8Text,
             ],
             'mode' => ['nullable', Rule::enum(DocsSearchMode::class)],
             'k' => ['nullable', 'integer', 'min:1', 'max:'.max(1, (int) config('ai.docs.k_max'))],

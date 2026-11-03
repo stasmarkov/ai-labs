@@ -132,3 +132,66 @@ it('AC-4 AI_PROVIDER and AI_MODEL from the environment pick the provider and mod
         config(['ai' => $original]);
     }
 });
+
+it('AC-7 describe rows keep the answer columns null', function (): void {
+    $listing = Listing::factory()->for(Dealer::factory())->create();
+
+    $this->get('/listings/'.$listing->id.'/describe')->streamedContent();
+
+    $run = AiRun::firstOrFail();
+    expect($run->retrieved_chunk_ids)->toBeNull()
+        ->and($run->cited_chunk_ids)->toBeNull()
+        ->and($run->refusal_reason)->toBeNull();
+});
+
+it('AC-7 annotate merges retrieved and cited chunk ids into the completed row', function (): void {
+    $recorder = app(AiRunRecorder::class);
+    $recorder->started('inv-1', 'DocsAnswerAgent', 'fake-stream', 'm', 'docs-answer@v1');
+    $recorder->annotate('inv-1', [3, 5, 8], [5]);
+    $recorder->completed('inv-1', 10, 20);
+
+    $run = AiRun::where('invocation_id', 'inv-1')->firstOrFail();
+    expect($run->status)->toBe('completed')
+        ->and($run->retrieved_chunk_ids)->toBe([3, 5, 8])
+        ->and($run->cited_chunk_ids)->toBe([5])
+        ->and($run->prompt_version)->toBe('docs-answer@v1');
+});
+
+it('AC-5 a run abandoned by the output guard is finished as refused', function (): void {
+    $recorder = app(AiRunRecorder::class);
+    $recorder->started('inv-2', 'DocsAnswerAgent', 'fake-stream', 'm', 'docs-answer@v1');
+    $recorder->annotate('inv-2', [1, 2]);
+    $recorder->refused('inv-2', 'canary');
+
+    $run = AiRun::where('invocation_id', 'inv-2')->firstOrFail();
+    expect($run->status)->toBe('refused')
+        ->and($run->refusal_reason)->toBe('canary')
+        ->and($run->retrieved_chunk_ids)->toBe([1, 2])
+        ->and($run->cited_chunk_ids)->toBeNull()
+        ->and($run->tokens_out)->toBeNull();
+});
+
+it('AC-3 AC-4 recordOutcome writes a no_context or refused row without tokens', function (string $status, ?string $reason, ?array $retrieved): void {
+    $id = app(AiRunRecorder::class)->recordOutcome($status, 'DocsAnswerAgent', 'fake-stream', 'm', 'docs-answer@v1', 42, $reason, $retrieved);
+
+    $run = AiRun::where('invocation_id', $id)->firstOrFail();
+    expect($run->status)->toBe($status)
+        ->and($run->provider)->toBe('fake-stream')
+        ->and($run->model)->toBe('m')
+        ->and($run->prompt_version)->toBe('docs-answer@v1')
+        ->and($run->latency_ms)->toBe(42)
+        ->and($run->tokens_in)->toBeNull()
+        ->and($run->tokens_out)->toBeNull()
+        ->and($run->ttft_ms)->toBeNull()
+        ->and($run->refusal_reason)->toBe($reason)
+        ->and($run->retrieved_chunk_ids)->toBe($retrieved);
+})->with([
+    'no_context' => ['no_context', null, []],
+    'refused' => ['refused', 'ignore-previous', null],
+]);
+
+it('MNC-3 an annotate for an unknown run is ignored', function (): void {
+    app(AiRunRecorder::class)->annotate('nope', [1]);
+
+    expect(AiRun::count())->toBe(0);
+});

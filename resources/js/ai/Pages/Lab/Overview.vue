@@ -26,7 +26,7 @@ interface Run {
     tokens_out: number | null;
     ttft_ms: number | null;
     latency_ms: number;
-    status: 'completed' | 'failed';
+    status: 'completed' | 'failed' | 'refused' | 'no_context';
     created_at: string;
 }
 
@@ -141,7 +141,7 @@ function show(value: number | null): string {
                         <td class="py-2 pr-4 text-right">{{ show(run.tokens_out) }}</td>
                         <td class="py-2 pr-4 text-right">{{ show(run.ttft_ms) }}</td>
                         <td class="py-2 pr-4 text-right">{{ run.latency_ms }}</td>
-                        <td class="py-2 pr-4" :class="run.status === 'failed' ? 'text-danger' : 'text-success'">{{ run.status }}</td>
+                        <td class="py-2 pr-4" :class="run.status === 'failed' ? 'text-danger' : run.status === 'completed' ? 'text-success' : 'text-muted'">{{ run.status }}</td>
                         <td class="py-2"><time :datetime="run.created_at" :title="run.created_at">{{ relativeTime(run.created_at) }}</time></td>
                     </tr>
                 </tbody>

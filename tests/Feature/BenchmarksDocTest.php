@@ -264,3 +264,20 @@ test('MNC-1 BENCHMARKS.md parity section records the asset fingerprint and the r
     expect(preg_match_all('/^resources\/(css\/app\.css|js\/app\.js) assets\/app-[\w-]+\.(css|js) [0-9a-f]{64}$/m', $parity))
         ->toBe(2);
 });
+
+test('MNC-4 bench/asset-fingerprint.sh prints the lines recorded in BENCHMARKS.md', function (): void {
+    $manifest = public_path('build/manifest.json');
+    if (! is_file($manifest)) {
+        $this->markTestSkipped('No Vite build to fingerprint.');
+    }
+
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+    preg_match_all('/^resources\/(?:css\/app\.css|js\/app\.js) \S+ [0-9a-f]{64}$/m', $doc, $recorded);
+
+    $output = [];
+    exec(escapeshellarg(base_path('bench/asset-fingerprint.sh')).' 2>&1', $output, $exit);
+
+    expect($exit)->toBe(0)
+        ->and($recorded[0])->toHaveCount(2)
+        ->and($output)->toBe($recorded[0]);
+});

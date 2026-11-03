@@ -20,5 +20,10 @@ final readonly class AiRunRecord
         public ?string $errorClass = null,
         public ?string $errorMessage = null,
         public ?int $inputs = null,
+        /** @var list<int>|null */
+        public ?array $retrievedChunkIds = null,
+        /** @var list<int>|null */
+        public ?array $citedChunkIds = null,
+        public ?string $refusalReason = null,
     ) {}
 }

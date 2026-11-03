@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Services\LabOverviewService;
+use App\Http\Requests\DocsAskRequest;
 use Inertia\Inertia;
 use Inertia\Response;
 
 final class ShowLabChatController extends Controller
 {
-    public function __invoke(LabOverviewService $lab): Response
-    {
-        $slice = $lab->capability('chat')->slice;
+    private const ID_PLACEHOLDER = 'RUN_ID';
 
+    public function __invoke(): Response
+    {
         return Inertia::render('Lab/Chat', [
-            'slices' => [$slice, 'SL-41'],
-            'blockedBy' => null,
-            'backlog' => "backlog.md › {$slice}",
-            'guide' => 'docs/learning-guide.md',
+            'askUrl' => route('docs.ask', [], false),
+            'runUrl' => route('ai.runs.show', ['invocationId' => self::ID_PLACEHOLDER], false),
+            'idPlaceholder' => self::ID_PLACEHOLDER,
+            'maxQuestionLength' => DocsAskRequest::MAX_QUESTION_LENGTH,
         ]);
     }
 }

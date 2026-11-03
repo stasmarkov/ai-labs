@@ -52,7 +52,7 @@ test('AC-9 learning guide explains streaming an AI answer with links', function 
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–13');
+    expect($guide)->toContain('sections 1–14');
 });
 
 test('AC-8 learning guide explains running the model locally', function (): void {
@@ -92,7 +92,7 @@ test('AC-8 learning guide explains running the model locally', function (): void
 
     expect($section)->toContain('| Server | Tokens in |');
 
-    expect($guide)->toContain('sections 1–13');
+    expect($guide)->toContain('sections 1–14');
     expect($guide)->not->toContain('running models locally (SL-22)');
 });
 
@@ -123,7 +123,7 @@ test('AC-9 learning guide explains embeddings and vector search', function (): v
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–13');
+    expect($guide)->toContain('sections 1–14');
     expect($guide)->not->toContain('embeddings and vector search (SL-24)');
 });
 
@@ -155,7 +155,7 @@ test('AC-9 learning guide explains chunking and hybrid retrieval', function (): 
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–13');
+    expect($guide)->toContain('sections 1–14');
     expect($guide)->not->toContain('RAG with citations (SL-32)');
 });
 
@@ -188,5 +188,48 @@ test('AC-8 learning guide explains the AI lab UI', function (): void {
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–13');
+    expect($guide)->toContain('sections 1–14');
+});
+
+test('AC-11 learning guide documents docs answering', function (): void {
+    $guide = file_get_contents(base_path('docs/learning-guide.md'));
+
+    preg_match('/^## 14\. Answering with citations: RAG, guards and the trace row\n(.*?)(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->not->toBe('');
+
+    foreach (['0.635', '0.674', '0.469', '0.446', 'relevance gate', 'sources', 'TTFT', '4783', 'disregard everything you were told before', 'prompt-injection.v1', '<doc', 'canary', '12-word', 'replace', 'cannot un-send', 'retrieved_chunk_ids', 'cited_chunk_ids', 'refusal_reason', 'Server-Timing'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    foreach ([
+        '../app/Services/DocsAnswerService.php',
+        '../app/Ai/DocsAnswerProtocol.php',
+        '../app/Ai/OutputGuard.php',
+        '../app/Services/PromptInjectionGuard.php',
+        '../.ai/specs/spec-20261103-1028-docs-chat-answer/',
+        'https://platform.openai.com/docs/guides/prompt-engineering',
+        'https://owasp.org/www-project-top-10-for-large-language-model-applications/',
+    ] as $link) {
+        expect($section)->toContain("]($link");
+    }
+
+    foreach (['../app/Services/DocsAnswerService.php', '../app/Ai/DocsAnswerProtocol.php', '../app/Ai/OutputGuard.php', '../app/Services/PromptInjectionGuard.php', '../.ai/specs/spec-20261103-1028-docs-chat-answer/'] as $path) {
+        expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
+    }
+
+    expect($guide)->toContain('sections 1–14');
+    expect($guide)->not->toContain('RAG with citations (SL-45, on top of the index from SL-32)');
+});
+
+test('AC-1 NFR-1 learning guide records the live docs answering run', function (): void {
+    $guide = file_get_contents(base_path('docs/learning-guide.md'));
+
+    preg_match('/^## 14\. Answering with citations: RAG, guards and the trace row\n(.*?)(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    $section = $matches[1] ?? '';
+
+    foreach (['Live run: five questions', 'tokens/s', 'no_context', '1695', '2290', '2595', '2587', '1758', '1766', '4072', '5270', '4600', '500 ms'] as $needle) {
+        expect($section)->toContain($needle);
+    }
 });

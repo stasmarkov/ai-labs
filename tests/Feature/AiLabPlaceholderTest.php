@@ -4,16 +4,7 @@ declare(strict_types=1);
 
 use Inertia\Testing\AssertableInertia as Assert;
 
-it('AC-7 chat and photos show what is coming', function (): void {
-    $this->get('/ai/chat')
-        ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Lab/Chat')
-            ->where('slices', ['SL-45', 'SL-41'])
-            ->where('blockedBy', null)
-            ->where('backlog', 'backlog.md › SL-45')
-            ->where('guide', 'docs/learning-guide.md'));
-
+it('AC-7 photos shows what is coming', function (): void {
     $this->get('/ai/photos')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page

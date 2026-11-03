@@ -19,6 +19,13 @@ export interface LoggedEvent {
     detail?: string;
 }
 
+export interface EventStreamHooks {
+    /** Called with every parsed event after it is logged, for pages that understand more than text_delta. */
+    onEvent?: (event: StreamEvent) => void;
+    /** Called with the response once it is known to be a stream, for headers such as Server-Timing. */
+    onResponse?: (response: Response) => void;
+}
+
 const MAX_LOGGED_EVENTS = 500;
 const TICK_MS = 100;
 
@@ -54,6 +61,10 @@ function describe(event: StreamEvent): string | undefined {
         return event.message;
     }
 
+    if (event.type === 'refused' || event.type === 'no_context') {
+        return typeof event.stage === 'string' ? event.stage : undefined;
+    }
+
     if (event.type === 'stream_start') {
         return [event.provider, event.model].filter((part) => typeof part === 'string').join(' ');
     }
@@ -74,6 +85,14 @@ function failureMessage(response: Response): string {
         return 'No such listing.';
     }
 
+    if (response.status === 422) {
+        return 'The server rejected the input.';
+    }
+
+    if (response.status === 503) {
+        return 'The service is unavailable right now.';
+    }
+
     return `Server error (${response.status}).`;
 }
 
@@ -81,7 +100,7 @@ function failureMessage(response: Response): string {
  * Reads a server-sent-events response with fetch and a stream reader, so it can be aborted and can see status codes.
  * A token is one text_delta event with a non-empty delta; every time is in ms since fetch was called.
  */
-export function useEventStream() {
+export function useEventStream(hooks: EventStreamHooks = {}) {
     const status = ref<StreamStatus>('idle');
     const text = ref('');
     const events = shallowRef<LoggedEvent[]>([]);
@@ -143,7 +162,8 @@ export function useEventStream() {
         events.value = [...events.value, { number: totalEvents.value, type: event.type, atMs, detail: describe(event) }].slice(-MAX_LOGGED_EVENTS);
         now.value = atMs;
 
-        if (event.type === 'stream_start' && typeof event.invocation_id === 'string') {
+        // The model stream names its run in stream_start; outcomes without a model call carry it on their only event.
+        if (invocationId.value === null && typeof event.invocation_id === 'string') {
             invocationId.value = event.invocation_id;
         }
 
@@ -157,6 +177,8 @@ export function useEventStream() {
                 ttftMs.value = atMs;
             }
         }
+
+        hooks.onEvent?.(event);
 
         if (event.type === 'error') {
             finish('error', typeof event.message === 'string' ? event.message : 'The stream reported an error.');
@@ -176,7 +198,7 @@ export function useEventStream() {
         now.value = 0;
     }
 
-    async function start(url: string): Promise<void> {
+    async function start(url: string, init: Pick<RequestInit, 'method' | 'body' | 'headers'> = {}): Promise<void> {
         if (status.value === 'streaming') {
             return;
         }
@@ -191,13 +213,15 @@ export function useEventStream() {
         }, TICK_MS);
 
         try {
-            const response = await fetch(url, { signal, headers: { Accept: 'text/event-stream' } });
+            const response = await fetch(url, { ...init, signal, headers: { Accept: 'text/event-stream', ...(init.headers as Record<string, string> | undefined) } });
 
             if (!response.ok || response.body === null) {
                 finish('error', response.ok ? 'Server error (empty response).' : failureMessage(response));
 
                 return;
             }
+
+            hooks.onResponse?.(response);
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();

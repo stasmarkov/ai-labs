@@ -65,7 +65,7 @@ final readonly class LabOverviewService
             new LabCapability('describe', 'Describe', route('ai.describe', absolute: false), 'ready', 'SL-22'),
             new LabCapability('semantic', 'Semantic search', route('ai.semantic', absolute: false), 'ready', 'SL-24'),
             new LabCapability('docs', 'Docs search', route('ai.docs', absolute: false), 'ready', 'SL-32'),
-            new LabCapability('chat', 'Chat', route('ai.chat', absolute: false), 'coming', 'SL-45'),
+            new LabCapability('chat', 'Chat', route('ai.chat', absolute: false), 'ready', 'SL-45'),
             new LabCapability('photos', 'Photos', route('ai.photos', absolute: false), 'coming', 'SL-36'),
         ];
     }
