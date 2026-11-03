@@ -1,50 +1,141 @@
 # Manual test plan: AI lab UI (SL-46)
 
-Run from the project root, `/Users/stasmarkov/work/interview`. The lab is at https://interview.ddev.site/ai. Use a desktop browser with its developer tools open (Console and Network).
+The lab lives at https://interview.ddev.site/ai. Run shell commands from `/Users/stasmarkov/work/interview`. Use a desktop browser with developer tools open (Console and Network tabs).
 
 ## Preconditions
 
-- `ddev server --current` prints `nginx-fpm`; `ddev npm run build` has run; Ollama is running with `qwen3.5:9b` and `bge-m3`; `.env` has `AI_PROVIDER=ollama`.
+- DDEV is up and serves nginx-fpm: `ddev start && ddev server --current` prints `nginx-fpm`.
+- Assets are built: `ddev npm run build`, and `public/hot` does not exist.
+- Ollama runs on the Mac with the two models: `ollama list` shows `qwen3.5:9b` and `bge-m3`.
+- `.env` has `AI_PROVIDER=ollama`.
 - Docs are indexed (SL-32): `ddev artisan docs:search flushpackets --k=1` prints a row.
+- Listings exist: `ddev artisan tinker --execute 'echo App\Models\Listing::count();'` prints a number above 0.
+- No login is needed.
 
-## Step 1: old pages untouched (MNC-1)
+Rollback for anything that edits `.env`: put the old value back, then `ddev artisan config:clear`.
+
+## Step 1
+
+Old pages untouched (MNC-1).
 
 ```sh
 bench/asset-fingerprint.sh
 curl -s https://interview.ddev.site/listings/1 | grep -o 'build/assets/[^"]*'
 ```
 
-Expected: the `app.css` and `app.js` file names and hashes are the ones recorded before the slice (in the build report); the detail page links only those two files, never the `ai` entry.
+Expected: the fingerprint lines equal the ones recorded in `BENCHMARKS.md` (`app-CjRfEL-0.css` and `app-BvRk9kiK.js`, same hashes). The listing page links only those two files and never an `ai-` file.
 
-## Step 2: streamed description and Stop (AC-2, AC-3)
+## Step 2
 
-1. Open `/ai`, check the top bar shows the text model `qwen3.5:9b`, the embedding model `bge-m3` and a green Ollama dot, and the recent runs table has rows.
-2. Open `/ai/describe`, pick a listing, press Start. Expected: the text grows word by word; the rail shows events arriving with times, time to first token, tokens and tokens/s; after the end the run row (provider `ollama`, tokens, latency) appears.
-3. Start again and press Stop after a second. Expected: the text stops growing at once and the page says "stopped after N tokens"; Start works again immediately.
+Overview and top bar on every page (AC-1, and the earlier top bar bug).
 
-4. Switch to the fake provider (`AI_PROVIDER=fake-stream` in `.env`, `ddev artisan config:clear`), start a run: 200 words arrive over about 10 s, first token within 1 s; switch back to `ollama`.
-5. Count runs (`ddev artisan tinker --execute 'echo App\Models\AiRun::count();'`), start a run and press Stop after a second, count again: the count usually does not change, and the page says the server may not have logged the run.
-6. `ddev server frankenphp-octane`, repeat 2 and 3 on `/ai/describe`, then `ddev server nginx-fpm`.
+1. Open https://interview.ddev.site/ai.
+2. Expected: the top bar reads "AI lab", text `qwen3.5:9b`, embeddings `bge-m3`, and a green dot with "Ollama reachable". Five capability cards: Describe, Semantic and Docs are ready; Chat shows "coming" with SL-45 and Photos shows "coming" with SL-36. A table lists up to 20 newest runs with agent, provider, model, tokens in and out, TTFT, latency, status and time.
+3. Click the Chat card. Expected: the browser goes to `/ai/chat`.
+4. Visit `/ai/describe`, `/ai/semantic`, `/ai/docs`, `/ai/chat`, `/ai/photos` (use the top navigation). Expected: on every page the top bar still shows both model tags and the Ollama status, never "Ollama not used".
+5. Open https://interview.ddev.site/ai/runs/doesnotexist. Expected: 404.
 
-## Step 3: errors (AC-4)
+## Step 3
 
-1. Press Start more than 20 times within a minute (or set `AI_DESCRIBE_PER_MINUTE=2`, `ddev artisan config:clear`). Expected: a readable "too many requests" message with seconds to wait. Restore the setting.
-2. Quit Ollama (menu bar) and press Start. Expected: the masked "The description could not be generated." message, no stack trace; the top bar shows Ollama unreachable after a reload. Start Ollama again (`open -a Ollama`).
+Streamed description (AC-2).
 
-## Step 4: search pages (AC-5, AC-6)
+1. Open `/ai/describe`, choose listing 1, press Start.
+2. Expected: the text grows as it arrives. The event log fills with rows (`stream_start`, `text_delta`, ..., `text_end`, `stream_end`) each with a time in ms. The page shows time to first token (a few hundred ms), tokens received, and tokens per second.
+3. After the stream ends, a "Logged run" block shows provider `ollama`, model `qwen3.5:9b`, token counts, TTFT, latency, status `completed`.
+4. Optional, for a steady stream: set `AI_PROVIDER=fake-stream`, `ddev artisan config:clear`, Start again. Expected: about 200 words over about 10 s, first token under 1 s. Switch back to `ollama` afterwards.
 
-1. `/ai/semantic`, query "family car with a big boot". Expected: 10 listings with body type, price, city, similarity bars; the rail shows embedding ms and database ms. An empty query shows the 422 message.
-2. `/ai/docs`, query `flushpackets`, then "why does apache hold back a streamed response until the end". Expected: three columns (vector, text, hybrid), each with timings; chunks found by more than one mode are highlighted; for `flushpackets` the text and hybrid columns start with the learning guide chunk.
+## Step 4
 
-## Step 5: responsive and accessible (AC-7, AC-9)
+Stop (AC-3).
 
-For `/ai`, `/ai/describe`, `/ai/semantic`, `/ai/docs`, `/ai/chat`, `/ai/photos`, at 1440×900 and at 390×844 (device toolbar):
-- no horizontal scrollbar; no console errors;
-- Tab through every control: focus is always visible;
-- chat and photos show what is coming and link to the backlog and guide;
-- with a screen reader (VoiceOver: Cmd+F5) on `/ai/describe`, the streamed text is read out politely while the event log is not.
+1. On `/ai/describe` press Start, wait about a second, press Stop.
+2. Expected: the text stops growing at once (wait 2 s and compare), the page says "Stopped after N tokens" (N is the real count), and Start is enabled.
+3. Press Start immediately. Expected: a new stream begins within a second.
+4. Run count check. Note `ddev artisan tinker --execute 'echo App\Models\AiRun::count();'`, Start, Stop after 1 s, count again. Expected on nginx-fpm: unchanged. On a worker server (`ddev server frankenphp-octane`) the server may keep generating and the count rises by one. Repeat 1 to 3 there, then `ddev server nginx-fpm`.
 
-## Step 6: parity, suite and bench (MNC-2, MNC-3)
+## Step 5
+
+Error messages (AC-4).
+
+1. Rate limit. Run `AI_DESCRIBE_PER_MINUTE=2` in `.env`, `ddev artisan config:clear`, then:
+
+   ```sh
+   for i in 1 2 3; do curl -s -o /dev/null -w "%{http_code}\n" https://interview.ddev.site/listings/1/describe; done
+   curl -si https://interview.ddev.site/listings/1/describe | head -20
+   ```
+
+   Expected: the last responses are 429 with `retry-after: <seconds>` and body `{"success":false,"status":429,"message":"Too Many Attempts.","errors":{}}`. While limited, press Start on `/ai/describe`: the page shows "Too many requests, try again in N s." (N close to the `retry-after`) and state Failed. Restore the setting.
+2. Masked error. Set `OLLAMA_URL=http://host.docker.internal:11999` in `.env`, `ddev artisan config:clear`, press Start. Expected: "The description could not be generated.", no stack trace. Reload `/ai`: the top bar shows Ollama unreachable. Restore `.env`.
+3. Connection lost. In the browser console on `/ai/describe` run `window.fetch = () => Promise.reject(new TypeError('x'))`, then press Start. Expected: "Connection lost." in the page. Reload to undo.
+
+## Step 6
+
+Semantic search (AC-5).
+
+1. Open `/ai/semantic`, type `cheap family car with low mileage`, press Search.
+2. Expected: 10 listings, each with year, make, model, body type, price, city, a bar and a value like `0.53`. The side rail shows Embedding ms and Database ms, matching `server-timing`:
+
+   ```sh
+   curl -si 'https://interview.ddev.site/api/listings/semantic?q=family+car' | grep -i server-timing
+   ```
+
+   Expected header: `server-timing: embed;dur=..., db;dur=...`.
+3. Paste a query of 201 or more characters (for example 250 letters `a`). Expected: "The query is limited to 200 characters."
+4. 503: set `OLLAMA_URL=http://host.docker.internal:11999`, `ddev artisan config:clear`, search again. Expected: "Semantic search is unavailable right now." Restore `.env`.
+
+## Step 7
+
+Docs search, three modes (AC-6).
+
+1. Open `/ai/docs`, type `how does rate limiting work`, Search. In the Network tab expect three requests to `/api/docs/search` (modes `vector`, `text`, `hybrid`) starting together.
+2. Expected: three columns side by side, each with items showing source, path, heading, snippet, score and ranks like "vector #1 · text #-". Chunks present in more than one list carry an "In several lists" mark. Each column has its own embed and db timings (text mode has no embed time).
+3. Search `flushpackets`. Expected: text and hybrid columns start with a repo chunk (BENCHMARKS.md or the learning guide).
+4. With the unreachable Ollama URL from step 6.4, search again. Expected: vector and hybrid show "Docs search is unavailable."; the text column still lists results. Restore `.env`.
+
+## Step 8
+
+Placeholders (AC-7).
+
+1. Open `/ai/chat`. Expected: names SL-45 and SL-41 and streamed answers with citations; points to `backlog.md` (the slice entries) and `docs/learning-guide.md`, shown as monospace paths.
+2. Open `/ai/photos`. Expected: names SL-36, similar photos, and that it is blocked by Q-06; same pointers.
+
+Known gap: the backlog pointer has no `#sl-45` or `#sl-36` anchor.
+
+## Step 9
+
+Learning guide (AC-8).
+
+1. Open `docs/learning-guide.md` and find `## 13. The AI lab UI: Inertia, Vue and streams in the browser`.
+2. Expected: it explains a first load versus later Inertia visits and props as JSON; why the lab has its own Vite entry; reading SSE with `fetch` and a `ReadableStream`; Stop with `AbortController` and what the server sees; and `Server-Timing`. Links open: the spec folder, the controllers, `ServerTiming.php`, `useEventStream.ts`, inertiajs.com, vuejs.org, and the three MDN pages.
+
+## Step 10
+
+Responsive and accessible (AC-9).
+
+For `/ai`, `/ai/describe`, `/ai/semantic`, `/ai/docs`, `/ai/chat`, `/ai/photos`, once at 1440x900 and once at 390x844 (device toolbar), also after running a search or a stream:
+
+- No horizontal scrollbar. In the console: `document.documentElement.scrollWidth === document.documentElement.clientWidth` prints `true`.
+- Console has no errors (the browser's own "Failed to load resource: 429" line is fine in step 5).
+- Press Tab through the page: every control shows a visible outline.
+- Only the description output has `aria-live`: `[...document.querySelectorAll('[aria-live]')].map(e => e.getAttribute('aria-live'))` on a finished `/ai/describe` prints `["polite"]`, and the event log is not in the list.
+- Optional: VoiceOver (Cmd+F5) on `/ai/describe` reads the streamed text and not the event log.
+
+## Step 11
+
+Existing endpoints unchanged (MNC-2).
+
+```sh
+curl -si 'https://interview.ddev.site/api/listings/semantic?q=family+car' | head -20
+curl -si -X POST -H 'Accept: application/json' https://interview.ddev.site/api/listings/semantic | head -12
+```
+
+Expected: the semantic and docs search responses have the same JSON body as before plus a `server-timing` header. Other endpoints (for example `/api/listings`) have no new headers.
+
+Known difference to decide on: the uncommitted `app/Http/Responses/JsonErrorRenderer.php` now copies exception headers onto JSON errors, so the POST above answers 405 with `allow: GET, HEAD`, and 429 answers now carry `retry-after` and `x-ratelimit-*`. This is not in the spec; record whether you accept it.
+
+## Step 12
+
+Suite, parity and bench (MNC-3).
 
 ```sh
 mkdir -p /tmp/sl46
@@ -56,7 +147,8 @@ done
 ddev server nginx-fpm
 ddev artisan test --compact
 ddev npm run typecheck && ddev npm run build
-bench/run.sh ping --quick; echo "exit=$?"   # commit first
+git status --short
+bench/run.sh ping --quick; echo "exit=$?"
 ```
 
-Expected: `identical` six times; all green; `exit=0`.
+Expected: `identical` six times; the suite is green (518 tests at last count) with no network calls; typecheck and build are clean. `bench/run.sh` refuses a dirty tree, so commit the work first (`git status --short` must print nothing); then `exit=0`. Finish on nginx-fpm.

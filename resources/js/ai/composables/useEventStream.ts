@@ -91,20 +91,27 @@ export function useEventStream() {
     const error = ref<string | null>(null);
     const invocationId = ref<string | null>(null);
     const firstTokenAt = ref<number | null>(null);
+    const lastTokenAt = ref<number | null>(null);
     const now = ref(0);
 
     let controller: AbortController | null = null;
     let ticker: ReturnType<typeof setInterval> | null = null;
     let startedAt = 0;
 
+    /**
+     * Tokens after the first, divided by the time from the first token: the first token
+     * opens the interval, so it is not counted inside it. While streaming the interval
+     * runs to now; once finished it ends at the last token, not at [DONE].
+     */
     const tokensPerSecond = computed<number | null>(() => {
-        if (firstTokenAt.value === null || tokens.value < 2) {
+        if (firstTokenAt.value === null || lastTokenAt.value === null || tokens.value < 2) {
             return null;
         }
 
-        const seconds = (now.value - firstTokenAt.value) / 1000;
+        const end = status.value === 'streaming' ? now.value : lastTokenAt.value;
+        const seconds = (end - firstTokenAt.value) / 1000;
 
-        return seconds > 0 ? Math.round((tokens.value / seconds) * 10) / 10 : null;
+        return seconds > 0 ? Math.round(((tokens.value - 1) / seconds) * 10) / 10 : null;
     });
 
     function elapsed(): number {
@@ -143,6 +150,7 @@ export function useEventStream() {
         if (event.type === 'text_delta' && typeof event.delta === 'string' && event.delta !== '') {
             text.value += event.delta;
             tokens.value += 1;
+            lastTokenAt.value = atMs;
 
             if (firstTokenAt.value === null) {
                 firstTokenAt.value = atMs;
@@ -164,6 +172,7 @@ export function useEventStream() {
         error.value = null;
         invocationId.value = null;
         firstTokenAt.value = null;
+        lastTokenAt.value = null;
         now.value = 0;
     }
 

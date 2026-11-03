@@ -39,7 +39,7 @@ const timings = ref<ServerTimings | null>(null);
 const elapsedMs = ref<number | null>(null);
 const failure = ref<string | null>(null);
 
-const canSearch = computed(() => !loading.value && query.value.trim() !== '' && query.value.length <= props.maxQueryLength);
+const canSearch = computed(() => !loading.value && query.value.trim() !== '' && [...query.value.trim()].length <= props.maxQueryLength);
 
 function formatPrice(match: ListingMatch): string {
     return new Intl.NumberFormat('en', { style: 'currency', currency: match.currency, maximumFractionDigits: 0 }).format(match.price_cents / 100);

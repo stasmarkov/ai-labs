@@ -11,7 +11,7 @@ it('AC-7 chat and photos show what is coming', function (): void {
             ->component('Lab/Chat')
             ->where('slices', ['SL-45', 'SL-41'])
             ->where('blockedBy', null)
-            ->where('backlog', 'backlog.md')
+            ->where('backlog', 'backlog.md › SL-45')
             ->where('guide', 'docs/learning-guide.md'));
 
     $this->get('/ai/photos')
@@ -20,6 +20,6 @@ it('AC-7 chat and photos show what is coming', function (): void {
             ->component('Lab/Photos')
             ->where('slices', ['SL-36'])
             ->where('blockedBy', 'Q-06')
-            ->where('backlog', 'backlog.md')
+            ->where('backlog', 'backlog.md › SL-36')
             ->where('guide', 'docs/learning-guide.md'));
 });

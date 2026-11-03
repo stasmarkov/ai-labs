@@ -92,3 +92,43 @@ it('AC-1 the overview marks Ollama as not used when no provider uses it', functi
 
     Http::assertNothingSent();
 });
+
+it('AC-1 every lab page shares the top bar props', function (string $url): void {
+    Http::preventStrayRequests();
+    Http::fake([
+        '*/api/version' => Http::response(['version' => '0.12.0']),
+    ]);
+
+    $this->get($url)
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('lab.textModel', config('ai.providers.fake-stream.models.text.default'))
+            ->where('lab.embeddingModel', config('ai.providers.ollama.models.embeddings.default'))
+            ->where('lab.ollama.reachable', true)
+            ->etc());
+})->with(['/ai/describe', '/ai/chat']);
+
+it('AC-1 the shared top bar reports Ollama as not used when no provider uses it', function (): void {
+    Http::preventStrayRequests();
+    config()->set('ai.default_for_embeddings', 'fake-stream');
+
+    $this->get('/ai/chat')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('lab.ollama.reachable', 'not-used')->etc());
+
+    Http::assertNothingSent();
+});
+
+it('AC-1 every capability card links to a page that opens, including the coming ones', function (): void {
+    Http::preventStrayRequests();
+    Http::fake(['*/api/version' => Http::response(['version' => '0.12.0'])]);
+
+    $cards = collect($this->get('/ai')->assertOk()->inertiaProps('capabilities'));
+
+    expect($cards)->toHaveCount(5)
+        ->and($cards->where('status', 'coming')->pluck('route')->all())->toBe(['/ai/chat', '/ai/photos']);
+
+    foreach ($cards as $card) {
+        $this->get($card['route'])->assertOk();
+    }
+});

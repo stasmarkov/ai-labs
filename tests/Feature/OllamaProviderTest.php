@@ -241,3 +241,15 @@ it('AC-4 describe is limited per IP and answers 429 as JSON', function (): void 
     expect($limited->headers->get('Content-Type'))->toContain('application/json')
         ->and(AiRun::count())->toBe(2);
 });
+
+it('AC-4 describe 429 carries a numeric Retry-After and the same JSON body', function (): void {
+    config(['ai.describe_per_minute' => 1]);
+    $listing = Listing::factory()->for(Dealer::factory())->create();
+
+    $this->get('/listings/'.$listing->id.'/describe')->assertOk()->streamedContent();
+    $limited = $this->get('/listings/'.$listing->id.'/describe');
+
+    $limited->assertStatus(429);
+    expect($limited->headers->get('Retry-After'))->toBeNumeric()
+        ->and($limited->json())->toBe(['success' => false, 'status' => 429, 'message' => 'Too Many Attempts.', 'errors' => []]);
+});

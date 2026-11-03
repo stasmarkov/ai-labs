@@ -8,19 +8,13 @@ interface LabShared {
     textModel?: string;
     embeddingModel?: string;
     ollama?: { reachable: boolean | 'not-used' };
+    navigation?: Array<{ href: string; label: string }>;
 }
 
-const navigation = [
-    { href: '/ai', label: 'Overview' },
-    { href: '/ai/describe', label: 'Describe' },
-    { href: '/ai/semantic', label: 'Semantic search' },
-    { href: '/ai/docs', label: 'Docs search' },
-    { href: '/ai/chat', label: 'Chat' },
-    { href: '/ai/photos', label: 'Photos' },
-];
-
 const page = usePage();
-const lab = computed(() => (page.props.lab ?? page.props) as LabShared);
+const lab = computed(() => (page.props.lab ?? {}) as LabShared);
+const navigation = computed(() => lab.value.navigation ?? []);
+const overviewHref = computed(() => navigation.value[0]?.href ?? '/ai');
 
 const ollama = computed<{ state: 'ok' | 'down' | 'idle'; label: string }>(() => {
     const reachable = lab.value.ollama?.reachable;
@@ -37,25 +31,29 @@ const ollama = computed<{ state: 'ok' | 'down' | 'idle'; label: string }>(() => 
 });
 
 function isCurrent(href: string): boolean {
-    return page.url === href || (href !== '/ai' && page.url.startsWith(`${href}/`));
+    const path = page.url.split('?')[0];
+
+    return path === href || (href !== overviewHref.value && path.startsWith(`${href}/`));
 }
 </script>
 
 <template>
-    <div class="min-h-screen">
+    <div class="flex min-h-screen flex-col">
         <a href="#lab-content" class="lab-skip-link">Skip to content</a>
-        <header class="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-rule px-4 py-3 sm:px-6">
-            <span class="text-[18px] font-semibold">AI lab</span>
-            <div class="flex min-w-0 flex-wrap items-center gap-2">
-                <LabTag v-if="lab.textModel" caption="text">{{ lab.textModel }}</LabTag>
-                <LabTag v-if="lab.embeddingModel" caption="embeddings">{{ lab.embeddingModel }}</LabTag>
-            </div>
-            <div class="ml-auto">
-                <LabStatusDot :state="ollama.state" :label="ollama.label" />
+        <header class="border-b border-rule">
+            <div class="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
+                <span class="text-[18px] font-semibold">AI lab</span>
+                <div class="flex min-w-0 flex-wrap items-center gap-2">
+                    <LabTag v-if="lab.textModel" caption="text">{{ lab.textModel }}</LabTag>
+                    <LabTag v-if="lab.embeddingModel" caption="embeddings">{{ lab.embeddingModel }}</LabTag>
+                </div>
+                <div class="ml-auto">
+                    <LabStatusDot :state="ollama.state" :label="ollama.label" />
+                </div>
             </div>
         </header>
 
-        <div class="mx-auto flex max-w-[1200px] flex-col md:flex-row">
+        <div class="mx-auto flex w-full max-w-[1200px] flex-1 flex-col md:flex-row">
             <nav aria-label="Lab pages" class="shrink-0 border-b border-rule px-4 py-3 md:w-52 md:border-b-0 md:border-r md:px-6 md:py-6">
                 <ul class="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0 md:flex-col md:gap-y-2">
                     <li v-for="item in navigation" :key="item.href">

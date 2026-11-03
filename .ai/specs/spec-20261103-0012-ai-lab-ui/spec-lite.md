@@ -125,6 +125,7 @@ Resolved under standing approval (self-decided). Facts checked in the repo and `
 2. A separate Vite entry and `@source not` exclusions so the existing assets stay byte-identical (parity) (self-decided, standing approval).
 3. Read SSE with `fetch` and a stream reader rather than `EventSource`, so Stop can abort through `AbortController` and the page can read status codes such as 429 (self-decided, standing approval).
 4. Design: lab notebook with an instrument rail (owner: "taste any design by your own") (self-decided).
+- JSON errors keep their HTTP exception's headers (fix pass, self-decided under standing approval): 429s on describe, semantic search and docs search now carry `Retry-After` and `X-RateLimit-*`, 405s carry `Allow`. This widens MNC-2 beyond `Server-Timing`, on error responses only; bodies are unchanged. Kept because the describe page needs `Retry-After` to say how long to wait, and these headers are what HTTP expects. Pinned by `tests/Feature/JsonErrorHeadersTest.php`.
 
 ## Open questions
 

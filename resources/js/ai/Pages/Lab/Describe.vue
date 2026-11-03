@@ -51,7 +51,8 @@ let lookupToken = 0;
 
 const listingId = computed(() => (freeId.value.trim() !== '' ? freeId.value.trim() : selectedId.value));
 const isStreaming = computed(() => stream.status.value === 'streaming');
-const canStart = computed(() => !isStreaming.value && /^\d+$/.test(listingId.value));
+// Same pattern as the describe route: no leading zero, at most 18 digits.
+const canStart = computed(() => !isStreaming.value && /^[1-9]\d{0,17}$/.test(listingId.value));
 
 const statusMessage = computed<string | null>(() => {
     switch (stream.status.value) {
@@ -125,12 +126,15 @@ function start(): void {
     void stream.start(props.describeUrl.replace(props.idPlaceholder, listingId.value));
 }
 
+// A failed stream is logged too (status failed), so its row is looked up like a finished one.
 watch(stream.status, (status) => {
-    if (status === 'done' && stream.invocationId.value !== null) {
-        void loadRun(stream.invocationId.value);
+    if (status !== 'done' && status !== 'error') {
+        return;
     }
 
-    if (status === 'done' && stream.invocationId.value === null) {
+    if (stream.invocationId.value !== null) {
+        void loadRun(stream.invocationId.value);
+    } else if (status === 'done') {
         runMessage.value = 'Run not logged yet.';
     }
 });
@@ -152,7 +156,7 @@ onBeforeUnmount(() => {
             <select
                 id="describe-listing"
                 v-model="selectedId"
-                class="min-h-10 w-full min-w-0 rounded-sm border border-rule bg-white px-3 text-[15px] text-ink"
+                class="min-h-10 w-full min-w-0 rounded-sm border border-field bg-white px-3 text-[15px] text-ink"
             >
                 <option v-for="listing in listings" :key="listing.id" :value="String(listing.id)">
                     {{ listing.id }} · {{ listing.title }}

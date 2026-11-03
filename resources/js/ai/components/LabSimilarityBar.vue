@@ -5,6 +5,7 @@ const props = defineProps<{
     value: number;
 }>();
 
+// Cosine similarity runs from -1 to 1: only the bar is clamped, the printed value is the real one.
 const clamped = computed(() => Math.min(1, Math.max(0, props.value)));
 </script>
 
@@ -13,13 +14,13 @@ const clamped = computed(() => Math.min(1, Math.max(0, props.value)));
         <div
             class="h-1 min-w-0 flex-1 bg-rule"
             role="meter"
-            aria-valuemin="0"
+            aria-valuemin="-1"
             aria-valuemax="1"
-            :aria-valuenow="clamped"
-            :aria-label="`Similarity ${clamped.toFixed(4)}`"
+            :aria-valuenow="value"
+            :aria-label="`Similarity ${value.toFixed(4)}`"
         >
             <div class="h-1 bg-ink" :style="{ width: `${clamped * 100}%` }" />
         </div>
-        <span class="font-mono text-[13px] tabular-nums">{{ clamped.toFixed(4) }}</span>
+        <span class="font-mono text-[13px] tabular-nums">{{ value.toFixed(4) }}</span>
     </div>
 </template>

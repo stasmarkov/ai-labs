@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Services\LabOverviewService;
 use Inertia\Inertia;
 use Inertia\Response;
 
 final class ShowLabPhotosController extends Controller
 {
-    public function __invoke(): Response
+    public function __invoke(LabOverviewService $lab): Response
     {
+        $slice = $lab->capability('photos')->slice;
+
         return Inertia::render('Lab/Photos', [
-            'slices' => ['SL-36'],
+            'slices' => [$slice],
             'blockedBy' => 'Q-06',
-            'backlog' => 'backlog.md',
+            'backlog' => "backlog.md › {$slice}",
             'guide' => 'docs/learning-guide.md',
         ]);
     }

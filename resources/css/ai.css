@@ -12,6 +12,8 @@
     --color-paper: #f5f2eb;
     --color-ink: #1a1916;
     --color-rule: #d8d2c4;
+    /* Form control borders: 3:1 or more on paper and on white (WCAG 1.4.11); rule is only 1.35:1. */
+    --color-field: #8a8478;
     --color-muted: #6b665c;
     --color-signal: #c2410c;
     --color-success: #2b7a4b;
@@ -41,6 +43,10 @@
     h3 {
         font-weight: 600;
     }
+}
+
+input[type='search']::-webkit-search-cancel-button {
+    appearance: none;
 }
 
 .lab-skip-link {

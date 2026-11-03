@@ -40,7 +40,8 @@ it('AC-2 the run endpoint returns the logged run by invocation id', function ():
         'ttft_ms' => 56,
         'latency_ms' => 789,
         'status' => 'failed',
-        'error_message' => 'boom',
+        'error_class' => 'Illuminate\\Http\\Client\\ConnectionException',
+        'error_message' => 'cURL error 7: Failed to connect to host.docker.internal port 11434',
     ]);
 
     $this->getJson('/ai/runs/run-abc')
@@ -56,9 +57,10 @@ it('AC-2 the run endpoint returns the logged run by invocation id', function ():
             'ttft_ms' => 56,
             'latency_ms' => 789,
             'status' => 'failed',
-            'error_message' => 'boom',
+            'error_message' => 'ConnectionException',
         ])
-        ->assertJsonStructure(['created_at']);
+        ->assertJsonStructure(['created_at'])
+        ->assertDontSee('host.docker.internal');
 });
 
 it('AC-2 the run endpoint answers 404 for an unknown invocation id', function (): void {

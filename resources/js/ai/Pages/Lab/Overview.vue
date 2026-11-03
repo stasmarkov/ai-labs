@@ -51,8 +51,11 @@ function relativeTime(iso: string): string {
     ];
 
     for (const [unit, size] of steps) {
-        if (Math.abs(seconds) >= size) {
-            return formatter.format(Math.round(seconds / size), unit);
+        const rounded = Math.round(seconds / size);
+
+        // Compare the rounded value, so 59.6 minutes reads "1 hour ago", not "60 minutes ago".
+        if (Math.abs(rounded) >= 1) {
+            return formatter.format(rounded, unit);
         }
     }
 
@@ -100,14 +103,9 @@ function show(value: number | null): string {
         <h2 id="lab-capabilities" class="m-0 text-[18px]">Capabilities</h2>
         <ul class="m-0 mt-3 grid list-none grid-cols-1 gap-x-8 gap-y-4 p-0 sm:grid-cols-2">
             <li v-for="capability in capabilities" :key="capability.key" class="flex flex-col gap-1">
-                <Link
-                    v-if="capability.status === 'ready'"
-                    :href="capability.route"
-                    class="text-[15px] font-semibold text-ink underline"
-                >
+                <Link :href="capability.route" class="text-[15px] font-semibold text-ink underline">
                     {{ capability.title }}
                 </Link>
-                <span v-else class="text-[15px] font-semibold text-muted">{{ capability.title }}</span>
                 <span class="font-mono text-[13px] text-muted">
                     {{ capability.status === 'ready' ? 'ready' : 'coming' }} · {{ capability.slice }}
                 </span>
@@ -118,8 +116,8 @@ function show(value: number | null): string {
     <section aria-labelledby="lab-runs" class="mt-8 border-t border-rule pt-6">
         <h2 id="lab-runs" class="m-0 text-[18px]">Recent runs</h2>
         <p v-if="recentRuns.length === 0" class="mt-3 text-[15px] text-muted">No runs yet.</p>
-        <div v-else class="mt-3 overflow-x-auto">
-            <table class="w-full border-collapse text-left text-[13px]">
+        <div v-else class="mt-3 overflow-x-auto" tabindex="0" role="region" aria-label="Recent runs, scrolls sideways">
+            <table class="w-full border-collapse whitespace-nowrap text-left text-[13px]">
                 <caption class="sr-only">The 20 newest AI runs</caption>
                 <thead>
                     <tr class="border-b border-rule text-muted">

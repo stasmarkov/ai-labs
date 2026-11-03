@@ -42,11 +42,15 @@ final readonly class EloquentAiRunRepository implements AiRunRepositoryInterface
             ->all();
     }
 
+    /**
+     * The error is reported by its exception class only: the stored message can name the
+     * internal provider URL or carry the provider's response body, and the lookup is public.
+     */
     public function findByInvocationId(string $invocationId): ?AiRunDetail
     {
         $run = AiRun::query()->where('invocation_id', $invocationId)->first();
 
-        return $run === null ? null : new AiRunDetail($this->toSummary($run), $run->prompt_version, $run->error_message);
+        return $run === null ? null : new AiRunDetail($this->toSummary($run), $run->prompt_version, $run->error_class === null ? null : class_basename($run->error_class));
     }
 
     private function toSummary(AiRun $run): AiRunSummary

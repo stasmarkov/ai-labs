@@ -29,15 +29,67 @@ final readonly class LabOverviewService
             embeddingProvider: $embeddingProvider,
             embeddingModel: (string) config("ai.providers.{$embeddingProvider}.models.embeddings.default"),
             ollamaReachable: $this->usesOllama([$textProvider, $embeddingProvider]) ? $this->ollama->reachable() : 'not-used',
-            capabilities: [
-                new LabCapability('describe', 'Describe', '/ai/describe', 'ready', 'SL-22'),
-                new LabCapability('semantic', 'Semantic search', '/ai/semantic', 'ready', 'SL-24'),
-                new LabCapability('docs', 'Docs search', '/ai/docs', 'ready', 'SL-32'),
-                new LabCapability('chat', 'Chat', '/ai/chat', 'coming', 'SL-45'),
-                new LabCapability('photos', 'Photos', '/ai/photos', 'coming', 'SL-36'),
-            ],
+            capabilities: $this->capabilities(),
             recentRuns: $this->runs->recent(self::RECENT_RUNS),
         );
+    }
+
+    /**
+     * @return array{textProvider: string, textModel: string, embeddingProvider: string, embeddingModel: string, ollama: array{reachable: bool|string}, navigation: list<array{href: string, label: string}>}
+     */
+    public function topBar(): array
+    {
+        $textProvider = (string) config('ai.default');
+        $embeddingProvider = (string) config('ai.default_for_embeddings');
+
+        return [
+            'textProvider' => $textProvider,
+            'textModel' => (string) config("ai.providers.{$textProvider}.models.text.default"),
+            'embeddingProvider' => $embeddingProvider,
+            'embeddingModel' => (string) config("ai.providers.{$embeddingProvider}.models.embeddings.default"),
+            'ollama' => [
+                'reachable' => $this->usesOllama([$textProvider, $embeddingProvider]) ? $this->ollama->reachable() : 'not-used',
+            ],
+            'navigation' => $this->navigation(),
+        ];
+    }
+
+    /**
+     * The lab's pages, the one list behind the overview cards, the navigation and the placeholders.
+     *
+     * @return list<LabCapability>
+     */
+    public function capabilities(): array
+    {
+        return [
+            new LabCapability('describe', 'Describe', route('ai.describe', absolute: false), 'ready', 'SL-22'),
+            new LabCapability('semantic', 'Semantic search', route('ai.semantic', absolute: false), 'ready', 'SL-24'),
+            new LabCapability('docs', 'Docs search', route('ai.docs', absolute: false), 'ready', 'SL-32'),
+            new LabCapability('chat', 'Chat', route('ai.chat', absolute: false), 'coming', 'SL-45'),
+            new LabCapability('photos', 'Photos', route('ai.photos', absolute: false), 'coming', 'SL-36'),
+        ];
+    }
+
+    public function capability(string $key): LabCapability
+    {
+        foreach ($this->capabilities() as $capability) {
+            if ($capability->key === $key) {
+                return $capability;
+            }
+        }
+
+        throw new \InvalidArgumentException("Unknown lab capability {$key}.");
+    }
+
+    /**
+     * @return list<array{href: string, label: string}>
+     */
+    private function navigation(): array
+    {
+        return [
+            ['href' => route('ai.overview', absolute: false), 'label' => 'Overview'],
+            ...array_map(fn (LabCapability $capability): array => ['href' => $capability->route, 'label' => $capability->title], $this->capabilities()),
+        ];
     }
 
     /**

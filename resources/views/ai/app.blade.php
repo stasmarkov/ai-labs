@@ -4,7 +4,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title inertia>AI lab</title>
-        @vite(['resources/css/ai.css', 'resources/js/ai/app.ts'])
+        @fonts
+        {{-- The current page's chunk is listed too, so the browser fetches it with app.ts instead of after it. --}}
+        @vite(['resources/css/ai.css', 'resources/js/ai/app.ts', "resources/js/ai/Pages/{$page['component']}.vue"])
         @inertiaHead
     </head>
     <body>

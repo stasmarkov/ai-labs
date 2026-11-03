@@ -17,7 +17,7 @@ const model = defineModel<string>({ required: true });
             v-model="model"
             :type="type ?? 'text'"
             :placeholder="placeholder"
-            class="min-h-10 w-full min-w-0 rounded-sm border border-rule bg-white px-3 text-[15px] text-ink placeholder:text-muted"
+            class="min-h-10 w-full min-w-0 rounded-sm border border-field bg-white px-3 text-[15px] text-ink placeholder:text-muted"
         >
     </div>
 </template>

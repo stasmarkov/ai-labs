@@ -378,6 +378,15 @@ I indexed 121 markdown files into 2 706 chunks of about 400 tokens and searched 
 
 `bench/parity/frankenphp-octane.txt` and `bench/parity/frankenphp-worker.txt` were captured on 2026-10-30 from the same seeded database. `bench/parity.sh compare nginx-fpm frankenphp-octane` and `bench/parity.sh compare nginx-fpm frankenphp-worker` both report `identical`. Getting there needed two things that only matter in a long-lived worker. The worker must know the client used HTTPS, or asset URLs come out as `http://`: frankenphp-worker sets `HTTPS=on` from `X-Forwarded-Proto` in its Caddyfile and frankenphp-octane uses `OCTANE_HTTPS=true`, with no proxy trust in app code. And `public/frankenphp-worker.php` defines `LARAVEL_START` so `/up` has the same shape; in worker mode that number is the worker's uptime, not the request time, and parity masks it. Octane runs with `--log-level=warn` and the worker Caddyfile has no access log, so neither way logs each request.
 
+All six snapshots were re-baselined on 2026-11-03 (commit 580fbac) because `/listings/1` links the Vite assets and `app.css` stopped using Tailwind's automatic source detection, which changed its hashed file name. Automatic detection also scanned the markdown docs, so any docs edit could change the build; `app.css` now lists its sources explicitly (`source(none)` plus `@source` lines), and a rebuild after a markdown change gives the same file. After that re-baseline `bench/asset-fingerprint.sh` prints exactly these lines, and still does after the AI lab entries were added, so the old pages load byte-identical assets:
+
+```
+resources/css/app.css assets/app-CjRfEL-0.css 82042c94c3ab3d21075df7b9868cb39096d32a2085ceddb6c94b2b56d438ce71
+resources/js/app.js assets/app-BvRk9kiK.js e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+```
+
+A fresh capture on each of the six servers compared with its committed snapshot prints `identical` six times (checked 2026-11-03, after the AI lab UI).
+
 OpenLiteSpeed answers on its own port, `https://interview.ddev.site:8091`, while the `web` container stays idle on nginx-fpm. `capture` rewrites that base URL to the plain site URL before hashing, so the snapshot compares directly with the others.
 
 ### PHP settings per server (what differs and why)

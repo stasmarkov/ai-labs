@@ -36,7 +36,7 @@ final class JsonErrorRenderer
             $e instanceof HttpExceptionInterface => ApiResponse::error(
                 $e->getStatusCode(),
                 $e->getStatusCode() === 404 ? 'Not found' : ($e->getMessage() !== '' ? $e->getMessage() : 'Request failed'),
-            ),
+            )->withHeaders($e->getHeaders()),
             default => ApiResponse::error(500, 'Server error'),
         };
     }

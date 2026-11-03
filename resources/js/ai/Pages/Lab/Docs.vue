@@ -65,7 +65,7 @@ let searchToken = 0;
 
 const limitValue = computed(() => Number(limit.value));
 const limitValid = computed(() => Number.isInteger(limitValue.value) && limitValue.value >= 1 && limitValue.value <= props.maxK);
-const canSearch = computed(() => !loading.value && limitValid.value && query.value.trim() !== '' && query.value.length <= props.maxQueryLength);
+const canSearch = computed(() => !loading.value && limitValid.value && query.value.trim() !== '' && [...query.value.trim()].length <= props.maxQueryLength);
 const searched = computed(() => columns.value.some((column) => column.done));
 
 const sharedIds = computed(() => {

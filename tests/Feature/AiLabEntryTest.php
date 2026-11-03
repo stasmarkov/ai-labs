@@ -17,6 +17,7 @@ beforeEach(function (): void {
         'resources/js/app.js' => ['file' => 'assets/app-old.js', 'src' => 'resources/js/app.js', 'isEntry' => true],
         'resources/css/ai.css' => ['file' => 'assets/ai-lab.css', 'src' => 'resources/css/ai.css', 'isEntry' => true],
         'resources/js/ai/app.ts' => ['file' => 'assets/ai-lab.js', 'src' => 'resources/js/ai/app.ts', 'isEntry' => true],
+        'resources/js/ai/Pages/Lab/Overview.vue' => ['file' => 'assets/ai-overview.js', 'src' => 'resources/js/ai/Pages/Lab/Overview.vue', 'isDynamicEntry' => true],
     ], JSON_THROW_ON_ERROR));
     app()->usePublicPath($directory);
     $this->publicDirectory = $directory;
@@ -33,6 +34,7 @@ it('MNC-1 the lab uses its own entry and the old pages do not load it', function
         ->assertInertia(fn (Assert $page) => $page->component('Lab/Overview'))
         ->assertSee('/build/assets/ai-lab.css', false)
         ->assertSee('/build/assets/ai-lab.js', false)
+        ->assertSee('/build/assets/ai-overview.js', false)
         ->assertDontSee('/build/assets/app-old', false);
 
     $listing = Listing::factory()->for(Dealer::factory())->create();

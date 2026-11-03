@@ -251,3 +251,16 @@ test('AC-8 BENCHMARKS.md names one best batch size and the sweep files carry the
             ->and(fmod($summary['seconds'], 1.0))->not->toBe(0.0);
     }
 });
+
+test('MNC-1 BENCHMARKS.md parity section records the asset fingerprint and the re-baseline', function (): void {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+
+    preg_match('/^## Response parity\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $parity = $matches[1] ?? '';
+
+    expect($parity)->toContain('2026-11-03')
+        ->toContain('re-baseline')
+        ->toContain('bench/asset-fingerprint.sh');
+    expect(preg_match_all('/^resources\/(css\/app\.css|js\/app\.js) assets\/app-[\w-]+\.(css|js) [0-9a-f]{64}$/m', $parity))
+        ->toBe(2);
+});
