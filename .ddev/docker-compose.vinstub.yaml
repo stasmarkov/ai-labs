@@ -1,0 +1,17 @@
+services:
+  vinstub:
+    container_name: ddev-${DDEV_SITENAME}-vinstub
+    image: node:24-alpine
+    hostname: vinstub
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: ${DDEV_APPROOT}
+    restart: unless-stopped
+    expose:
+      - 3000
+    environment:
+      - VINSTUB_DELAY_MS=${VINSTUB_DELAY_MS:-300}
+      - PORT=3000
+    volumes:
+      - "./vinstub:/app:ro"
+    command: node /app/server.mjs

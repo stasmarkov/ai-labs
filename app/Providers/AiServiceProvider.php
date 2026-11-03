@@ -62,6 +62,7 @@ class AiServiceProvider extends ServiceProvider
 
         // Each describe call holds a PHP worker and the GPU for seconds, so callers are limited per IP.
         RateLimiter::for('describe', fn (Request $request): Limit => Limit::perMinute((int) config('ai.describe_per_minute'))->by((string) $request->ip()));
+        RateLimiter::for('slow', fn (Request $request): Limit => Limit::perMinute((int) config('services.vinstub.per_minute'))->by((string) $request->ip()));
         RateLimiter::for('semantic-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.semantic_per_minute'))->by((string) $request->ip()));
         RateLimiter::for('docs-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.docs.search_per_minute'))->by((string) $request->ip()));
         RateLimiter::for('docs-ask', fn (Request $request): Limit => Limit::perMinute((int) config('ai.docs.answer.per_minute'))->by((string) $request->ip()));

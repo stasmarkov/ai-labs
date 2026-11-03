@@ -121,8 +121,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-40, BR-41, BR-26
 - **Depends on:** SL-06
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261104-0001-slow-io-healthz
 - **Source:** brief (Phase 3)
 - **Run:** `/sdd "SL-09: GET /listings/{id}/slow calling a 300 ms stub VIN API, a fast GET /healthz, and a bench scenario measuring healthz p95 and 502/504 rate under 100-user slow load for FPM (2 max_children settings) and FrankenPHP (fixed vs max_threads + max_wait_time) (BR-40, BR-41, BR-26). Rules in product-brief.md."`
 

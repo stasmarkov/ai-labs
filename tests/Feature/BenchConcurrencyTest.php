@@ -166,3 +166,58 @@ it('AC-1 max-requests is accepted only with a worker server and a positive integ
     'text' => ['frankenphp-octane', ['4', '--max-requests', 'x']],
     'missing value' => ['frankenphp-octane', ['4', '--max-requests']],
 ]);
+
+it('AC-6 autoscale on frankenphp writes threads, max threads and max wait, shows them and default restores', function (): void {
+    $overlay = $this->root.'/app/.ddev/config.zz-bench-concurrency.yaml';
+
+    $set = ($this->concurrency)('frankenphp', 'autoscale', '--threads', '14', '--max-threads', '64', '--max-wait', '5');
+
+    expect($set->getExitCode())->toBe(0, $set->getErrorOutput())
+        ->and(file_get_contents($overlay))->toContain('FRANKENPHP_CONFIG', 'num_threads 14', 'max_threads 64', 'max_wait_time 5s')
+        ->and(($this->ddevCalls)())->toContain('ddev restart')
+        ->and(($this->concurrency)('frankenphp', '--show')->getOutput())->toBe("autoscale 14 to 64 threads, max-wait 5s\n")
+        ->and(file_get_contents($this->root.'/app/.ddev/config.yaml'))->toBe("name: interview\nwebserver_type: nginx-fpm\n");
+
+    $restore = ($this->concurrency)('frankenphp', 'default');
+
+    expect($restore->getExitCode())->toBe(0, $restore->getErrorOutput())
+        ->and(($this->overlayFiles)())->toBe([])
+        ->and(($this->concurrency)('frankenphp', '--show')->getOutput())->toBe("default\n");
+});
+
+it('AC-6 autoscale max-wait defaults to 5 seconds', function (): void {
+    $set = ($this->concurrency)('frankenphp', 'autoscale', '--threads', '8', '--max-threads', '32');
+
+    expect($set->getExitCode())->toBe(0, $set->getErrorOutput())
+        ->and(($this->concurrency)('frankenphp', '--show')->getOutput())->toBe("autoscale 8 to 32 threads, max-wait 5s\n");
+});
+
+it('AC-6 autoscale is an error on other servers and on bad values, with no overlay and no restart', function (string $server, array $args): void {
+    $process = ($this->concurrency)($server, 'autoscale', ...$args);
+
+    expect($process->getExitCode())->toBe(2)
+        ->and($process->getErrorOutput())->toContain('autoscale')
+        ->and(($this->overlayFiles)())->toBe([])
+        ->and(($this->ddevCalls)())->not->toContain('ddev restart');
+})->with([
+    'nginx-fpm' => ['nginx-fpm', ['--threads', '8', '--max-threads', '32']],
+    'openlitespeed' => ['openlitespeed', ['--threads', '8', '--max-threads', '32']],
+    'frankenphp-worker' => ['frankenphp-worker', ['--threads', '8', '--max-threads', '32']],
+    'frankenphp-octane' => ['frankenphp-octane', ['--threads', '8', '--max-threads', '32']],
+    'missing threads' => ['frankenphp', ['--max-threads', '32']],
+    'max not above threads' => ['frankenphp', ['--threads', '32', '--max-threads', '32']],
+    'zero wait' => ['frankenphp', ['--threads', '8', '--max-threads', '32', '--max-wait', '0']],
+    'text' => ['frankenphp', ['--threads', 'x', '--max-threads', '32']],
+    'unknown flag' => ['frankenphp', ['--threads', '8', '--max-threads', '32', '--bogus', '1']],
+]);
+
+it('AC-6 the one usage text lists every form including autoscale, and every bad call exits 2 through it', function (array $args): void {
+    $process = ($this->concurrency)('frankenphp', ...$args);
+
+    expect($process->getExitCode())->toBe(2)
+        ->and($process->getErrorOutput())->toContain('Usage', 'autoscale --threads', '--max-threads', '--max-wait', 'default', '--show', '--max-requests');
+})->with([
+    'bad value' => [['abc']],
+    'autoscale without values' => [['autoscale']],
+    'autoscale not above' => [['autoscale', '--threads', '8', '--max-threads', '8']],
+]);

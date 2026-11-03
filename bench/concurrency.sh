@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 ## Usage: bench/concurrency.sh <n> [--max-requests <m>]
 ##        bench/concurrency.sh default
+##        bench/concurrency.sh autoscale --threads <n> --max-threads <m> [--max-wait <seconds>]
 ##        bench/concurrency.sh --show
 ## Sets the PHP worker limit of the active server to n and restarts DDEV; default restores today's values
 ## (FPM dynamic, 8 children, recycling after 200 requests; OpenLiteSpeed 10; FrankenPHP 2 x CPUs).
@@ -15,7 +16,9 @@
 ## `ddev server` removes every bench overlay when it switches, so settings never leak to another server.
 ## --max-requests <m> is accepted for these two servers only.
 ## All overlays are gitignored and written under .ddev/; .ddev/config.yaml is never touched.
-## --show prints "<n> workers" or "default"; on frankenphp-octane and frankenphp-worker it prints
+## autoscale (frankenphp only): num_threads n, max_threads m (m > n) and max_wait_time s seconds (default 5) in the
+## same FRANKENPHP_CONFIG overlay, so FrankenPHP starts n threads and adds up to m under load; other servers get an error.
+## --show prints "<n> workers" or "default" ("autoscale <n> to <m> threads, max-wait <s>s" after autoscale); on frankenphp-octane and frankenphp-worker it prints
 ## "<n> workers, max-requests <m>" read from the active configuration. Env: BENCH_APPROOT.
 
 set -Eeuo pipefail
@@ -36,9 +39,18 @@ CADDYFILE="$DDEV_DIR/web-build/Caddyfile.frankenphp"
 CADDYFILE_SOURCE="$DDEV_DIR/servers/frankenphp-worker/web-build/Caddyfile.frankenphp"
 NO_RECYCLING=1000000
 
-usage() {
-  echo "Usage: $0 <n> [--max-requests <m>]|default|--show (n and m are positive integers; --max-requests only on frankenphp-octane and frankenphp-worker)" >&2
+die2() {
+  echo "$1" >&2
   exit 2
+}
+
+usage() {
+  die2 "Usage: $0 <n> [--max-requests <m>]
+       $0 default
+       $0 autoscale --threads <n> --max-threads <m> [--max-wait <seconds>]
+       $0 --show
+n, m and seconds are positive integers; --max-requests only on frankenphp-octane and frankenphp-worker;
+autoscale only on frankenphp, with m greater than n."
 }
 
 remove_overlays() {
@@ -122,6 +134,38 @@ show() {
   done
   echo default
 }
+
+write_autoscale() {
+  printf '# bench: autoscale %s to %s threads, max-wait %ss\nweb_environment:\n  - "FRANKENPHP_CONFIG=num_threads %s\\nmax_threads %s\\nmax_wait_time %ss"\n' "$1" "$2" "$3" "$1" "$2" "$3" > "$FRANKEN_OVERLAY"
+}
+
+if [[ "${1:-}" == "autoscale" ]]; then
+  shift
+  threads="" max_threads="" max_wait=5
+  while [[ $# -gt 0 ]]; do
+    [[ $# -ge 2 ]] || usage
+    case "$1" in
+      --threads) threads="$2" ;;
+      --max-threads) max_threads="$2" ;;
+      --max-wait) max_wait="$2" ;;
+      *) usage ;;
+    esac
+    shift 2
+  done
+  for number in "$threads" "$max_threads" "$max_wait"; do
+    [[ "$number" =~ ^[1-9][0-9]*$ ]] || usage
+  done
+  (( max_threads > threads )) || usage
+  server="$(cd "$APPROOT" && ddev server --current)"
+  if [[ "$server" != "frankenphp" ]]; then
+    die2 "autoscale is available on frankenphp only (active server: $server)"
+  fi
+  remove_overlays
+  write_autoscale "$threads" "$max_threads" "$max_wait"
+  (cd "$APPROOT" && ddev restart >/dev/null)
+  echo "$server: autoscale $threads to $max_threads threads, max-wait ${max_wait}s"
+  exit 0
+fi
 
 max_requests=""
 case "${1:-}" in

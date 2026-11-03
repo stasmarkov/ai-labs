@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'vinstub' => [
+        'url' => env('VINSTUB_URL', 'http://vinstub:3000'),
+        'timeout' => 2,
+        'connect_timeout' => 1,
+        'per_minute' => filled(env('VINSTUB_PER_MINUTE')) ? (int) env('VINSTUB_PER_MINUTE') : 60,
+    ],
+
 ];

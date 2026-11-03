@@ -7,6 +7,7 @@ namespace App\Http\Responses;
 use App\Exceptions\DocsAnswerUnavailableException;
 use App\Exceptions\DocsSearchUnavailableException;
 use App\Exceptions\SemanticSearchUnavailableException;
+use App\Exceptions\VinReportUnavailableException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,8 +20,8 @@ final class JsonErrorRenderer
     public static function wantsJson(Request $request): bool
     {
         return $request->is('api/*')
-            || $request->routeIs('listings.index', 'listings.describe')
-            || $request->is('listings/*/describe')
+            || $request->routeIs('listings.index', 'listings.describe', 'listings.slow')
+            || $request->is('listings/*/describe', 'listings/*/slow')
             || $request->expectsJson();
     }
 
@@ -32,7 +33,7 @@ final class JsonErrorRenderer
 
         return match (true) {
             $e instanceof ValidationException => ApiResponse::error(422, 'Validation failed', $e->errors()),
-            $e instanceof SemanticSearchUnavailableException, $e instanceof DocsSearchUnavailableException, $e instanceof DocsAnswerUnavailableException => ApiResponse::error(503, $e->getMessage()),
+            $e instanceof SemanticSearchUnavailableException, $e instanceof DocsSearchUnavailableException, $e instanceof DocsAnswerUnavailableException, $e instanceof VinReportUnavailableException => ApiResponse::error(503, $e->getMessage()),
             $e instanceof ModelNotFoundException => ApiResponse::error(404, 'Not found'),
             $e instanceof HttpExceptionInterface => ApiResponse::error(
                 $e->getStatusCode(),
