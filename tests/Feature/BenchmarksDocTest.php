@@ -485,7 +485,7 @@ test('AC-6 BENCHMARKS.md quotes the committed export-load matrix', function (): 
                 exportLoadMs($median['php_held_ms_p95']),
                 $median['php_peak_memory_bytes_max'] / 1048576,
                 $median['php_cpu_ms_total'] === null ? 'n/a (shared process)' : sprintf('%.1f ms', $median['php_cpu_ms_total'] / $median['php_downloads']),
-                exportLoadMs($median['health_p95_ms']),
+                exportLoadMs($median['health_p95_ms']).($result['flagged'] ? ' ⚠' : ''),
                 $median['health_errors'],
                 $result['probe_qps'] * $result['measure_s'],
             );

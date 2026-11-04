@@ -928,18 +928,20 @@ Every mode wrote a `stopped` row for 5 of 5 runs. nginx-fpm went from no row to 
 
 | Server | Mode | Health p95 | PHP held p95 |
 |---|---|---|---|
-| nginx-fpm | offload | 16 ms | 23 ms |
-| nginx-fpm | stream | 10 000 ms | 23 006 ms |
-| apache-fpm | offload | 16 ms | 16 ms |
-| apache-fpm | stream | 10 000 ms | 22 474 ms |
-| frankenphp | offload | 18 ms | 78 ms |
-| frankenphp | stream | 10 000 ms | 22 510 ms |
-| openlitespeed | offload | 16 ms | 31 ms |
-| openlitespeed | stream | 10 000 ms | 20 950 ms |
+| nginx-fpm | offload | 15 ms | 20 ms |
+| nginx-fpm | stream | 10 000 ms | 22 994 ms |
+| apache-fpm | offload | 16 ms | 23 ms |
+| apache-fpm | stream | 10 000 ms | 22 483 ms |
+| frankenphp | offload | 18 ms | 70 ms |
+| frankenphp | stream | 10 000 ms | 22 505 ms |
+| openlitespeed | offload | 19 ms | 42 ms |
+| openlitespeed | stream | 5189 ms | 15 704 ms |
 
-- **Streaming holds a worker for the whole download.** PHP held the request for about 21 to 23 s at p95, and the health check timed out on 124 to 182 of 300 probes. Offload cut the hold to 16 to 78 ms and the health check answered in 16 to 18 ms with no timeouts.
-- **Memory was not the problem.** PHP's peak memory stayed at 2 MiB in stream mode too, because it reads 64 KiB at a time. What streaming costs is worker time, plus 22 to 29 ms of CPU per file (700 ms on FrankenPHP) against 0.3 to 0.4 ms for offload on the three other servers.
+- **Streaming holds a worker for the whole download.** On nginx, Apache and FrankenPHP, PHP held the request for 22.5 to 23.0 s at p95 and the health check timed out on 170 to 181 of 300 probes. Offload cut the hold to 20 to 70 ms and the health check answered in 15 to 19 ms with no timeouts.
+- **OpenLiteSpeed is the exception, for a reason that is not a virtue.** It takes PHP's output faster than the client reads and buffers it, so PHP finished sooner (15.7 s at p95) and no health probe timed out, though the repeats varied by 44 %. The same buffering hides a disconnected client: PHP sends the whole 50 MiB even when the client left after 3 s.
+- **Memory was not the problem.** PHP's peak memory stayed at 2 MiB in stream mode too, because it reads 64 KiB at a time. A whole request cost about 6 ms of CPU with offload and 20 to 43 ms streamed, framework boot included. On FrankenPHP the CPU of one download cannot be read at all: `getrusage` counts the whole process, which holds every PHP thread and Caddy itself, so the bench reports n/a there.
 - **The client sees no difference.** Download p95 was 25.0 s in all 8 cells and every download had the right size; the first per client had the right sha256. Offload does not speed up a slow client, it stops that client from owning a worker.
+- **FrankenPHP worker and Octane modes stream.** Their Caddyfile has no `intercept`, so an `X-Sendfile` header would reach the client with the file's absolute path. The app sends the header only when the classic FrankenPHP config marks that it intercepts it (`EXPORTS_SENDFILE_INTERCEPT`), and falls back to streaming otherwise.
 
 **When to choose what.**
 - Offload any large file that PHP only has to authorise: exports, reports, invoices, media. Keep the authorisation in PHP and the sending in the server.

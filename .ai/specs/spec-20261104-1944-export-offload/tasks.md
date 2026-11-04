@@ -92,9 +92,9 @@
 
 ## Done when
 
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
 
 ## Phase: Gaps (converge round 1)
 
@@ -138,3 +138,9 @@ Each finding was verified before fixing. Doc notes for the guide and BENCHMARKS 
 11. Gap 14 (done). The flush test counts `PHP_OUTPUT_HANDLER_FLUSH` calls through an `ob_start` callback: N + 1 flushes, every one but the last exactly 64 KiB. Mutation check: removing `ob_flush()` and `flush()` made it fail; reverted.
 12. `ExportDelivery` (fixed). The unused `$mode` and the free-string `$label` are replaced by one `ExportDeliveryMode` enum (`offload`, `stream-fallback`, `stream`) that decides the header value, the log's `mode` and the streaming branch.
 13. Slow-read DoS (fixed). `exports.stream_max_seconds` (env `EXPORTS_STREAM_MAX_SECONDS`, default 300); streaming stops after it and logs `aborted: true`, `abort_reason: "max_duration"`. The log also has `abort_reason: "client_disconnect"` for real disconnects.
+
+- Owner-side notes (after the review fix pass):
+  - The 8-cell matrix was re-run at commit b00e1f6 (CPU baseline from request start, FrankenPHP CPU n/a); the first run's files were replaced. BENCHMARKS.md and guide section 20 quote the new files.
+  - Deviation from Clarification Q4: the harness uses a 60 s closed-loop window at 2 MiB/s per client (about 25 s per download, 3 downloads per client per repeat) instead of 1 MiB/s and a fixed 2 downloads; the hold per download and the BR-21 window are the point, and BENCHMARKS.md states the method used.
+  - OpenLiteSpeed: stream mode cells are flagged for spread (44 % health p95) and the offload cell at 31 %; OpenLiteSpeed buffers PHP output, so its stream hold time measures the buffer and disconnects are not seen (documented).
+  - Final checks: 1063 tests, Pint, PHPStan, typecheck, build green; fingerprint unchanged; parity identical on 6 servers; `bench/run.sh ping --quick` exit 0 on a clean tree after the docs commit.

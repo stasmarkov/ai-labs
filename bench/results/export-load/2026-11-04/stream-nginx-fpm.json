@@ -2,7 +2,7 @@
   "server": "nginx-fpm",
   "mode": "stream",
   "label": "nginx-fpm",
-  "commit": "9040d0f",
+  "commit": "b00e1f6",
   "concurrency": "default",
   "base_url": "https://interview.ddev.site",
   "date": "2026-11-04",
@@ -21,48 +21,48 @@
   "probe_image_digest": "sha256:12c8fd3955056a7d68ff58317e87ae2878e72c2c9046169dc35da35b36428937",
   "health_starved_repeats": 0,
   "median": {
-    "health_error_percent": 60.66666666666667,
-    "health_errors": 182,
-    "health_p50_ms": 4182.280363,
-    "health_p95_answered_ms": 9498.118064,
+    "health_error_percent": 60.333333333333336,
+    "health_errors": 181,
+    "health_p50_ms": 4166.379276,
+    "health_p95_answered_ms": 9529.185797,
     "health_p95_ms": 10000,
-    "health_p99_ms": 9897.697838999999,
-    "load_download_p50_s": 24.964540,
-    "load_download_p95_s": 24.993668,
+    "health_p99_ms": 9929.808927,
+    "load_download_p50_s": 24.960870,
+    "load_download_p95_s": 24.990544,
     "load_downloads": 60,
     "load_error_percent": 0,
     "load_errors": 0,
     "load_integrity_errors": 0,
-    "load_mbit_per_s_per_client": 16.800458586151272,
+    "load_mbit_per_s_per_client": 16.803367575003787,
     "php_aborted": 0,
     "php_bytes_sent_by_php_total": 3145729920,
-    "php_cpu_ms_total": 1764.2000000000003,
+    "php_cpu_ms_total": 2553.3,
     "php_downloads": 60,
-    "php_held_ms_p50": 588.4,
-    "php_held_ms_p95": 23005.6,
+    "php_held_ms_p50": 564.2,
+    "php_held_ms_p95": 22994,
     "php_peak_memory_bytes_max": 2097152,
     "health_starved": false
   },
   "spread_percent": {
-    "health_error_percent": 0,
-    "health_errors": 0,
-    "health_p50_ms": 2.2043563797303576,
-    "health_p95_answered_ms": 0.7804194525750415,
+    "health_error_percent": 1.6574585635359116,
+    "health_errors": 1.6574585635359116,
+    "health_p50_ms": 0.6403337582269536,
+    "health_p95_answered_ms": 1.0259712433225878,
     "health_p95_ms": 0,
-    "health_p99_ms": 0.7775699284003937,
-    "load_download_p50_s": 0.009213067815396339,
-    "load_download_p95_s": 0.007938010539310227,
+    "health_p99_ms": 1.0416584927304222,
+    "load_download_p50_s": 0.02186221874477862,
+    "load_download_p95_s": 0.015697937587914625,
     "load_downloads": 0,
     "load_error_percent": 0,
     "load_errors": 0,
     "load_integrity_errors": 0,
-    "load_mbit_per_s_per_client": 0.007238150791449959,
+    "load_mbit_per_s_per_client": 0.019340318234003187,
     "php_aborted": 0,
     "php_bytes_sent_by_php_total": 0,
-    "php_cpu_ms_total": 5.509579412764994,
+    "php_cpu_ms_total": 6.712881369208461,
     "php_downloads": 0,
-    "php_held_ms_p50": 35.63902107409926,
-    "php_held_ms_p95": 0.3138366310811154,
+    "php_held_ms_p50": 22.332506203473944,
+    "php_held_ms_p95": 0.1726537357571572,
     "php_peak_memory_bytes_max": 200,
     "health_p95": 0
   },
@@ -71,7 +71,7 @@
   "runs": [
     {
       "repeat": 1,
-      "bench_run": "export-load-nginx-fpm-stream-nginx-fpm-69104-r1",
+      "bench_run": "export-load-nginx-fpm-stream-nginx-fpm-38318-r1",
       "load": {
         "downloads": 60,
         "errors": 0,
@@ -79,41 +79,42 @@
         "sha_checked": 20,
         "error_percent": 0,
         "bytes_total": 3145729920,
-        "download_p50_s": 24.962476,
-        "download_p95_s": 24.993668,
-        "mbit_per_s_per_client_median": 16.801231167042225
+        "download_p50_s": 24.960870,
+        "download_p95_s": 24.988922,
+        "mbit_per_s_per_client_median": 16.803367575003787
       },
       "health": {
-        "rps": 4.297401125291342,
-        "p50_ms": 4126.712551,
+        "rps": 4.297653615211455,
+        "p50_ms": 4166.379276,
         "p95_ms": 10000,
-        "p99_ms": 9897.697838999999,
+        "p99_ms": 9859.892301,
         "starved": false,
         "breakdown": {
           "502": 0,
           "504": 0,
           "other_5xx": 0,
           "other_non_2xx": 0,
-          "timeouts": 182
+          "timeouts": 183
         },
-        "errors": 182,
+        "errors": 183,
         "requests": 300,
-        "error_percent": 60.66666666666667,
-        "p95_answered_ms": 9498.118064
+        "error_percent": 61,
+        "p95_answered_ms": 9462.062926999999
       },
       "php": {
         "downloads": 60,
-        "php_held_ms_p50": 762.5,
-        "php_held_ms_p95": 23057.6,
+        "php_held_ms_p50": 526.6,
+        "php_held_ms_p95": 23019.9,
         "peak_memory_bytes_max": 6291456,
-        "cpu_ms_total": 1830.6000000000001,
+        "cpu_ms_total": 2624.2,
+        "cpu_scope": "request",
         "bytes_sent_by_php_total": 3145729920,
         "aborted": 0
       }
     },
     {
       "repeat": 2,
-      "bench_run": "export-load-nginx-fpm-stream-nginx-fpm-69104-r2",
+      "bench_run": "export-load-nginx-fpm-stream-nginx-fpm-38318-r2",
       "load": {
         "downloads": 60,
         "errors": 0,
@@ -121,41 +122,42 @@
         "sha_checked": 20,
         "error_percent": 0,
         "bytes_total": 3145729920,
-        "download_p50_s": 24.964540,
-        "download_p95_s": 24.993445,
-        "mbit_per_s_per_client_median": 16.800015124516104
+        "download_p50_s": 24.959069,
+        "download_p95_s": 24.990544,
+        "mbit_per_s_per_client_median": 16.804222559626492
       },
       "health": {
-        "rps": 4.2974395655695785,
-        "p50_ms": 4218.904915,
+        "rps": 4.297679377510986,
+        "p50_ms": 4176.9900880000005,
         "p95_ms": 10000,
-        "p99_ms": 9958.658339,
+        "p99_ms": 9963.326998999999,
         "starved": false,
         "breakdown": {
           "502": 0,
           "504": 0,
           "other_5xx": 0,
           "other_non_2xx": 0,
-          "timeouts": 182
+          "timeouts": 181
         },
-        "errors": 182,
+        "errors": 181,
         "requests": 300,
-        "error_percent": 60.66666666666667,
-        "p95_answered_ms": 9556.793916
+        "error_percent": 60.333333333333336,
+        "p95_answered_ms": 9559.829633
       },
       "php": {
         "downloads": 60,
-        "php_held_ms_p50": 552.8,
-        "php_held_ms_p95": 23005.6,
+        "php_held_ms_p50": 564.2,
+        "php_held_ms_p95": 22994,
         "peak_memory_bytes_max": 2097152,
-        "cpu_ms_total": 1733.4,
+        "cpu_ms_total": 2553.3,
+        "cpu_scope": "request",
         "bytes_sent_by_php_total": 3145729920,
         "aborted": 0
       }
     },
     {
       "repeat": 3,
-      "bench_run": "export-load-nginx-fpm-stream-nginx-fpm-69104-r3",
+      "bench_run": "export-load-nginx-fpm-stream-nginx-fpm-38318-r3",
       "load": {
         "downloads": 60,
         "errors": 0,
@@ -163,34 +165,35 @@
         "sha_checked": 20,
         "error_percent": 0,
         "bytes_total": 3145729920,
-        "download_p50_s": 24.964776,
-        "download_p95_s": 24.995429,
-        "mbit_per_s_per_client_median": 16.800458586151272
+        "download_p50_s": 24.964526,
+        "download_p95_s": 24.992845,
+        "mbit_per_s_per_client_median": 16.800972734863457
       },
       "health": {
-        "rps": 4.2973945953226265,
-        "p50_ms": 4182.280363,
+        "rps": 4.297203850591552,
+        "p50_ms": 4150.311355000001,
         "p95_ms": 10000,
-        "p99_ms": 9881.696817,
+        "p99_ms": 9929.808927,
         "starved": false,
         "breakdown": {
           "502": 0,
           "504": 0,
           "other_5xx": 0,
           "other_non_2xx": 0,
-          "timeouts": 182
+          "timeouts": 180
         },
-        "errors": 182,
+        "errors": 180,
         "requests": 300,
-        "error_percent": 60.66666666666667,
-        "p95_answered_ms": 9482.668755
+        "error_percent": 60,
+        "p95_answered_ms": 9529.185797
       },
       "php": {
         "downloads": 60,
-        "php_held_ms_p50": 588.4,
-        "php_held_ms_p95": 22985.4,
+        "php_held_ms_p50": 652.6,
+        "php_held_ms_p95": 22980.2,
         "peak_memory_bytes_max": 2097152,
-        "cpu_ms_total": 1764.2000000000003,
+        "cpu_ms_total": 2452.8,
+        "cpu_scope": "request",
         "bytes_sent_by_php_total": 3145729920,
         "aborted": 0
       }
