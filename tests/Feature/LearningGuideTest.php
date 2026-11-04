@@ -440,3 +440,47 @@ test('AC-8 learning guide section 19 explains slow I/O, worker pools and the hea
 
     expect(substr($guide, (int) strpos($guide, '## 16.'), (int) strpos($guide, '## 17.') - (int) strpos($guide, '## 16.')))->toContain('bench/slow-load.sh --workload sse');
 });
+
+test('AC-7 learning guide section 20 explains offloaded downloads with the measured numbers', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+    $start = strpos($guide, '## 20. Letting the web server send the file');
+    expect($start)->not->toBeFalse();
+    $section = substr($guide, (int) $start, strpos($guide, '## Planned sections') - (int) $start);
+
+    foreach (['X-Accel-Redirect', 'X-Sendfile', 'X-LiteSpeed-Location', 'mod_xsendfile', 'intercept', '/_protected_exports/', 'internal', 'php_held_ms', 'bytes_sent_by_php', 'stream-fallback', 'nginx-fpm', 'apache-fpm', 'frankenphp', 'openlitespeed', 'section 19'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    foreach (['apache-fpm', 'frankenphp', 'nginx-fpm', 'openlitespeed'] as $server) {
+        foreach (['offload', 'stream'] as $mode) {
+            $result = json_decode((string) file_get_contents(base_path("bench/results/export-load/2026-11-04/{$mode}-{$server}.json")), true, flags: JSON_THROW_ON_ERROR);
+            $p95 = (int) round($result['median']['health_p95_ms']);
+            $row = sprintf('| %s | %s | %s | %s |', $server, $mode, $p95 >= 10000 ? '10 000 ms' : $p95.' ms', number_format((int) round($result['median']['php_held_ms_p95']), 0, '', ' ').' ms');
+            expect($section)->toContain($row);
+        }
+    }
+
+    preg_match_all('/\]\((\.\.\/[^)#]+)/', $section, $links);
+    expect($links[1])->not->toBeEmpty();
+    foreach ($links[1] as $link) {
+        expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$link))->toBeTrue("missing: {$link}");
+    }
+});
+
+test('AC-7 learning guide section 20 walks each server through one offload and notes the out-of-scope modes', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+    $start = (int) strpos($guide, '## 20. Letting the web server send the file');
+    $section = substr($guide, $start, strpos($guide, '## Planned sections') - $start);
+
+    foreach (['**One offload per server.**', 'who reads the file', 'is free', 'Octane', 'worker mode', 'shutdown functions', '.ddev/web-build/Dockerfile', 'rebuild', '/exports/listings?mode=offload'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    expect($section)->not->toContain('/exports/1?mode=offload');
+
+    $walkthrough = substr($section, (int) strpos($section, '**One offload per server.**'));
+    $walkthrough = substr($walkthrough, 0, (int) strpos($walkthrough, '**Why the path must be restricted.**'));
+    foreach (['nginx-fpm', 'apache-fpm', 'frankenphp', 'openlitespeed'] as $server) {
+        expect($walkthrough)->toContain("- **{$server}**");
+    }
+});

@@ -645,6 +645,54 @@ The first bar of each pair is the http workload, the second the sse workload.
 
 I wanted to know what a health check sees while a PHP server is busy waiting on slow calls. With 100 users each holding a worker for 300 ms, throughput was exactly workers divided by 0.3 s, and the health endpoint, which does nothing, took 4 s at p95 on 8 FPM children because it waited in the same queue. Then I replaced the slow calls with 30 open AI answer streams of 6 s each: on 8 children 299 of 300 health checks timed out, while FrankenPHP with autoscaling threads (14 growing to 64) answered them in 16 ms. That turned "SSE holds a worker per answer" from an argument into a number, and it is why a long-running AI feature on FPM needs either a pool sized for it or a queued variant.
 
+## File downloads: offload vs PHP streaming (2026-11-04)
+
+What a 50 MiB CSV download costs a PHP worker when PHP streams the file, compared with PHP handing the file to the web server (SL-11). 4 servers by 2 modes, each cell the median of 3 repeats (BR-21). Raw files: [`bench/results/export-load/2026-11-04/`](bench/results/export-load/2026-11-04/). Reproduce with `bench/export-load-matrix.sh` on a clean tree.
+
+Set-up: commit `9040d0f`, default worker limits on every server (no `bench/concurrency.sh` overlay). The file is `listings.csv`, 52 428 832 bytes, sha256 `74366ebf…`. 20 clients in one container download it in a closed loop for 60 s, each limited to 2 MiB/s with `curl --limit-rate`, so one download takes about 25 s: a slow mobile connection. Every download is checked by size and the first one per client by sha256; no cell had a size or hash mismatch. A separate probe sends 5 requests per second to `GET /healthz` for the same 60 s, so "Health timeouts" is out of 300 probes, and the p95 counts a probe with no answer in 10 s as 10 000 ms. "PHP held" is the time PHP spent on the request, and "CPU per download" is PHP CPU time per download, both from `storage/logs/exports.jsonl`. Peak memory is the median over 3 repeats of the largest peak seen (the first repeat of every cell, offload included, reached 6 MiB, so that peak is not caused by the file).
+
+| Server | Mode | Downloads | Download p95 | PHP held p50 / p95 | Peak memory | CPU per download | Health p95 | Health timeouts |
+|---|---|---|---|---|---|---|---|---|
+| nginx-fpm | offload | 60 | 25.0 s | 10 / 23 ms | 2 MiB | 0.4 ms | 16 ms | 0 of 300 |
+| nginx-fpm | stream | 60 | 25.0 s | 588 / 23 006 ms | 2 MiB | 29.4 ms | 10 000 ms | 182 of 300 |
+| apache-fpm | offload | 60 | 25.0 s | 9 / 16 ms | 2 MiB | 0.3 ms | 16 ms | 0 of 300 |
+| apache-fpm | stream | 60 | 25.0 s | 576 / 22 474 ms | 2 MiB | 26.0 ms | 10 000 ms | 179 of 300 |
+| frankenphp | offload | 60 | 25.0 s | 33 / 78 ms | 2 MiB | 28.6 ms | 18 ms | 0 of 300 |
+| frankenphp | stream | 60 | 25.0 s | 21 952 / 22 510 ms | 2 MiB | 699.9 ms | 10 000 ms | 170 of 300 |
+| openlitespeed | offload | 60 | 25.0 s | 14 / 31 ms | 2 MiB | 0.4 ms | 16 ms | 0 of 300 |
+| openlitespeed | stream | 60 | 25.0 s | 9471 / 20 950 ms | 2 MiB | 21.8 ms | 10 000 ms | 124 of 300 |
+
+Offload sent 0 bytes through PHP in every cell; stream sent 3 145 729 920 bytes per repeat (60 files). No cell is flagged for spread.
+
+```mermaid
+xychart-beta
+    title "PHP held p95 per download (ms)"
+    x-axis ["fpm", "apache", "franken", "ols"]
+    y-axis "p95 (ms)" 0 --> 25000
+    bar [23, 16, 78, 31]
+    bar [23006, 22474, 22510, 20950]
+```
+
+The first bar of each pair is offload, the second is stream.
+
+### What the numbers say
+
+- **Offload frees the worker almost at once.** PHP held the request for 16 to 78 ms at p95 while the client still needed 25 s for the file, and the health check stayed at 16 to 18 ms with 0 timeouts on all four servers. With streaming, PHP held the request for 20 950 to 23 006 ms at p95 and the health check timed out on 124 to 182 of 300 probes.
+- **The download time did not change.** Download p95 was 25.0 s in all 8 cells, because the 2 MiB/s client limit, not the server, sets the pace. Offload does not make a slow client faster; it stops the slow client from owning a worker.
+- **Memory is not the cost; worker time is.** Stream mode reads 64 KiB at a time, so peak memory stayed at 2 MiB (6 MiB in the first repeat) for a 50 MiB file, the same as offload. What streaming spends is a worker for the whole download. With 20 slow clients and 8 FPM children (or 14 FrankenPHP threads) every worker was busy writing to a slow connection, the same effect as the slow I/O in section 19.
+- **PHP CPU per download is small but not zero.** Streaming cost 22 to 29 ms of CPU per file on the three non-FrankenPHP servers against 0.3 to 0.4 ms for offload.
+
+### Surprises
+
+- **FrankenPHP offload costs 28.6 ms of CPU per download.** The other three servers spend under 0.5 ms. FrankenPHP streaming was the worst case at 699.9 ms per file. The Caddy `intercept` rule and PHP run in one process, which may explain the larger counter, but I did not isolate the cause.
+- **On nginx and Apache the median stream request was short.** PHP held half of the requests for only 576 to 588 ms, yet p95 was 22 to 23 s and the health check still starved. A likely reason is that the web server buffers part of the response and releases PHP early for some requests, but I did not verify this.
+- **OpenLiteSpeed streamed best.** It had the fewest health timeouts (124 of 300) and the lowest p95 hold (20 950 ms); it also holds the request about 9.5 s at p50, between the buffering servers and FrankenPHP. All four servers still reached the 10 000 ms probe limit at p95.
+- **The first repeat of the first harness run was wrong, not slow.** One OpenLiteSpeed cell recorded only 20 downloads in repeats 2 and 3, because the harness re-created the client output directory at the same path. It uses one directory per repeat now, and that cell was run again.
+
+### Interview story
+
+A 50 MB export is not heavy for PHP's memory, it is heavy for its workers: a phone on a slow connection takes 25 s to receive it, and a PHP process streaming it is busy for the whole 25 s. I measured 20 such clients on four servers: with PHP streaming, the health check timed out on 124 to 182 of 300 probes, and with `X-Accel-Redirect`, `X-Sendfile` or `X-LiteSpeed-Location` PHP held each request for 16 to 78 ms at p95 and the health check stayed at 16 to 18 ms. The bytes were identical in both modes (same sha256 on every first download per client), so the only change is who does the waiting. The catch is that each server spells the hand-off differently and has to be told which directory it may serve, which is a security setting, not a performance one.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

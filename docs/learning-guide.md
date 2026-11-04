@@ -4,7 +4,7 @@ This guide explains how everything in this project works, in the order it was bu
 
 It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan and its order are in [`backlog.md`](../backlog.md).
 
-**Status (2026-11-03):** sections 1–15 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24, SL-32, SL-33, SL-45 and SL-46. Section 16 is a map of all the AI code: every file and its purpose, four requests traced end to end, and how to handle common feature requests. Section 17 (SL-40) explains the exact and semantic answer cache. Section 18 (SL-41) explains how Stop cancels generation on every server mode and how the chat sends history. Section 19 (SL-09) measures slow I/O, worker pools and the health check. Planned sections are listed at the end.
+**Status (2026-11-03):** sections 1–15 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24, SL-32, SL-33, SL-45 and SL-46. Section 16 is a map of all the AI code: every file and its purpose, four requests traced end to end, and how to handle common feature requests. Section 17 (SL-40) explains the exact and semantic answer cache. Section 18 (SL-41) explains how Stop cancels generation on every server mode and how the chat sends history. Section 19 (SL-09) measures slow I/O, worker pools and the health check. Section 20 (SL-11) explains how a large download is handed to the web server so a PHP worker is not held. Planned sections are listed at the end.
 
 ---
 
@@ -888,9 +888,73 @@ Every mode wrote a `stopped` row for 5 of 5 runs. nginx-fpm went from no row to 
 
 ---
 
+## 20. Letting the web server send the file
+
+**What it is.** A 50 MiB CSV export can be sent two ways. In **stream** mode PHP reads the file and writes it to the client in chunks, so a PHP worker is busy until the last byte has left, however slowly the client reads. In **offload** mode PHP only decides that the download is allowed, then answers with an empty body and a header that names the file; the web server reads the file from disk and sends it itself, and the PHP worker is free again after a few milliseconds. This is section 19's lesson (a worker that waits is a worker lost) applied to a download.
+
+**The pieces.**
+- `php artisan exports:generate` ([`ExportsGenerateCommand`](../app/Console/Commands/ExportsGenerateCommand.php), [`ExportFileService`](../app/Services/ExportFileService.php)) writes `listings.csv` to a temp file, renames it into place and records its size and sha256 in the `exports` table, so a reader never sees a half-written file.
+- `GET /exports/{id}?mode=offload|stream` ([`ServeExportController`](../app/Http/Controllers/ServeExportController.php), [`ExportDeliveryService`](../app/Services/ExportDeliveryService.php)) is a lab route behind the debug-routes gate and its own `exports` throttle, because every download holds bandwidth.
+- [`OffloadHeader`](../app/Enums/OffloadHeader.php) holds the header spellings. [`ExportStreamer`](../app/Support/ExportStreamer.php) is the 64 KiB-chunk stream with a flush after each chunk, stopping if the client has gone (the abort watcher from section 18).
+- [`ExportDownloadLog`](../app/Support/ExportDownloadLog.php) appends one JSON line per download to `storage/logs/exports.jsonl` from a shutdown callback: `php_held_ms`, peak memory, CPU and `bytes_sent_by_php`. For an offload download `bytes_sent_by_php` is 0, which is how the bench proves PHP did not send the file.
+
+**One offload download, step by step.**
+1. The client asks for `/exports/listings?mode=offload`. The web server passes it to PHP like any request.
+2. Laravel checks the debug gate and the throttle, finds the export record and answers 200 with no body, `Content-Length`, `Content-Disposition: attachment`, `X-Export-Mode: offload` and one hand-off header. The PHP worker finishes and goes back to the pool.
+3. The web server sees the hand-off header in PHP's response, drops the empty body and sends the named file to the client by itself. It can do this for 25 s, or for a client that stops and restarts with a `Range` request, without a PHP worker involved.
+
+**The four header spellings.** If the header is unknown or the server cannot offload, the controller answers with `X-Export-Mode: stream-fallback` and streams the same bytes.
+
+| Server | Header PHP sends | What the server config does |
+|---|---|---|
+| nginx-fpm | `X-Accel-Redirect: /_protected_exports/listings.csv` | An `internal` location `/_protected_exports/` aliased to `storage/app/exports/`. `internal` means a client asking for that URL directly gets 404. |
+| apache-fpm | `X-Sendfile: /var/www/html/storage/app/exports/listings.csv` | `mod_xsendfile` enabled, with the path allowed only under the exports directory. A direct request to `/storage/app/exports/` gets 403. |
+| frankenphp | `X-Sendfile` (same absolute path) | A Caddy `intercept` rule in the `export_offload` snippet matches `X-Sendfile` for the exports directory only and serves the file with a `file_server` rooted there. |
+| openlitespeed | `X-LiteSpeed-Location: /_protected_exports/listings.csv` | A `/_protected_exports/` context mapped to the exports directory, with its own `rewrite { enable 0 }` (otherwise the Laravel front-controller rewrite swallows the redirected URI) and a rewrite rule that answers 403 to direct requests, because OpenLiteSpeed has no "internal" flag. |
+
+**One offload per server.** The same request, `/exports/listings?mode=offload`, on each server: who reads the file, and when the PHP worker is free.
+- **nginx-fpm**: PHP-FPM returns the empty response with `X-Accel-Redirect` to nginx, and the FPM worker is free as soon as that response is written. nginx itself reads the file from the internal `/_protected_exports/` location and sends it, with `Range` support.
+- **apache-fpm**: PHP-FPM returns `X-Sendfile`. The FPM worker is free once the response is written; Apache's `mod_xsendfile` output filter then replaces the empty body with the file and Apache reads it from disk.
+- **frankenphp**: the PHP thread runs inside the Caddy process and is free once the handler returns the response with `X-Sendfile`. The `intercept` handler then sees the header and a `file_server` reads the file, so the slow client occupies a Caddy connection, not a PHP thread.
+- **openlitespeed**: the LSAPI PHP process returns `X-LiteSpeed-Location` and is free at once. OpenLiteSpeed re-routes the request internally to the `/_protected_exports/` context and serves the file from there.
+
+**Not covered.** Laravel Octane and the FrankenPHP worker mode are out of scope. In a long-lived worker the process does not end between requests, so shutdown functions do not run per request and the `ExportDownloadLog` line (written from a shutdown callback) would be missing or misattributed. The offload path also differs there, since the worker hands responses to its host server in a different way than classic FPM or the per-request FrankenPHP mode measured here.
+
+**Image rebuild cost.** apache-fpm needs `mod_xsendfile`, which `.ddev/web-build/Dockerfile` installs with `apt-get` as an extra step of the web image build. The first `ddev start` or `ddev restart` after adding or editing that file rebuilds the web image, which takes noticeably longer than a normal restart and needs network access; later restarts reuse the cached image. The extra layer is in the image for every server, not only apache-fpm.
+
+**Why the path must be restricted.** The hand-off header is a request from PHP to the web server: "read this file for me". If the application ever lets a user influence that path, or the server accepts any path, the header turns into a file-disclosure hole. So every config serves only the exports directory, the exports directory is not reachable by URL, and the checks in `manual-test.md#step-3` ask each server for the internal location and for the storage path directly.
+
+**What was measured** ([`bench/export-load.sh`](../bench/export-load.sh), run 8 times by [`bench/export-load-matrix.sh`](../bench/export-load-matrix.sh); full table and chart in the "File downloads: offload vs PHP streaming (2026-11-04)" section of [`BENCHMARKS.md`](../BENCHMARKS.md)). 20 clients downloading the 50 MiB file at 2 MiB/s each (about 25 s per file) while a probe asks `/healthz` 5 times per second:
+
+| Server | Mode | Health p95 | PHP held p95 |
+|---|---|---|---|
+| nginx-fpm | offload | 16 ms | 23 ms |
+| nginx-fpm | stream | 10 000 ms | 23 006 ms |
+| apache-fpm | offload | 16 ms | 16 ms |
+| apache-fpm | stream | 10 000 ms | 22 474 ms |
+| frankenphp | offload | 18 ms | 78 ms |
+| frankenphp | stream | 10 000 ms | 22 510 ms |
+| openlitespeed | offload | 16 ms | 31 ms |
+| openlitespeed | stream | 10 000 ms | 20 950 ms |
+
+- **Streaming holds a worker for the whole download.** PHP held the request for about 21 to 23 s at p95, and the health check timed out on 124 to 182 of 300 probes. Offload cut the hold to 16 to 78 ms and the health check answered in 16 to 18 ms with no timeouts.
+- **Memory was not the problem.** PHP's peak memory stayed at 2 MiB in stream mode too, because it reads 64 KiB at a time. What streaming costs is worker time, plus 22 to 29 ms of CPU per file (700 ms on FrankenPHP) against 0.3 to 0.4 ms for offload on the three other servers.
+- **The client sees no difference.** Download p95 was 25.0 s in all 8 cells and every download had the right size; the first per client had the right sha256. Offload does not speed up a slow client, it stops that client from owning a worker.
+
+**When to choose what.**
+- Offload any large file that PHP only has to authorise: exports, reports, invoices, media. Keep the authorisation in PHP and the sending in the server.
+- Stream from PHP only when the bytes must be produced or transformed on the way (an on-the-fly archive, a generated report too big to keep), and size the pool for it as in section 19.
+- Treat the directory the server may serve as a security boundary: one directory, no user-controlled path, no direct URL.
+
+**In this repo.** Tests: `ExportGenerateTest`, `ServeExportTest`, `ExportOffloadConfigTest`, `BenchExportLoadTest`, `ExportLoadResultsTest`. Configs: [`.ddev/nginx_full/nginx-site.conf`](../.ddev/nginx_full/nginx-site.conf), [`.ddev/apache/apache-site.conf`](../.ddev/apache/apache-site.conf), [`.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp`](../.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp), [`.ddev/servers/openlitespeed/conf/vhosts/interview/vhconf.conf`](../.ddev/servers/openlitespeed/conf/vhosts/interview/vhconf.conf). Results: [`bench/results/export-load/`](../bench/results/export-load/). Spec: [`.ai/specs/spec-20261104-1944-export-offload/`](../.ai/specs/spec-20261104-1944-export-offload/).
+
+**Read next.** [nginx: X-Accel-Redirect and `internal`](https://nginx.org/en/docs/http/ngx_http_core_module.html#internal) · [mod_xsendfile](https://tn123.org/mod_xsendfile/) · [Caddy `intercept`](https://caddyserver.com/docs/caddyfile/directives/intercept) · [OpenLiteSpeed: X-LiteSpeed-Location](https://docs.openlitespeed.org/config/advanced/) · [FrankenPHP: X-Sendfile](https://frankenphp.dev/docs/x-sendfile/)
+
+---
+
 ## Planned sections
 
 Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):
 
-- **Server track:** Early Hints and compression (SL-10), file downloads offloaded to the web server (SL-11), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
+- **Server track:** Early Hints and compression (SL-10), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
 - **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; structured output (SL-23); tool calling (SL-25); evals (SL-26); vision (SL-27); model comparison (SL-28); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39, shown on the `/ai/photos` placeholder); a research agent (SL-42); a prompt playground (SL-43).

@@ -1,0 +1,199 @@
+{
+  "server": "openlitespeed",
+  "mode": "offload",
+  "label": "openlitespeed",
+  "commit": "9040d0f",
+  "concurrency": "default",
+  "base_url": "https://interview.ddev.site:8091",
+  "date": "2026-11-04",
+  "quick": false,
+  "clients": 20,
+  "rate": "2M",
+  "export_bytes": 52428832,
+  "export_sha256": "74366ebfa0f6812c1eafd4c3c09ecfd5434e0aa762e7c24f8a8b324a8d87fa11",
+  "probe_qps": 5,
+  "probe_timeout_s": 10,
+  "measure_s": 60,
+  "repeats": 3,
+  "client_image": "curlimages/curl:8.11.1",
+  "client_image_digest": "curlimages/curl@sha256:c1fe1679c34d9784c1b0d1e5f62ac0a79fca01fb6377cdd33e90473c6f9f9a69",
+  "probe_image": "autopulse-oha:1.16.0",
+  "probe_image_digest": "sha256:12c8fd3955056a7d68ff58317e87ae2878e72c2c9046169dc35da35b36428937",
+  "health_starved_repeats": 0,
+  "median": {
+    "health_error_percent": 0,
+    "health_errors": 0,
+    "health_p50_ms": 10.452342999999999,
+    "health_p95_answered_ms": 16.080705000000002,
+    "health_p95_ms": 16.080705000000002,
+    "health_p99_ms": 22.502978,
+    "load_download_p50_s": 24.966488,
+    "load_download_p95_s": 24.999092,
+    "load_downloads": 60,
+    "load_error_percent": 0,
+    "load_errors": 0,
+    "load_integrity_errors": 0,
+    "load_mbit_per_s_per_client": 16.799603984491505,
+    "php_aborted": 0,
+    "php_bytes_sent_by_php_total": 0,
+    "php_cpu_ms_total": 24.000000000000004,
+    "php_downloads": 60,
+    "php_held_ms_p50": 14.3,
+    "php_held_ms_p95": 30.8,
+    "php_peak_memory_bytes_max": 2097152,
+    "health_starved": false
+  },
+  "spread_percent": {
+    "health_error_percent": 0,
+    "health_errors": 0,
+    "health_p50_ms": 3.004532093904679,
+    "health_p95_answered_ms": 18.130417789518557,
+    "health_p95_ms": 18.130417789518557,
+    "health_p99_ms": 14.704520441694433,
+    "load_download_p50_s": 0.060825535413711065,
+    "load_download_p95_s": 0.02437688536848031,
+    "load_downloads": 0,
+    "load_error_percent": 0,
+    "load_errors": 0,
+    "load_integrity_errors": 0,
+    "load_mbit_per_s_per_client": 0.06403635075439622,
+    "php_aborted": 0,
+    "php_bytes_sent_by_php_total": 0,
+    "php_cpu_ms_total": 69.16666666666633,
+    "php_downloads": 0,
+    "php_held_ms_p50": 29.370629370629374,
+    "php_held_ms_p95": 291.5584415584416,
+    "php_peak_memory_bytes_max": 200,
+    "health_p95": 18.130417789518557
+  },
+  "spread_limit_percent": 20,
+  "flagged": false,
+  "runs": [
+    {
+      "repeat": 1,
+      "bench_run": "export-load-openlitespeed-offload-openlitespeed-75992-r1",
+      "load": {
+        "downloads": 60,
+        "errors": 0,
+        "integrity_errors": 0,
+        "sha_checked": 20,
+        "error_percent": 0,
+        "bytes_total": 3145729920,
+        "download_p50_s": 24.966488,
+        "download_p95_s": 24.994753,
+        "mbit_per_s_per_client_median": 16.799603984491505
+      },
+      "health": {
+        "rps": 4.999845164461624,
+        "p50_ms": 10.276896,
+        "p95_ms": 16.080705000000002,
+        "p99_ms": 22.275059,
+        "starved": false,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 0
+        },
+        "errors": 0,
+        "requests": 300,
+        "error_percent": 0,
+        "p95_answered_ms": 16.080705000000002
+      },
+      "php": {
+        "downloads": 60,
+        "php_held_ms_p50": 14.3,
+        "php_held_ms_p95": 117.9,
+        "peak_memory_bytes_max": 6291456,
+        "cpu_ms_total": 40.59999999999992,
+        "bytes_sent_by_php_total": 0,
+        "aborted": 0
+      }
+    },
+    {
+      "repeat": 2,
+      "bench_run": "export-load-openlitespeed-offload-openlitespeed-75992-r2",
+      "load": {
+        "downloads": 60,
+        "errors": 0,
+        "integrity_errors": 0,
+        "sha_checked": 20,
+        "error_percent": 0,
+        "bytes_total": 3145729920,
+        "download_p50_s": 24.980178,
+        "download_p95_s": 24.999092,
+        "mbit_per_s_per_client_median": 16.789899928061697
+      },
+      "health": {
+        "rps": 4.999420642138886,
+        "p50_ms": 10.452342999999999,
+        "p95_ms": 18.206446,
+        "p99_ms": 25.584014,
+        "starved": false,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 0
+        },
+        "errors": 0,
+        "requests": 300,
+        "error_percent": 0,
+        "p95_answered_ms": 18.206446
+      },
+      "php": {
+        "downloads": 60,
+        "php_held_ms_p50": 15.3,
+        "php_held_ms_p95": 28.1,
+        "peak_memory_bytes_max": 2097152,
+        "cpu_ms_total": 24.000000000000004,
+        "bytes_sent_by_php_total": 0,
+        "aborted": 0
+      }
+    },
+    {
+      "repeat": 3,
+      "bench_run": "export-load-openlitespeed-offload-openlitespeed-75992-r3",
+      "load": {
+        "downloads": 60,
+        "errors": 0,
+        "integrity_errors": 0,
+        "sha_checked": 20,
+        "error_percent": 0,
+        "bytes_total": 3145729920,
+        "download_p50_s": 24.964992,
+        "download_p95_s": 25.000847,
+        "mbit_per_s_per_client_median": 16.800657781394555
+      },
+      "health": {
+        "rps": 4.999641861571131,
+        "p50_ms": 10.59094,
+        "p95_ms": 15.290947,
+        "p99_ms": 22.502978,
+        "starved": false,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 0
+        },
+        "errors": 0,
+        "requests": 300,
+        "error_percent": 0,
+        "p95_answered_ms": 15.290947
+      },
+      "php": {
+        "downloads": 60,
+        "php_held_ms_p50": 11.1,
+        "php_held_ms_p95": 30.8,
+        "peak_memory_bytes_max": 2097152,
+        "cpu_ms_total": 24,
+        "bytes_sent_by_php_total": 0,
+        "aborted": 0
+      }
+    }
+  ]
+}

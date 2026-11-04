@@ -1,4 +1,5 @@
-#ddev-generated
+# SL-11: taken over from DDEV (its generated-file marker line is removed on purpose) so that the
+# export_offload snippet below survives `ddev restart`.
 # Adapted from https://github.com/php/frankenphp/blob/main/caddy/frankenphp/Caddyfile
 #
 # The Caddyfile is an easy way to configure FrankenPHP and the Caddy web server.
@@ -41,19 +42,45 @@
 	}
 }
 
+# SL-11: PHP answers an export download with an empty body and an absolute path in X-Sendfile.
+# Only a path under the exports directory matches; anything else is passed on as PHP sent it. The
+# file is then served by a file_server rooted at the exports directory, which cannot leave it.
+# The `env EXPORTS_SENDFILE_INTERCEPT 1` lines on the php_server blocks below tell PHP (as a server
+# variable) that this Caddyfile intercepts X-Sendfile. The frankenphp-worker Caddyfile and Octane have no
+# intercept and do not set it, so there PHP falls back to streaming (App\Services\ExportDeliveryService).
+(export_offload) {
+	intercept {
+		@sendfile header X-Sendfile /var/www/html/storage/app/exports/*
+		handle_response @sendfile {
+			root * /var/www/html/storage/app/exports
+			method * GET
+			rewrite * {resp.header.X-Sendfile}
+			uri strip_prefix /var/www/html/storage/app/exports
+			header -X-Sendfile
+			file_server
+		}
+	}
+}
+
 :80 {
 	import common_config
 
 	@secure header X-Forwarded-Proto https
-	php_server @secure {
-		env HTTPS on
-		env SERVER_PORT 443
-		env REQUEST_SCHEME https
-		root {$DDEV_APPROOT}/{$DDEV_DOCROOT}
-	}
+	route {
+		import export_offload
 
-	php_server {
-		root {$DDEV_APPROOT}/{$DDEV_DOCROOT}
+		php_server @secure {
+			env EXPORTS_SENDFILE_INTERCEPT 1
+			env HTTPS on
+			env SERVER_PORT 443
+			env REQUEST_SCHEME https
+			root {$DDEV_APPROOT}/{$DDEV_DOCROOT}
+		}
+
+		php_server {
+			env EXPORTS_SENDFILE_INTERCEPT 1
+			root {$DDEV_APPROOT}/{$DDEV_DOCROOT}
+		}
 	}
 }
 
@@ -61,8 +88,13 @@
 	import common_config
 	tls /etc/ssl/certs/master.crt /etc/ssl/certs/master.key
 
-	php_server {
-		root {$DDEV_APPROOT}/{$DDEV_DOCROOT}
+	route {
+		import export_offload
+
+		php_server {
+			env EXPORTS_SENDFILE_INTERCEPT 1
+			root {$DDEV_APPROOT}/{$DDEV_DOCROOT}
+		}
 	}
 }
 

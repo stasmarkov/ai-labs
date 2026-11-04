@@ -5,10 +5,12 @@ use App\Http\Controllers\DescribeListingController;
 use App\Http\Controllers\ListListingsController;
 use App\Http\Controllers\SearchDocsController;
 use App\Http\Controllers\SemanticSearchController;
+use App\Http\Controllers\ServeExportController;
 use App\Http\Controllers\ShowListingController;
 use App\Http\Controllers\ShowSlowListingController;
 use App\Http\Middleware\AddServerTimingHeader;
 use App\Http\Middleware\EnsureDebugRoutes;
+use App\Services\ExportFileService;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/listings', ListListingsController::class)->name('listings.index');
@@ -32,3 +34,7 @@ Route::get('/api/docs/search', SearchDocsController::class)
 Route::post('/api/docs/ask', AskDocsController::class)
     ->middleware(['throttle:docs-ask', AddServerTimingHeader::class])
     ->name('docs.ask');
+Route::get('/exports/{id}', ServeExportController::class)
+    ->where('id', ExportFileService::ID_PATTERN)
+    ->middleware([EnsureDebugRoutes::class, 'throttle:exports'])
+    ->name('exports.show');

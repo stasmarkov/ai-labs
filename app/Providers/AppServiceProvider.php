@@ -7,24 +7,31 @@ use App\Contracts\DocsBenchRepositoryInterface;
 use App\Contracts\DocsIndexRepositoryInterface;
 use App\Contracts\DocsSearchRepositoryInterface;
 use App\Contracts\EmbeddingStatsRepositoryInterface;
+use App\Contracts\ExportRepositoryInterface;
 use App\Contracts\ListingDocumentRepositoryInterface;
 use App\Contracts\ListingRepositoryInterface;
 use App\Contracts\RagEvalRepositoryInterface;
 use App\Contracts\SemanticBenchRepositoryInterface;
 use App\Contracts\SemanticSearchRepositoryInterface;
+use App\Contracts\ShutdownScheduler;
 use App\Repositories\EloquentDocsAnswerCacheRepository;
 use App\Repositories\EloquentDocsBenchRepository;
 use App\Repositories\EloquentDocsIndexRepository;
 use App\Repositories\EloquentDocsSearchRepository;
 use App\Repositories\EloquentEmbeddingStatsRepository;
+use App\Repositories\EloquentExportRepository;
 use App\Repositories\EloquentListingDocumentRepository;
 use App\Repositories\EloquentListingRepository;
 use App\Repositories\EloquentRagEvalRepository;
 use App\Repositories\EloquentSemanticBenchRepository;
 use App\Repositories\EloquentSemanticSearchRepository;
 use App\Services\MarkdownChunker;
+use App\Support\PhpShutdownScheduler;
 use App\Support\ServerTiming;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -49,6 +56,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(DocsBenchRepositoryInterface::class, EloquentDocsBenchRepository::class);
         $this->app->bind(RagEvalRepositoryInterface::class, EloquentRagEvalRepository::class);
         $this->app->bind(EmbeddingStatsRepositoryInterface::class, EloquentEmbeddingStatsRepository::class);
+        $this->app->bind(ExportRepositoryInterface::class, EloquentExportRepository::class);
+        $this->app->bind(ShutdownScheduler::class, PhpShutdownScheduler::class);
     }
 
     /**
@@ -57,5 +66,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Model::preventLazyLoading(! $this->app->isProduction());
+
+        // Each download holds bandwidth and, in stream mode, a PHP worker on purpose, so callers are limited per IP.
+        RateLimiter::for('exports', fn (Request $request): Limit => Limit::perMinute((int) config('exports.per_minute'))->by((string) $request->ip()));
     }
 }

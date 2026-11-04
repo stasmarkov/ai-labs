@@ -1,0 +1,199 @@
+{
+  "server": "nginx-fpm",
+  "mode": "stream",
+  "label": "nginx-fpm",
+  "commit": "9040d0f",
+  "concurrency": "default",
+  "base_url": "https://interview.ddev.site",
+  "date": "2026-11-04",
+  "quick": false,
+  "clients": 20,
+  "rate": "2M",
+  "export_bytes": 52428832,
+  "export_sha256": "74366ebfa0f6812c1eafd4c3c09ecfd5434e0aa762e7c24f8a8b324a8d87fa11",
+  "probe_qps": 5,
+  "probe_timeout_s": 10,
+  "measure_s": 60,
+  "repeats": 3,
+  "client_image": "curlimages/curl:8.11.1",
+  "client_image_digest": "curlimages/curl@sha256:c1fe1679c34d9784c1b0d1e5f62ac0a79fca01fb6377cdd33e90473c6f9f9a69",
+  "probe_image": "autopulse-oha:1.16.0",
+  "probe_image_digest": "sha256:12c8fd3955056a7d68ff58317e87ae2878e72c2c9046169dc35da35b36428937",
+  "health_starved_repeats": 0,
+  "median": {
+    "health_error_percent": 60.66666666666667,
+    "health_errors": 182,
+    "health_p50_ms": 4182.280363,
+    "health_p95_answered_ms": 9498.118064,
+    "health_p95_ms": 10000,
+    "health_p99_ms": 9897.697838999999,
+    "load_download_p50_s": 24.964540,
+    "load_download_p95_s": 24.993668,
+    "load_downloads": 60,
+    "load_error_percent": 0,
+    "load_errors": 0,
+    "load_integrity_errors": 0,
+    "load_mbit_per_s_per_client": 16.800458586151272,
+    "php_aborted": 0,
+    "php_bytes_sent_by_php_total": 3145729920,
+    "php_cpu_ms_total": 1764.2000000000003,
+    "php_downloads": 60,
+    "php_held_ms_p50": 588.4,
+    "php_held_ms_p95": 23005.6,
+    "php_peak_memory_bytes_max": 2097152,
+    "health_starved": false
+  },
+  "spread_percent": {
+    "health_error_percent": 0,
+    "health_errors": 0,
+    "health_p50_ms": 2.2043563797303576,
+    "health_p95_answered_ms": 0.7804194525750415,
+    "health_p95_ms": 0,
+    "health_p99_ms": 0.7775699284003937,
+    "load_download_p50_s": 0.009213067815396339,
+    "load_download_p95_s": 0.007938010539310227,
+    "load_downloads": 0,
+    "load_error_percent": 0,
+    "load_errors": 0,
+    "load_integrity_errors": 0,
+    "load_mbit_per_s_per_client": 0.007238150791449959,
+    "php_aborted": 0,
+    "php_bytes_sent_by_php_total": 0,
+    "php_cpu_ms_total": 5.509579412764994,
+    "php_downloads": 0,
+    "php_held_ms_p50": 35.63902107409926,
+    "php_held_ms_p95": 0.3138366310811154,
+    "php_peak_memory_bytes_max": 200,
+    "health_p95": 0
+  },
+  "spread_limit_percent": 20,
+  "flagged": false,
+  "runs": [
+    {
+      "repeat": 1,
+      "bench_run": "export-load-nginx-fpm-stream-nginx-fpm-69104-r1",
+      "load": {
+        "downloads": 60,
+        "errors": 0,
+        "integrity_errors": 0,
+        "sha_checked": 20,
+        "error_percent": 0,
+        "bytes_total": 3145729920,
+        "download_p50_s": 24.962476,
+        "download_p95_s": 24.993668,
+        "mbit_per_s_per_client_median": 16.801231167042225
+      },
+      "health": {
+        "rps": 4.297401125291342,
+        "p50_ms": 4126.712551,
+        "p95_ms": 10000,
+        "p99_ms": 9897.697838999999,
+        "starved": false,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 182
+        },
+        "errors": 182,
+        "requests": 300,
+        "error_percent": 60.66666666666667,
+        "p95_answered_ms": 9498.118064
+      },
+      "php": {
+        "downloads": 60,
+        "php_held_ms_p50": 762.5,
+        "php_held_ms_p95": 23057.6,
+        "peak_memory_bytes_max": 6291456,
+        "cpu_ms_total": 1830.6000000000001,
+        "bytes_sent_by_php_total": 3145729920,
+        "aborted": 0
+      }
+    },
+    {
+      "repeat": 2,
+      "bench_run": "export-load-nginx-fpm-stream-nginx-fpm-69104-r2",
+      "load": {
+        "downloads": 60,
+        "errors": 0,
+        "integrity_errors": 0,
+        "sha_checked": 20,
+        "error_percent": 0,
+        "bytes_total": 3145729920,
+        "download_p50_s": 24.964540,
+        "download_p95_s": 24.993445,
+        "mbit_per_s_per_client_median": 16.800015124516104
+      },
+      "health": {
+        "rps": 4.2974395655695785,
+        "p50_ms": 4218.904915,
+        "p95_ms": 10000,
+        "p99_ms": 9958.658339,
+        "starved": false,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 182
+        },
+        "errors": 182,
+        "requests": 300,
+        "error_percent": 60.66666666666667,
+        "p95_answered_ms": 9556.793916
+      },
+      "php": {
+        "downloads": 60,
+        "php_held_ms_p50": 552.8,
+        "php_held_ms_p95": 23005.6,
+        "peak_memory_bytes_max": 2097152,
+        "cpu_ms_total": 1733.4,
+        "bytes_sent_by_php_total": 3145729920,
+        "aborted": 0
+      }
+    },
+    {
+      "repeat": 3,
+      "bench_run": "export-load-nginx-fpm-stream-nginx-fpm-69104-r3",
+      "load": {
+        "downloads": 60,
+        "errors": 0,
+        "integrity_errors": 0,
+        "sha_checked": 20,
+        "error_percent": 0,
+        "bytes_total": 3145729920,
+        "download_p50_s": 24.964776,
+        "download_p95_s": 24.995429,
+        "mbit_per_s_per_client_median": 16.800458586151272
+      },
+      "health": {
+        "rps": 4.2973945953226265,
+        "p50_ms": 4182.280363,
+        "p95_ms": 10000,
+        "p99_ms": 9881.696817,
+        "starved": false,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 182
+        },
+        "errors": 182,
+        "requests": 300,
+        "error_percent": 60.66666666666667,
+        "p95_answered_ms": 9482.668755
+      },
+      "php": {
+        "downloads": 60,
+        "php_held_ms_p50": 588.4,
+        "php_held_ms_p95": 22985.4,
+        "peak_memory_bytes_max": 2097152,
+        "cpu_ms_total": 1764.2000000000003,
+        "bytes_sent_by_php_total": 3145729920,
+        "aborted": 0
+      }
+    }
+  ]
+}

@@ -434,3 +434,75 @@ test('AC-7 BENCHMARKS.md quotes the committed slow-load matrix', function (): vo
         expect($section)->toContain($formatted);
     }
 });
+
+function exportLoadResults(): array
+{
+    $results = [];
+    foreach (['apache-fpm', 'frankenphp', 'nginx-fpm', 'openlitespeed'] as $server) {
+        foreach (['offload', 'stream'] as $mode) {
+            $results[$server][$mode] = json_decode(
+                (string) file_get_contents(base_path("bench/results/export-load/2026-11-04/{$mode}-{$server}.json")),
+                true,
+                flags: JSON_THROW_ON_ERROR,
+            );
+        }
+    }
+
+    return $results;
+}
+
+function exportLoadMs(float $ms): string
+{
+    $rounded = (int) round($ms);
+
+    return $rounded >= 10000 ? number_format($rounded, 0, '', ' ').' ms' : $rounded.' ms';
+}
+
+test('AC-6 BENCHMARKS.md quotes the committed export-load matrix', function (): void {
+    $doc = (string) file_get_contents(base_path('BENCHMARKS.md'));
+    $start = strpos($doc, '## File downloads: offload vs PHP streaming (2026-11-04)');
+    expect($start)->not->toBeFalse();
+    $end = strpos($doc, "\n## ", (int) $start + 10);
+    $section = substr($doc, (int) $start, ($end === false ? strlen($doc) : $end) - (int) $start);
+
+    foreach (['### What the numbers say', '### Surprises', '### Interview story', 'xychart-beta', 'bench/export-load-matrix.sh', 'bench/results/export-load/2026-11-04/'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    $header = '| Server | Mode | Downloads | Download p95 | PHP held p50 / p95 | Peak memory | CPU per download | Health p95 | Health timeouts |';
+    expect($section)->toContain($header);
+
+    foreach (exportLoadResults() as $server => $modes) {
+        foreach ($modes as $mode => $result) {
+            $median = $result['median'];
+            $row = sprintf(
+                '| %s | %s | %d | %.1f s | %s / %s | %d MiB | %s | %s | %d of %d |',
+                $server,
+                $mode,
+                $median['load_downloads'],
+                $median['load_download_p95_s'],
+                number_format((int) round($median['php_held_ms_p50']), 0, '', (int) round($median['php_held_ms_p50']) >= 10000 ? ' ' : ''),
+                exportLoadMs($median['php_held_ms_p95']),
+                $median['php_peak_memory_bytes_max'] / 1048576,
+                $median['php_cpu_ms_total'] === null ? 'n/a (shared process)' : sprintf('%.1f ms', $median['php_cpu_ms_total'] / $median['php_downloads']),
+                exportLoadMs($median['health_p95_ms']),
+                $median['health_errors'],
+                $result['probe_qps'] * $result['measure_s'],
+            );
+            expect($section)->toContain($row);
+        }
+    }
+
+    preg_match('/```mermaid\n(xychart-beta.*?)```/s', $section, $chart);
+    expect($chart[1] ?? '')->not->toBe('');
+    foreach (exportLoadResults() as $modes) {
+        foreach ($modes as $result) {
+            expect($chart[1])->toContain((string) (int) round($result['median']['php_held_ms_p95']));
+        }
+    }
+
+    preg_match('/### Interview story\n(.*?)(?=^##|\z)/ms', $section, $story);
+    $sentences = preg_split('/(?<=[.!?])\s+(?=[A-Z])/', trim($story[1] ?? '')) ?: [];
+    expect(count($sentences))->toBeGreaterThanOrEqual(3)->toBeLessThanOrEqual(6)
+        ->and($story[1] ?? '')->toMatch('/\d/');
+});

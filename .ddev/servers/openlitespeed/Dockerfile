@@ -16,6 +16,9 @@ COPY conf/zz-opcache.ini /usr/local/lsws/lsphp84/etc/php/8.4/mods-available/zz-o
 
 COPY conf/httpd_config.conf /usr/local/lsws/conf/httpd_config.conf
 COPY conf/vhosts/interview/vhconf.conf /usr/local/lsws/conf/vhosts/interview/vhconf.conf
+# SL-11: OpenLiteSpeed answers an offloaded file with the file's own MIME type, and csv is not in its list.
+RUN printf 'csv     = text/csv\n' >> /usr/local/lsws/conf/mime.properties
+
 RUN cp /usr/local/lsws/conf/httpd_config.conf /usr/local/lsws/.conf/httpd_config.conf \
     && mkdir -p /usr/local/lsws/.conf/vhosts/interview \
     && cp /usr/local/lsws/conf/vhosts/interview/vhconf.conf /usr/local/lsws/.conf/vhosts/interview/vhconf.conf \

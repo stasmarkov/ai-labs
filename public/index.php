@@ -5,6 +5,10 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
+// CPU baseline for the export download log (cpu_ms covers the whole request, boot included). Meaningful
+// only where one PHP process serves one request at a time; see App\Support\ExportDownloadLog.
+define('LARAVEL_START_RUSAGE', getrusage() ?: []);
+
 // Determine if the application is in maintenance mode...
 if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
     require $maintenance;
