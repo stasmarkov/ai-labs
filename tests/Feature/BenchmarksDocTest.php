@@ -412,3 +412,25 @@ test('AC-8 BENCHMARKS.md reports Stop and cancel for every server mode from the 
     expect(count($sentences))->toBeGreaterThanOrEqual(3)->toBeLessThanOrEqual(6)
         ->and($story[1] ?? '')->toMatch('/\d/');
 });
+
+test('AC-7 BENCHMARKS.md quotes the committed slow-load matrix', function (): void {
+    $doc = (string) file_get_contents(base_path('BENCHMARKS.md'));
+    $start = strpos($doc, '## Slow I/O and the health check (2026-11-03)');
+    expect($start)->not->toBeFalse();
+    $section = substr($doc, (int) $start, strpos($doc, '## Response parity') - (int) $start);
+
+    foreach (['### What the numbers say', '### Surprises', '### Interview story', 'xychart-beta', 'bench/slow-load-matrix.sh', 'bench/results/slow-load/2026-11-03/', 'bench/results/slow-load/2026-11-04/'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    $files = glob(base_path('bench/results/slow-load/*/*.json')) ?: [];
+    expect($files)->toHaveCount(8);
+
+    foreach ($files as $file) {
+        $result = json_decode((string) file_get_contents($file), true, flags: JSON_THROW_ON_ERROR);
+        expect($result['repeats'] ?? $result['metadata']['repeats'] ?? 3)->toBe(3);
+        $p95 = (int) round($result['median']['health_p95_ms']);
+        $formatted = $p95 >= 10000 ? '10 000 ms' : $p95.' ms';
+        expect($section)->toContain($formatted);
+    }
+});

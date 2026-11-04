@@ -422,3 +422,21 @@ test('AC-8 learning guide section 16 maps the Stop and conversation files, flow 
     expect($section)->toContain('history')->toContain('docs-answer@v2')->toContain('connection_aborted()')
         ->toContain('Stop doesn\'t stop')->toContain('section 18');
 });
+
+test('AC-8 learning guide section 19 explains slow I/O, worker pools and the health check', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+    $start = strpos($guide, '## 19. Slow I/O, worker pools and a health check that stays fast');
+    expect($start)->not->toBeFalse();
+    $section = substr($guide, (int) $start, strpos($guide, '## Planned sections') - (int) $start);
+
+    foreach (['pm.max_children', 'max_threads', 'max_wait_time', 'Little', '/healthz', 'no middleware group', 'SSE', 'queued', '4003 ms', '276 ms', '299 of 300', '16 ms'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    preg_match_all('/\]\((\.\.\/[^)#]+)/', $section, $links);
+    foreach ($links[1] as $link) {
+        expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$link))->toBeTrue("missing: {$link}");
+    }
+
+    expect(substr($guide, (int) strpos($guide, '## 16.'), (int) strpos($guide, '## 17.') - (int) strpos($guide, '## 16.')))->toContain('bench/slow-load.sh --workload sse');
+});

@@ -586,6 +586,65 @@ NFR-1 (reported, not a gate): median probe after Stop at most 1.5 times the idle
 
 A Stop button only hides the answer unless the server also stops, so I measured what each server did when the client left. On nginx-fpm the run left no row at all and on Octane the model kept generating 320 tokens for nobody, 22 s after the client had gone. I made the stream ignore the abort for its own duration, check `connection_aborted()` after every flush and release the model stream, which closes the connection to Ollama. On all six server modes 30 of 30 runs then wrote a `stopped` row, the delta lag was at most 4 tokens, a 1-token probe to Ollama answered in 75 to 144 ms against 40 to 65 ms idle, and Ollama's own log showed 30 of 30 requests cancelled. The same work found that my first version never ran on php-fpm, because the framework's wrapper flushes the stream itself.
 
+## Slow I/O and the health check (2026-11-03)
+
+What happens to a health check while every PHP worker is waiting on something slow (SL-09). Two workloads, four worker configurations, each cell the median of 3 repeats (BR-21: warm-up 30 s, measure 60 s). Raw files: [`bench/results/slow-load/2026-11-03/`](bench/results/slow-load/2026-11-03/) and [`bench/results/slow-load/2026-11-04/`](bench/results/slow-load/2026-11-04/) (the run crossed midnight UTC; the two autoscale cells are in the second folder). Reproduce with `bench/slow-load-matrix.sh` on a clean tree.
+
+Set-up: commit `920d764`; 7 CPUs in the web container; load and probe as separate oha/k6 containers capped at 2 CPUs each, through the DDEV router like every other bench; the stub VIN API is its own Node container answering after 300 ms. The probe sends 5 requests per second to `GET /healthz` over 50 connections with oha's latency correction, so a slow answer does not slow the probe down (no coordinated omission). Its p95 counts a probe with no answer within 10 s as 10 000 ms; "timeouts" are those probes.
+
+- **http**: 100 users in a closed loop on `GET /listings/{id}/slow` (listing ids rotate), each request holding a worker for at least 300 ms.
+- **sse**: 30 users in a closed loop on `GET /listings/{id}/describe` with the fake stream provider (120 tokens, 50 ms apart, about 6 s per answer, no GPU), each stream read to `[DONE]`.
+
+Configurations, set through `bench/concurrency.sh` overlays and restored afterwards: nginx-fpm `pm=static` with 8 and with 32 children; frankenphp with a fixed 14 threads (today's default, 2 × 7 CPUs) and with autoscale (`num_threads 14`, `max_threads 64`, `max_wait_time 5s`).
+
+### Slow HTTP calls (100 users)
+
+| Configuration | Load RPS | Load p95 | Health p50 | Health p95 | Health timeouts | 502 / 504 |
+|---|---|---|---|---|---|---|
+| nginx-fpm static 8 | 23.9 | 4375 ms | 3846 ms | 4003 ms | 0 | 0 / 0 |
+| nginx-fpm static 32 | 93.5 | 1338 ms | 829 ms | 998 ms | 0 | 0 / 0 |
+| frankenphp fixed 14 | 41.2 | 2712 ms | 2194 ms | 2369 ms | 0 | 0 / 0 |
+| frankenphp autoscale 14→64 | 197.8 | 626 ms | 183 ms | 276 ms | 0 | 0 / 0 |
+
+### Open AI answer streams (30 users)
+
+| Configuration | Streams/s | Time to `[DONE]` p50 | Time to `[DONE]` p95 | Health p95 | Health timeouts (share) | 502 / 504 |
+|---|---|---|---|---|---|---|
+| nginx-fpm static 8 | 1.26 | 24 764 ms | 24 847 ms | 10 000 ms (starved) | 299 of 300 (99.7%) | 0 / 0 |
+| nginx-fpm static 32 | 4.88 | 6146 ms | 6190 ms | 15 ms | 0 | 0 / 0 |
+| frankenphp fixed 14 | 2.10 | 12 392 ms | 18 573 ms | 10 000 ms | 118 of 300 (39.3%) | 0 / 0 |
+| frankenphp autoscale 14→64 | 4.87 | 6153 ms | 6193 ms | 16 ms | 0 | 0 / 0 |
+
+Every health-p95 spread across the 3 repeats is below 20% (largest 8.5%, nginx-fpm 32 with sse), so no cell is flagged.
+
+```mermaid
+xychart-beta
+    title "Health check p95 under load (ms, 10 000 = timed out)"
+    x-axis ["fpm 8", "fpm 32", "franken 14", "franken auto"]
+    y-axis "p95 (ms)" 0 --> 10000
+    bar [4003, 998, 2369, 276]
+    bar [10000, 15, 10000, 16]
+```
+
+The first bar of each pair is the http workload, the second the sse workload.
+
+### What the numbers say
+
+- **Throughput is workers divided by the time each request holds one.** With 300 ms per request the ceiling is 8 ÷ 0.3 = 26.7 rps for 8 FPM children, 107 for 32, 46.7 for 14 threads and 213 for 64. Measured: 23.9, 93.5, 41.2 and 197.8. This is Little's law, and it held within 13% in every cell.
+- **The health check waits in the same queue.** `/healthz` does no work at all, yet with 8 children it took 4003 ms at p95, the same as the slow requests in front of it. A load balancer with a 2 s health timeout would have marked a perfectly healthy server dead. No PHP pool has a separate lane for cheap requests.
+- **An AI answer stream is slow I/O that lasts 20 times longer.** 30 streams of about 6 s need about 30 workers. With 8 children each stream waited behind three others (24.8 s instead of 6.1 s) and 299 of 300 health probes got no answer within 10 s. With 32 children, or with threads allowed to grow to 64, the same load left the health check at 15–16 ms. This is the cost of answering over direct SSE (section 9) in numbers: one worker per open answer, for the whole answer.
+- **Autoscaling fixed both workloads without a bigger fixed pool.** frankenphp started at the same 14 threads as the fixed cell and grew under load: the health p95 went from 2369 ms to 276 ms (http) and from 10 000 ms to 16 ms (sse).
+
+### Surprises
+
+- **No 502 or 504 appeared anywhere.** The expectation was that some layer would give up. Nginx and the DDEV router waited longer than the probe's 10 s timeout, so a starved health check shows up as client timeouts, not as gateway errors. Which layer gives up first depends on the timeout of every hop (DDEV's nginx allows 10 minutes, `fastcgi_read_timeout 10m`; `bench/timeouts.sh` measures the timeouts per server).
+- **`max_wait_time` never fired.** It was meant to turn long waits into errors. Autoscale added threads before any request had waited 5 s, so nothing was rejected. Its effect would only show once `max_threads` itself is used up.
+- **The fixed FrankenPHP pool did worse than 32 FPM children.** 14 threads is less than 32 processes; thread vs process makes no difference when every worker is simply waiting. Autoscale, not threads, is what changed the result.
+
+### Interview story
+
+I wanted to know what a health check sees while a PHP server is busy waiting on slow calls. With 100 users each holding a worker for 300 ms, throughput was exactly workers divided by 0.3 s, and the health endpoint, which does nothing, took 4 s at p95 on 8 FPM children because it waited in the same queue. Then I replaced the slow calls with 30 open AI answer streams of 6 s each: on 8 children 299 of 300 health checks timed out, while FrankenPHP with autoscaling threads (14 growing to 64) answered them in 16 ms. That turned "SSE holds a worker per answer" from an argument into a number, and it is why a long-running AI feature on FPM needs either a pool sized for it or a queued variant.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

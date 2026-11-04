@@ -33,21 +33,23 @@
 
 ## Phase 3: Measure and document
 
-- [ ] 6. Committed 8-cell run (measurement)
+- [x] 6. Committed 8-cell run (measurement)
   Covers: AC-7, NFR-1
-  - [ ] 6.1 nginx-fpm 8 and 32, frankenphp fixed 14 and autoscale 14→64 / 5 s, both workloads, 3 repeats; restore defaults and nginx-fpm after
-  - [ ] 6.2 **Verify**: 8 JSON files committed; `bench/concurrency.sh --show` prints `default` on nginx-fpm at the end
+  - [x] 6.1 nginx-fpm 8 and 32, frankenphp fixed 14 and autoscale 14→64 / 5 s, both workloads, 3 repeats; restore defaults and nginx-fpm after
+  - [x] 6.2 **Verify**: 8 JSON files committed; `bench/concurrency.sh --show` prints `default` on nginx-fpm at the end
+    - Result: `bench/slow-load-matrix.sh` exit 0 at commit 920d764; 6 files in `bench/results/slow-load/2026-11-03/` and the 2 autoscale cells in `2026-11-04/` (the run crossed midnight UTC); ended on nginx-fpm with `default`; all health-p95 spreads below 20 % (largest 8.5 %).
 
-- [ ] 7. BENCHMARKS.md, guide section 19, code map (docs)
+- [x] 7. BENCHMARKS.md, guide section 19, code map (docs)
   Covers: AC-7, AC-8
-  - [ ] 7.1 BENCHMARKS section with the tables, the Mermaid chart and the three subsections
-  - [ ] 7.2 Guide section 19; section 16 note on the SSE workload
-  - [ ] 7.3 **Verify**: `LearningGuideTest` and `BenchmarksDocTest` needles read from the result files
+  - [x] 7.1 BENCHMARKS section with the tables, the Mermaid chart and the three subsections
+  - [x] 7.2 Guide section 19; section 16 note on the SSE workload
+  - [x] 7.3 **Verify**: `LearningGuideTest` and `BenchmarksDocTest` needles read from the result files
 
-- [ ] 8. Parity, fingerprint and bench (checks)
+- [x] 8. Parity, fingerprint and bench (checks)
   Covers: MNC-1, MNC-2, MNC-3, MNC-4
-  - [ ] 8.1 Full suite, Pint, PHPStan, typecheck, build; fingerprint; parity on 6 servers; `bench/run.sh ping --quick` exit 0 on a clean tree
-  - [ ] 8.2 **Verify**: outputs recorded here
+  - [x] 8.1 Full suite, Pint, PHPStan, typecheck, build; fingerprint; parity on 6 servers; `bench/run.sh ping --quick` exit 0 on a clean tree
+  - [x] 8.2 **Verify**: outputs recorded here
+    - Result: 965 tests, Pint, PHPStan, typecheck, build green; fingerprint unchanged; parity identical on all 6 servers; `bench/run.sh ping --quick` exit 0 on a clean tree after the docs commit.
     - Suite 928 passed (7887 assertions); Pint passed; PHPStan no errors; typecheck and build clean.
     - Fingerprint: app.css `assets/app-CjRfEL-0.css` `82042c94c3ab...ce71`, matches BENCHMARKS.md baseline.
     - Parity: `identical` on nginx-fpm, apache-fpm, frankenphp, frankenphp-octane, frankenphp-worker, openlitespeed; snapshots restored, nginx-fpm active again.
@@ -81,9 +83,9 @@
 
 ## Done when
 
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
 
 ## Phase: Gaps (converge round 1)
 

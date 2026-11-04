@@ -4,7 +4,7 @@ This guide explains how everything in this project works, in the order it was bu
 
 It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan and its order are in [`backlog.md`](../backlog.md).
 
-**Status (2026-11-03):** sections 1–15 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24, SL-32, SL-33, SL-45 and SL-46. Section 16 is a map of all the AI code: every file and its purpose, four requests traced end to end, and how to handle common feature requests. Section 17 (SL-40) explains the exact and semantic answer cache. Section 18 (SL-41) explains how Stop cancels generation on every server mode and how the chat sends history. Planned sections are listed at the end.
+**Status (2026-11-03):** sections 1–15 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24, SL-32, SL-33, SL-45 and SL-46. Section 16 is a map of all the AI code: every file and its purpose, four requests traced end to end, and how to handle common feature requests. Section 17 (SL-40) explains the exact and semantic answer cache. Section 18 (SL-41) explains how Stop cancels generation on every server mode and how the chat sends history. Section 19 (SL-09) measures slow I/O, worker pools and the health check. Planned sections are listed at the end.
 
 ---
 
@@ -730,6 +730,8 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | "Stop doesn't stop" / "Stop button / cancel" | The client aborts with `AbortController`; the server side lives in `SseProtocol` and `AbortWatcher` (section 18). Check `ai_runs` for a `stopped` row first, then run `bench/chat-stop.sh` for the mode in question. A new stream type must go through `SseProtocol` to get the cancel. | a case in `StreamCancelTest` with a fake watcher; a `bench/chat-stop.sh` run per mode |
 | "Let the chat remember earlier turns" | `history` in the request (`DocsChatTurn`, `max_history_turns`), prompt `docs-answer.v2.md`. Never add history to the output guard's allowed texts, and never cache a turn that has history. A follow-up that retrieves badly needs query rewriting, not a bigger history (section 18). | `DocsChatHistoryTest`: validation, escaping, a forged turn |
 
+**Load note (SL-09).** Every streamed answer holds one PHP worker until `[DONE]`. [`bench/slow-load.sh --workload sse`](../bench/slow-load.sh) measures what that does to the rest of the server: 30 open answers on 8 FPM children starved the health check (section 19). Before adding an AI feature that streams to many users at once, size the pool for it or use a queued variant.
+
 ### Testing patterns used everywhere
 
 - **No network in the suite.** `Embeddings::fake(...)` returns fixed vectors, so tests can pick exact similarities. The `fake-stream` provider streams canned text (`AI_FAKE_TEXT`, `fail_after`). `Http::fake` is used for Ollama's own endpoints.
@@ -846,9 +848,49 @@ Every mode wrote a `stopped` row for 5 of 5 runs. nginx-fpm went from no row to 
 
 ---
 
+## 19. Slow I/O, worker pools and a health check that stays fast
+
+**What it is.** A PHP request keeps its worker for as long as it waits: on a database, on another API, or on a model writing an answer. A server has a fixed or bounded number of workers, so enough slow requests fill them all, and everything else, the cheap health check included, waits in the same queue. This section measures that, with a slow HTTP call and with open AI answer streams, on PHP-FPM and on FrankenPHP.
+
+**The pieces.**
+- [`ShowSlowListingController`](../app/Http/Controllers/ShowSlowListingController.php) and [`VinReportService`](../app/Services/VinReportService.php): `GET /listings/{id}/slow` loads the listing, then calls a stub VIN API through [`VinStubClient`](../app/Support/VinStubClient.php) and waits for it. It is a lab endpoint: behind the debug-routes gate and its own throttle, because holding a worker on purpose is exactly what a public endpoint must not allow.
+- The stub, [`.ddev/vinstub/server.mjs`](../.ddev/vinstub/server.mjs), runs in its own Node container ([`docker-compose.vinstub.yaml`](../.ddev/docker-compose.vinstub.yaml)) and answers after 300 ms. If it were a Laravel route, the wait would take a second PHP worker and double the effect being measured; Node's event loop holds many sleeping requests at once, like a real external API.
+- [`HealthzController`](../app/Http/Controllers/HealthzController.php) on `GET /healthz`, loaded from [`routes/health.php`](../routes/health.php) with no middleware group: no session (no Redis write, no cookie), no database, no outbound call. It answers 503 in maintenance mode, because the global maintenance middleware still runs, and a server in maintenance should not get traffic.
+
+**One slow request, step by step.**
+1. On **nginx-fpm** nginx passes the request to the FPM pool. A free child takes it; with `pm=static` and 8 children, at most 8 requests run at once and the rest wait in the pool's listen queue. The child runs Laravel, which calls the stub and blocks for 300 ms. Only when it answers is the child free for the next request in the queue.
+2. On **frankenphp** Caddy hands the request to one of FrankenPHP's PHP threads. With a fixed `num_threads 14`, at most 14 run at once. With `max_threads 64`, FrankenPHP starts more threads while requests are waiting, up to 64; `max_wait_time 5s` makes a request that waited 5 s for a thread fail instead of waiting forever.
+3. `/healthz` arrives in the same queue. It has nothing to do, but it cannot start until a worker is free.
+
+**What was measured** ([`bench/slow-load.sh`](../bench/slow-load.sh), run 8 times by [`bench/slow-load-matrix.sh`](../bench/slow-load-matrix.sh); full tables and the chart in the "Slow I/O and the health check (2026-11-03)" section of [`BENCHMARKS.md`](../BENCHMARKS.md)). 100 users on the slow endpoint, or 30 users holding describe streams of about 6 s each ([`bench/k6-sse.js`](../bench/k6-sse.js), fake provider, no GPU), while a separate probe sends 5 requests per second to `/healthz`:
+
+| Configuration | Health p95, slow HTTP | Health p95, AI streams |
+|---|---|---|
+| nginx-fpm static 8 | 4003 ms | 10 000 ms, 299 of 300 timed out |
+| nginx-fpm static 32 | 998 ms | 15 ms |
+| frankenphp fixed 14 | 2369 ms | 10 000 ms, 118 of 300 timed out |
+| frankenphp autoscale 14→64 | 276 ms | 16 ms |
+
+- **Throughput = workers ÷ time held.** 8 children at 300 ms each can serve at most 26.7 requests per second; measured 23.9. 32 children: 107, measured 93.5. 14 threads: 46.7, measured 41.2. 64 threads: 213, measured 197.8. That is Little's law; once you know how long a request holds a worker, you know the ceiling.
+- **`pm.max_children` vs threads.** An FPM child is a whole process (its own memory, its own opcache view); a FrankenPHP thread shares one process. For waiting, that difference does not matter: 14 threads did worse than 32 children because 14 is less than 32. What mattered was that FrankenPHP could grow the pool under load.
+- **An AI answer is slow I/O that lasts 6 s.** With direct SSE (section 9) each open answer holds a worker until `[DONE]`. 30 open answers on 8 children made each one wait behind three others (24.8 s instead of 6.1 s) and starved the health check completely. That is the price of the direct variant, and the reason the queued Mercure or Reverb variant exists: there a short request queues a job and returns, and the answer reaches the browser through a hub, so a long answer holds a queue worker, not a web worker.
+- **No 502 or 504 appeared.** Every layer in front of PHP waited longer than the probe's 10 s, so the failure showed up as health checks that never answered. A real load balancer with a 2–5 s health timeout would have taken this server out of rotation while it was working correctly.
+
+**When to choose what.**
+- Size the pool for the slow part: workers ≥ concurrent slow requests (Little's law), within memory.
+- Prefer a pool that can grow (FrankenPHP `max_threads`, FPM `pm=dynamic` up to a high `max_children`) when load comes in bursts.
+- Move long work off the request: a queued job plus a broadcast (Mercure, Reverb) for AI answers that many people stream at once, or for anything longer than a few seconds.
+- Keep the health check on the cheapest path and give it its own lane where the server supports it (a separate small FPM pool or port), because no setting here gives it priority inside the shared queue.
+
+**In this repo.** Tests: [`HealthzTest`](../tests/Feature/HealthzTest.php), [`SlowListingTest`](../tests/Feature/SlowListingTest.php), `BenchSlowLoadTest`, `BenchConcurrencyTest`, `VinStubTest`. Results: [`bench/results/slow-load/`](../bench/results/slow-load/). Spec: [`.ai/specs/spec-20261104-0001-slow-io-healthz/`](../.ai/specs/spec-20261104-0001-slow-io-healthz/).
+
+**Read next.** [PHP-FPM configuration](https://www.php.net/manual/en/install.fpm.configuration.php) · [FrankenPHP: performance and `max_threads`](https://frankenphp.dev/docs/performance/) · [FrankenPHP configuration](https://frankenphp.dev/docs/config/) · [Little's law](https://en.wikipedia.org/wiki/Little%27s_law) · [oha](https://github.com/hatoo/oha)
+
+---
+
 ## Planned sections
 
 Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):
 
-- **Server track:** slow I/O and thread autoscaling (SL-09), Early Hints and compression (SL-10), file downloads offloaded to the web server (SL-11), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
+- **Server track:** Early Hints and compression (SL-10), file downloads offloaded to the web server (SL-11), HTTP/3 (SL-12), real-time updates with Mercure and Reverb (SL-13, SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
 - **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; structured output (SL-23); tool calling (SL-25); evals (SL-26); vision (SL-27); model comparison (SL-28); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39, shown on the `/ai/photos` placeholder); a research agent (SL-42); a prompt playground (SL-43).

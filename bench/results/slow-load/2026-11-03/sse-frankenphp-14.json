@@ -1,0 +1,166 @@
+{
+  "server": "frankenphp",
+  "workload": "sse",
+  "label": "frankenphp-14",
+  "commit": "920d764",
+  "concurrency": "14 workers",
+  "base_url": "https://interview.ddev.site",
+  "date": "2026-11-03",
+  "quick": false,
+  "users": 30,
+  "probe_connections": 50,
+  "probe_qps": 5,
+  "probe_timeout_s": 10,
+  "warmup_s": 30,
+  "measure_s": 60,
+  "repeats": 3,
+  "load_image": "grafana/k6:1.0.0",
+  "load_image_digest": "grafana/k6@sha256:f21270290d702cbf0a7d6ba5d7ed100b63bcb233b558b885ed787547b3488279",
+  "probe_image": "autopulse-oha:1.16.0",
+  "probe_image_digest": "sha256:12c8fd3955056a7d68ff58317e87ae2878e72c2c9046169dc35da35b36428937",
+  "health_starved_repeats": 0,
+  "load_no_stream_repeats": 0,
+  "median": {
+    "health_502": 0,
+    "health_504": 0,
+    "health_error_percent": 39.33333333333333,
+    "health_errors": 118,
+    "health_other_5xx": 0,
+    "health_other_non_2xx": 0,
+    "health_p50_ms": 8198.702041,
+    "health_p95_answered_ms": 9801.33545,
+    "health_p95_ms": 10000,
+    "health_p99_ms": 9991.570339000002,
+    "health_rps": 4.3985625040989875,
+    "health_timeouts": 118,
+    "load_error_percent": 0,
+    "load_errors": 0,
+    "load_p50_ms": 12391.8715895,
+    "load_p95_ms": 18573.15394625,
+    "load_p99_ms": 18633.4893152,
+    "load_rps": 2.096575346367661,
+    "health_starved": false,
+    "load_no_stream_completed": false
+  },
+  "spread_percent": {
+    "health_502": 0,
+    "health_504": 0,
+    "health_error_percent": 1.6949152542372823,
+    "health_errors": 1.694915254237288,
+    "health_other_5xx": 0,
+    "health_other_non_2xx": 0,
+    "health_p50_ms": 0.621802191920872,
+    "health_p95_answered_ms": 0.26306155045433355,
+    "health_p95_ms": 0,
+    "health_p99_ms": 0.5605919800351113,
+    "health_rps": 0.21401852455117742,
+    "health_timeouts": 1.694915254237288,
+    "load_error_percent": 0,
+    "load_errors": 0,
+    "load_p50_ms": 0.2539940538656746,
+    "load_p95_ms": 0.5644890512586631,
+    "load_p99_ms": 0.08794850026629873,
+    "load_rps": 0.1692066856064371,
+    "health_p95": 0
+  },
+  "spread_limit_percent": 20,
+  "flagged": false,
+  "runs": [
+    {
+      "repeat": 1,
+      "id_offset": 10007,
+      "load": {
+        "rps": 2.0952614330146395,
+        "p50_ms": 12405.423092,
+        "p95_ms": 18593.51309325,
+        "p99_ms": 18633.4893152,
+        "no_stream_completed": false,
+        "requests": 156,
+        "errors": 0,
+        "error_percent": 0
+      },
+      "health": {
+        "rps": 4.398313618754167,
+        "p50_ms": 8202.939473,
+        "p95_ms": 10000,
+        "p99_ms": 9996.198989,
+        "starved": false,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 118
+        },
+        "errors": 118,
+        "requests": 300,
+        "error_percent": 39.33333333333333,
+        "p95_answered_ms": 9801.33545
+      }
+    },
+    {
+      "repeat": 2,
+      "id_offset": 20014,
+      "load": {
+        "rps": 2.09880897866947,
+        "p50_ms": 12373.948475000001,
+        "p95_ms": 18488.669672750002,
+        "p99_ms": 18618.0850818,
+        "no_stream_completed": false,
+        "requests": 156,
+        "errors": 0,
+        "error_percent": 0
+      },
+      "health": {
+        "rps": 4.407727357326901,
+        "p50_ms": 8151.959764000001,
+        "p95_ms": 10000,
+        "p99_ms": 9940.187047,
+        "starved": false,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 117
+        },
+        "errors": 117,
+        "requests": 300,
+        "error_percent": 39,
+        "p95_answered_ms": 9822.982345
+      }
+    },
+    {
+      "repeat": 3,
+      "id_offset": 30021,
+      "load": {
+        "rps": 2.096575346367661,
+        "p50_ms": 12391.8715895,
+        "p95_ms": 18573.15394625,
+        "p99_ms": 18634.4729562,
+        "no_stream_completed": false,
+        "requests": 156,
+        "errors": 0,
+        "error_percent": 0
+      },
+      "health": {
+        "rps": 4.3985625040989875,
+        "p50_ms": 8198.702041,
+        "p95_ms": 10000,
+        "p99_ms": 9991.570339000002,
+        "starved": false,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 119
+        },
+        "errors": 119,
+        "requests": 300,
+        "error_percent": 39.666666666666664,
+        "p95_answered_ms": 9797.1988
+      }
+    }
+  ]
+}
