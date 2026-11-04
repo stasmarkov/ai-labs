@@ -147,7 +147,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-51, BR-26
 - **Depends on:** SL-06
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261104-1944-export-offload
 - **Source:** brief (Phase 4)
 - **Run:** `/sdd "SL-11: GET /exports/{id} generates a ~50 MB CSV to disk and serves it via X-Sendfile (FrankenPHP), X-Accel-Redirect (nginx) and mod_xsendfile (Apache), with a PHP-streaming variant for comparison of PHP memory/CPU (BR-51, BR-26). Rules in product-brief.md."`
