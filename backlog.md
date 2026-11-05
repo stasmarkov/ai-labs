@@ -134,7 +134,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-50, BR-52, BR-26
 - **Depends on:** SL-06
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261104-2340-early-hints-compression
 - **Source:** brief (Phase 4)
 - **Run:** `/sdd "SL-10: detail page sends Vite preload Link headers and a guarded 103 Early Hint on FrankenPHP (identical final response elsewhere), Caddyfile encode zstd br gzip, and BENCHMARKS.md LCP with/without hints and bytes per encoding (BR-50, BR-52, BR-26). Rules in product-brief.md."`
