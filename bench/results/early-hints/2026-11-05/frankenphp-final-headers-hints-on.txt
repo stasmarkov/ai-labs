@@ -1,0 +1,5 @@
+HTTP/2 200 
+cache-control: no-cache, private
+content-type: text/html; charset=utf-8
+link: <https://interview.ddev.site/build/assets/app-CjRfEL-0.css>; rel="preload"; as="style", <https://interview.ddev.site/build/assets/app-BvRk9kiK.js>; rel="modulepreload"; as="script"
+vary: Accept-Encoding

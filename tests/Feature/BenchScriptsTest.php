@@ -15,6 +15,7 @@ beforeEach(function (): void {
 out=""
 url=""
 echo "\$*" >> "$this->root/curl.log"
+args=" \$* "
 [[ -n "\${STUB_CURL_FAIL-}" ]] && exit 7
 while [[ \$# -gt 0 ]]; do
   case "\$1" in
@@ -34,6 +35,9 @@ if [[ "\$url" == */debug/runtime ]]; then
   exit 0
 fi
 printf 'body:%s$suffix' "\$url" > "\$out"
+if [[ -n "\${STUB_SERVER_ONLY_IN_103-}" && "\$args" == *" -D "* ]]; then
+  printf 'HTTP/2 103\\r\\nserver: Caddy\\r\\n\\r\\nHTTP/2 200\\r\\ncontent-type: text/html\\r\\n\\r\\n'
+fi
 header="\${STUB_SERVER_HEADER-auto}"
 if [[ "\$header" == "auto" ]]; then
   case "\$(sed -n 's/^# server: *//p' "\$DDEV_APPROOT/.ddev/config.zz-server.yaml" 2>/dev/null)" in
@@ -43,6 +47,7 @@ if [[ "\$header" == "auto" ]]; then
     *) header="nginx" ;;
   esac
 fi
+[[ -n "\${STUB_SERVER_ONLY_IN_103-}" ]] && header=""
 printf '200\t%s\t%s' "\${STUB_CONTENT_TYPE-application/json}" "\$header"
 BASH;
         file_put_contents($this->root.'/bin/curl', $script);
@@ -176,6 +181,21 @@ it('AC-7 frankenphp capture expects a Caddy server header', function (): void {
     expect($rejected->getExitCode())->toBe(4)
         ->and($rejected->getErrorOutput())->toContain('Snapshot not written')
         ->and(file_exists($this->root.'/parity/frankenphp.txt'))->toBeFalse();
+});
+
+it('MNC-1 capture accepts a Server header that only the 103 response carries', function (): void {
+    ($this->writeCurl)();
+    ($this->setServer)('frankenphp');
+    $accepted = ($this->runWith)(['STUB_SERVER_ONLY_IN_103' => '1'], 'parity.sh', 'capture');
+
+    expect($accepted->getExitCode())->toBe(0)
+        ->and(file_exists($this->root.'/parity/frankenphp.txt'))->toBeTrue();
+
+    ($this->setServer)('nginx-fpm');
+    $rejected = ($this->runWith)(['STUB_SERVER_ONLY_IN_103' => '1'], 'parity.sh', 'capture');
+
+    expect($rejected->getExitCode())->toBe(4)
+        ->and(file_exists($this->root.'/parity/nginx-fpm.txt'))->toBeFalse();
 });
 
 it('AC-9 versions parses the FrankenPHP version', function (): void {

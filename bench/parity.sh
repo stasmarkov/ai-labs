@@ -5,7 +5,7 @@
 ## bench/parity/<active server>.txt. Only the /up body has its render time
 ## ("rendered in Nms") masked, because Laravel prints it and it differs per request.
 ## The snapshot is written only when every request succeeds and the Server header
-## matches the active server's token (nginx-fpm: nginx, apache-fpm: apache, frankenphp, frankenphp-octane, frankenphp-worker: caddy,
+## matches the active server's token (read from any response of the exchange, since a 103 can carry it alone) (nginx-fpm: nginx, apache-fpm: apache, frankenphp, frankenphp-octane, frankenphp-worker: caddy,
 ## openlitespeed: litespeed).
 ## Env: PARITY_BASE_URL (default: `ddev server --url`, e.g. https://interview.ddev.site, :8091 for openlitespeed),
 ##      PARITY_INSECURE=1 adds -k.
@@ -82,6 +82,10 @@ capture() {
     rest="${meta#*$'\t'}"
     type="$(media_type "${rest%%$'\t'*}")"
     server_header="$(printf '%s' "${rest#*$'\t'}" | tr '[:upper:]' '[:lower:]')"
+    if [[ -z "$server_header" ]]; then
+      # A 103 Early Hint can carry the Server header alone (FrankenPHP); read it from any response.
+      server_header="$(curl "${curl_flags[@]}" -o /dev/null -D - "$BASE_URL$path" 2>/dev/null | tr -d '\r' | sed -n 's/^[Ss][Ee][Rr][Vv][Ee][Rr]: *//p' | head -1 | tr '[:upper:]' '[:lower:]' || true)"
+    fi
     if [[ -z "$server_header" || "$server_header" != *"$token"* ]]; then
       echo "Server header '${server_header:-<missing>}' on $path does not match the active server '$server'. Snapshot not written. Run 'ddev restart' or 'ddev server $server'." >&2
       exit 4

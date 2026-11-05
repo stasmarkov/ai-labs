@@ -693,6 +693,135 @@ The first bar of each pair is offload, the second is stream.
 
 A 50 MB export is not heavy for PHP's memory, it is heavy for its workers: a phone on a slow connection takes 25 s to receive it, and a PHP process streaming it is busy for that whole time. I measured 20 such clients on four servers. With PHP streaming, the health check timed out on 170 to 181 of 300 probes on nginx, Apache and FrankenPHP; with `X-Accel-Redirect`, `X-Sendfile` or `X-LiteSpeed-Location`, PHP held each request for 20 to 70 ms at p95 and the health check stayed under 20 ms. The bytes were identical in both modes, so the only change is who does the waiting. The catch is that each server needs its own hand-off configuration and must be told exactly which directory it may serve, and the review found an encoded-path bypass in my first OpenLiteSpeed rule, so that part is a security setting, not a performance one.
 
+## Early Hints and compression (2026-11-05)
+
+Does a `103 Early Hints` response make the listing page paint sooner, and what do the web servers do with `Accept-Encoding`? Three parts, all on `GET /listings/1`: whether a 103 reaches an HTTP/2 client, Largest Contentful Paint in a throttled browser, and compression per encoding and resource. Raw files: [`bench/results/early-hints/2026-11-05/`](bench/results/early-hints/2026-11-05/), [`bench/results/lcp/2026-11-05/`](bench/results/lcp/2026-11-05/), [`bench/results/compression/2026-11-05/`](bench/results/compression/2026-11-05/). Reproduce with `bench/early-hints.sh`, `bench/lcp.sh` (wraps `bench/lcp.mjs`) and `bench/compression.sh`.
+
+Set-up: commit `01715ee` plus this slice's working tree. The 103 probe is `curlimages/curl:8.11.1` run by digest; the direct path resolves `interview.ddev.site` to the web container (`curl --resolve`), so TLS name and Host are the real ones. The LCP script drives Chromium from `mcr.microsoft.com/playwright@sha256:70e367e0cbf60340a5b5fd562f6247a34eb3196efab9f88a3dd56482d9fe09d2` (Playwright 1.49.1). Throttling is done at the network layer by a toxiproxy container on `ddev_default` that sits between Chromium and the router: 75 ms latency each way, so 150 ms RTT, 1.6 Mbit/s down (200 KB/s) and 750 kbit/s up (94 KB/s), Lighthouse's "Slow 4G". Only the 4x CPU slowdown is set through the DevTools protocol. Every run is cold (a new browser context), LCP is the median of 5 valid runs through the router, and the throttle values and image digests are in every result file. The toxiproxy image is `shopify/toxiproxy:2.1.4` from Docker Hub, pinned by digest (the ghcr.io image was refused by the local Docker daemon; it runs emulated as amd64, which does not matter at 1.6 Mbit/s). The compression script runs in the pinned curl container over HTTP/2 through the router and takes the median of 5 repeats per cell; for the export it records CPU from the web container's cgroup per download, checks that an identity response has no `Content-Encoding` and every other at most one value, and compares the decoded sha256 with the `exports` record.
+
+### Does a 103 reach the client?
+
+| Server | Through the router | Straight at the web container (protocol) |
+|---|---|---|
+| frankenphp | yes | yes (HTTP/2 on 443) |
+| frankenphp-worker | no | no (HTTP/2 on 443) |
+| frankenphp-octane | no | no (HTTP/1.1 on 8000; Octane serves plain HTTP inside the container) |
+| nginx-fpm | no | no (HTTP/1.1 on 443, the DDEV nginx config) |
+
+Traefik 3.7 forwards the 103 to the browser, so the LCP runs use the router path, the one a user takes. Worker and Octane modes send no hint by design: the sender is switched off when `FRANKENPHP_WORKER` or `LARAVEL_OCTANE` is set in the request or the process environment.
+
+### LCP per variant
+
+| Variant | LCP median (min to max) | FCP median | TTFB median | Early hint used |
+|---|---|---|---|---|
+| frankenphp-hints | 1211 ms (1204 to 1240) | 609 ms | 391 ms | yes |
+| frankenphp-no-hints | 1238 ms (1220 to 1293) | 663 ms | 369 ms | no |
+| nginx-fpm | 1223 ms (1204 to 1239) | 612 ms | 379 ms | no |
+
+```mermaid
+xychart-beta
+    title "FCP and LCP median per variant (ms)"
+    x-axis ["franken+hints", "franken", "nginx-fpm"]
+    y-axis "ms" 0 --> 1400
+    bar [609, 663, 612]
+    bar [1211, 1238, 1223]
+```
+
+The first bar of each group is FCP, the second LCP.
+
+### Compression per encoding
+
+`page-js` is the detail page's own script (`app-BvRk9kiK.js`, `resources/js/app.js`), which is empty: 0 bytes in every encoding. To still show what each server does to a real script, `lab-bundle` measures the largest built bundle, `/build/assets/app-BFvfizUE.js` (`resources/js/ai/app.ts`, the AI lab), which the listing page does not load.
+
+| Server | Resource | Accept-Encoding | Content-Encoding | Wire bytes | Time to last byte |
+|---|---|---|---|---|---|
+| frankenphp | html | identity | none | 1 512 | 14.6 ms |
+| frankenphp | html | gzip | gzip | 636 | 15.4 ms |
+| frankenphp | html | br | br | 550 | 13.4 ms |
+| frankenphp | html | zstd | zstd | 654 | 15.0 ms |
+| frankenphp | html | zstd, br, gzip | zstd | 654 | 16.4 ms |
+| frankenphp | css | identity | none | 38 128 | 3.8 ms |
+| frankenphp | css | gzip | gzip | 9 754 | 5.3 ms |
+| frankenphp | css | br | br | 8 771 | 7.0 ms |
+| frankenphp | css | zstd | zstd | 9 987 | 4.6 ms |
+| frankenphp | css | zstd, br, gzip | zstd | 9 987 | 5.4 ms |
+| frankenphp | page-js | identity | none | 0 | 3.9 ms |
+| frankenphp | page-js | gzip | none | 0 | 3.6 ms |
+| frankenphp | page-js | br | none | 0 | 3.5 ms |
+| frankenphp | page-js | zstd | none | 0 | 3.8 ms |
+| frankenphp | page-js | zstd, br, gzip | none | 0 | 3.6 ms |
+| frankenphp | lab-bundle | identity | none | 202 851 | 4.0 ms |
+| frankenphp | lab-bundle | gzip | gzip | 70 333 | 5.8 ms |
+| frankenphp | lab-bundle | br | br | 65 112 | 8.1 ms |
+| frankenphp | lab-bundle | zstd | zstd | 71 611 | 6.5 ms |
+| frankenphp | lab-bundle | zstd, br, gzip | zstd | 71 611 | 5.4 ms |
+| frankenphp | export | identity | none | 52 428 832 | 64.7 ms |
+| frankenphp | export | gzip | gzip | 8 018 572 | 225.2 ms |
+| frankenphp | export | br | br | 6 463 974 | 599.1 ms |
+| frankenphp | export | zstd | zstd | 8 442 896 | 169.0 ms |
+| frankenphp | export | zstd, br, gzip | zstd | 8 442 896 | 158.4 ms |
+| nginx-fpm | html | identity | none | 1 512 | 16.9 ms |
+| nginx-fpm | html | gzip | gzip | 628 | 15.4 ms |
+| nginx-fpm | html | br | none | 1 512 | 15.5 ms |
+| nginx-fpm | html | zstd | none | 1 512 | 16.1 ms |
+| nginx-fpm | html | zstd, br, gzip | gzip | 628 | 15.5 ms |
+| nginx-fpm | css | identity | none | 38 128 | 4.0 ms |
+| nginx-fpm | css | gzip | gzip | 9 370 | 4.8 ms |
+| nginx-fpm | css | br | none | 38 128 | 3.8 ms |
+| nginx-fpm | css | zstd | none | 38 128 | 4.7 ms |
+| nginx-fpm | css | zstd, br, gzip | gzip | 9 370 | 4.1 ms |
+| nginx-fpm | page-js | identity | none | 0 | 3.6 ms |
+| nginx-fpm | page-js | gzip | none | 0 | 3.5 ms |
+| nginx-fpm | page-js | br | none | 0 | 3.4 ms |
+| nginx-fpm | page-js | zstd | none | 0 | 3.8 ms |
+| nginx-fpm | page-js | zstd, br, gzip | none | 0 | 3.7 ms |
+| nginx-fpm | lab-bundle | identity | none | 202 851 | 4.1 ms |
+| nginx-fpm | lab-bundle | gzip | gzip | 68 257 | 7.9 ms |
+| nginx-fpm | lab-bundle | br | none | 202 851 | 4.3 ms |
+| nginx-fpm | lab-bundle | zstd | none | 202 851 | 4.6 ms |
+| nginx-fpm | lab-bundle | zstd, br, gzip | gzip | 68 257 | 8.8 ms |
+| nginx-fpm | export | identity | none | 52 428 832 | 77.2 ms |
+| nginx-fpm | export | gzip | none | 52 428 832 | 61.9 ms |
+| nginx-fpm | export | br | none | 52 428 832 | 54.1 ms |
+| nginx-fpm | export | zstd | none | 52 428 832 | 60.1 ms |
+| nginx-fpm | export | zstd, br, gzip | none | 52 428 832 | 62.6 ms |
+
+CPU seconds the web container spent on one export download (cgroup `cpu.stat`, median of 5 downloads per encoding):
+
+| Server | Accept-Encoding | Wire bytes | Web container CPU |
+|---|---|---|---|
+| frankenphp | identity | 52 428 832 | 0.048 s |
+| frankenphp | gzip | 8 018 572 | 0.292 s |
+| frankenphp | br | 6 463 974 | 0.698 s |
+| frankenphp | zstd | 8 442 896 | 0.249 s |
+| frankenphp | zstd, br, gzip | 8 442 896 | 0.229 s |
+| nginx-fpm | identity | 52 428 832 | 0.073 s |
+| nginx-fpm | gzip | 52 428 832 | 0.078 s |
+| nginx-fpm | br | 52 428 832 | 0.118 s |
+| nginx-fpm | zstd | 52 428 832 | 0.126 s |
+| nginx-fpm | zstd, br, gzip | 52 428 832 | 0.125 s |
+
+### What the numbers say
+
+- **The hint helps a little, and mostly first paint.** With a 103, FCP fell from 663 ms to 609 ms (54 ms) and LCP from 1238 ms to 1211 ms (27 ms, about 2 %); the browser used the hinted CSS and JS in all 5 runs (`initiatorType` `early-hints`). The gain is bounded by how long the server works before the HTML is ready, and this page is fast: the whole HTML answers in about 15 ms unthrottled (the `html` identity row below), so a fast page has little to gain. The LCP ranges of the three variants overlap.
+- **The server alone makes no difference.** nginx-fpm and FrankenPHP without hints are within 15 ms of each other on LCP (1223 ms and 1238 ms) and 51 ms on FCP; only the 103 changes anything, and nginx-fpm cannot send one.
+- **Only FrankenPHP negotiates more than gzip.** It answers `gzip`, `br` and `zstd` as asked and picks `zstd` for `zstd, br, gzip`. nginx-fpm answers `gzip` or nothing; for `br` or `zstd` alone it sends the uncompressed body.
+- **Brotli is smallest and slowest.** For the 50 MiB export `br` sent 6 463 974 bytes for 0.698 CPU seconds, `gzip` 8 018 572 bytes for 0.292 s and `zstd` 8 442 896 bytes for 0.249 s, against 0.048 s uncompressed.
+- **The export is compressed at most once.** On both servers `Content-Encoding` had one value at most and the decoded sha256 matched the record in every row.
+
+### Surprises
+
+- **The first LCP numbers were an artefact of the throttle.** The first run throttled with DevTools network emulation, which delays the final response but not the 103 or the fetches it starts. It reported FCP falling from 452 ms to 201 ms, which is impossible with a 150 ms round trip. Throttling at the network layer (toxiproxy) delays everything alike, and the real gain shrank to 54 ms of FCP. The flawed files are kept in [`bench/results/lcp/2026-11-05/cdp-throttle/`](bench/results/lcp/2026-11-05/cdp-throttle/) with a note.
+- **Octane sent a 103 at first.** The guard looked only at `$_SERVER['FRANKENPHP_WORKER']`, which Octane does not put into each request's `$_SERVER`. It now also reads the process environment (`FRANKENPHP_WORKER`, `LARAVEL_OCTANE`); live probes give 0 hints on Octane and worker mode and 1 on classic FrankenPHP.
+- **The Server header is missing from the final 200 when a 103 is sent.** On FrankenPHP with `EARLY_HINTS` on, `server: FrankenPHP Caddy` appears on the 103 but not on the 200 (`bench/results/early-hints/2026-11-05/frankenphp-final-headers.diff`); every other header, `Link` included, is the same. Caddy sets that header itself, so it is accepted as a server behaviour.
+- **nginx-fpm does not compress the CSV export.** The type is not in DDEV's nginx `gzip_types`, so the 52 428 832 bytes arrive as sent for every encoding: no double compression, and no saving either.
+- **The page's own JavaScript is empty.** The detail page loads a 0-byte `app.js`, so the compression table needs a separate bundle to say anything about scripts.
+- **Committed traces carried personal data.** curl's verbose output includes the local mkcert certificate's subject, which names the developer's account and machine. The script now strips certificate lines and IP addresses before writing, and a test fails if they come back.
+
+### Interview story
+
+A 103 Early Hints lets the server tell the browser to fetch CSS and JS while PHP is still building the page. My first measurement said it halved first paint, which was too good to be true: DevTools throttling did not delay the 103. Measured again behind a network-level throttle (150 ms RTT, 1.6 Mbit/s), it saved 54 ms of first paint and 27 ms of LCP, because this page's server time is only about 15 ms; Early Hints pay off when the server thinks for hundreds of milliseconds. It also only works where the whole path forwards the 103 (Traefik does) and where the server can send one (classic FrankenPHP, not nginx-fpm or Octane). On compression FrankenPHP offers `zstd`, `br` and `gzip` while nginx-fpm offers `gzip`; `br` made the 50 MiB export 6.5 MB against 8.0 MB for `gzip` but cost about 2.4 times the CPU.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

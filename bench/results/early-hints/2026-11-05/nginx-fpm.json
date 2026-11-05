@@ -1,0 +1,12 @@
+{
+  "server": "nginx-fpm",
+  "label": "nginx-fpm",
+  "date": "2026-11-05",
+  "commit": "01715ee",
+  "listing": 1,
+  "router_103": false,
+  "direct_103": false,
+  "direct_protocol": "https:443 HTTP/1.1",
+  "probe_image": "curlimages/curl:8.11.1",
+  "probe_image_digest": "curlimages/curl@sha256:c1fe1679c34d9784c1b0d1e5f62ac0a79fca01fb6377cdd33e90473c6f9f9a69"
+}

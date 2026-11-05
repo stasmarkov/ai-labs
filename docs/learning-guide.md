@@ -954,6 +954,49 @@ Every mode wrote a `stopped` row for 5 of 5 runs. nginx-fpm went from no row to 
 
 ---
 
+## 21. Early Hints and compression
+
+**What it is.** Two ways to make the same page arrive sooner without changing its HTML. A **`103 Early Hints`** is an interim response the server sends before the real one, carrying `Link` headers that name the CSS and JS the page will need. **Compression** shrinks the response body on the wire, and the client says what it can decode in `Accept-Encoding`.
+
+**What a 103 is.** HTTP allows several responses to one request: any number of 1xx responses, then the final one. The 103 has no body, only `Link: <url>; rel=preload` headers, and the browser starts fetching those files while the server is still working. Browsers use it only over HTTP/2 or HTTP/3 (HTTP/1.1 clients ignore or mishandle 1xx responses), and only on a connection they trust: Chrome drops hints on a connection with a certificate error.
+
+**Why before the slow work.** The hint is worth the time PHP spends between receiving the request and sending the first byte of the page. It must therefore be sent at the start of the request, before the database and rendering; a hint sent when the page is ready arrives with the page and saves nothing. In this repo [`SendEarlyHints`](../app/Http/Middleware/SendEarlyHints.php) runs first on the listing detail route and asks [`PhpEarlyHintSender`](../app/Support/PhpEarlyHintSender.php) to call `headers_send(103)`. That function exists only on FrankenPHP. On other servers, and in FrankenPHP's worker and Octane modes (detected from `FRANKENPHP_WORKER` or `LARAVEL_OCTANE` in the request or the process environment), the sender reports itself unavailable and the middleware does nothing, and it never throws. The links come from Laravel's own Vite resolution (`Vite::preloadedAssets()` for the page's entries), so the 103 and the final `Link` header name the same files ([`config/performance.php`](../config/performance.php) has the `EARLY_HINTS` switch). The final response carries the same `Link` headers from Laravel's `AddLinkHeadersForPreloadedAssets`, so a client that ignored the 103 still gets them.
+
+**Why proxies may drop it.** A 103 is a hop-by-hop interim response. A proxy that does not understand 1xx responses, or an HTTP/1.1 hop in the chain, may discard it, buffer it until the final response (which defeats it) or fail. So the bench measures it on the path a user takes: `bench/early-hints.sh` found a 103 on classic frankenphp both through the router (Traefik 3.7 forwards it) and straight at the container, and none on nginx-fpm, frankenphp-worker or frankenphp-octane.
+
+**preload vs modulepreload.** Both ask the browser to fetch early. `rel=preload as=style` fetches a stylesheet; `rel=modulepreload` fetches a JavaScript module, parses it and its imports into the module map, so the later `<script type="module">` runs without a second fetch. Using `preload as=script` for a module would fetch the file but the module loader would not reuse it. The middleware sends `preload` for the CSS entry and `modulepreload` for the JS entry.
+
+**How an encoding is picked.** The client sends `Accept-Encoding: zstd, br, gzip`; the server picks one it supports, compresses the body, sets `Content-Encoding` and adds `Vary: Accept-Encoding` so a cache keeps one copy per encoding. If the client lists nothing the server supports, the body goes out as is. Caddy on FrankenPHP is set to `encode zstd br gzip` ([`Caddyfile.frankenphp`](../.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp), and the same in the [worker Caddyfile](../.ddev/servers/frankenphp-worker/web-build/Caddyfile.frankenphp)) and answered all three, preferring `zstd` for the combined header; nginx-fpm ([`nginx-site.conf`](../.ddev/nginx_full/nginx-site.conf), DDEV's defaults) answered `gzip` or nothing. A response must carry a single `Content-Encoding` value: a second compression layer on top of a compressed body would not decode.
+
+**What was measured** ([`bench/lcp.sh`](../bench/lcp.sh) and [`bench/lcp.mjs`](../bench/lcp.mjs), [`bench/compression.sh`](../bench/compression.sh), [`bench/early-hints.sh`](../bench/early-hints.sh); tables and chart in the "Early Hints and compression (2026-11-05)" section of [`BENCHMARKS.md`](../BENCHMARKS.md)). Cold Chromium behind a network-level throttle (a toxiproxy container: 150 ms RTT, 1.6 Mbit/s down, 750 kbit/s up) with 4x CPU slowdown, median of 5:
+
+| Variant | LCP | FCP |
+|---|---|---|
+| frankenphp-hints | 1211 ms | 609 ms |
+| frankenphp-no-hints | 1238 ms | 663 ms |
+| nginx-fpm | 1223 ms | 612 ms |
+
+- **The hint is worth the server's think time, no more.** FCP fell by 54 ms and LCP by 27 ms (about 2 %). This page's HTML is ready in about 15 ms, so there is little time for the browser to use; a page that spends hundreds of milliseconds in the database would gain far more.
+- **Throttle at the network, not in DevTools.** The first run used DevTools network emulation, which delays the final response but not the 103 and the fetches it starts. It reported FCP falling from 452 ms to 201 ms, an impossible gain under a 150 ms round trip. A TCP proxy delays every byte alike; the flawed run is kept in `bench/results/lcp/2026-11-05/cdp-throttle/` as a lesson.
+
+**The CPU and bytes trade-off.** Compression spends CPU to save bytes, and the best ratio costs the most. The 50 MiB export on FrankenPHP, web container CPU for one download:
+
+| Encoding | Wire bytes | CPU |
+|---|---|---|
+| gzip | 8 018 572 | 0.292 s |
+| br | 6 463 974 | 0.698 s |
+| zstd | 8 442 896 | 0.249 s |
+
+Uncompressed it cost 0.048 s (median of 5 downloads per encoding). `br` saved 19 % more bytes than `gzip` and cost 2.4 times the CPU; `zstd` was cheapest but sent the most bytes. The detail page's own script is empty (0 bytes), so the script rows in `BENCHMARKS.md` use the largest built bundle, the AI lab's, labelled `lab-bundle`.
+
+**Why compressing an offloaded large file can cost more than it saves.** As in section 20, the web server, not PHP, sends the file. If that server then compresses 52 428 832 bytes on the fly, the cost moves from PHP to the server's CPU, per download, and the wait on a slow client is the same. An uncompressed file also has a known `Content-Length`; an on-the-fly compressed stream does not. On nginx-fpm the export was sent uncompressed for every encoding, and on FrankenPHP it was compressed once per request (single `Content-Encoding`, sha256 equal to the record). Measure before turning it on for a big file.
+
+**In this repo.** Tests: `EarlyHintsTest`, `PreloadLinksTest`, `BenchEarlyHintsTest`, `BenchLcpTest`, `BenchCompressionTest`, `BenchCommittedRunsTest`. Results: [`bench/results/early-hints/`](../bench/results/early-hints/), [`bench/results/lcp/`](../bench/results/lcp/), [`bench/results/compression/`](../bench/results/compression/). Spec: [`.ai/specs/spec-20261104-2340-early-hints-compression/`](../.ai/specs/spec-20261104-2340-early-hints-compression/).
+
+**Read next.** [MDN: 103 Early Hints](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/103) · [Chrome: Early Hints](https://developer.chrome.com/docs/web-platform/early-hints) · [MDN: modulepreload](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/rel/modulepreload) · [MDN: Accept-Encoding](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding) · [FrankenPHP: early hints](https://frankenphp.dev/docs/early-hints/)
+
+---
+
 ## Planned sections
 
 Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):

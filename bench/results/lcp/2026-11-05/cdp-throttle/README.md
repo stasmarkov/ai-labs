@@ -1,0 +1,1 @@
+First LCP measurement, kept as flawed: it throttled with CDP network emulation, which does not delay the 103 and the hinted fetches, so the early-hint variants were not delayed like everything else; superseded by the toxiproxy network-layer runs in the parent directory.

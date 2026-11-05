@@ -6,6 +6,7 @@ use App\Contracts\DocsAnswerCacheRepositoryInterface;
 use App\Contracts\DocsBenchRepositoryInterface;
 use App\Contracts\DocsIndexRepositoryInterface;
 use App\Contracts\DocsSearchRepositoryInterface;
+use App\Contracts\EarlyHintSender;
 use App\Contracts\EmbeddingStatsRepositoryInterface;
 use App\Contracts\ExportRepositoryInterface;
 use App\Contracts\ListingDocumentRepositoryInterface;
@@ -26,6 +27,7 @@ use App\Repositories\EloquentRagEvalRepository;
 use App\Repositories\EloquentSemanticBenchRepository;
 use App\Repositories\EloquentSemanticSearchRepository;
 use App\Services\MarkdownChunker;
+use App\Support\PhpEarlyHintSender;
 use App\Support\PhpShutdownScheduler;
 use App\Support\ServerTiming;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -58,6 +60,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(EmbeddingStatsRepositoryInterface::class, EloquentEmbeddingStatsRepository::class);
         $this->app->bind(ExportRepositoryInterface::class, EloquentExportRepository::class);
         $this->app->bind(ShutdownScheduler::class, PhpShutdownScheduler::class);
+        $this->app->bind(EarlyHintSender::class, PhpEarlyHintSender::class);
     }
 
     /**

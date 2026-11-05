@@ -1,0 +1,50 @@
+* Host interview.ddev.site:443 was resolved.
+* IPv6: (none)
+* IPv4: <ip>
+*   Trying <ip>:443...
+* Connected to interview.ddev.site (<ip>) port 443
+* ALPN: curl offers h2,http/1.1
+* (304) (OUT), TLS handshake, Client hello (1):
+} [324 bytes data]
+* (304) (IN), TLS handshake, Server hello (2):
+{ [122 bytes data]
+* (304) (IN), TLS handshake, Unknown (8):
+{ [19 bytes data]
+* (304) (IN), TLS handshake, Certificate (11):
+{ [1182 bytes data]
+* (304) (IN), TLS handshake, CERT verify (15):
+{ [264 bytes data]
+* (304) (IN), TLS handshake, Finished (20):
+{ [36 bytes data]
+* (304) (OUT), TLS handshake, Finished (20):
+} [36 bytes data]
+* SSL connection using TLSv1.3 / AEAD-CHACHA20-POLY1305-SHA256 / [blank] / UNDEF
+* ALPN: server accepted h2
+* Server certificate:
+*  start date: Nov  5 00:18:49 2026 GMT
+*  expire date: Feb  5 00:18:49 2029 GMT
+*  SSL certificate verify ok.
+* using HTTP/2
+* [HTTP/2] [1] OPENED stream for https://interview.ddev.site/listings/1
+* [HTTP/2] [1] [:method: GET]
+* [HTTP/2] [1] [:scheme: https]
+* [HTTP/2] [1] [:authority: interview.ddev.site]
+* [HTTP/2] [1] [:path: /listings/1]
+* [HTTP/2] [1] [user-agent: curl/8.7.1]
+* [HTTP/2] [1] [accept: */*]
+> GET /listings/1 HTTP/2
+> Host: interview.ddev.site
+> User-Agent: curl/8.7.1
+> Accept: */*
+> 
+* Request completely sent off
+< HTTP/2 200 
+< cache-control: no-cache, private
+< content-type: text/html; charset=utf-8
+< date: Thu, 05 Nov 2026 00:19:10 GMT
+< link: <https://interview.ddev.site/build/assets/app-CjRfEL-0.css>; rel="preload"; as="style", <https://interview.ddev.site/build/assets/app-BvRk9kiK.js>; rel="modulepreload"; as="script"
+< server: FrankenPHP Caddy
+< vary: Accept-Encoding
+< 
+{ [1512 bytes data]
+* Connection #0 to host interview.ddev.site left intact

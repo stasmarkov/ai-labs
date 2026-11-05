@@ -1,0 +1,21 @@
+* Added interview.ddev.site:8000:<ip> to DNS cache
+* Hostname interview.ddev.site was found in DNS cache
+*   Trying <ip>:8000...
+* Connected to interview.ddev.site (<ip>) port 8000
+* using HTTP/1.x
+> GET /listings/1 HTTP/1.1
+> Host: interview.ddev.site:8000
+> User-Agent: curl/8.11.1
+> Accept: */*
+> 
+* Request completely sent off
+< HTTP/1.1 200 OK
+< Cache-Control: no-cache, private
+< Content-Type: text/html; charset=utf-8
+< Date: Thu, 05 Nov 2026 00:19:54 GMT
+< Link: <https://interview.ddev.site:8000/build/assets/app-CjRfEL-0.css>; rel="preload"; as="style", <https://interview.ddev.site:8000/build/assets/app-BvRk9kiK.js>; rel="modulepreload"; as="script"
+< Server: FrankenPHP Caddy
+< Content-Length: 1537
+< 
+{ [1537 bytes data]
+* Connection #0 to host interview.ddev.site left intact

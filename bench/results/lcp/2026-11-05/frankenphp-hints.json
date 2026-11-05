@@ -1,0 +1,140 @@
+{
+  "variant": "frankenphp-hints",
+  "server": "frankenphp",
+  "path": "router",
+  "path_reason": "router forwards the 103 to an HTTP/2 client on frankenphp (bench/results/early-hints/2026-11-05), so the browser path matches production",
+  "date": "2026-11-05",
+  "commit": "01715ee",
+  "listing": 1,
+  "url": "https://interview.ddev.site/listings/1",
+  "runs": 5,
+  "valid_runs": 5,
+  "invalid_runs": 0,
+  "early_hints_setting": "on",
+  "cold": true,
+  "browser_image": "mcr.microsoft.com/playwright:v1.49.1-noble",
+  "browser_image_digest": "mcr.microsoft.com/playwright@sha256:70e367e0cbf60340a5b5fd562f6247a34eb3196efab9f88a3dd56482d9fe09d2",
+  "playwright_version": "1.49.1",
+  "throttle_image": "shopify/toxiproxy:2.1.4",
+  "throttle_image_digest": "shopify/toxiproxy@sha256:a6b080af39986b863a1f7c5a3b9bacf2afeb48abab8f0eb7e243f8f7ad38c645",
+  "throttle_upstream": "ddev-router",
+  "throttle": {
+    "method": "toxiproxy (TCP proxy on ddev_default, network layer)",
+    "rtt_ms": 150,
+    "down_kbps": 1600,
+    "up_kbps": 750,
+    "cpu_slowdown": 4,
+    "cpu_method": "cdp Emulation.setCPUThrottlingRate",
+    "toxics": [
+      {
+        "name": "latency_up",
+        "type": "latency",
+        "direction": "upstream",
+        "latency_ms": 75
+      },
+      {
+        "name": "latency_down",
+        "type": "latency",
+        "direction": "downstream",
+        "latency_ms": 75
+      },
+      {
+        "name": "bandwidth_up",
+        "type": "bandwidth",
+        "direction": "upstream",
+        "rate_kb_per_s": 94
+      },
+      {
+        "name": "bandwidth_down",
+        "type": "bandwidth",
+        "direction": "downstream",
+        "rate_kb_per_s": 200
+      }
+    ]
+  },
+  "lcp_ms": {
+    "median": 1211,
+    "min": 1204,
+    "max": 1240
+  },
+  "fcp_ms": {
+    "median": 609,
+    "min": 596,
+    "max": 648
+  },
+  "ttfb_ms": {
+    "median": 391,
+    "min": 375,
+    "max": 392
+  },
+  "ttfb_source": "cdp Network.responseReceived timing.receiveHeadersEnd of the document request",
+  "ttfb_nav_ms": {
+    "median": 392,
+    "min": 375,
+    "max": 392
+  },
+  "early_hint_used": true,
+  "early_hint_runs": 5,
+  "samples": [
+    {
+      "lcp_ms": 1233,
+      "fcp_ms": 648,
+      "ttfb_nav_ms": 392,
+      "early_hint_used": true,
+      "initiator_types": {
+        "css": "early-hints",
+        "js": "early-hints"
+      },
+      "ttfb_ms": 391,
+      "valid": true
+    },
+    {
+      "lcp_ms": 1204,
+      "fcp_ms": 600,
+      "ttfb_nav_ms": 375,
+      "early_hint_used": true,
+      "initiator_types": {
+        "css": "early-hints",
+        "js": "early-hints"
+      },
+      "ttfb_ms": 375,
+      "valid": true
+    },
+    {
+      "lcp_ms": 1211,
+      "fcp_ms": 609,
+      "ttfb_nav_ms": 392,
+      "early_hint_used": true,
+      "initiator_types": {
+        "css": "early-hints",
+        "js": "early-hints"
+      },
+      "ttfb_ms": 392,
+      "valid": true
+    },
+    {
+      "lcp_ms": 1207,
+      "fcp_ms": 596,
+      "ttfb_nav_ms": 383,
+      "early_hint_used": true,
+      "initiator_types": {
+        "css": "early-hints",
+        "js": "early-hints"
+      },
+      "ttfb_ms": 383,
+      "valid": true
+    },
+    {
+      "lcp_ms": 1240,
+      "fcp_ms": 629,
+      "ttfb_nav_ms": 392,
+      "early_hint_used": true,
+      "initiator_types": {
+        "css": "early-hints",
+        "js": "early-hints"
+      },
+      "ttfb_ms": 392,
+      "valid": true
+    }
+  ]
+}

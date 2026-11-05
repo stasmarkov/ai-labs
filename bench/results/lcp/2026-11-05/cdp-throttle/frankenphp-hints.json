@@ -1,0 +1,101 @@
+{
+  "variant": "frankenphp-hints",
+  "server": "frankenphp",
+  "path": "router",
+  "path_reason": "router forwards the 103 to an HTTP/2 client on frankenphp (bench/results/early-hints/2026-11-04), so the browser path matches production",
+  "date": "2026-11-05",
+  "commit": "01715ee",
+  "listing": 1,
+  "url": "https://interview.ddev.site/listings/1",
+  "runs": 5,
+  "cold": true,
+  "browser_image": "mcr.microsoft.com/playwright:v1.49.1-noble",
+  "browser_image_digest": "mcr.microsoft.com/playwright@sha256:70e367e0cbf60340a5b5fd562f6247a34eb3196efab9f88a3dd56482d9fe09d2",
+  "playwright_version": "1.49.1",
+  "throttle": {
+    "rtt_ms": 150,
+    "down_kbps": 1600,
+    "up_kbps": 750,
+    "cpu_slowdown": 4
+  },
+  "lcp_ms": {
+    "median": 936,
+    "min": 925,
+    "max": 959
+  },
+  "fcp_ms": {
+    "median": 201,
+    "min": 187,
+    "max": 231
+  },
+  "ttfb_ms": {
+    "median": 163,
+    "min": 159,
+    "max": 177
+  },
+  "ttfb_source": "cdp Network.responseReceived timing.receiveHeadersEnd of the document request",
+  "ttfb_nav_ms": {
+    "median": 18,
+    "min": 17,
+    "max": 170
+  },
+  "early_hint_used": true,
+  "early_hint_runs": 5,
+  "samples": [
+    {
+      "lcp_ms": 959,
+      "fcp_ms": 223,
+      "ttfb_nav_ms": 170,
+      "early_hint_used": true,
+      "initiator_types": {
+        "css": "early-hints",
+        "js": "early-hints"
+      },
+      "ttfb_ms": 177
+    },
+    {
+      "lcp_ms": 947,
+      "fcp_ms": 231,
+      "ttfb_nav_ms": 24,
+      "early_hint_used": true,
+      "initiator_types": {
+        "css": "early-hints",
+        "js": "early-hints"
+      },
+      "ttfb_ms": 159
+    },
+    {
+      "lcp_ms": 925,
+      "fcp_ms": 187,
+      "ttfb_nav_ms": 17,
+      "early_hint_used": true,
+      "initiator_types": {
+        "css": "early-hints",
+        "js": "early-hints"
+      },
+      "ttfb_ms": 163
+    },
+    {
+      "lcp_ms": 936,
+      "fcp_ms": 195,
+      "ttfb_nav_ms": 18,
+      "early_hint_used": true,
+      "initiator_types": {
+        "css": "early-hints",
+        "js": "early-hints"
+      },
+      "ttfb_ms": 169
+    },
+    {
+      "lcp_ms": 931,
+      "fcp_ms": 201,
+      "ttfb_nav_ms": 17,
+      "early_hint_used": true,
+      "initiator_types": {
+        "css": "early-hints",
+        "js": "early-hints"
+      },
+      "ttfb_ms": 162
+    }
+  ]
+}

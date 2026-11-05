@@ -1,0 +1,101 @@
+{
+  "variant": "nginx-fpm",
+  "server": "nginx-fpm",
+  "path": "router",
+  "path_reason": "router forwards the 103 to an HTTP/2 client on frankenphp (bench/results/early-hints/2026-11-04), so the browser path matches production",
+  "date": "2026-11-05",
+  "commit": "01715ee",
+  "listing": 1,
+  "url": "https://interview.ddev.site/listings/1",
+  "runs": 5,
+  "cold": true,
+  "browser_image": "mcr.microsoft.com/playwright:v1.49.1-noble",
+  "browser_image_digest": "mcr.microsoft.com/playwright@sha256:70e367e0cbf60340a5b5fd562f6247a34eb3196efab9f88a3dd56482d9fe09d2",
+  "playwright_version": "1.49.1",
+  "throttle": {
+    "rtt_ms": 150,
+    "down_kbps": 1600,
+    "up_kbps": 750,
+    "cpu_slowdown": 4
+  },
+  "lcp_ms": {
+    "median": 988,
+    "min": 982,
+    "max": 995
+  },
+  "fcp_ms": {
+    "median": 448,
+    "min": 442,
+    "max": 458
+  },
+  "ttfb_ms": {
+    "median": 163,
+    "min": 159,
+    "max": 163
+  },
+  "ttfb_source": "cdp Network.responseReceived timing.receiveHeadersEnd of the document request",
+  "ttfb_nav_ms": {
+    "median": 16,
+    "min": 14,
+    "max": 32
+  },
+  "early_hint_used": false,
+  "early_hint_runs": 0,
+  "samples": [
+    {
+      "lcp_ms": 988,
+      "fcp_ms": 448,
+      "ttfb_nav_ms": 32,
+      "early_hint_used": false,
+      "initiator_types": {
+        "css": "link",
+        "js": "script"
+      },
+      "ttfb_ms": 159
+    },
+    {
+      "lcp_ms": 986,
+      "fcp_ms": 449,
+      "ttfb_nav_ms": 17,
+      "early_hint_used": false,
+      "initiator_types": {
+        "css": "link",
+        "js": "script"
+      },
+      "ttfb_ms": 162
+    },
+    {
+      "lcp_ms": 994,
+      "fcp_ms": 443,
+      "ttfb_nav_ms": 16,
+      "early_hint_used": false,
+      "initiator_types": {
+        "css": "link",
+        "js": "script"
+      },
+      "ttfb_ms": 163
+    },
+    {
+      "lcp_ms": 982,
+      "fcp_ms": 442,
+      "ttfb_nav_ms": 16,
+      "early_hint_used": false,
+      "initiator_types": {
+        "css": "link",
+        "js": "script"
+      },
+      "ttfb_ms": 163
+    },
+    {
+      "lcp_ms": 995,
+      "fcp_ms": 458,
+      "ttfb_nav_ms": 14,
+      "early_hint_used": false,
+      "initiator_types": {
+        "css": "link",
+        "js": "script"
+      },
+      "ttfb_ms": 163
+    }
+  ]
+}

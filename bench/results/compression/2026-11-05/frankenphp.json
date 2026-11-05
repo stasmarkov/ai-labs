@@ -1,0 +1,543 @@
+{
+  "server": "frankenphp",
+  "label": "frankenphp",
+  "date": "2026-11-05",
+  "commit": "01715ee",
+  "listing": 1,
+  "repeats": 5,
+  "client": {
+    "image": "curlimages/curl:8.11.1",
+    "image_id": "curlimages/curl@sha256:c1fe1679c34d9784c1b0d1e5f62ac0a79fca01fb6377cdd33e90473c6f9f9a69",
+    "protocol": "h2"
+  },
+  "sha256_source": "exports record",
+  "resources": [
+    {
+      "resource": "html",
+      "path": "/listings/1",
+      "accept_encoding": "identity",
+      "status": 200,
+      "content_encoding": "",
+      "wire_bytes": 1512,
+      "seconds": [
+        0.014603,
+        0.017874,
+        0.017346,
+        0.013318,
+        0.013916
+      ],
+      "seconds_median": 0.014603
+    },
+    {
+      "resource": "html",
+      "path": "/listings/1",
+      "accept_encoding": "gzip",
+      "status": 200,
+      "content_encoding": "gzip",
+      "wire_bytes": 636,
+      "seconds": [
+        0.019220,
+        0.015120,
+        0.016778,
+        0.015369,
+        0.012891
+      ],
+      "seconds_median": 0.015369
+    },
+    {
+      "resource": "html",
+      "path": "/listings/1",
+      "accept_encoding": "br",
+      "status": 200,
+      "content_encoding": "br",
+      "wire_bytes": 550,
+      "seconds": [
+        0.013419,
+        0.013391,
+        0.012742,
+        0.013747,
+        0.012308
+      ],
+      "seconds_median": 0.013391
+    },
+    {
+      "resource": "html",
+      "path": "/listings/1",
+      "accept_encoding": "zstd",
+      "status": 200,
+      "content_encoding": "zstd",
+      "wire_bytes": 654,
+      "seconds": [
+        0.015786,
+        0.015859,
+        0.014960,
+        0.014353,
+        0.013783
+      ],
+      "seconds_median": 0.014960
+    },
+    {
+      "resource": "html",
+      "path": "/listings/1",
+      "accept_encoding": "zstd, br, gzip",
+      "status": 200,
+      "content_encoding": "zstd",
+      "wire_bytes": 654,
+      "seconds": [
+        0.015950,
+        0.023180,
+        0.016432,
+        0.016364,
+        0.019460
+      ],
+      "seconds_median": 0.016432
+    },
+    {
+      "resource": "css",
+      "path": "/build/assets/app-CjRfEL-0.css",
+      "accept_encoding": "identity",
+      "status": 200,
+      "content_encoding": "",
+      "wire_bytes": 38128,
+      "seconds": [
+        0.014179,
+        0.003810,
+        0.003470,
+        0.004045,
+        0.003670
+      ],
+      "seconds_median": 0.003810
+    },
+    {
+      "resource": "css",
+      "path": "/build/assets/app-CjRfEL-0.css",
+      "accept_encoding": "gzip",
+      "status": 200,
+      "content_encoding": "gzip",
+      "wire_bytes": 9754,
+      "seconds": [
+        0.003947,
+        0.005466,
+        0.004245,
+        0.005259,
+        0.005742
+      ],
+      "seconds_median": 0.005259
+    },
+    {
+      "resource": "css",
+      "path": "/build/assets/app-CjRfEL-0.css",
+      "accept_encoding": "br",
+      "status": 200,
+      "content_encoding": "br",
+      "wire_bytes": 8771,
+      "seconds": [
+        0.005549,
+        0.006983,
+        0.005893,
+        0.013575,
+        0.010267
+      ],
+      "seconds_median": 0.006983
+    },
+    {
+      "resource": "css",
+      "path": "/build/assets/app-CjRfEL-0.css",
+      "accept_encoding": "zstd",
+      "status": 200,
+      "content_encoding": "zstd",
+      "wire_bytes": 9987,
+      "seconds": [
+        0.004625,
+        0.004279,
+        0.004323,
+        0.005134,
+        0.004750
+      ],
+      "seconds_median": 0.004625
+    },
+    {
+      "resource": "css",
+      "path": "/build/assets/app-CjRfEL-0.css",
+      "accept_encoding": "zstd, br, gzip",
+      "status": 200,
+      "content_encoding": "zstd",
+      "wire_bytes": 9987,
+      "seconds": [
+        0.006915,
+        0.005565,
+        0.004391,
+        0.004388,
+        0.005376
+      ],
+      "seconds_median": 0.005376
+    },
+    {
+      "resource": "page-js",
+      "path": "/build/assets/app-BvRk9kiK.js",
+      "accept_encoding": "identity",
+      "status": 200,
+      "content_encoding": "",
+      "wire_bytes": 0,
+      "seconds": [
+        0.003904,
+        0.004263,
+        0.004932,
+        0.003502,
+        0.003720
+      ],
+      "seconds_median": 0.003904
+    },
+    {
+      "resource": "page-js",
+      "path": "/build/assets/app-BvRk9kiK.js",
+      "accept_encoding": "gzip",
+      "status": 200,
+      "content_encoding": "",
+      "wire_bytes": 0,
+      "seconds": [
+        0.003756,
+        0.003959,
+        0.003552,
+        0.003552,
+        0.003588
+      ],
+      "seconds_median": 0.003588
+    },
+    {
+      "resource": "page-js",
+      "path": "/build/assets/app-BvRk9kiK.js",
+      "accept_encoding": "br",
+      "status": 200,
+      "content_encoding": "",
+      "wire_bytes": 0,
+      "seconds": [
+        0.003501,
+        0.003716,
+        0.003468,
+        0.003274,
+        0.003493
+      ],
+      "seconds_median": 0.003493
+    },
+    {
+      "resource": "page-js",
+      "path": "/build/assets/app-BvRk9kiK.js",
+      "accept_encoding": "zstd",
+      "status": 200,
+      "content_encoding": "",
+      "wire_bytes": 0,
+      "seconds": [
+        0.003733,
+        0.003600,
+        0.003775,
+        0.003938,
+        0.003913
+      ],
+      "seconds_median": 0.003775
+    },
+    {
+      "resource": "page-js",
+      "path": "/build/assets/app-BvRk9kiK.js",
+      "accept_encoding": "zstd, br, gzip",
+      "status": 200,
+      "content_encoding": "",
+      "wire_bytes": 0,
+      "seconds": [
+        0.004068,
+        0.003514,
+        0.004530,
+        0.003630,
+        0.003558
+      ],
+      "seconds_median": 0.003630
+    },
+    {
+      "resource": "lab-bundle",
+      "path": "/build/assets/app-BFvfizUE.js",
+      "accept_encoding": "identity",
+      "status": 200,
+      "content_encoding": "",
+      "wire_bytes": 202851,
+      "seconds": [
+        0.004211,
+        0.003994,
+        0.003881,
+        0.004189,
+        0.003872
+      ],
+      "seconds_median": 0.003994
+    },
+    {
+      "resource": "lab-bundle",
+      "path": "/build/assets/app-BFvfizUE.js",
+      "accept_encoding": "gzip",
+      "status": 200,
+      "content_encoding": "gzip",
+      "wire_bytes": 70333,
+      "seconds": [
+        0.006658,
+        0.005962,
+        0.005592,
+        0.005582,
+        0.005775
+      ],
+      "seconds_median": 0.005775
+    },
+    {
+      "resource": "lab-bundle",
+      "path": "/build/assets/app-BFvfizUE.js",
+      "accept_encoding": "br",
+      "status": 200,
+      "content_encoding": "br",
+      "wire_bytes": 65112,
+      "seconds": [
+        0.008051,
+        0.008216,
+        0.007899,
+        0.007412,
+        0.012654
+      ],
+      "seconds_median": 0.008051
+    },
+    {
+      "resource": "lab-bundle",
+      "path": "/build/assets/app-BFvfizUE.js",
+      "accept_encoding": "zstd",
+      "status": 200,
+      "content_encoding": "zstd",
+      "wire_bytes": 71611,
+      "seconds": [
+        0.005314,
+        0.009211,
+        0.006267,
+        0.008427,
+        0.006452
+      ],
+      "seconds_median": 0.006452
+    },
+    {
+      "resource": "lab-bundle",
+      "path": "/build/assets/app-BFvfizUE.js",
+      "accept_encoding": "zstd, br, gzip",
+      "status": 200,
+      "content_encoding": "zstd",
+      "wire_bytes": 71611,
+      "seconds": [
+        0.005764,
+        0.005357,
+        0.005798,
+        0.004639,
+        0.004797
+      ],
+      "seconds_median": 0.005357
+    },
+    {
+      "resource": "export",
+      "path": "/exports/listings",
+      "accept_encoding": "identity",
+      "status": 200,
+      "content_encoding": "",
+      "wire_bytes": 52428832,
+      "seconds": [
+        0.096269,
+        0.064715,
+        0.059159,
+        0.053193,
+        0.124185
+      ],
+      "seconds_median": 0.064715
+    },
+    {
+      "resource": "export",
+      "path": "/exports/listings",
+      "accept_encoding": "gzip",
+      "status": 200,
+      "content_encoding": "gzip",
+      "wire_bytes": 8018572,
+      "seconds": [
+        0.247157,
+        0.224803,
+        0.223554,
+        0.225206,
+        0.225332
+      ],
+      "seconds_median": 0.225206
+    },
+    {
+      "resource": "export",
+      "path": "/exports/listings",
+      "accept_encoding": "br",
+      "status": 200,
+      "content_encoding": "br",
+      "wire_bytes": 6463974,
+      "seconds": [
+        0.592756,
+        0.599120,
+        0.630500,
+        0.607713,
+        0.599099
+      ],
+      "seconds_median": 0.599120
+    },
+    {
+      "resource": "export",
+      "path": "/exports/listings",
+      "accept_encoding": "zstd",
+      "status": 200,
+      "content_encoding": "zstd",
+      "wire_bytes": 8442896,
+      "seconds": [
+        0.161976,
+        0.183800,
+        0.157649,
+        0.169005,
+        0.169210
+      ],
+      "seconds_median": 0.169005
+    },
+    {
+      "resource": "export",
+      "path": "/exports/listings",
+      "accept_encoding": "zstd, br, gzip",
+      "status": 200,
+      "content_encoding": "zstd",
+      "wire_bytes": 8442896,
+      "seconds": [
+        0.159645,
+        0.161719,
+        0.155363,
+        0.157815,
+        0.158370
+      ],
+      "seconds_median": 0.158370
+    }
+  ],
+  "export": {
+    "expected_sha256": "74366ebfa0f6812c1eafd4c3c09ecfd5434e0aa762e7c24f8a8b324a8d87fa11",
+    "expected_bytes": 52428832,
+    "ok": true,
+    "rows": [
+      {
+        "accept_encoding": "identity",
+        "content_encoding": "",
+        "wire_bytes": 52428832,
+        "seconds": [
+          0.096269,
+          0.064715,
+          0.059159,
+          0.053193,
+          0.124185
+        ],
+        "seconds_median": 0.064715,
+        "cpu_samples": [
+          0.094,
+          0.046,
+          0.048,
+          0.048,
+          0.234
+        ],
+        "cpu_seconds": 0.048,
+        "single_encoding": true,
+        "decoded_sha256": "74366ebfa0f6812c1eafd4c3c09ecfd5434e0aa762e7c24f8a8b324a8d87fa11",
+        "sha_ok": true
+      },
+      {
+        "accept_encoding": "gzip",
+        "content_encoding": "gzip",
+        "wire_bytes": 8018572,
+        "seconds": [
+          0.247157,
+          0.224803,
+          0.223554,
+          0.225206,
+          0.225332
+        ],
+        "seconds_median": 0.225206,
+        "cpu_samples": [
+          0.331,
+          0.292,
+          0.285,
+          0.289,
+          0.294
+        ],
+        "cpu_seconds": 0.292,
+        "single_encoding": true,
+        "decoded_sha256": "74366ebfa0f6812c1eafd4c3c09ecfd5434e0aa762e7c24f8a8b324a8d87fa11",
+        "sha_ok": true
+      },
+      {
+        "accept_encoding": "br",
+        "content_encoding": "br",
+        "wire_bytes": 6463974,
+        "seconds": [
+          0.592756,
+          0.599120,
+          0.630500,
+          0.607713,
+          0.599099
+        ],
+        "seconds_median": 0.599120,
+        "cpu_samples": [
+          0.718,
+          0.698,
+          0.742,
+          0.688,
+          0.680
+        ],
+        "cpu_seconds": 0.698,
+        "single_encoding": true,
+        "decoded_sha256": "74366ebfa0f6812c1eafd4c3c09ecfd5434e0aa762e7c24f8a8b324a8d87fa11",
+        "sha_ok": true
+      },
+      {
+        "accept_encoding": "zstd",
+        "content_encoding": "zstd",
+        "wire_bytes": 8442896,
+        "seconds": [
+          0.161976,
+          0.183800,
+          0.157649,
+          0.169005,
+          0.169210
+        ],
+        "seconds_median": 0.169005,
+        "cpu_samples": [
+          0.235,
+          0.296,
+          0.225,
+          0.265,
+          0.249
+        ],
+        "cpu_seconds": 0.249,
+        "single_encoding": true,
+        "decoded_sha256": "74366ebfa0f6812c1eafd4c3c09ecfd5434e0aa762e7c24f8a8b324a8d87fa11",
+        "sha_ok": true
+      },
+      {
+        "accept_encoding": "zstd, br, gzip",
+        "content_encoding": "zstd",
+        "wire_bytes": 8442896,
+        "seconds": [
+          0.159645,
+          0.161719,
+          0.155363,
+          0.157815,
+          0.158370
+        ],
+        "seconds_median": 0.158370,
+        "cpu_samples": [
+          0.229,
+          0.233,
+          0.227,
+          0.230,
+          0.229
+        ],
+        "cpu_seconds": 0.229,
+        "single_encoding": true,
+        "decoded_sha256": "74366ebfa0f6812c1eafd4c3c09ecfd5434e0aa762e7c24f8a8b324a8d87fa11",
+        "sha_ok": true
+      }
+    ]
+  }
+}

@@ -506,3 +506,112 @@ test('AC-6 BENCHMARKS.md quotes the committed export-load matrix', function (): 
     expect(count($sentences))->toBeGreaterThanOrEqual(3)->toBeLessThanOrEqual(6)
         ->and($story[1] ?? '')->toMatch('/\d/');
 });
+
+function earlyHintsLcpResults(): array
+{
+    $results = [];
+    foreach (['frankenphp-hints', 'frankenphp-no-hints', 'nginx-fpm'] as $variant) {
+        $results[$variant] = json_decode(
+            (string) file_get_contents(base_path("bench/results/lcp/2026-11-05/{$variant}.json")),
+            true,
+            flags: JSON_THROW_ON_ERROR,
+        );
+    }
+
+    return $results;
+}
+
+function earlyHintsDocSection(): string
+{
+    $doc = (string) file_get_contents(base_path('BENCHMARKS.md'));
+    $start = strpos($doc, '## Early Hints and compression (2026-11-05)');
+    expect($start)->not->toBeFalse();
+    $end = strpos($doc, "\n## ", (int) $start + 10);
+
+    return substr($doc, (int) $start, ($end === false ? strlen($doc) : $end) - (int) $start);
+}
+
+test('AC-7 BENCHMARKS.md quotes the committed 103 path, LCP and compression results', function (): void {
+    $section = earlyHintsDocSection();
+
+    foreach (['### What the numbers say', '### Surprises', '### Interview story', 'xychart-beta', 'bench/results/lcp/2026-11-05/', 'bench/results/compression/2026-11-05/', 'bench/results/early-hints/2026-11-05/', 'bench/lcp.mjs', 'bench/compression.sh', 'bench/early-hints.sh'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+    expect(substr_count($section, '```mermaid'))->toBe(1);
+
+    foreach (['frankenphp', 'frankenphp-worker', 'frankenphp-octane', 'nginx-fpm'] as $server) {
+        $hints = json_decode((string) file_get_contents(base_path("bench/results/early-hints/2026-11-05/{$server}.json")), true, flags: JSON_THROW_ON_ERROR);
+        [$scheme, $protocol] = explode(' ', (string) $hints['direct_protocol'], 2);
+        $port = explode(':', $scheme)[1];
+        $row = sprintf('| %s | %s | %s (%s on %s', $server, $hints['router_103'] ? 'yes' : 'no', $hints['direct_103'] ? 'yes' : 'no', $protocol, $port);
+        expect($section)->toContain($row);
+    }
+
+    expect($section)->toContain('| Variant | LCP median (min to max) | FCP median | TTFB median | Early hint used |');
+    $throttle = null;
+    foreach (earlyHintsLcpResults() as $variant => $result) {
+        $row = sprintf(
+            '| %s | %d ms (%d to %d) | %d ms | %d ms | %s |',
+            $variant,
+            $result['lcp_ms']['median'],
+            $result['lcp_ms']['min'],
+            $result['lcp_ms']['max'],
+            $result['fcp_ms']['median'],
+            $result['ttfb_ms']['median'],
+            $result['early_hint_used'] ? 'yes' : 'no',
+        );
+        expect($section)->toContain($row);
+        expect($result['browser_image_digest'])->toContain('sha256:');
+        $throttle = $result['throttle'];
+    }
+    expect($section)->toContain(sprintf('%d ms RTT, %s Mbit/s down', $throttle['rtt_ms'], rtrim(rtrim(number_format($throttle['down_kbps'] / 1000, 1), '0'), '.')));
+    expect($section)->toContain(earlyHintsLcpResults()['frankenphp-hints']['browser_image_digest']);
+
+    preg_match('/```mermaid\n(xychart-beta.*?)```/s', $section, $chart);
+    foreach (earlyHintsLcpResults() as $result) {
+        expect($chart[1] ?? '')->toContain((string) $result['lcp_ms']['median']);
+    }
+
+    expect($section)->toContain('| Server | Resource | Accept-Encoding | Content-Encoding | Wire bytes | Time to last byte |');
+    foreach (['frankenphp', 'nginx-fpm'] as $server) {
+        $result = json_decode((string) file_get_contents(base_path("bench/results/compression/2026-11-05/{$server}.json")), true, flags: JSON_THROW_ON_ERROR);
+        foreach ($result['resources'] as $r) {
+            $row = sprintf(
+                '| %s | %s | %s | %s | %s | %s ms |',
+                $server,
+                $r['resource'],
+                $r['accept_encoding'],
+                $r['content_encoding'] === '' ? 'none' : $r['content_encoding'],
+                number_format($r['wire_bytes'], 0, '', ' '),
+                number_format($r['seconds_median'] * 1000, 1),
+            );
+            expect($section)->toContain($row);
+        }
+        foreach ($result['export']['rows'] as $r) {
+            $row = sprintf('| %s | %s | %s | %.3f s |', $server, $r['accept_encoding'], number_format($r['wire_bytes'], 0, '', ' '), $r['cpu_seconds']);
+            expect($section)->toContain($row);
+        }
+    }
+
+    preg_match('/### Interview story\n(.*?)(?=^##|\z)/ms', $section, $story);
+    $sentences = preg_split('/(?<=[.!?])\s+(?=[A-Z])/', trim($story[1] ?? '')) ?: [];
+    expect(count($sentences))->toBeGreaterThanOrEqual(3)->toBeLessThanOrEqual(6)
+        ->and($story[1] ?? '')->toMatch('/\d/');
+});
+
+test('AC-5 BENCHMARKS.md names the script bundle the compression rows measured', function (): void {
+    $doc = (string) file_get_contents(base_path('BENCHMARKS.md'));
+    $start = (int) strpos($doc, '## Early Hints and compression (2026-11-05)');
+    $section = substr($doc, $start, strpos($doc, '## Response parity') - $start);
+
+    foreach (['frankenphp', 'nginx-fpm'] as $server) {
+        $result = json_decode((string) file_get_contents(base_path("bench/results/compression/2026-11-05/{$server}.json")), true, flags: JSON_THROW_ON_ERROR);
+        foreach ($result['resources'] as $row) {
+            if ($row['resource'] === 'lab-bundle') {
+                expect($section)->toContain($row['path']);
+            }
+        }
+    }
+
+    expect($section)->toContain('page-js')->toContain('app-BvRk9kiK.js');
+});

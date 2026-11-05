@@ -10,12 +10,15 @@ use App\Http\Controllers\ShowListingController;
 use App\Http\Controllers\ShowSlowListingController;
 use App\Http\Middleware\AddServerTimingHeader;
 use App\Http\Middleware\EnsureDebugRoutes;
+use App\Http\Middleware\SendEarlyHints;
 use App\Services\ExportFileService;
+use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/listings', ListListingsController::class)->name('listings.index');
 Route::get('/listings/{id}', ShowListingController::class)
     ->where('id', '[1-9][0-9]{0,17}')
+    ->middleware([SendEarlyHints::class, AddLinkHeadersForPreloadedAssets::class])
     ->name('listings.show');
 Route::get('/listings/{id}/slow', ShowSlowListingController::class)
     ->where('id', '[1-9][0-9]{0,17}')

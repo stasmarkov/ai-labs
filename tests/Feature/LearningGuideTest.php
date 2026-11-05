@@ -484,3 +484,45 @@ test('AC-7 learning guide section 20 walks each server through one offload and n
         expect($walkthrough)->toContain("- **{$server}**");
     }
 });
+
+test('AC-7 learning guide section 21 explains Early Hints and compression with the measured numbers', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+    $start = strpos($guide, '## 21. Early Hints and compression');
+    expect($start)->not->toBeFalse();
+    $section = substr($guide, (int) $start, strpos($guide, '## Planned sections') - (int) $start);
+
+    foreach (['103', 'HTTP/2', 'before the slow work', 'proxies', 'preload', 'modulepreload', 'Accept-Encoding', 'Content-Encoding', 'Vary', 'zstd', 'br', 'gzip', 'CPU', 'section 20', 'SendEarlyHints', 'headers_send'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    foreach (['frankenphp-hints', 'frankenphp-no-hints', 'nginx-fpm'] as $variant) {
+        $result = json_decode((string) file_get_contents(base_path("bench/results/lcp/2026-11-05/{$variant}.json")), true, flags: JSON_THROW_ON_ERROR);
+        expect($section)->toContain(sprintf('| %s | %d ms | %d ms |', $variant, $result['lcp_ms']['median'], $result['fcp_ms']['median']));
+    }
+
+    $export = json_decode((string) file_get_contents(base_path('bench/results/compression/2026-11-05/frankenphp.json')), true, flags: JSON_THROW_ON_ERROR)['export']['rows'];
+    foreach ($export as $row) {
+        if ($row['content_encoding'] !== '' && $row['accept_encoding'] !== 'zstd, br, gzip') {
+            expect($section)->toContain(sprintf('| %s | %s | %.3f s |', $row['content_encoding'], number_format($row['wire_bytes'], 0, '', ' '), $row['cpu_seconds']));
+        }
+    }
+
+    preg_match_all('/\]\((\.\.\/[^)#]+)/', $section, $links);
+    expect($links[1])->not->toBeEmpty();
+    foreach ($links[1] as $link) {
+        expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$link))->toBeTrue("missing: {$link}");
+    }
+});
+
+test('AC-7 guide section 21 links the server compression configs and names the substitute script bundle', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+    $start = (int) strpos($guide, '## 21. Early Hints and compression');
+    $section = substr($guide, $start, strpos($guide, '## Planned sections') - $start);
+
+    foreach (['../.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp', '../.ddev/servers/frankenphp-worker/web-build/Caddyfile.frankenphp', '../.ddev/nginx_full/nginx-site.conf'] as $link) {
+        expect($section)->toContain("]({$link})")
+            ->and(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$link))->toBeTrue();
+    }
+
+    expect($section)->toContain('lab-bundle')->toContain('0 bytes');
+});
