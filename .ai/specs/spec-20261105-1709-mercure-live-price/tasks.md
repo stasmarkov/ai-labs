@@ -33,20 +33,20 @@
   - [x] 5.1 Pinned Node subscribers (no deps), probe, busy-thread sampling, 20 publishes, latency per subscriber, private checks, JSON
   - [x] 5.2 **Verify**: `BenchMercureLoadTest` with stubs; `--quick` run
 
-- [ ] 6. Committed runs (measurement)
+- [x] 6. Committed runs (measurement)
   Covers: AC-6
-  - [ ] 6.1 N=100 and N=1000 on frankenphp; end on nginx-fpm
-  - [ ] 6.2 **Verify**: result files present, private checks pass
+  - [x] 6.1 N=100 and N=1000 on frankenphp; end on nginx-fpm
+  - [x] 6.2 **Verify**: result files present, private checks pass
 
 - [x] 7. BENCHMARKS.md, guide 23, code map (docs)
   Covers: AC-6, AC-7
   - [x] 7.1 Section, chart with SL-09 contrast, three subsections; guide 23; section 16 pointer
   - [x] 7.2 **Verify**: `BenchmarksDocTest`, `LearningGuideTest` read numbers from the files
 
-- [ ] 8. Checks
+- [x] 8. Checks
   Covers: MNC-1, MNC-2, MNC-3, MNC-5
-  - [ ] 8.1 Full suite, Pint, PHPStan, typecheck, build; new fingerprint recorded; parity identical on 6 servers against the new baseline; `git diff HEAD -- .ddev/config.yaml` empty; key grep clean; `bench/run.sh ping --quick` exit 0 on a clean tree
-  - [ ] 8.2 **Verify**: outputs recorded here
+  - [x] 8.1 Full suite, Pint, PHPStan, typecheck, build; new fingerprint recorded; parity identical on 6 servers against the new baseline; `git diff HEAD -- .ddev/config.yaml` empty; key grep clean; `bench/run.sh ping --quick` exit 0 on a clean tree
+  - [x] 8.2 **Verify**: outputs recorded here
     - Suite 1241 passed (13351 assertions); Pint passed; PHPStan no errors; `npm run typecheck` and `npm run build` clean.
     - Fingerprint `app-DNob7CFE.css` / `app-BbIOVcpD.js` matches the BENCHMARKS.md record. Parity re-captured on all 6 servers: only the timestamp line differs from `bench/parity/*.txt`; `compare nginx-fpm <server>` identical for the other 5.
     - `git diff HEAD -- .ddev/config.yaml` empty. The two Mercure key values appear in no tracked or untracked file outside `.env` and `.ddev/.env.web` (both gitignored, untracked).
@@ -80,21 +80,21 @@
 
 ## Done when
 
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
 
 ## Phase: Gaps (converge round 1)
 
-- [ ] 9. Committed full-method Mercure runs replace the --quick files (measurement, docs)
+- [x] 9. Committed full-method Mercure runs replace the --quick files (measurement, docs)
   Covers: AC-6, AC-1, AC-2
   - Both committed files in `bench/results/mercure-load/2026-11-05/` have `"quick": true`, `"publishes": 5`, `"measure_s": 20` and `"commit": "cb01359"` from a dirty tree. Clarification Q12 says `--quick` output goes to `raw/` only, and Task 6 is still open. `BENCHMARKS.md` ("Method limits", "Interview story") and guide section 23 both quote these numbers with a quick-run caveat. After the slice is committed, run `bench/mercure-load.sh --subscribers 100 --label frankenphp` and `--subscribers 1000` with the full method (clean tree, restart, 90 s, 20 publishes) on frankenphp, end on nginx-fpm, and replace the quick files. Update both doc tables, the chart, the prose and the result paths in `BenchmarksDocTest` and `LearningGuideTest` if the date folder changes. Then drop the quick-run caveats.
-  - [ ] 9.1 **Verify**: both result files have `"quick": false`, `"publishes": 20`, `private.passed` true, `delivered.percent` 100, zero health timeouts and `latency_ms.max` under 1000 (AC-1's "within 1 s" through the router). `ddev artisan test --compact tests/Feature/BenchmarksDocTest.php tests/Feature/LearningGuideTest.php` passes. `ddev server` reports nginx-fpm at the end.
+  - [x] 9.1 **Verify**: both result files have `"quick": false`, `"publishes": 20`, `private.passed` true, `delivered.percent` 100, zero health timeouts and `latency_ms.max` under 1000 (AC-1's "within 1 s" through the router). `ddev artisan test --compact tests/Feature/BenchmarksDocTest.php tests/Feature/LearningGuideTest.php` passes. `ddev server` reports nginx-fpm at the end.
 
-- [ ] 10. Finish Task 8 on a clean tree (checks)
+- [x] 10. Finish Task 8 on a clean tree (checks)
   Covers: MNC-1, MNC-2, MNC-3, MNC-5
   - Task 8 is unticked. Its own 8.2 notes say `bench/run.sh ping --quick` exits 2 because the tree is dirty, so the last run condition was never met. Rerun it after the commit and record the output under 8.2, then tick Task 8.
-  - [ ] 10.1 **Verify**: `bench/run.sh ping --quick` exits 0 on a clean tree. `git diff HEAD -- .ddev/config.yaml` is empty. The full suite, Pint, PHPStan, typecheck and build are green. Task 8 and 8.1/8.2 are ticked with the outputs recorded.
+  - [x] 10.1 **Verify**: `bench/run.sh ping --quick` exits 0 on a clean tree. `git diff HEAD -- .ddev/config.yaml` is empty. The full suite, Pint, PHPStan, typecheck and build are green. Task 8 and 8.1/8.2 are ticked with the outputs recorded.
 
 - [x] 11. Guide 23: results link, key delivery, and the section 16 request row (docs)
   Covers: AC-7
@@ -131,6 +131,8 @@ Source: the ship report `.ai/reports/ship-spec-20261105-1709-mercure-live-price-
   - [x] 14.11 BENCHMARKS.md busy-thread wording fixed (`listings:reprice` is a CLI process outside the pool; the only PHP-thread work is `/healthz`) and the latency-tail causes reworded; guide section 23 and the section 16 row updated; bolt quick re-checks recorded.
   - [x] 14.12 **Verify**: full suite, Pint, PHPStan, typecheck and build green; parity re-captured on all 6 servers (reason: the page gained `data-price-rendered-ms`, masked in the hash) and `compare nginx-fpm <server>` is `identical` for the other five; fingerprint `app-DNob7CFE.css` unchanged, JS now `app-PTzu1QaN.js` (`7fbc38601b4f59a1c78dcec8cb4ceb16cf7a64abf4dfafff60069c5f97735256`); `git diff HEAD -- .ddev/config.yaml` empty; `git grep -F` for both key values finds nothing; `ddev server` reports nginx-fpm.
 
-- [ ] 15. Full-method runs on a clean tree (tasks 6, 9, 10 stay open)
+- [x] 15. Full-method runs on a clean tree (tasks 6, 9, 10 stay open)
   - `bench/mercure-load.sh` refuses a dirty tree (`git working tree has changes outside bench/results/ and .ai/session/`), and the whole slice is uncommitted, so the N=100 and N=1000 full runs and `bench/run.sh ping --quick` were not run. After the commit: `bench/mercure-load.sh --subscribers 100 --label frankenphp` and `--subscribers 1000 --label frankenphp`, replace the `--quick` files in `bench/results/mercure-load/2026-11-05/` (move the old ones to `bench/results/raw/`), update the BENCHMARKS.md and guide tables and the "quick" caveats, then `bench/run.sh ping --quick`.
 
+
+- Owner-side notes (after the fix pass): code committed as 515e78c; full-method runs on frankenphp then replaced the --quick files: N=100 2100/2100 delivered, latency p50 33 / p95 45 / max 57 ms, health p95 15 ms, max 1 busy thread; N=1000 21000/21000, p50 70 / p95 344 / max 488 ms, health p95 16 ms, max 1 busy thread; private checks passed in both. BENCHMARKS.md and guide 23 updated; `bench/run.sh ping --quick` exit 0 on a clean tree after the results commit.

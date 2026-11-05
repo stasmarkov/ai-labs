@@ -889,22 +889,22 @@ HTTP/3 runs over QUIC on UDP and the DDEV router cannot carry it, so I measured 
 
 Do open Mercure subscribers hold PHP workers the way an open direct SSE answer does (SL-13, contrasted with SL-09)? Two cells on frankenphp, 100 and 1000 subscribers, each with the shared SL-09 health probe running at the same time. Raw files: [`bench/results/mercure-load/2026-11-05/`](bench/results/mercure-load/2026-11-05/) (`n100-frankenphp.json`, `n1000-frankenphp.json`). Reproduce with `bench/mercure-load.sh --subscribers <n> --label frankenphp` on frankenphp (it refuses any server without a hub and puts `.env` and listing 1's price back on exit).
 
-Set-up: one pinned Node container (`node:22.12.0-alpine`, built-in `fetch`, no dependencies) opens N connections to `GET /.well-known/mercure?topic=<listing 1 price topic>` through the DDEV router and holds them. Three more subscribers watch the private topic: one with listing 1's token, one with listing 2's token, one without a token. Meanwhile `GET /healthz` is probed at 5 requests per second with a 10 s timeout (the SL-09 probe, oha capped at 2 CPUs), and FrankenPHP's busy and total PHP threads are read from Caddy's metrics once a second. During the window `listings:reprice` changes listing 1's price 5 times (public updates), then once with `--private`; that last command also sends a public update, so every subscriber should get 6 messages. Latency is the receive time in the Node container minus the `published_at_ms` PHP took right before the POST to the hub; the containers share the host kernel's clock.
+Set-up: one pinned Node container (`node:22.12.0-alpine`, built-in `fetch`, no dependencies) opens N connections to `GET /.well-known/mercure?topic=<listing 1 price topic>` through the DDEV router and holds them. Three more subscribers watch the private topic: one with listing 1's token, one with listing 2's token, one without a token. Meanwhile `GET /healthz` is probed at 5 requests per second with a 10 s timeout (the SL-09 probe, oha capped at 2 CPUs), and FrankenPHP's busy and total PHP threads are read from Caddy's metrics once a second. During the 90 s window `listings:reprice` changes listing 1's price 20 times, 2 s apart (public updates), then once with `--private`; that last command also sends a public update, so every subscriber should get 21 messages. Latency is the receive time in the Node container minus the `published_at_ms` PHP took right before the POST to the hub; the containers share the host kernel's clock.
 
 **Conditions that differ from earlier frankenphp cells.** Two things changed in the frankenphp Caddyfile for this slice, and every frankenphp cell from SL-13 on runs with them:
 - **Caddy metrics are on** (`servers { metrics }`). The busy-thread count is read from `frankenphp_busy_threads`, and that gauge does not exist without the option (checked: with it removed the sampler read `na na`). The option adds per-request bookkeeping to every request the server handles, so a frankenphp cell from SL-13 on is not strictly comparable with the frankenphp cells from earlier slices; the effect was not measured separately. A Caddy environment toggle was considered and rejected: it would need `.ddev/.env.web` edited and a `ddev restart` around each run, and the bench would still have to restore it.
-- **The hub keeps a history** (`transport bolt`, last 100 updates, file under `/tmp`, `lastEventID=earliest` on the page), added in the review fix pass so a price published between render and connect is not lost. The two committed cells below were measured earlier with the history-less `local` transport. Quick re-checks with `bolt` (in the gitignored `bench/results/raw/`, label `frankenphp-fixpass`): 100 subscribers 600 of 600 delivered, latency p50 33 ms, p95 56 ms, max 59 ms, health p95 17 ms; 1000 subscribers 6000 of 6000, p50 88 ms, p95 376 ms, max 436 ms, health p95 36 ms, max 1 busy thread. Same shape, within the run-to-run noise of a 20 s run, which is why the committed cells have not been replaced by them.
+- **The hub keeps a history** (`transport bolt`, last 100 updates, file under `/tmp`, `lastEventID=earliest` on the page), added in the review fix pass so a price published between render and connect is not lost. The committed cells below were measured with it.
 
 **Cost on servers without a hub.** The detail page is byte-identical everywhere, so on the five servers without a hub every page view still sends one request for `/.well-known/mercure`, which reaches that server's 404 path (and boots the application there) before the script gives up. That is one extra request per detail page view, kept on purpose for parity; it was not benchmarked.
 
-**Method limits.** These are `--quick` runs (20 s window, 5 publishes, no restart before the run, no clean-tree check), written with `BENCH_OUT_DIR` to the committed folder and marked `"quick": true` in each file. The full method (90 s window, 20 publishes, restart first) refuses to run on a working tree with uncommitted changes, which this one had. The numbers show the shape of the result; they are not a median of repeats.
+**Method.** Full runs on a clean tree at commit `515e78c` (DDEV restarted first, 90 s window, 20 publishes 2 s apart plus one private publish). The first committed files were 20 s `--quick` runs; they are replaced, and their shape matched these.
 
 ### Subscribers held by the hub
 
 | Subscribers | Delivered | Latency p50 | Latency p95 | Latency max | Health p95 | Max busy PHP threads |
 |---|---|---|---|---|---|---|
-| 100 | 600 of 600 | 28 ms | 46 ms | 47 ms | 17 ms | 1 |
-| 1000 | 6000 of 6000 | 78 ms | 400 ms | 484 ms | 20 ms | 0 |
+| 100 | 2100 of 2100 | 33 ms | 45 ms | 57 ms | 15 ms | 1 |
+| 1000 | 21000 of 21000 | 70 ms | 344 ms | 488 ms | 16 ms | 1 |
 
 The pool has 14 PHP threads in both cells. No health probe timed out and the private checks passed in both: only the subscriber holding listing 1's token received the private update (the wrong-token and no-token subscribers received none).
 
@@ -913,27 +913,27 @@ xychart-beta
     title "Health check p95 with open streams (ms, 10 000 = timed out)"
     x-axis ["30 SSE answers (SL-09)", "100 Mercure", "1000 Mercure"]
     y-axis "p95 (ms)" 0 --> 10000
-    bar [10000, 17, 20]
+    bar [10000, 15, 16]
 ```
 
 The first bar is the SL-09 cell `bench/results/slow-load/2026-11-03/sse-frankenphp-14.json` (frankenphp, fixed 14 threads, 30 users reading a 6 s answer each, 118 of 300 probes without an answer within 10 s). The other two are this section. The SL-09 cell is a different workload on the same server and probe: it shows what a held connection costs when PHP holds it, not a like-for-like benchmark of the same N.
 
 ### What the numbers say
 
-- **Subscribers did not occupy PHP threads.** 1000 open connections left 0 of 14 threads busy at every sample and the health p95 at 20 ms. 30 direct SSE answers on the same 14 threads left the health check at 10 000 ms with 118 of 300 probes unanswered. A Mercure subscriber is an open socket in Caddy's Go code; PHP is only involved for the short publish request.
-- **Delivery was complete.** 600 of 600 and 6000 of 6000 messages arrived, one copy per subscriber per publish.
-- **The latency tail grows with N, the median stays small.** p50 went from 28 ms to 78 ms and p95 from 46 ms to 400 ms between 100 and 1000 subscribers. The likely causes, not separated by this bench, are the single Node event loop that reads all N sockets and timestamps them, the router hop, and CPU contention between the hub, the router, the probe and the generator on one host; the hub does not write to subscribers one after another from a single thread that the last connection has to wait for.
+- **Subscribers did not occupy PHP threads.** With 1000 open connections at most 1 of 14 threads was busy in any sample (median 0) and the health p95 was 16 ms, the same as with 100 (15 ms). 30 direct SSE answers on the same 14 threads left the health check at 10 000 ms with 118 of 300 probes unanswered. A Mercure subscriber is an open socket in Caddy's Go code; PHP is only involved for the short publish request.
+- **Delivery was complete.** 2100 of 2100 and 21000 of 21000 messages arrived, one copy per subscriber per publish.
+- **The latency tail grows with N, the median stays small.** p50 went from 33 ms to 70 ms and p95 from 45 ms to 344 ms between 100 and 1000 subscribers. The likely causes, not separated by this bench, are the single Node event loop that reads all N sockets and timestamps them, the router hop, and CPU contention between the hub, the router, the probe and the generator on one host; the hub does not write to subscribers one after another from a single thread that the last connection has to wait for.
 - **Authorization held.** A private update reached only the connection whose JWT named that listing's private topic.
 
 ### Surprises
 
-- **One cell showed a busy thread.** The 100 cell has max 1 busy thread and the 1000 cell 0. A busy thread is a PHP request in flight. `listings:reprice` is a CLI process outside the FrankenPHP pool and the publish POST is answered by the hub inside Caddy, so the only PHP-thread work during the window is the `/healthz` probe (5 requests per second, each a few milliseconds). With one-second sampling, whether a sample catches one of them is chance, so read "0 or 1", not a trend.
-- **Latency is bounded by the generator too.** One Node process serves all N sockets and measures their arrival; part of the 400 ms p95 at N=1000 is its own event loop. It is an upper bound for the hub.
+- **A busy thread showed up at all.** Both cells have max 1 busy thread (median 0). A busy thread is a PHP request in flight. `listings:reprice` is a CLI process outside the FrankenPHP pool and the publish POST is answered by the hub inside Caddy, so the only PHP-thread work during the window is the `/healthz` probe (5 requests per second, each a few milliseconds). With one-second sampling, whether a sample catches one of them is chance, so read "0 or 1", not a trend.
+- **Latency is bounded by the generator too.** One Node process serves all N sockets and measures their arrival; part of the 344 ms p95 at N=1000 is its own event loop. It is an upper bound for the hub.
 - **The hub is not Mercure's recommended topology.** Here it is in the same process as PHP (FrankenPHP's Caddy module), so a hub restart drops every subscriber and the page reconnects on its own. A separate hub scales and restarts independently.
 
 ### Interview story
 
-I wanted to show that Mercure subscribers do not cost PHP workers the way direct SSE does. I opened 100 and 1000 subscribers on FrankenPHP's built-in hub while the SL-09 health probe ran: at 1000 open connections 0 of 14 PHP threads were busy and the health p95 was 20 ms, against 10 000 ms with 30 direct SSE answers. A published price change reached all 6000 deliveries, with p50 78 ms and p95 400 ms through the DDEV router, and a private update reached only the token that named its topic. These are short `--quick` runs on a dirty tree, so I would claim the shape of the result, not the exact latencies.
+I wanted to show that Mercure subscribers do not cost PHP workers the way direct SSE does. I opened 100 and 1000 subscribers on FrankenPHP's built-in hub while the SL-09 health probe ran: at 1000 open connections at most 1 of 14 PHP threads was busy and the health p95 was 16 ms, against 10 000 ms with 30 direct SSE answers. 20 price changes reached all 21 000 deliveries, with p50 70 ms and p95 344 ms through the DDEV router, and a private update reached only the token that named its topic. The latency tail is partly my own load generator, one Node process reading every socket.
 
 ## Response parity
 

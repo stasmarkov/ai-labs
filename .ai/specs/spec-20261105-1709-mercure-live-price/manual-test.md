@@ -93,13 +93,13 @@ Expected:
 Expected:
 - Each run exits 0 and each JSON has health p95 and timeouts, busy threads max and median, latency p50/p95/max, delivered/expected, and private `{authorized_received: 1, wrong_token_received: 0, no_token_received: 0, passed: true}`.
 - The `BENCHMARKS.md` section has the table, the Mermaid chart including the SL-09 10 000 ms cell, and the subsections "What the numbers say", "Surprises" and "Interview story".
-- Known gap: the committed JSON files are `--quick` runs (`"quick": true`), which the spec says belong in `bench/results/raw/`. Replace them with full runs from this step.
+
 
 ## Step 7: The guide (AC-7)
 
 1. Open `docs/learning-guide.md`, section `## 23. Live updates with Mercure`, and the section 16 code map.
 
 Expected:
-- Section 23 explains the hub inside Caddy, publish vs subscribe, private topics and JWT claims, the measured numbers (0 of 14 threads busy at 1000 subscribers vs 10 000 ms health for SL-09), keys via process env vs `.env`, and EventSource reconnect and the give-up rule.
+- Section 23 explains the hub inside Caddy, publish vs subscribe, private topics and JWT claims, the measured numbers (at most 1 of 14 threads busy at 1000 subscribers, health p95 16 ms, vs 10 000 ms for SL-09), keys via process env vs `.env`, and EventSource reconnect and the give-up rule.
 - The links to code, the Caddyfile, scripts, results, mercure.rocks, frankenphp.dev and MDN open.
 - Section 16 has a row "Notify the browser when something changes" pointing to section 23.
