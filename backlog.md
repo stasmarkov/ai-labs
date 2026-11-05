@@ -173,7 +173,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-60, BR-61
 - **Depends on:** SL-03
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261105-1709-mercure-live-price
 - **Source:** brief (Phase 5)
 - **Run:** `/sdd "SL-13: enable FrankenPHP's built-in Mercure hub, publish a per-listing update when a price changes, and update the detail page price live via EventSource, including a private-update variant with subscriber JWT topic claims (BR-60, BR-61). Rules in product-brief.md."`
