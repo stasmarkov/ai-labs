@@ -39,10 +39,11 @@
   - [x] 5.2 BENCHMARKS section and guide section 22
   - [x] 5.3 **Verify**: `BenchmarksDocTest`, `LearningGuideTest` read numbers from the result files; `BenchCommittedRunsTest` privacy grep green
 
-- [ ] 6. Parity, fingerprint and bench (checks)
+- [x] 6. Parity, fingerprint and bench (checks)
   Covers: MNC-1, MNC-2, MNC-3
-  - [ ] 6.1 Full suite, Pint, PHPStan, typecheck, build; fingerprint; parity on 6 servers; `git diff HEAD -- .ddev` empty; `bench/run.sh ping --quick` exit 0 on a clean tree
-  - [ ] 6.2 **Verify**: outputs recorded here
+  - [x] 6.1 Full suite, Pint, PHPStan, typecheck, build; fingerprint; parity on 6 servers; `git diff HEAD -- .ddev` empty; `bench/run.sh ping --quick` exit 0 on a clean tree
+  - [x] 6.2 **Verify**: outputs recorded here
+    - After the slice commit c427ebd: `bench/run.sh ping --quick` exit 0 on a clean tree; web container offloads read back as before (tso on, gso on, gro off, udp_gso on); privacy grep over bench/results/http3 clean; `git diff HEAD -- .ddev` empty.
     - Pint passed; PHPStan `No errors` (253 files); `ddev npm run typecheck` clean; `ddev npm run build` ok; full suite `1152 passed (9909 assertions)`; after the review fix pass: `1190 passed (11925 assertions)`.
     - Fingerprint before and after the build identical: `app-CjRfEL-0.css 82042c94...ce71`, `app-BvRk9kiK.js e3b0c44298...b855`.
     - Parity: `identical` on nginx-fpm, apache-fpm, openlitespeed, frankenphp, frankenphp-octane, frankenphp-worker; server back on nginx-fpm.
@@ -73,9 +74,9 @@
 
 ## Done when
 
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
 
 ## Phase: Gaps (converge round 1)
 
