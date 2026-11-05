@@ -615,3 +615,73 @@ test('AC-5 BENCHMARKS.md names the script bundle the compression rows measured',
 
     expect($section)->toContain('page-js')->toContain('app-BvRk9kiK.js');
 });
+
+/**
+ * @return array<string, array<string, mixed>>
+ */
+function http3LcpResults(): array
+{
+    $results = [];
+    foreach (['h2-loss0', 'h3-loss0', 'h2-loss2', 'h3-loss2'] as $variant) {
+        $results[$variant] = json_decode((string) file_get_contents(base_path("bench/results/http3/2026-11-05/lcp-{$variant}.json")), true, flags: JSON_THROW_ON_ERROR);
+    }
+
+    return $results;
+}
+
+test('AC-4 BENCHMARKS.md has the HTTP/3 table, chart and story read from the result files', function (): void {
+    $doc = (string) file_get_contents(base_path('BENCHMARKS.md'));
+    $start = strpos($doc, '## HTTP/3 vs HTTP/2 (2026-11-05)');
+    expect($start)->not->toBeFalse();
+    $end = strpos($doc, "\n## ", (int) $start + 5);
+    $section = substr($doc, (int) $start, ($end === false ? strlen($doc) : $end) - (int) $start);
+
+    foreach (['### What the numbers say', '### Surprises', '### Interview story', 'Alt-Svc', 'bench/results/http3/2026-11-05/', 'bench/http3.sh'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    expect($section)->toContain('| Variant | Load time median (min to max) | LCP median (min to max) | FCP median | TTFB median | Measured RTT |');
+    foreach (http3LcpResults() as $variant => $result) {
+        $row = sprintf(
+            '| %s | %d ms (%d to %d) | %d ms (%d to %d) | %d ms | %d ms | %d ms |',
+            $variant,
+            $result['load_ms']['median'],
+            $result['load_ms']['min'],
+            $result['load_ms']['max'],
+            $result['lcp_ms']['median'],
+            $result['lcp_ms']['min'],
+            $result['lcp_ms']['max'],
+            $result['fcp_ms']['median'],
+            $result['ttfb_ms']['median'],
+            $result['net']['rtt_ms'],
+        );
+        expect($section)->toContain($row);
+    }
+
+    preg_match('/```mermaid\n(xychart-beta.*?)```/s', $section, $chart);
+    foreach (http3LcpResults() as $result) {
+        expect($chart[1] ?? '')->toContain((string) $result['load_ms']['median']);
+    }
+
+    $profile = http3LcpResults()['h2-loss0']['net'];
+    expect($section)->toContain(sprintf('%d ms each way', $profile['delay_ms']))
+        ->toContain($profile['rate_down'])
+        ->toContain($profile['rate_up'])
+        ->toContain(http3LcpResults()['h2-loss0']['browser_image_digest']);
+
+    preg_match('/### Interview story\n(.*?)(?=^##|\z)/ms', $section, $story);
+    $sentences = preg_split('/(?<=[.!?])\s+(?=[A-Z])/', trim($story[1] ?? '')) ?: [];
+    expect(count($sentences))->toBeGreaterThanOrEqual(3)->toBeLessThanOrEqual(6)
+        ->and($story[1] ?? '')->toMatch('/\d/');
+});
+
+test('NFR-1 BENCHMARKS.md states that h2 and h3 shared one netem profile and no DevTools emulation', function (): void {
+    $doc = (string) file_get_contents(base_path('BENCHMARKS.md'));
+    $start = (int) strpos($doc, '## HTTP/3 vs HTTP/2 (2026-11-05)');
+    $section = substr($doc, $start);
+
+    expect($section)->toContain('same netem profile')->toContain('no DevTools');
+    $loss0 = http3LcpResults();
+    expect(array_intersect_key($loss0['h2-loss2']['net'], ['delay_ms' => 1, 'rate_up' => 1, 'rate_down' => 1]))
+        ->toEqual(array_intersect_key($loss0['h3-loss2']['net'], ['delay_ms' => 1, 'rate_up' => 1, 'rate_down' => 1]));
+});

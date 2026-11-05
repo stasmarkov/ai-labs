@@ -526,3 +526,28 @@ test('AC-7 guide section 21 links the server compression configs and names the s
 
     expect($section)->toContain('lab-bundle')->toContain('0 bytes');
 });
+
+test('AC-5 guide section 22 explains HTTP/3 and quotes the measured numbers with working links', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+    $start = strpos($guide, '## 22. HTTP/3 and QUIC');
+    expect($start)->not->toBeFalse();
+    $section = substr($guide, (int) $start, strpos($guide, '## Planned sections') - (int) $start);
+
+    foreach (['QUIC', 'UDP', 'Alt-Svc', 'head-of-line', 'Traefik', 'router', 'netem', 'network layer', 'handshake', 'origin-to-force-quic-on', 'nextHopProtocol', 'section 21'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    foreach (['h2-loss0', 'h3-loss0', 'h2-loss2', 'h3-loss2'] as $variant) {
+        $result = json_decode((string) file_get_contents(base_path("bench/results/http3/2026-11-05/lcp-{$variant}.json")), true, flags: JSON_THROW_ON_ERROR);
+        expect($section)->toContain(sprintf('| %s | %d ms | %d ms | %d ms |', $variant, $result['load_ms']['median'], $result['lcp_ms']['median'], $result['ttfb_ms']['median']));
+    }
+
+    foreach (['../bench/http3.sh', '../bench/lib/netem.sh', '../bench/lcp.mjs', '../bench/results/http3/', '../BENCHMARKS.md', '../tests/Feature/BenchHttp3Test.php', '../tests/Feature/BenchNetemTest.php'] as $link) {
+        expect($section)->toContain("]({$link}");
+    }
+    preg_match_all('/\]\((\.\.\/[^)#]+)/', $section, $links);
+    foreach ($links[1] as $link) {
+        expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$link))->toBeTrue("missing: {$link}");
+    }
+    expect($section)->toContain('https://www.rfc-editor.org/rfc/rfc9000')->toContain('https://www.rfc-editor.org/rfc/rfc9114');
+});

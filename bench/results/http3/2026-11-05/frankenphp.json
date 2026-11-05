@@ -1,0 +1,19 @@
+{
+  "server": "frankenphp",
+  "label": "frankenphp",
+  "date": "2026-11-05",
+  "commit": "9092cd5",
+  "path": "/listings/1",
+  "h3_ok": true,
+  "h3_status": 200,
+  "h3_alpn": "h3",
+  "h2_status": 200,
+  "alpn_h2": "h2",
+  "alt_svc": "h3=\":443\"; ma=2592000",
+  "body_sha256_h2": "98e943ebaf6093d7f487357c3f4f6a66d5f82317eeb6cb2bbf0b38b516c7e3dc",
+  "body_sha256_h3": "98e943ebaf6093d7f487357c3f4f6a66d5f82317eeb6cb2bbf0b38b516c7e3dc",
+  "reason": null,
+  "early_hints_during_h3": false,
+  "early_hints_reason": "the quiche-based curl cannot parse the 103 Early Hints interim response over h3 (Header without colon)",
+  "curl_image_digest": "alpine/curl-http3@sha256:b0cb55696adcaf5714958926a28ce78a5fa72f6a4aa8df2ec5b72f1cde8038e3"
+}

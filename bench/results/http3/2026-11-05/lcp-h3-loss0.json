@@ -1,0 +1,233 @@
+{
+  "variant": "h3-loss0",
+  "server": "frankenphp",
+  "path": "direct",
+  "path_reason": "netem needs the direct path: the router has no HTTP/3",
+  "date": "2026-11-05",
+  "commit": "9092cd5",
+  "listing": 1,
+  "url": "https://interview.ddev.site/listings/1",
+  "runs": 5,
+  "attempts": 5,
+  "valid_runs": 5,
+  "invalid_runs": 0,
+  "early_hints_setting": "on",
+  "cold": true,
+  "browser_image": "mcr.microsoft.com/playwright:v1.49.1-noble",
+  "browser_image_digest": "mcr.microsoft.com/playwright@sha256:70e367e0cbf60340a5b5fd562f6247a34eb3196efab9f88a3dd56482d9fe09d2",
+  "playwright_version": "1.49.1",
+  "protocol": "h3",
+  "net": {
+    "sidecar_image_digest": "sha256:b09d9b21381f47a79b3cbcb30da25266dc17186ea00ae65e99fdc51396f48e70",
+    "applied": true,
+    "reason": null,
+    "delay_ms": 75,
+    "loss_pct": 0,
+    "rate_up": "750kbit",
+    "rate_down": "1600kbit",
+    "rtt_ms": 154,
+    "rtt_samples_ms": [
+      310,
+      153,
+      155,
+      154,
+      155,
+      154,
+      151,
+      154,
+      157,
+      154,
+      156,
+      153,
+      153,
+      154,
+      154,
+      153,
+      155,
+      153,
+      155,
+      152
+    ],
+    "rtt_target_ms": [
+      140,
+      170
+    ],
+    "mode": "bidirectional",
+    "limit": 1000,
+    "offloads": {
+      "client": {
+        "before": {
+          "eth0": {
+            "tso": "on",
+            "gso": "on",
+            "gro": "off",
+            "udp_gso": "on"
+          }
+        },
+        "after": {
+          "eth0": {
+            "tso": "off",
+            "gso": "off",
+            "gro": "off",
+            "udp_gso": "off"
+          },
+          "ifb0": {
+            "tso": "off",
+            "gso": "off",
+            "gro": "off",
+            "udp_gso": "off"
+          }
+        }
+      },
+      "web": {
+        "before": {
+          "eth0": {
+            "tso": "on",
+            "gso": "on",
+            "gro": "off",
+            "udp_gso": "on"
+          }
+        },
+        "after": {
+          "eth0": {
+            "tso": "off",
+            "gso": "off",
+            "gro": "off",
+            "udp_gso": "off"
+          }
+        },
+        "restored": {
+          "eth0": {
+            "tso": "on",
+            "gso": "on",
+            "gro": "off",
+            "udp_gso": "on"
+          }
+        }
+      }
+    },
+    "qdisc": {
+      "unit": "packets (segmentation offloads off, counters reset after the RTT check)",
+      "egress_drop_rate": 0,
+      "ingress_drop_rate": 0,
+      "egress_packets": 330,
+      "egress_dropped": 0,
+      "egress_bytes": 54575,
+      "ingress_packets": 640,
+      "ingress_dropped": 0,
+      "ingress_bytes": 709479,
+      "accepted_drop_pct": [
+        0,
+        0
+      ]
+    }
+  },
+  "throttle": {
+    "method": "netem (kernel qdisc on the browser container network, ingress via ifb, network layer)",
+    "rtt_ms": 150,
+    "down_kbps": 1600,
+    "up_kbps": 750,
+    "cpu_slowdown": 4,
+    "cpu_method": "cdp Emulation.setCPUThrottlingRate"
+  },
+  "lcp_ms": {
+    "median": 1253,
+    "min": 1243,
+    "max": 1260
+  },
+  "fcp_ms": {
+    "median": 633,
+    "min": 606,
+    "max": 652
+  },
+  "ttfb_ms": {
+    "median": 402,
+    "min": 384,
+    "max": 432
+  },
+  "ttfb_source": "cdp Network.responseReceived timing.receiveHeadersEnd of the document request",
+  "ttfb_nav_ms": {
+    "median": 402,
+    "min": 384,
+    "max": 432
+  },
+  "early_hint_used": true,
+  "early_hint_runs": 5,
+  "load_ms": {
+    "median": 1233,
+    "min": 1225,
+    "max": 1246
+  },
+  "samples": [
+    {
+      "next_hop_protocol": "h3",
+      "load_ms": 1246,
+      "lcp_ms": 1260,
+      "fcp_ms": 652,
+      "ttfb_nav_ms": 432,
+      "early_hint_used": true,
+      "initiator_types": {
+        "css": "early-hints",
+        "js": "early-hints"
+      },
+      "ttfb_ms": 432,
+      "valid": true
+    },
+    {
+      "next_hop_protocol": "h3",
+      "load_ms": 1225,
+      "lcp_ms": 1243,
+      "fcp_ms": 606,
+      "ttfb_nav_ms": 384,
+      "early_hint_used": true,
+      "initiator_types": {
+        "css": "early-hints",
+        "js": "early-hints"
+      },
+      "ttfb_ms": 384,
+      "valid": true
+    },
+    {
+      "next_hop_protocol": "h3",
+      "load_ms": 1230,
+      "lcp_ms": 1247,
+      "fcp_ms": 647,
+      "ttfb_nav_ms": 402,
+      "early_hint_used": true,
+      "initiator_types": {
+        "css": "early-hints",
+        "js": "early-hints"
+      },
+      "ttfb_ms": 402,
+      "valid": true
+    },
+    {
+      "next_hop_protocol": "h3",
+      "load_ms": 1239,
+      "lcp_ms": 1253,
+      "fcp_ms": 633,
+      "ttfb_nav_ms": 409,
+      "early_hint_used": true,
+      "initiator_types": {
+        "css": "early-hints",
+        "js": "early-hints"
+      },
+      "ttfb_ms": 408,
+      "valid": true
+    },
+    {
+      "next_hop_protocol": "h3",
+      "load_ms": 1233,
+      "lcp_ms": 1253,
+      "fcp_ms": 616,
+      "ttfb_nav_ms": 397,
+      "early_hint_used": true,
+      "initiator_types": {
+        "css": "early-hints",
+        "js": "early-hints"
+      },
+      "ttfb_ms": 397,
+      "valid": true
+    }
+  ]
+}

@@ -822,6 +822,69 @@ CPU seconds the web container spent on one export download (cgroup `cpu.stat`, m
 
 A 103 Early Hints lets the server tell the browser to fetch CSS and JS while PHP is still building the page. My first measurement said it halved first paint, which was too good to be true: DevTools throttling did not delay the 103. Measured again behind a network-level throttle (150 ms RTT, 1.6 Mbit/s), it saved 54 ms of first paint and 27 ms of LCP, because this page's server time is only about 15 ms; Early Hints pay off when the server thinks for hundreds of milliseconds. It also only works where the whole path forwards the 103 (Traefik does) and where the server can send one (classic FrankenPHP, not nginx-fpm or Octane). On compression FrankenPHP offers `zstd`, `br` and `gzip` while nginx-fpm offers `gzip`; `br` made the 50 MiB export 6.5 MB against 8.0 MB for `gzip` but cost about 2.4 times the CPU.
 
+## HTTP/3 vs HTTP/2 (2026-11-05)
+
+Does the same page load faster over HTTP/3 than over HTTP/2 when both see the same slow, lossy link? Two parts, both on frankenphp (the only server with a UDP listener): one verified HTTP/3 request with the `Alt-Svc` advertisement, and four cold-browser variants of `GET /listings/1`, {h2, h3} x {loss 0 %, loss 2 %}. Raw files: [`bench/results/http3/2026-11-05/`](bench/results/http3/2026-11-05/) (`lcp-<variant>.json` for the page timings, `frankenphp.json` and `nginx-fpm.json` for the curl proof). Reproduce with `bench/http3.sh` (and `bench/http3.sh --server nginx-fpm`) and `bench/http3-matrix.sh`, which switches to frankenphp, runs the four variants of `node bench/lcp.mjs --net netem --protocol <h2|h3> --loss <0|2>` and puts nginx-fpm back. All four variant files and the curl files come from one session with the same scripts, the same digest-pinned netem sidecar and the same offload state.
+
+Set-up: the DDEV router (Traefik) ends TLS and speaks plain HTTP to the web container, so no browser has ever used HTTP/3 through it. Both clients therefore run in a container on `ddev_default` and connect straight to the web container, whose Caddy listens on TCP 443 and UDP 443. The page timings come from Chromium in `mcr.microsoft.com/playwright@sha256:70e367e0cbf60340a5b5fd562f6247a34eb3196efab9f88a3dd56482d9fe09d2` (Playwright 1.49.1), forced to h2 with `--disable-quic` or to h3 with `--origin-to-force-quic-on`; a run counts only if the document's `nextHopProtocol` equals the requested protocol and the load event fired, and a failed navigation counts as an invalid attempt (up to 8 attempts for 5 valid runs). All four variants use the same netem profile, applied by `bench/lib/netem.sh` from a `NET_ADMIN` sidecar (`nicolaka/netshoot`, pinned by digest) that shares the browser container's network: 75 ms each way (150 ms RTT), 750kbit up and 1600kbit down, plus 2 % random loss per direction in the loss variants. There is no DevTools network emulation, only the 4x CPU slowdown. TCP and QUIC both cross the shaped interface, which is why toxiproxy (TCP only) could not be used. Every variant is 5 cold runs (a new browser context each) with the early hints on (the default), and every file records the profile, the measured RTT (the median of 20 TCP connects to the web container, probed with HEAD requests so no page is downloaded) and the offload state.
+
+**Loss is per wire packet.** `netem` drops one kernel buffer (skb) at a time. With TCP segmentation offload, generic segmentation and receive offload, and UDP GSO (which QUIC uses to send several datagrams in one call), one skb can hold dozens of packets, so a "2 %" drop would remove whole bursts, differently for TCP and for QUIC. The first version of this comparison measured exactly that (its ingress drop rate read 1.2 to 1.4 %). The scripts now turn `tso`, `gso`, `gro` and `tx-udp-segmentation` off on the browser container's `eth0` and `ifb0`, and on the web container's `eth0` for the length of each variant, with `ethtool -K` from short-lived sidecars. This is runtime state of a shared container: the previous values (tso on, gso on, gro off, udp_gso on) are recorded, restored on every exit path (success, failure, Ctrl-C, SIGTERM) and checked (`net.offloads.web.restored` equals `before` in every file). The qdisc counters are reset after the RTT check, so the drop rates cover only the variant's own traffic.
+
+### One HTTP/3 request
+
+| Server | h3 status | h3 ALPN | h2 ALPN | Alt-Svc on h2 | Body sha256 equal |
+|---|---|---|---|---|---|
+| frankenphp | 200 | h3 | h2 | `h3=":443"; ma=2592000` | yes |
+| nginx-fpm | none (no HTTP/3: curl exit 7) | none | http/1.1 | none | not applicable |
+
+`bench/http3.sh` sends one `curl --http3-only` request and one h2 request to `/listings/1` from the pinned `alpine/curl-http3` image (curl 8.11.0-DEV built with quiche 0.22.0). `curlimages/curl` has no HTTP/3 and the usual `ymuski/curl-http3` and `badouralix/curl-http3` images have no linux/arm64 build, so this one was chosen. The body hash over h3 equals the one over h2. A limitation of that quiche curl: it cannot parse the `103 Early Hints` interim response over h3 and stops with "Header without colon". `/listings/1` sends a 103, so the script sets `EARLY_HINTS=false` in `.env` for the two requests (the shared env backup and restore, undone on exit) and records `early_hints_during_h3: false` with the reason; h2 and h3 see the same setting. The page-timing variants below keep the early hints on, because Chromium parses the 103 over QUIC.
+
+### Page timings per variant
+
+| Variant | Load time median (min to max) | LCP median (min to max) | FCP median | TTFB median | Measured RTT |
+|---|---|---|---|---|---|
+| h2-loss0 | 1454 ms (1447 to 1561) | 1477 ms (1465 to 1586) | 808 ms | 582 ms | 155 ms |
+| h3-loss0 | 1233 ms (1225 to 1246) | 1253 ms (1243 to 1260) | 633 ms | 402 ms | 154 ms |
+| h2-loss2 | 1841 ms (1761 to 2644) | 1868 ms (1783 to 2674) | 1004 ms | 725 ms | 155 ms |
+| h3-loss2 | 1257 ms (1240 to 1506) | 1297 ms (1254 to 1534) | 627 ms | 406 ms | 154 ms |
+
+```mermaid
+xychart-beta
+    title "Load time median per variant (ms)"
+    x-axis ["h2 loss 0", "h3 loss 0", "h2 loss 2", "h3 loss 2"]
+    y-axis "ms" 0 --> 2000
+    bar [1454, 1233, 1841, 1257]
+```
+
+Measured drops, per variant and per direction (egress is client to server, ingress is server to client; counted in packets, all five runs of the variant included, within the accepted 1 to 3.5 % window of 0.5 to 1.75 times the loss):
+
+| Variant | Egress dropped / sent | Ingress dropped / sent |
+|---|---|---|
+| h2-loss0 | 0 of 333 (0.00 %) | 0 of 556 (0.00 %) |
+| h3-loss0 | 0 of 330 (0.00 %) | 0 of 640 (0.00 %) |
+| h2-loss2 | 9 of 448 (2.01 %) | 12 of 563 (2.13 %) |
+| h3-loss2 | 6 of 359 (1.67 %) | 12 of 645 (1.86 %) |
+
+### What the numbers say
+
+- **On the clean link HTTP/3 is about one round trip faster, and it shows in the first byte.** TTFB fell from 582 ms to 402 ms, 180 ms for a 155 ms RTT. TCP plus TLS needs two round trips before the request goes out; QUIC combines the transport and TLS handshakes in one. Load time fell from 1454 ms to 1233 ms (221 ms) and LCP from 1477 ms to 1253 ms (224 ms).
+- **With 2 % loss per packet HTTP/2 slowed down a lot and HTTP/3 barely did.** The h2 load median went from 1454 ms to 1841 ms (387 ms, 27 %) and its worst run took 2644 ms; even the fastest lossy run, 1761 ms, is slower than the slowest clean h2 run, 1561 ms. The h3 load median went from 1233 ms to 1257 ms (24 ms) and four of five h3-loss2 runs were within 1240 to 1321 ms. The gap between the protocols grew from 221 ms to 584 ms in load time (1841 ms against 1257 ms) and from 224 ms to 571 ms in LCP (1868 ms against 1297 ms).
+- **Loss hit the first byte on h2 too.** TTFB moved from 582 ms to 725 ms on h2 (a lost handshake packet waits for a retransmit timer) and from 402 ms to 406 ms on h3.
+- **Early hints were used on both protocols.** The hinted CSS and JS were fetched from the 103 in all five runs of all four variants.
+
+### Surprises
+
+- **Head-of-line blocking did appear once the loss was per packet.** The first run of this comparison dropped whole offload aggregates and found h2 only 30 ms slower with loss (1467 ms against 1437 ms) and no protocol difference; the same profile counted per wire packet makes h2 387 ms slower. How a loss pattern lands on a protocol depends on how its packets are batched, so a netem comparison of TCP and QUIC is only fair once the offloads are off on both ends.
+- **The sample is small.** Each lossy variant saw 18 to 21 drops in total (6 to 12 per direction), and each loss draw is random: the h3-loss2 draw (1.67 % and 1.86 %) was a little lighter than the h2-loss2 one (2.01 % and 2.13 %). With 5 runs per variant the direction and rough size of the effect are clear, a precise percentage is not.
+- **The h3 result describes a repeat visitor, not a first visit.** QUIC was forced with `--origin-to-force-quic-on`. A real browser has no way to know the server speaks h3 until it has read `Alt-Svc` from an earlier h2 response, so a first visit goes over h2 and only later visits can use QUIC. The h3 rows are the cold-cache load of a visitor who already learned the advertisement; the first visit is the h2 row.
+- **These numbers are not comparable with the Early Hints section.** That section went through the router with toxiproxy and measured LCP 1211 ms with hints; the h2 runs here go straight to the web container with netem and measure 1477 ms. Two different throttles and paths, so only the rows within this section are comparable with each other.
+- **The loss rates are per variant, not per run.** The qdisc counters are read once after a variant's runs (the counters were reset after the RTT check), so a drop rate describes all runs of that variant together.
+- **nginx-fpm has nothing to compare.** It has no UDP listener, so `h3_ok` is false there with the reason recorded; the server was switched back to nginx-fpm after the runs.
+
+### Interview story
+
+HTTP/3 runs over QUIC on UDP and the DDEV router cannot carry it, so I measured it by connecting a browser container straight to FrankenPHP and shaping both protocols with the same kernel netem profile (150 ms RTT, 1.6 Mbit/s down, 750 kbit/s up) instead of a TCP-only proxy. The first attempt looked as if loss did not matter, until I saw that netem was dropping whole offload aggregates; after turning TSO, GSO, GRO and UDP GSO off on both ends so that 2 % meant 2 % of wire packets, h2 slowed by 387 ms (1454 ms to 1841 ms) while h3 slowed by 24 ms (1233 ms to 1257 ms). On a clean link h3 was still 221 ms faster, one saved handshake round trip. The h3 numbers model a repeat visitor, because I forced QUIC, and with 5 runs and 6 to 12 drops per direction I would claim the direction of the effect, not its exact size.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

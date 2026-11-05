@@ -1,0 +1,92 @@
+# h2
+* Added interview.ddev.site:443:<ip> to DNS cache
+* Hostname interview.ddev.site was found in DNS cache
+*   Trying <ip>:443...
+* ALPN: curl offers h2,http/1.1
+} [5 bytes data]
+* TLSv1.2 (OUT), TLS handshake, Client hello (1):
+} [512 bytes data]
+* TLSv1.2 (IN), TLS handshake, Server hello (2):
+{ [122 bytes data]
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+} [1 bytes data]
+* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+{ [19 bytes data]
+* TLSv1.3 (IN), TLS handshake, Certificate (11):
+{ [1228 bytes data]
+* TLSv1.3 (IN), TLS handshake, CERT verify (15):
+{ [264 bytes data]
+* TLSv1.3 (IN), TLS handshake, Finished (20):
+{ [36 bytes data]
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+} [36 bytes data]
+* SSL connection using TLSv1.3 / TLS_AES_128_GCM_SHA256 / [blank] / UNDEF
+* ALPN: server accepted h2
+* Server certificate:
+*  start date: Nov  5 11:36:35 2026 GMT
+*  expire date: Feb  5 11:36:35 2029 GMT
+*  SSL certificate verify result: unable to get local issuer certificate (20), continuing anyway.
+* Connected to interview.ddev.site (<ip>) port 443
+* using HTTP/2
+* [HTTP/2] [1] OPENED stream for https://interview.ddev.site/listings/1
+* [HTTP/2] [1] [:method: GET]
+* [HTTP/2] [1] [:scheme: https]
+* [HTTP/2] [1] [:authority: interview.ddev.site]
+* [HTTP/2] [1] [:path: /listings/1]
+* [HTTP/2] [1] [user-agent: curl/8.11.0-DEV]
+* [HTTP/2] [1] [accept: */*]
+} [5 bytes data]
+> GET /listings/1 HTTP/2
+> Host: interview.ddev.site
+> User-Agent: curl/8.11.0-DEV
+> Accept: */*
+> 
+{ [5 bytes data]
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+{ [122 bytes data]
+* Request completely sent off
+{ [5 bytes data]
+< HTTP/2 200 
+< alt-svc: h3=":443"; ma=2592000
+< cache-control: no-cache, private
+< content-type: text/html; charset=utf-8
+< date: Thu, 05 Nov 2026 11:36:47 GMT
+< link: <https://interview.ddev.site/build/assets/app-CjRfEL-0.css>; rel="preload"; as="style", <https://interview.ddev.site/build/assets/app-BvRk9kiK.js>; rel="modulepreload"; as="script"
+< server: FrankenPHP Caddy
+< content-length: 1512
+< 
+} [5 bytes data]
+* Connection #0 to host interview.ddev.site left intact
+# h3
+* Added interview.ddev.site:443:<ip> to DNS cache
+* Hostname interview.ddev.site was found in DNS cache
+*   Trying <ip>:443...
+* Server certificate:
+*  start date: Nov  5 11:36:35 2026 GMT
+*  expire date: Feb  5 11:36:35 2029 GMT
+*  SSL certificate verify result: unable to get local issuer certificate (20), continuing anyway.
+* Connected to interview.ddev.site (<ip>) port 443
+* using HTTP/3
+* [HTTP/3] [0] OPENED stream for https://interview.ddev.site/listings/1
+* [HTTP/3] [0] [:method: GET]
+* [HTTP/3] [0] [:scheme: https]
+* [HTTP/3] [0] [:authority: interview.ddev.site]
+* [HTTP/3] [0] [:path: /listings/1]
+* [HTTP/3] [0] [user-agent: curl/8.11.0-DEV]
+* [HTTP/3] [0] [accept: */*]
+> GET /listings/1 HTTP/3
+> Host: interview.ddev.site
+> User-Agent: curl/8.11.0-DEV
+> Accept: */*
+> 
+* Request completely sent off
+< HTTP/3 200 
+< server: FrankenPHP Caddy
+< content-type: text/html; charset=utf-8
+< cache-control: no-cache, private
+< date: Thu, 05 Nov 2026 11:36:47 GMT
+< link: <https://interview.ddev.site/build/assets/app-CjRfEL-0.css>; rel="preload"; as="style", <https://interview.ddev.site/build/assets/app-BvRk9kiK.js>; rel="modulepreload"; as="script"
+< content-length: 1512
+< 
+{ [1512 bytes data]
+* Connection #0 to host interview.ddev.site left intact

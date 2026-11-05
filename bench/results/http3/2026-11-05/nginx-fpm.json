@@ -1,0 +1,19 @@
+{
+  "server": "nginx-fpm",
+  "label": "nginx-fpm",
+  "date": "2026-11-05",
+  "commit": "9092cd5",
+  "path": "/listings/1",
+  "h3_ok": false,
+  "h3_status": null,
+  "h3_alpn": null,
+  "h2_status": 200,
+  "alpn_h2": "http/1.1",
+  "alt_svc": null,
+  "body_sha256_h2": "35583e7b0de1e86910c016bd1a794e78e9e2288bc9ab6b4a973ddd07577672d3",
+  "body_sha256_h3": null,
+  "reason": "no HTTP/3: curl exit 7",
+  "early_hints_during_h3": false,
+  "early_hints_reason": "the quiche-based curl cannot parse the 103 Early Hints interim response over h3 (Header without colon)",
+  "curl_image_digest": "alpine/curl-http3@sha256:b0cb55696adcaf5714958926a28ce78a5fa72f6a4aa8df2ec5b72f1cde8038e3"
+}

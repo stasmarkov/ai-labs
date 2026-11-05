@@ -160,8 +160,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-26
 - **Depends on:** SL-03
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261105-1109-http3
 - **Source:** brief (Phase 4)
 - **Run:** `/sdd "SL-12: run FrankenPHP outside the DDEV router with UDP 443 exposed, verify one HTTP/3 request and Alt-Svc, and record h2 vs h3 latency on a throttled profile (BR-26). Rules in product-brief.md."`
 
