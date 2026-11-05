@@ -173,8 +173,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-60, BR-61
 - **Depends on:** SL-03
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261105-1709-mercure-live-price
 - **Source:** brief (Phase 5)
 - **Run:** `/sdd "SL-13: enable FrankenPHP's built-in Mercure hub, publish a per-listing update when a price changes, and update the detail page price live via EventSource, including a private-update variant with subscriber JWT topic claims (BR-60, BR-61). Rules in product-brief.md."`
 
@@ -367,7 +367,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Size:** M
 - **BRs:** BR-91, BR-26
 - **Depends on:** SL-23, SL-24, SL-25, SL-26, SL-27
-- **Blocked by:** Q-04
+- **Blocked by:** none (Q-04 answered 2026-11-05: second model in Ollama)
 - **Status:** approved
 - **Spec:** —
 - **Source:** brief (Phase 11)
@@ -477,7 +477,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-97, BR-94, BR-90, BR-27
 - **Depends on:** SL-25
 - **Blocked by:** none
-- **Status:** proposed
+- **Status:** approved
 - **Spec:** —
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-34: admin assistant with a hand-written tool-calling loop over the local model's OpenAI-compatible API — tools searchListings, getListing, updateTitle, addTag, countByTag; confirmation before writes, BR-94 step limit, every step logged (BR-97, BR-94, BR-90, BR-27). Rules in product-brief.md."`
@@ -491,7 +491,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-97, BR-27
 - **Depends on:** SL-34
 - **Blocked by:** none
-- **Status:** proposed
+- **Status:** approved
 - **Spec:** —
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-35: expose the admin assistant's listing tools as an MCP server in Laravel and use them from Claude Code, with writes still confirmed (BR-97, BR-27). Rules in product-brief.md."`
@@ -503,8 +503,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Size:** M
 - **BRs:** BR-96, BR-90, BR-27
 - **Depends on:** SL-22, SL-27
-- **Blocked by:** Q-06
-- **Status:** proposed
+- **Blocked by:** none (Q-06 answered 2026-11-05: Stanford Cars dataset)
+- **Status:** approved
 - **Spec:** —
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-36: similar car photos — embed every photo with a local CLIP/SigLIP image encoder (sidecar service), store vectors in pgvector, show up to 8 nearest photos of other listings next to the hero image, threshold and near-duplicate cutoff, cached in Redis (BR-96, BR-90, BR-27). Rules in product-brief.md."`
@@ -516,8 +516,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Size:** S
 - **BRs:** BR-90, BR-27
 - **Depends on:** SL-36
-- **Blocked by:** Q-06
-- **Status:** proposed
+- **Blocked by:** none (Q-06 answered 2026-11-05: Stanford Cars dataset)
+- **Status:** approved
 - **Spec:** —
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-37: text-to-photo search using the CLIP/SigLIP text encoder against the SL-36 photo vectors (BR-90, BR-27). Rules in product-brief.md."`
@@ -529,8 +529,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Size:** S
 - **BRs:** BR-96, BR-27
 - **Depends on:** SL-36, SL-27
-- **Blocked by:** Q-06
-- **Status:** proposed
+- **Blocked by:** none (Q-06 answered 2026-11-05: Stanford Cars dataset)
+- **Status:** approved
 - **Spec:** —
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-38: hybrid similarity — add a text vector (title or SL-27 caption), combine with the image vector by weights (default 0.7/0.3), compare against image-only results (BR-96, BR-27). Rules in product-brief.md."`
@@ -542,8 +542,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Size:** M
 - **BRs:** BR-90, BR-27
 - **Depends on:** SL-36, SL-27
-- **Blocked by:** Q-06
-- **Status:** proposed
+- **Blocked by:** none (Q-06 answered 2026-11-05: Stanford Cars dataset)
+- **Status:** approved
 - **Spec:** —
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-39: cluster near-duplicate photos by image vector and ask the local vision model which photo per cluster is best; review page "keep this one, remove N" (BR-90, BR-27). Rules in product-brief.md."`
@@ -584,7 +584,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-90, BR-27
 - **Depends on:** SL-32
 - **Blocked by:** none
-- **Status:** proposed
+- **Status:** approved
 - **Spec:** —
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-42: research agent — plan sub-questions, search the SL-32 docs index, keep notes in Redis, write a report; store and replay every step (BR-90, BR-27). Rules in product-brief.md."`
@@ -597,7 +597,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-90, BR-91, BR-27
 - **Depends on:** SL-22
 - **Blocked by:** none
-- **Status:** proposed
+- **Status:** approved
 - **Spec:** —
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-43: prompt playground — versioned prompts, the same input run across 2–3 local models side by side, output, tokens and latency logged per run (BR-90, BR-91, BR-27). Rules in product-brief.md."`
@@ -614,6 +614,32 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Spec:** —
 - **Source:** intake 2026-10-30 (Stanislav Markov: "a guide with links that teaches me how everything we implemented works", after all planned slices)
 - **Run:** `/sdd "SL-44: finish docs/learning-guide.md — check every link, fill missing sections, put sections in learning order, add a closing summary (BR-27). Rules in product-brief.md."`
+
+### SL-47 · FrankenPHP with Mercure as the default server
+
+- **Outcome:** `ddev start` brings the project up on classic FrankenPHP with the Mercure hub on; every bench script, check and doc that assumed nginx-fpm as the resting server ends on FrankenPHP instead, and the other five servers stay one `ddev server <name>` away.
+- **Entry point:** `.ddev/config.zz-server.yaml` default, bench scripts' restore target, `bench/parity.sh`, docs
+- **Size:** M
+- **BRs:** BR-26, BR-27
+- **Depends on:** SL-13
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** owner request 2026-11-05 (Stanislav Markov: "after implementing fully frankenphp and mercure - keep it as default")
+- **Run:** `/sdd "SL-47: make classic FrankenPHP with the Mercure hub the default server: the committed server overlay, every bench script's end-of-run restore target, parity and fingerprint baselines, and the docs that say nginx-fpm is the default; .ddev/config.yaml only if unavoidable (ask first). Rules in product-brief.md."`
+
+### SL-48 · Study-focused AI lab UI
+
+- **Outcome:** The developer can learn from the lab, not only use it: each capability page explains what happens step by step next to the live run, links to the guide section and the code, shows the measured numbers from BENCHMARKS.md, and offers guided experiments (change a setting, predict, run, compare).
+- **Entry point:** `/ai` pages
+- **Size:** M
+- **BRs:** BR-27
+- **Depends on:** SL-46, the AI slices it presents
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** owner request 2026-11-05 (Stanislav Markov: "update the UI to make it better in terms of studying")
+- **Run:** `/sdd "SL-48: make the AI lab UI a study tool: per page a 'how it works' panel synced with the live event log, links to the guide section and code files, the measured numbers from BENCHMARKS.md, and guided experiments (predict, run, compare) for describe, semantic search, docs search, chat with cache and stop, and every AI capability shipped since; keep the lab's design system. Rules in product-brief.md."`
 
 ## Intake log
 
@@ -650,3 +676,4 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 | 2026-11-02 | Stanislav Markov | Q-01 / Q-03 decision | Decision | ADR 0001 accepted; SL-22 run text uses the native ollama driver; SL-22 and SL-24 unblocked |
 | 2026-11-02 | Claude (standing approval) | SL-32 sized L with 10–12 tasks | Split | SL-32 narrowed to index and hybrid retrieval; answering, citations and guard moved to new SL-45; SL-33, SL-40, SL-41 now depend on SL-45 |
 | 2026-11-03 | Stanislav Markov | UI for AI capabilities (chat streaming, similar photos), Inertia or similar, design by Claude | New slice | SL-46 AI lab UI, before SL-45; SL-41 builds inside it |
+| 2026-11-05 | Stanislav Markov | After SL-13 keep FrankenPHP + Mercure as default; finish everything AI; guide; study-focused UI | New slices + approval | SL-47 (default server), SL-48 (study UI); SL-34, SL-35, SL-42, SL-43 approved; order SL-13 → SL-47 → AI (SL-23, SL-25, SL-26, SL-27, SL-34, SL-35, SL-42, SL-43; SL-28 needs Q-04, SL-36–39 need Q-06) → SL-48 → SL-44 |
