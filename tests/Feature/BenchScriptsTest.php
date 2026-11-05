@@ -117,6 +117,18 @@ it('AC-8 capture writes a snapshot per server', function (): void {
         ->and(file_get_contents($snapshot))->toMatch('/[0-9a-f]{64}/');
 });
 
+it('SL-13 capture masks the per-request data-price-rendered-ms attribute so two captures of the same page agree', function (): void {
+    ($this->writeCurl)(' data-price-rendered-ms="\'$RANDOM\'"');
+    ($this->setServer)('nginx-fpm');
+    ($this->run)('parity.sh', 'capture');
+    ($this->setServer)('apache-fpm');
+    ($this->run)('parity.sh', 'capture');
+
+    $same = ($this->run)('parity.sh', 'compare', 'nginx-fpm', 'apache-fpm');
+
+    expect($same->getExitCode())->toBe(0)->and($same->getOutput())->toContain('identical');
+});
+
 it('AC-9 compare exits 0 when identical and 1 with the path when different', function (): void {
     ($this->writeCurl)();
     ($this->setServer)('nginx-fpm');

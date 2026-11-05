@@ -685,3 +685,46 @@ test('NFR-1 BENCHMARKS.md states that h2 and h3 shared one netem profile and no 
     expect(array_intersect_key($loss0['h2-loss2']['net'], ['delay_ms' => 1, 'rate_up' => 1, 'rate_down' => 1]))
         ->toEqual(array_intersect_key($loss0['h3-loss2']['net'], ['delay_ms' => 1, 'rate_up' => 1, 'rate_down' => 1]));
 });
+
+test('AC-6 BENCHMARKS.md quotes the committed Mercure subscriber runs and contrasts them with SL-09', function (): void {
+    $doc = (string) file_get_contents(base_path('BENCHMARKS.md'));
+    $start = strpos($doc, '## Mercure subscribers and the health check (2026-11-05)');
+    expect($start)->not->toBeFalse();
+    $section = substr($doc, (int) $start, strpos($doc, '## Response parity') - (int) $start);
+
+    foreach (['### What the numbers say', '### Surprises', '### Interview story', 'xychart-beta', 'bench/mercure-load.sh', 'bench/results/mercure-load/2026-11-05/', 'bench/results/slow-load/2026-11-03/sse-frankenphp-14.json'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    foreach ([100, 1000] as $subscribers) {
+        $result = json_decode((string) file_get_contents(base_path("bench/results/mercure-load/2026-11-05/n{$subscribers}-frankenphp.json")), true, flags: JSON_THROW_ON_ERROR);
+        expect($result['private']['passed'])->toBeTrue()
+            ->and($result['delivered']['percent'])->toBe(100)
+            ->and($result['health']['breakdown']['timeouts'])->toBe(0);
+
+        $row = sprintf(
+            '| %d | %d of %d | %d ms | %d ms | %d ms | %d ms | %d |',
+            $subscribers,
+            $result['delivered']['received'],
+            $result['delivered']['expected'],
+            $result['latency_ms']['p50'],
+            $result['latency_ms']['p95'],
+            $result['latency_ms']['max'],
+            round($result['health']['p95_ms']),
+            $result['busy_threads']['max'],
+        );
+        expect($section)->toContain($row);
+    }
+
+    $sse = json_decode((string) file_get_contents(base_path('bench/results/slow-load/2026-11-03/sse-frankenphp-14.json')), true, flags: JSON_THROW_ON_ERROR);
+    expect($sse['median']['health_p95_ms'])->toBe(10000)
+        ->and($section)->toContain('10 000 ms')->toContain('118 of 300');
+
+    preg_match('/### Interview story\n(.*?)(?=^##|\z)/ms', $section, $story);
+    $sentences = preg_split('/(?<=[.!?])\s+(?=[A-Z])/', trim($story[1] ?? '')) ?: [];
+    expect(count($sentences))->toBeGreaterThanOrEqual(3)->toBeLessThanOrEqual(6);
+
+    foreach (['Caddy metrics are on', 'outside the FrankenPHP pool', 'one extra request per detail page view', 'data-price-rendered-ms'] as $needle) {
+        expect($doc)->toContain($needle);
+    }
+});

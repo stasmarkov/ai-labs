@@ -7,6 +7,7 @@ namespace App\Contracts;
 use App\DTOs\ListingDetail;
 use App\DTOs\ListingFilter;
 use App\DTOs\ListingPage;
+use App\DTOs\ListingPriceUpdate;
 use App\DTOs\ListingSummary;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
@@ -28,4 +29,11 @@ interface ListingRepositoryInterface
      * @return list<ListingSummary>
      */
     public function lowestIds(int $limit): array;
+
+    /**
+     * Saves the price and returns the one DTO that describes the change (new price, currency, previous price).
+     *
+     * @throws ModelNotFoundException
+     */
+    public function updatePrice(int $id, int $priceCents): ListingPriceUpdate;
 }

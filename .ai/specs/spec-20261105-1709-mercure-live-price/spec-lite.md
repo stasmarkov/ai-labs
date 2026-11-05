@@ -4,7 +4,7 @@ title: Live price updates through FrankenPHP's built-in Mercure hub
 type: feature
 size: M
 priority: P2
-status: approved
+status: in-progress
 ticket:
 stakeholders: [Stanislav Markov]
 approved_by: Stas Markov (standing approval)

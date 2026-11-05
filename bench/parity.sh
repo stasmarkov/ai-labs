@@ -9,6 +9,7 @@
 ## openlitespeed: litespeed).
 ## Env: PARITY_BASE_URL (default: `ddev server --url`, e.g. https://interview.ddev.site, :8091 for openlitespeed),
 ##      PARITY_INSECURE=1 adds -k.
+## The detail page's data-price-rendered-ms attribute (server time at render, SL-13) is masked to N before hashing for the same reason.
 ## Absolute URLs of the base URL in response bodies are rewritten to https://interview.ddev.site before hashing.
 
 set -euo pipefail
@@ -91,9 +92,9 @@ capture() {
       exit 4
     fi
     if [[ "$path" == "/up" ]]; then
-      hash="$(normalize_body < "$body" | sed -E 's/rendered in [0-9]+ms/rendered in Nms/' | sha256)"
+      hash="$(normalize_body < "$body" | sed -E 's/rendered in [0-9]+ms/rendered in Nms/; s/data-price-rendered-ms="[0-9]+"/data-price-rendered-ms="N"/' | sha256)"
     else
-      hash="$(normalize_body < "$body" | sha256)"
+      hash="$(normalize_body < "$body" | sed -E 's/data-price-rendered-ms="[0-9]+"/data-price-rendered-ms="N"/' | sha256)"
     fi
     printf '%s\t%s\t%s\t%s\n' "$path" "$status" "$type" "$hash" >> "$tmp"
   done

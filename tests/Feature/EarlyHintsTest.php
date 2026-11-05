@@ -115,8 +115,8 @@ it('AC-2 leaves the final response identical with hints on, off and unavailable'
     $this->app->instance(EarlyHintSender::class, recordingSender(false));
     $unavailable = $this->get($url)->assertOk();
 
-    expect($on->getContent())->toBe($off->getContent())
-        ->and($unavailable->getContent())->toBe($off->getContent())
+    expect(maskRenderTime($on->getContent()))->toBe(maskRenderTime($off->getContent()))
+        ->and(maskRenderTime($unavailable->getContent()))->toBe(maskRenderTime($off->getContent()))
         ->and($on->headers->all('link'))->toBe($off->headers->all('link'))
         ->and($unavailable->headers->all('link'))->toBe($off->headers->all('link'));
 })->skip(fn (): bool => ! file_exists(public_path('build/manifest.json')), 'requires the Vite build');
@@ -134,7 +134,7 @@ it('AC-2 the real sender is unavailable without headers_send and the response is
     $on = $this->get($url)->assertOk();
 
     expect($sender->isAvailable())->toBeFalse()
-        ->and($on->getContent())->toBe($off->getContent())
+        ->and(maskRenderTime($on->getContent()))->toBe(maskRenderTime($off->getContent()))
         ->and($on->headers->all('link'))->toBe($off->headers->all('link'));
 });
 

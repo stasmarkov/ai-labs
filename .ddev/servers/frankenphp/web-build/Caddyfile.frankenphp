@@ -11,6 +11,7 @@
 
 	servers {
 		trusted_proxies static private_ranges
+		metrics
 	}
 
 	{$CADDY_GLOBAL_OPTIONS}
@@ -62,11 +63,32 @@
 	}
 }
 
+# SL-13: FrankenPHP's built-in Mercure hub. Subscribers are held by the hub, not by PHP workers.
+# Caddy reads the keys from process environment variables (untracked .ddev/.env.web, written by
+# `artisan mercure:keys`). The hub lives in :80, which the DDEV router reaches and publishers use
+# (one unnamed hub is allowed per configuration); :443 proxies the hub path to it so both share one hub.
+(mercure_hub) {
+	mercure {
+		protocol_version_compatibility 8
+		publisher_jwt {env.MERCURE_PUBLISHER_JWT_KEY}
+		subscriber_jwt {env.MERCURE_SUBSCRIBER_JWT_KEY}
+		anonymous
+		# A short bolt history (last 100 updates) lets a subscriber that connects just after a publish, or after a
+		# dropped connection, replay what it missed (lastEventID=earliest, then Last-Event-ID on reconnect).
+		transport bolt {
+			path /tmp/mercure.db
+			size 100
+		}
+		cors_origins https://interview.ddev.site
+	}
+}
+
 :80 {
 	import common_config
 
 	@secure header X-Forwarded-Proto https
 	route {
+		import mercure_hub
 		import export_offload
 
 		php_server @secure {
@@ -89,6 +111,10 @@
 	tls /etc/ssl/certs/master.crt /etc/ssl/certs/master.key
 
 	route {
+		reverse_proxy /.well-known/mercure* localhost:80 {
+			flush_interval -1
+		}
+
 		import export_offload
 
 		php_server {

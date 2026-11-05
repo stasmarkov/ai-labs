@@ -9,6 +9,7 @@ use App\DTOs\DealerSummary;
 use App\DTOs\ListingDetail;
 use App\DTOs\ListingFilter;
 use App\DTOs\ListingPage;
+use App\DTOs\ListingPriceUpdate;
 use App\DTOs\ListingSummary;
 use App\Models\Listing;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,6 +21,15 @@ final readonly class EloquentListingRepository implements ListingRepositoryInter
     private const SUMMARY_COLUMNS = [
         'id', 'dealer_id', 'make', 'model', 'fuel', 'year', 'price_cents', 'currency', 'mileage_km', 'city', 'listed_at',
     ];
+
+    public function updatePrice(int $id, int $priceCents): ListingPriceUpdate
+    {
+        $listing = Listing::query()->findOrFail($id);
+        $previous = $listing->price_cents;
+        $listing->update(['price_cents' => $priceCents]);
+
+        return new ListingPriceUpdate($listing->id, $listing->price_cents, $listing->currency, $previous);
+    }
 
     public function search(ListingFilter $filter): ListingPage
     {

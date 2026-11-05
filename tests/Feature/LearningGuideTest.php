@@ -551,3 +551,38 @@ test('AC-5 guide section 22 explains HTTP/3 and quotes the measured numbers with
     }
     expect($section)->toContain('https://www.rfc-editor.org/rfc/rfc9000')->toContain('https://www.rfc-editor.org/rfc/rfc9114');
 });
+
+test('AC-7 guide section 23 explains Mercure, quotes the measured numbers and section 16 points to it', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+    $start = strpos($guide, '## 23. Live updates with Mercure');
+    expect($start)->not->toBeFalse();
+    $section = substr($guide, (int) $start, strpos($guide, '## Planned sections') - (int) $start);
+
+    foreach (['EventSource', 'text/event-stream', 'topic', 'JWT', 'mercure.subscribe', 'HttpOnly', 'SameSite=Strict', 'aria-live', 'private', 'Give up', 'section 19', 'section 9'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    foreach ([100, 1000] as $subscribers) {
+        $result = json_decode((string) file_get_contents(base_path("bench/results/mercure-load/2026-11-05/n{$subscribers}-frankenphp.json")), true, flags: JSON_THROW_ON_ERROR);
+        expect($section)->toContain(sprintf('| %d | %d ms | %d ms | %d ms | %d |', $subscribers, $result['latency_ms']['p50'], $result['latency_ms']['p95'], round($result['health']['p95_ms']), $result['busy_threads']['max']));
+    }
+
+    foreach (['../bench/mercure-load.sh', '../BENCHMARKS.md', '../app/Support/MercurePublisher.php', '../app/Support/MercureTokens.php', '../tests/Feature/MercureTokensTest.php', '../tests/Feature/BenchMercureLoadTest.php', '../.ai/specs/spec-20261105-1709-mercure-live-price/'] as $link) {
+        expect($section)->toContain("]({$link}");
+    }
+    preg_match_all('/\]\((\.\.\/[^)#]+)/', $section, $links);
+    foreach ($links[1] as $link) {
+        expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$link))->toBeTrue("missing: {$link}");
+    }
+
+    expect($section)->toContain('](../bench/results/mercure-load/')->toContain('.ddev/.env.web');
+
+    foreach (['same-origin', 'whatever `withCredentials` says', 'Why a plain page clears the cookie', 'lastEventID=earliest', 'data-price-rendered-ms', 'transport bolt', 'queue the publish', 'one extra request per page view', 'Caddy metrics'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+    expect($section)->not->toContain('PublishListingPrice')->not->toContain('because the script sets `withCredentials`');
+
+    preg_match('/^## 16\. .*?(?=^## 17\. )/ms', $guide, $map);
+    expect($map[0] ?? '')->toContain('section 23')->toContain('Mercure');
+    expect($map[0] ?? '')->toMatch('/Notify the browser when something changes[^\n]*section 23/');
+});

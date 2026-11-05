@@ -26,6 +26,7 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /.playwright-mcp
+/.ddev/.env.web
 .ddev/config.zz-server.yaml
 .ddev/docker-compose.frankenphp.yaml
 .ddev/docker-compose.openlitespeed.yaml

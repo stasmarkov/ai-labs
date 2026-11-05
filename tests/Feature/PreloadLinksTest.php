@@ -43,7 +43,7 @@ it('MNC-1 keeps the HTML body identical with and without the Link middleware', f
         ->get($url)->assertOk();
 
     expect($without->headers->has('link'))->toBeFalse()
-        ->and($without->getContent())->toBe($with);
+        ->and(maskRenderTime($without->getContent()))->toBe(maskRenderTime($with));
 })->skip(fn (): bool => ! file_exists(public_path('build/manifest.json')), 'requires the Vite build');
 
 it('MNC-2 does not add Link headers to other routes', function (): void {

@@ -2,7 +2,8 @@
     <img src="{{ asset($listing->heroImagePath) }}" alt="{{ $listing->listing->make }} {{ $listing->listing->model }}" class="mb-6 w-full rounded-lg">
 
     <h1 class="text-3xl font-semibold">{{ $listing->listing->make }} {{ $listing->listing->model }}</h1>
-    <p class="mt-1 text-lg">{{ number_format($listing->listing->priceCents / 100, 2, '.', ',') }} {{ $listing->listing->currency }}</p>
+    <p id="listing-price" class="mt-1 text-lg" data-price-topic="{{ $watch->topic }}" data-price-rendered-ms="{{ $renderedAtMs }}"@if ($watch->privateTopic !== null) data-price-topic-private="{{ $watch->privateTopic }}"@endif>{{ \App\Support\PriceFormatter::format($listing->listing->priceCents, $listing->listing->currency) }}</p>
+    <p id="listing-price-status" class="sr-only" aria-live="polite"></p>
 
     <dl class="mt-6 grid grid-cols-2 gap-2">
         <dt class="font-medium">Year</dt>

@@ -1,0 +1,65 @@
+{
+  "server": "frankenphp",
+  "label": "frankenphp",
+  "commit": "cb01359",
+  "concurrency": "default",
+  "base_url": "https://interview.ddev.site",
+  "date": "2026-11-05",
+  "quick": true,
+  "topic": "https://interview.ddev.site/listings/1/price",
+  "subscribers": 1000,
+  "publishes": 5,
+  "public_messages_per_subscriber": 6,
+  "measure_s": 20,
+  "probe_qps": 5,
+  "probe_timeout_s": 10,
+  "subscriber_image": "node:22.12.0-alpine",
+  "subscriber_image_digest": "node@sha256:51eff88af6dff26f59316b6e356188ffa2c422bd3c3b76f2556a2e7e89d080bd",
+  "probe_image": "autopulse-oha:1.16.0",
+  "probe_image_digest": "sha256:12c8fd3955056a7d68ff58317e87ae2878e72c2c9046169dc35da35b36428937",
+  "connected": 1000,
+  "connect_failed": 0,
+  "connect_failures": {},
+  "health": {
+    "rps": 4.996572472450782,
+    "p50_ms": 9.434135999999999,
+    "p95_ms": 20.128204,
+    "p99_ms": 314.979869,
+    "starved": false,
+    "breakdown": {
+      "502": 0,
+      "504": 0,
+      "other_5xx": 0,
+      "other_non_2xx": 0,
+      "timeouts": 0
+    },
+    "errors": 0,
+    "requests": 100,
+    "error_percent": 0,
+    "p95_answered_ms": 20.128204
+  },
+  "busy_threads": {
+    "metric_found": true,
+    "samples": 20,
+    "max": 0,
+    "median": 0,
+    "total_threads": 14
+  },
+  "latency_ms": {
+    "p50": 78,
+    "p95": 400,
+    "max": 484,
+    "samples": 6000
+  },
+  "delivered": {
+    "received": 6000,
+    "expected": 6000,
+    "percent": 100
+  },
+  "private": {
+    "authorized_received": 1,
+    "wrong_token_received": 0,
+    "no_token_received": 0,
+    "passed": true
+  }
+}

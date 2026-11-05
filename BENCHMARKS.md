@@ -885,17 +885,69 @@ Measured drops, per variant and per direction (egress is client to server, ingre
 
 HTTP/3 runs over QUIC on UDP and the DDEV router cannot carry it, so I measured it by connecting a browser container straight to FrankenPHP and shaping both protocols with the same kernel netem profile (150 ms RTT, 1.6 Mbit/s down, 750 kbit/s up) instead of a TCP-only proxy. The first attempt looked as if loss did not matter, until I saw that netem was dropping whole offload aggregates; after turning TSO, GSO, GRO and UDP GSO off on both ends so that 2 % meant 2 % of wire packets, h2 slowed by 387 ms (1454 ms to 1841 ms) while h3 slowed by 24 ms (1233 ms to 1257 ms). On a clean link h3 was still 221 ms faster, one saved handshake round trip. The h3 numbers model a repeat visitor, because I forced QUIC, and with 5 runs and 6 to 12 drops per direction I would claim the direction of the effect, not its exact size.
 
+## Mercure subscribers and the health check (2026-11-05)
+
+Do open Mercure subscribers hold PHP workers the way an open direct SSE answer does (SL-13, contrasted with SL-09)? Two cells on frankenphp, 100 and 1000 subscribers, each with the shared SL-09 health probe running at the same time. Raw files: [`bench/results/mercure-load/2026-11-05/`](bench/results/mercure-load/2026-11-05/) (`n100-frankenphp.json`, `n1000-frankenphp.json`). Reproduce with `bench/mercure-load.sh --subscribers <n> --label frankenphp` on frankenphp (it refuses any server without a hub and puts `.env` and listing 1's price back on exit).
+
+Set-up: one pinned Node container (`node:22.12.0-alpine`, built-in `fetch`, no dependencies) opens N connections to `GET /.well-known/mercure?topic=<listing 1 price topic>` through the DDEV router and holds them. Three more subscribers watch the private topic: one with listing 1's token, one with listing 2's token, one without a token. Meanwhile `GET /healthz` is probed at 5 requests per second with a 10 s timeout (the SL-09 probe, oha capped at 2 CPUs), and FrankenPHP's busy and total PHP threads are read from Caddy's metrics once a second. During the window `listings:reprice` changes listing 1's price 5 times (public updates), then once with `--private`; that last command also sends a public update, so every subscriber should get 6 messages. Latency is the receive time in the Node container minus the `published_at_ms` PHP took right before the POST to the hub; the containers share the host kernel's clock.
+
+**Conditions that differ from earlier frankenphp cells.** Two things changed in the frankenphp Caddyfile for this slice, and every frankenphp cell from SL-13 on runs with them:
+- **Caddy metrics are on** (`servers { metrics }`). The busy-thread count is read from `frankenphp_busy_threads`, and that gauge does not exist without the option (checked: with it removed the sampler read `na na`). The option adds per-request bookkeeping to every request the server handles, so a frankenphp cell from SL-13 on is not strictly comparable with the frankenphp cells from earlier slices; the effect was not measured separately. A Caddy environment toggle was considered and rejected: it would need `.ddev/.env.web` edited and a `ddev restart` around each run, and the bench would still have to restore it.
+- **The hub keeps a history** (`transport bolt`, last 100 updates, file under `/tmp`, `lastEventID=earliest` on the page), added in the review fix pass so a price published between render and connect is not lost. The two committed cells below were measured earlier with the history-less `local` transport. Quick re-checks with `bolt` (in the gitignored `bench/results/raw/`, label `frankenphp-fixpass`): 100 subscribers 600 of 600 delivered, latency p50 33 ms, p95 56 ms, max 59 ms, health p95 17 ms; 1000 subscribers 6000 of 6000, p50 88 ms, p95 376 ms, max 436 ms, health p95 36 ms, max 1 busy thread. Same shape, within the run-to-run noise of a 20 s run, which is why the committed cells have not been replaced by them.
+
+**Cost on servers without a hub.** The detail page is byte-identical everywhere, so on the five servers without a hub every page view still sends one request for `/.well-known/mercure`, which reaches that server's 404 path (and boots the application there) before the script gives up. That is one extra request per detail page view, kept on purpose for parity; it was not benchmarked.
+
+**Method limits.** These are `--quick` runs (20 s window, 5 publishes, no restart before the run, no clean-tree check), written with `BENCH_OUT_DIR` to the committed folder and marked `"quick": true` in each file. The full method (90 s window, 20 publishes, restart first) refuses to run on a working tree with uncommitted changes, which this one had. The numbers show the shape of the result; they are not a median of repeats.
+
+### Subscribers held by the hub
+
+| Subscribers | Delivered | Latency p50 | Latency p95 | Latency max | Health p95 | Max busy PHP threads |
+|---|---|---|---|---|---|---|
+| 100 | 600 of 600 | 28 ms | 46 ms | 47 ms | 17 ms | 1 |
+| 1000 | 6000 of 6000 | 78 ms | 400 ms | 484 ms | 20 ms | 0 |
+
+The pool has 14 PHP threads in both cells. No health probe timed out and the private checks passed in both: only the subscriber holding listing 1's token received the private update (the wrong-token and no-token subscribers received none).
+
+```mermaid
+xychart-beta
+    title "Health check p95 with open streams (ms, 10 000 = timed out)"
+    x-axis ["30 SSE answers (SL-09)", "100 Mercure", "1000 Mercure"]
+    y-axis "p95 (ms)" 0 --> 10000
+    bar [10000, 17, 20]
+```
+
+The first bar is the SL-09 cell `bench/results/slow-load/2026-11-03/sse-frankenphp-14.json` (frankenphp, fixed 14 threads, 30 users reading a 6 s answer each, 118 of 300 probes without an answer within 10 s). The other two are this section. The SL-09 cell is a different workload on the same server and probe: it shows what a held connection costs when PHP holds it, not a like-for-like benchmark of the same N.
+
+### What the numbers say
+
+- **Subscribers did not occupy PHP threads.** 1000 open connections left 0 of 14 threads busy at every sample and the health p95 at 20 ms. 30 direct SSE answers on the same 14 threads left the health check at 10 000 ms with 118 of 300 probes unanswered. A Mercure subscriber is an open socket in Caddy's Go code; PHP is only involved for the short publish request.
+- **Delivery was complete.** 600 of 600 and 6000 of 6000 messages arrived, one copy per subscriber per publish.
+- **The latency tail grows with N, the median stays small.** p50 went from 28 ms to 78 ms and p95 from 46 ms to 400 ms between 100 and 1000 subscribers. The likely causes, not separated by this bench, are the single Node event loop that reads all N sockets and timestamps them, the router hop, and CPU contention between the hub, the router, the probe and the generator on one host; the hub does not write to subscribers one after another from a single thread that the last connection has to wait for.
+- **Authorization held.** A private update reached only the connection whose JWT named that listing's private topic.
+
+### Surprises
+
+- **One cell showed a busy thread.** The 100 cell has max 1 busy thread and the 1000 cell 0. A busy thread is a PHP request in flight. `listings:reprice` is a CLI process outside the FrankenPHP pool and the publish POST is answered by the hub inside Caddy, so the only PHP-thread work during the window is the `/healthz` probe (5 requests per second, each a few milliseconds). With one-second sampling, whether a sample catches one of them is chance, so read "0 or 1", not a trend.
+- **Latency is bounded by the generator too.** One Node process serves all N sockets and measures their arrival; part of the 400 ms p95 at N=1000 is its own event loop. It is an upper bound for the hub.
+- **The hub is not Mercure's recommended topology.** Here it is in the same process as PHP (FrankenPHP's Caddy module), so a hub restart drops every subscriber and the page reconnects on its own. A separate hub scales and restarts independently.
+
+### Interview story
+
+I wanted to show that Mercure subscribers do not cost PHP workers the way direct SSE does. I opened 100 and 1000 subscribers on FrankenPHP's built-in hub while the SL-09 health probe ran: at 1000 open connections 0 of 14 PHP threads were busy and the health p95 was 20 ms, against 10 000 ms with 30 direct SSE answers. A published price change reached all 6000 deliveries, with p50 78 ms and p95 400 ms through the DDEV router, and a private update reached only the token that named its topic. These are short `--quick` runs on a dirty tree, so I would claim the shape of the result, not the exact latencies.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.
 
 `bench/parity/frankenphp-octane.txt` and `bench/parity/frankenphp-worker.txt` were captured on 2026-10-30 from the same seeded database. `bench/parity.sh compare nginx-fpm frankenphp-octane` and `bench/parity.sh compare nginx-fpm frankenphp-worker` both report `identical`. Getting there needed two things that only matter in a long-lived worker. The worker must know the client used HTTPS, or asset URLs come out as `http://`: frankenphp-worker sets `HTTPS=on` from `X-Forwarded-Proto` in its Caddyfile and frankenphp-octane uses `OCTANE_HTTPS=true`, with no proxy trust in app code. And `public/frankenphp-worker.php` defines `LARAVEL_START` so `/up` has the same shape; in worker mode that number is the worker's uptime, not the request time, and parity masks it. Octane runs with `--log-level=warn` and the worker Caddyfile has no access log, so neither way logs each request.
 
-All six snapshots were re-baselined on 2026-11-03 (commit 580fbac) because `/listings/1` links the Vite assets and `app.css` stopped using Tailwind's automatic source detection, which changed its hashed file name. Automatic detection also scanned the markdown docs, so any docs edit could change the build; `app.css` now lists its sources explicitly (`source(none)` plus `@source` lines), and a rebuild after a markdown change gives the same file. After that re-baseline `bench/asset-fingerprint.sh` prints exactly these lines, and still does after the AI lab entries were added, so the old pages load byte-identical assets:
+All six snapshots were re-baselined on 2026-11-03 (commit 580fbac) because `/listings/1` links the Vite assets and `app.css` stopped using Tailwind's automatic source detection, which changed its hashed file name. Automatic detection also scanned the markdown docs, so any docs edit could change the build; `app.css` now lists its sources explicitly (`source(none)` plus `@source` lines), and a rebuild after a markdown change gives the same file. After that re-baseline `bench/asset-fingerprint.sh` printed `app-CjRfEL-0.css` and the empty `app-BvRk9kiK.js` (the SHA-256 of an empty file), and still did after the AI lab entries were added, so the old pages loaded byte-identical assets.
+
+They were re-baselined a second time on 2026-11-05 (SL-13), once, because the listing detail page gained the live-price markup: a `mercure-hub` meta tag, a `data-price-topic` attribute on the price and a polite live region. `resources/js/app.js` is no longer empty (it opens one `EventSource` for the price topic), and the extra `sr-only` class changes `app.css`, so both fingerprinted assets have new hashed names. Only the `/listings/1` line of each snapshot changed, and it is the same hash on all six servers, so the page is still byte-identical everywhere. In the review fix pass the page gained one more attribute, `data-price-rendered-ms` (server time at render, used by the script to ignore history it already shows). It differs on every request, so `bench/parity.sh` masks it to `N` before hashing, like the `/up` render time, and the six snapshots were captured again on 2026-11-05 for that reason (`compare nginx-fpm <server>` prints `identical` for the other five; only the `/listings/1` hash and the timestamp line changed, to `097d5a85…`). The script also changed (the history replay and the render-time filter, now in a second small module that Vite inlines), which gives a new JS asset name: the markup and script are the same on servers without a hub, where the script gives up after one failed request. `bench/asset-fingerprint.sh` now prints exactly these lines, and later slices compare against them:
 
 ```
-resources/css/app.css assets/app-CjRfEL-0.css 82042c94c3ab3d21075df7b9868cb39096d32a2085ceddb6c94b2b56d438ce71
-resources/js/app.js assets/app-BvRk9kiK.js e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+resources/css/app.css assets/app-DNob7CFE.css 176bae5b51e4d3fd8f839b7effee51f6ae6bd5fa1c1f29e44a77e35553f1d444
+resources/js/app.js assets/app-PTzu1QaN.js 7fbc38601b4f59a1c78dcec8cb4ceb16cf7a64abf4dfafff60069c5f97735256
 ```
 
 A fresh capture on each of the six servers compared with its committed snapshot prints `identical` six times (checked 2026-11-03, after the AI lab UI).
