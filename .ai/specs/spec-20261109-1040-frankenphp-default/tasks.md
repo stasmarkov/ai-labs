@@ -31,10 +31,10 @@
   - [x] 4.1 `ddev server default`; full suite, Pint, PHPStan, typecheck, build; fingerprint; parity on 6 servers; `git diff HEAD -- .ddev/config.yaml` empty
   - [x] 4.2 **Verify**: outputs recorded here: default switched (Active: frankenphp); suite 1270 passed; Pint, PHPStan, typecheck, build clean; fingerprint unchanged (app-DNob7CFE.css, app-PTzu1QaN.js); parity identical x6; config.yaml diff empty
 
-- [ ] 5. Bench on a clean tree (checks)
+- [x] 5. Bench on a clean tree (checks)
   Covers: AC-5
-  - [ ] 5.1 After the commit, `bench/run.sh ping --quick` on the default server, exit 0
-  - [ ] 5.2 **Verify**: recorded here
+  - [x] 5.1 After the commit, `bench/run.sh ping --quick` on the default server, exit 0
+  - [x] 5.2 **Verify**: recorded here
 
 ## Traceability
 
@@ -60,9 +60,9 @@
 
 ## Done when
 
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
 
 ## Phase: Gaps (converge round 1)
 
@@ -134,3 +134,5 @@ Verified against the ship report and fixed on 2026-11-09. Task 5 (clean-tree ben
 - [x] R6. AC-3 guard: `(?![\w-])` regex, scoped to trap lines, cleanup/restore function bodies and the last 10 lines; `$restoring` is derived; regex self-tests; behaviour test for `http3-matrix.sh` (frankenphp measurement first, default restore last, exit 2 when unreadable).
 - [x] R7. `ServerDefaultCommandTest` asserts `not->toContain('mercure:keys --force')`; the stub refuses like the real command.
 - [x] R8. `BENCHMARKS.md` top note names `ddev setup`; every `.ai/specs/*/manual-test.md` rollback and closing switch is `ddev server default`; plans that need nginx-fpm now switch to it explicitly; `DocsDefaultServerTest` fails on a fenced block that ends on `ddev server nginx-fpm` and on a Rollback/Cleanup section that restores it.
+
+- Owner-side notes: committed as 18e6846; `bench/run.sh ping --quick` exit 0 on a clean tree on the default server (frankenphp, spread 0 %); 1315 tests; `ddev server --check default` exit 0.
