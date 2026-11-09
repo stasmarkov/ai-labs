@@ -10,6 +10,8 @@ beforeEach(function (): void {
     mkdir($this->root.'/bench', 0777, true);
     copy(base_path('bench/chat-stop.sh'), $this->root.'/bench/chat-stop.sh');
     chmod($this->root.'/bench/chat-stop.sh', 0755);
+    mkdir($this->root.'/bench/lib');
+    copy(base_path('bench/lib/default-server.sh'), $this->root.'/bench/lib/default-server.sh');
     file_put_contents($this->root.'/.env', "OLLAMA_MODEL=stub-model\n");
     exec('git -C '.escapeshellarg($this->root).' init -q && git -C '.escapeshellarg($this->root).' -c user.email=a@b -c user.name=t commit -q --allow-empty -m init');
 
@@ -18,6 +20,7 @@ beforeEach(function (): void {
 echo "ddev $*" >> "$STUB_LOG"
 case "$1 $2" in
   "server --current") echo "nginx-fpm" ;;
+  "server --default") echo "${STUB_DEFAULT-frankenphp}" ;;
   "server --url") echo "https://interview.test" ;;
   "artisan tinker")
     id=$(echo "$*" | grep -o 'inv-[0-9]*' | head -1)
@@ -130,13 +133,13 @@ it('AC-2 reports a mode that cannot detect the abort with its numbers', function
         ->and($result['lag_within_budget'])->toBeFalse();
 });
 
-it('AC-2 switches modes with ddev server and ends on nginx-fpm', function (): void {
-    chatStop($this, ['--modes', 'apache-fpm,frankenphp', '--runs', '1']);
+it('AC-3 switches modes with ddev server and ends on the default server', function (): void {
+    chatStop($this, ['--modes', 'apache-fpm,frankenphp', '--runs', '1'], ['STUB_DEFAULT' => 'openlitespeed']);
     $log = (string) file_get_contents($this->root.'/stub.log');
 
     expect(glob($this->root.'/bench/results/chat-stop/*/*.json'))->toHaveCount(2)
         ->and(strpos($log, 'ddev server apache-fpm'))->toBeLessThan(strpos($log, 'ddev server frankenphp'))
-        ->and(trim((string) array_slice(explode("\n", trim($log)), -1)[0]))->toBe('ddev server nginx-fpm');
+        ->and(trim((string) array_slice(explode("\n", trim($log)), -1)[0]))->toBe('ddev server openlitespeed');
 });
 
 it('AC-2 refuses to overwrite a mode result without --force', function (): void {

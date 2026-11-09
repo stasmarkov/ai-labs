@@ -5,7 +5,7 @@ App: https://interview.ddev.site. Everything below runs from the project root. N
 ## Preconditions
 
 - DDEV is installed and the project can start (`ddev start`).
-- You start on the default server, nginx-fpm (`ddev server` shows it as active).
+- You start on the default server, frankenphp (`ddev server` shows it as active); step 1 switches to nginx-fpm.
 - `.env` has no `DEBUG_ROUTES=true` line, or has `DEBUG_ROUTES=false`.
 - The commands use `curl -sk`; drop `-k` if your machine trusts the DDEV certificate.
 
@@ -13,7 +13,7 @@ Rollback (run this at the end, or any time something goes wrong):
 
 ```sh
 sed -i.bak '/^DEBUG_ROUTES=/d' .env && rm -f .env.bak   # flag off again
-ddev server nginx-fpm                                   # back to the default server
+ddev server default                                      # default server again
 git status --short .ddev .env.bench-backup              # overlay config.zzz-bench-leaks.yaml and .env.bench-backup must not exist
 ddev artisan config:clear
 ```
@@ -256,4 +256,4 @@ Expected: the routes exist (`debug.leaks`, `debug.worker`, and the earlier debug
 
 ## Final check
 
-Run the rollback block at the top. The project should end on nginx-fpm with `DEBUG_ROUTES` off.
+Run the rollback block at the top. The project should end on the default server with `DEBUG_ROUTES` off.

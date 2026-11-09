@@ -8,12 +8,12 @@ alias dbq='ddev exec -s db psql -U db -d db -tAc'
 
 ## Preconditions
 
-- DDEV is running on nginx-fpm: `ddev server --current` prints `nginx-fpm`.
+- DDEV is running. Run `ddev server nginx-fpm` first (this plan starts on nginx-fpm on purpose); `ddev server --current` prints `nginx-fpm`.
 - Ollama runs on the Mac and `ollama list` shows `bge-m3`.
 - `.env` leaves `AI_EMBEDDINGS_PROVIDER` and `OLLAMA_EMBED_MODEL` unset (defaults `ollama` and `bge-m3`). Then run `ddev artisan config:clear`.
 - The catalogue has the 50 000 seeded listings: `dbq "select count(*) from listings"` prints `50000`.
 - Write down the listings hash before you start: `dbq "select md5(string_agg(l::text, ',' order by id)) from listings l"`. The known value is `6a0f96d2c7139919cc215a520072d3f7`.
-- Risky parts: step 2 overwrites every stored vector with `--fresh`, and step 5 switches web servers. To go back, run `ddev server nginx-fpm`; to rebuild vectors, repeat step 2. Never touch `listings`; if the hash ever changes, stop and run `ddev artisan migrate:fresh --seed`.
+- Risky parts: step 2 overwrites every stored vector with `--fresh`, and step 5 switches web servers. To go back, run `ddev server default`; to rebuild vectors, repeat step 2. Never touch `listings`; if the hash ever changes, stop and run `ddev artisan migrate:fresh --seed`.
 
 ## Step 1: descriptions (AC-1, MNC-1)
 
@@ -116,7 +116,7 @@ for s in nginx-fpm apache-fpm openlitespeed frankenphp frankenphp-octane franken
   BENCH_PARITY_DIR=/tmp/sl24 bench/parity.sh capture >/dev/null
   bench/parity.sh compare bench/parity/$s.txt /tmp/sl24/$s.txt
 done
-ddev server nginx-fpm
+ddev server default
 ddev artisan test --compact
 bench/run.sh ping --quick; echo "exit=$?"
 ```

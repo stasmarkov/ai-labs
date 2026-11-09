@@ -10,7 +10,9 @@ It is a living document: every slice adds or updates its section when it ships (
 
 ## 1. The app and one request on nginx-fpm
 
-**What it is.** A small car marketplace on Laravel 13 and PHP 8.4: 500 dealers and 50 000 listings in PostgreSQL 16, with Redis for cache and sessions. It runs in DDEV, which starts a `web` container (nginx + PHP-FPM by default), a `db` container and a `redis` container behind a shared router.
+> This section describes the request on nginx-fpm, which is still one `ddev server nginx-fpm` away; the default server is set out in section 2.
+
+**What it is.** A small car marketplace on Laravel 13 and PHP 8.4: 500 dealers and 50 000 listings in PostgreSQL 16, with Redis for cache and sessions. It runs in DDEV, which starts a `web` container (nginx + PHP-FPM until `ddev setup` switches it to the default server), a `db` container and a `redis` container behind a shared router.
 
 **One request, step by step** (`GET /listings?make=BMW`):
 
@@ -29,6 +31,8 @@ It is a living document: every slice adds or updates its section when it ships (
 **Read next.** [Laravel request lifecycle](https://laravel.com/docs/13.x/lifecycle) · [DDEV architecture](https://docs.ddev.com/en/stable/users/usage/architecture/) · [PHP OPcache](https://www.php.net/manual/en/book.opcache.php)
 
 ## 2. Switching servers and proving they answer the same
+
+> The default server is now frankenphp (`ddev setup` on a fresh clone switches to it; `ddev server default` returns to it). Every other server is one `ddev server <name>` away.
 
 **What it is.** One command, `ddev server <name>`, swaps the web server without touching `.ddev/config.yaml`. It writes a gitignored overlay `.ddev/config.zz-server.yaml`. DDEV merges every `config.*.yaml` over `config.yaml` in name order, so `zz` wins. Then it restarts the project. A parity script then proves every server returns the same responses.
 

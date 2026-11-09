@@ -25,7 +25,8 @@ test('AC-13 README switching section documents the parity workflow', function ()
     expect($section)->toContain('migrate:fresh --seed')
         ->toContain('bench/parity.sh capture')
         ->not->toContain('capture <server>')
-        ->toContain('bench/parity.sh compare nginx-fpm apache-fpm');
+        ->toContain('bench/parity.sh compare frankenphp nginx-fpm')
+        ->toContain('bench/parity.sh compare frankenphp apache-fpm');
     expect(strpos($section, 'migrate:fresh --seed'))->toBeLessThan(strpos($section, 'bench/parity.sh capture'));
 });
 

@@ -5,26 +5,27 @@ Run everything from the project root (`/Users/stasmarkov/work/interview`) in a h
 ## Preconditions
 
 - DDEV is installed and the project is running: `ddev start`.
-- You are on `nginx-fpm` and have no `.ddev/config.zz-server.yaml` (`ls .ddev/config.zz-server.yaml` says "No such file").
+- You are on the default server (`ddev server --default` prints frankenphp, the default after `ddev setup`); step 1 switches to nginx-fpm on purpose, because steps 1 to 6 test the nginx-fpm side, and step 7 moves on to apache-fpm.
 - Note your current `.env` value of `DEBUG_ROUTES` (it should be unset or `false`). Step 10 changes it temporarily.
 - Switching servers runs `ddev restart`, so steps 7 and 11 take a minute or two each.
 
 ## Rollback (if anything goes wrong)
 
 ```sh
-ddev server nginx-fpm            # or: rm -f .ddev/config.zz-server.yaml && ddev restart
+ddev server default
 sed -i '' '/^DEBUG_ROUTES=/d' .env && ddev artisan optimize:clear   # only if you added it in step 10
 git checkout -- bench/parity     # only if you overwrote the committed snapshots
 rm -rf /tmp/parity-apache /tmp/parity-bad
 ```
 
-The project must end up on nginx-fpm with `.ddev/config.yaml` unchanged.
+The project must end up on the default server with `.ddev/config.yaml` unchanged.
 
 ## Step 1: baseline
 
 Action:
 
 ```sh
+ddev server nginx-fpm
 ddev describe | grep -i -E 'nginx|apache|webserver'
 ddev server --current
 ```
@@ -203,7 +204,7 @@ curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/runti
 
 Expected: `404`.
 
-## Step 11: switch back to nginx-fpm (AC-2, MNC-1, MNC-2)
+## Step 11: switch to nginx-fpm and compare (AC-2, MNC-1, MNC-2)
 
 Action:
 
@@ -263,4 +264,4 @@ Expected:
 - Second attempt (no overlay before): same message, `exit=1`, and `ls` reports the overlay file does not exist (it was removed).
 - Final state: nginx-fpm, no overlay; `ddev server --current` prints `nginx-fpm`.
 
-Clean up: `rm -rf /tmp/parity-nginx /tmp/parity-apache /tmp/parity-bad`.
+Clean up: `rm -rf /tmp/parity-nginx /tmp/parity-apache /tmp/parity-bad`, then `ddev server default` to put the project back on the default server.

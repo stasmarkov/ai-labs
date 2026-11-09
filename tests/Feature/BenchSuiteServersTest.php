@@ -13,6 +13,8 @@ beforeEach(function (): void {
     file_put_contents($this->dir.'/current', "nginx-fpm\n");
 
     copy(base_path('bench/suite.sh'), $this->dir.'/bench/suite.sh');
+    mkdir($this->dir.'/bench/lib');
+    copy(base_path('bench/lib/default-server.sh'), $this->dir.'/bench/lib/default-server.sh');
 
     $stub = function (string $path, string $body): void {
         file_put_contents($path, "#!/usr/bin/env bash\n".$body);
@@ -21,6 +23,7 @@ beforeEach(function (): void {
 
     $stub($this->dir.'/bin/ddev', <<<'SH'
 if [[ "$*" == "server --current" ]]; then cat "$BENCH_STUB_DIR/current"; exit 0; fi
+if [[ "$*" == "server --default" ]]; then echo "${STUB_DEFAULT-}"; exit 0; fi
 if [[ "$1" == "server" ]]; then echo "$2" > "$BENCH_STUB_DIR/current"; echo "ddev server $2" >> "$BENCH_STUB_DIR/log"; fi
 exit 0
 SH);
@@ -39,12 +42,13 @@ echo "run $server $scenario $label" >> "$BENCH_STUB_DIR/log"
 SH);
     file_put_contents($this->dir.'/bench/summary.php', "<?php\nfile_put_contents(getenv('BENCH_STUB_DIR').'/log', 'summary '.implode(' ', array_map(fn (\$a) => preg_replace('~[^\\s=]*/~', '', \$a), array_slice(\$argv, 1)))\n.\"\\n\", FILE_APPEND);\n");
 
-    $this->suite = function (array $arguments) {
+    $this->suite = function (array $arguments, string $default = 'frankenphp') {
         $process = new Process(['bash', $this->dir.'/bench/suite.sh', ...$arguments], null, [
             'PATH' => $this->dir.'/bin:'.getenv('PATH'),
             'BENCH_STUB_DIR' => $this->dir,
             'BENCH_APPROOT' => $this->dir,
             'BENCH_DATE' => '2030-01-01',
+            'STUB_DEFAULT' => $default,
         ]);
         $process->run();
 
@@ -114,4 +118,20 @@ it('MNC-1 suite without --servers runs the default four classic servers in order
     expect(array_slice($servers, 0, 4))->toBe(['nginx-fpm', 'apache-fpm', 'openlitespeed', 'frankenphp'])
         ->and(array_values(array_filter($log, fn (string $line): bool => $line === 'timeouts run')))->toHaveCount(4)
         ->and($log)->toContain('summary ping-fair-1.json --baseline=nginx-fpm-ping-fair.json --write=apache-fpm-ping-fair.json');
+});
+
+it('AC-3 suite ends on the default server it reads from ddev, not on nginx-fpm', function (): void {
+    $process = ($this->suite)(['--quick', '--servers', 'nginx-fpm,apache-fpm'], 'openlitespeed');
+    $switches = array_values(array_filter(($this->log)(), fn (string $line): bool => str_starts_with($line, 'ddev server ')));
+
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
+        ->and(end($switches))->toBe('ddev server openlitespeed');
+});
+
+it('AC-3 suite exits 2 before switching anything when the default server cannot be read', function (): void {
+    $process = ($this->suite)(['--quick', '--servers', 'nginx-fpm'], '');
+
+    expect($process->getExitCode())->toBe(2)
+        ->and($process->getErrorOutput())->toContain('ddev server --default')
+        ->and(($this->log)())->toBe([]);
 });

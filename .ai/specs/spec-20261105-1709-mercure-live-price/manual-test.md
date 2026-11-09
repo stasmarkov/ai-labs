@@ -8,7 +8,7 @@ Run everything from `/Users/stasmarkov/work/interview`. The app is at https://in
 - The listings are seeded: listing 1 and listing 2 exist (`/listings/1`, `/listings/2` return 200).
 - `.env` has `MERCURE_PUBLISHER_JWT_KEY` and `MERCURE_SUBSCRIBER_JWT_KEY` set. If they are empty, run `ddev artisan mercure:keys` first (it writes `.env` and `.ddev/.env.web`).
 - Note the starting prices of listing 1 and listing 2 (open both pages). Prices are in cents in the commands: `19990` shows as `199.90 EUR`.
-- Rollback for the whole plan: put the prices back with `ddev artisan listings:reprice 1 --restore=<original cents>` (and the same for listing 2), remove `DEBUG_ROUTES=true` from `.env` then `ddev artisan config:clear`, and run `ddev server nginx-fpm`. Check with `ddev server` that nginx-fpm is active.
+- Rollback for the whole plan: put the prices back with `ddev artisan listings:reprice 1 --restore=<original cents>` (and the same for listing 2), remove `DEBUG_ROUTES=true` from `.env` then `ddev artisan config:clear`, and run `ddev server default`. Check with `ddev server` that frankenphp is active.
 
 ## Step 1: Keys and the hub (AC-3, NFR-1)
 
@@ -73,7 +73,7 @@ Restore the price as above.
 ```sh
 bench/asset-fingerprint.sh
 for s in nginx-fpm apache-fpm openlitespeed frankenphp frankenphp-octane frankenphp-worker; do ddev server $s >/dev/null; BENCH_PARITY_DIR=/tmp/sl13 bench/parity.sh capture >/dev/null; bench/parity.sh compare bench/parity/$s.txt /tmp/sl13/$s.txt; done
-ddev server nginx-fpm
+ddev server default
 git diff --stat HEAD -- .ddev/config.yaml
 grep -n "app-PTzu1QaN\|second re-baseline" BENCHMARKS.md
 ```

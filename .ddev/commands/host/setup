@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+
+## Description: Set up a fresh clone: .env, Composer, APP_KEY, default server, Mercure keys, migrations, front-end build
+## Usage: setup
+## Example: ddev setup
+
+set -Eeuo pipefail
+
+APPROOT="${DDEV_APPROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
+KEY_NAMES=(MERCURE_PUBLISHER_JWT_KEY MERCURE_SUBSCRIBER_JWT_KEY)
+KEY_FILES=("$APPROOT/.env" "$APPROOT/.ddev/.env.web")
+CHANGED=0
+TEMP=""
+
+# Removes a half-written secret temp file on any exit; it lives next to its target, never in $TMPDIR.
+cleanup() {
+  [[ -z "$TEMP" ]] || rm -f "$TEMP"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+
+# Prints the non-empty value of a key in a file, nothing when it is absent or empty.
+key_value() {
+  grep -E "^$2=.+$" "$1" 2>/dev/null | tail -n 1 | cut -d= -f2- || true
+}
+
+# True when every Mercure key is present and non-empty in the file.
+file_has_pair() {
+  local name
+  for name in "${KEY_NAMES[@]}"; do
+    [[ -n "$(key_value "$1" "$name")" ]] || return 1
+  done
+}
+
+# True when the file holds at least one non-empty Mercure key.
+file_has_any() {
+  local name
+  for name in "${KEY_NAMES[@]}"; do
+    [[ -z "$(key_value "$1" "$name")" ]] || return 0
+  done
+  return 1
+}
+
+# Replaces or appends NAME=VALUE in a file. The new content is written to a 0600 temp file in the same directory and renamed
+# over the target, so the swap is atomic and the final mode is 0600 even when the target was 0644.
+set_key() {
+  local file="$1" name="$2" value="$3"
+  TEMP="$(mktemp "$(dirname "$file")/.$(basename "$file").XXXXXX")"
+  chmod 600 "$TEMP"
+  { grep -v "^${name}=" "$file" 2>/dev/null || true; } > "$TEMP"
+  printf '%s=%s\n' "$name" "$value" >> "$TEMP"
+  mv "$TEMP" "$file"
+  TEMP=""
+}
+
+# Copies a complete key pair from the source file into the target file.
+copy_pair() {
+  local name
+  for name in "${KEY_NAMES[@]}"; do
+    set_key "$2" "$name" "$(key_value "$1" "$name")"
+  done
+}
+
+# Leaves both files holding a complete pair without --force; sets KEYS_CHANGED=1 when it wrote something.
+# Exits 2 when the keys are partial everywhere, because mercure:keys would refuse and --force replaces keys.
+ensure_keys() {
+  local first="${KEY_FILES[0]}" second="${KEY_FILES[1]}"
+  if file_has_pair "$first" && file_has_pair "$second"; then
+    return 0
+  fi
+  if file_has_pair "$first"; then
+    copy_pair "$first" "$second"
+  elif file_has_pair "$second"; then
+    copy_pair "$second" "$first"
+  elif file_has_any "$first" || file_has_any "$second"; then
+    local file name missing=()
+    for file in "${KEY_FILES[@]}"; do
+      for name in "${KEY_NAMES[@]}"; do
+        [[ -n "$(key_value "$file" "$name")" ]] || missing+=("$name in ${file#"$APPROOT"/}")
+      done
+    done
+    echo "Mercure keys are only partly present and no file holds a complete pair. Missing: ${missing[*]}" >&2
+    echo "Run: ddev artisan mercure:keys --force" >&2
+    exit 2
+  else
+    ddev artisan mercure:keys
+  fi
+  KEYS_CHANGED=1
+}
+
+if [[ ! -f "$APPROOT/.env" ]]; then
+  cp "$APPROOT/.env.example" "$APPROOT/.env"
+  CHANGED=1
+fi
+
+ddev start
+
+default="$(ddev server --default)"
+if [[ -z "$default" ]]; then
+  echo "ddev server --default printed nothing." >&2
+  exit 2
+fi
+
+if [[ ! -f "$APPROOT/vendor/autoload.php" ]]; then
+  ddev composer install
+  CHANGED=1
+fi
+
+if [[ -z "$(key_value "$APPROOT/.env" APP_KEY)" ]]; then
+  ddev artisan key:generate
+  CHANGED=1
+fi
+
+KEYS_CHANGED=0
+ensure_keys
+
+# Keys are in place before the switch, so its restart already lets Caddy read them. Whether the server is fully applied is the server command's own question.
+server_ready=0
+ddev server --check default && server_ready=1
+
+if [[ $server_ready -eq 0 ]]; then
+  ddev server default
+  CHANGED=1
+elif [[ $KEYS_CHANGED -eq 1 ]]; then
+  ddev restart
+fi
+[[ $KEYS_CHANGED -eq 0 ]] || CHANGED=1
+
+ddev artisan migrate --force
+
+if [[ ! -f "$APPROOT/public/build/manifest.json" ]]; then
+  ddev npm install
+  ddev npm run build
+  CHANGED=1
+fi
+
+if [[ $CHANGED -eq 0 ]]; then
+  echo "Already set up: $default"
+else
+  echo "Set up: $default"
+fi
+echo "URL: $(ddev server --url)"

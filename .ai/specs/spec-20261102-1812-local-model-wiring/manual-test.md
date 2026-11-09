@@ -5,7 +5,7 @@ Run from the project root, `/Users/stasmarkov/work/interview`, in a host termina
 ## Preconditions
 
 - Ollama is running on the Mac (`curl -s localhost:11434/api/version` prints a version) and `ollama list` shows `qwen3.5:9b`.
-- `ddev start`; `ddev server --current` prints `nginx-fpm`.
+- `ddev start`, then `ddev server nginx-fpm` (this plan starts on nginx-fpm on purpose); `ddev server --current` prints `nginx-fpm`.
 - `.env` has `AI_PROVIDER=ollama`; `OLLAMA_MODEL`, `OLLAMA_URL`, `OLLAMA_NUM_CTX`, `OLLAMA_KEEP_ALIVE`, `AI_THINK`, `AI_TIMEOUT`, `AI_MAX_TOKENS` are unset or at their documented defaults. Run `ddev artisan config:clear`.
 
 <a id="step-1"></a>
@@ -34,7 +34,7 @@ for s in nginx-fpm apache-fpm openlitespeed frankenphp frankenphp-octane franken
   BENCH_PARITY_DIR=/tmp/sl22 bench/parity.sh capture >/dev/null
   bench/parity.sh compare bench/parity/$s.txt /tmp/sl22/$s.txt
 done
-ddev server nginx-fpm
+ddev server default
 ```
 
 Expected per server: an address line for `host.docker.internal`, a JSON version, `identical`.
@@ -47,7 +47,7 @@ curl -s -o /dev/null https://interview.ddev.site/listings/1/describe   # warm th
 for s in nginx-fpm apache-fpm openlitespeed frankenphp frankenphp-octane frankenphp-worker; do
   ddev server $s >/dev/null && echo "== $s" && bench/sse.sh --real; echo "exit=$?"
 done
-ddev server nginx-fpm
+ddev server default
 ddev artisan tinker --execute 'dump(App\Models\AiRun::where("provider","ollama")->latest("id")->take(6)->get(["model","tokens_in","tokens_out","ttft_ms","latency_ms","status"])->toArray());'
 ```
 
@@ -102,4 +102,4 @@ Expected: `config:show` lists model `qwen3.5:9b`, `max_tokens` 400, `timeout` 12
 
 ## Rollback
 
-`.env` must end with `AI_PROVIDER=ollama` and the project on nginx-fpm (`ddev server --current`). To go back to the fake at any point: `sed -i '' 's/^AI_PROVIDER=.*/AI_PROVIDER=fake-stream/' .env && ddev artisan config:clear`. Test rows added to `ai_runs` are harmless and can stay.
+`.env` must end with `AI_PROVIDER=ollama` and the project on the default server (`ddev server default`; `ddev server --current` prints `frankenphp`). To go back to the fake at any point: `sed -i '' 's/^AI_PROVIDER=.*/AI_PROVIDER=fake-stream/' .env && ddev artisan config:clear`. Test rows added to `ai_runs` are harmless and can stay.

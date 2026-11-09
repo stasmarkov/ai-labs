@@ -4,7 +4,7 @@ The lab lives at https://interview.ddev.site/ai. Run shell commands from `/Users
 
 ## Preconditions
 
-- DDEV is up and serves nginx-fpm: `ddev start && ddev server --current` prints `nginx-fpm`.
+- DDEV is up: `ddev start`, then `ddev server nginx-fpm` (this plan starts on nginx-fpm on purpose); `ddev server --current` prints `nginx-fpm`.
 - Assets are built: `ddev npm run build`, and `public/hot` does not exist.
 - Ollama runs on the Mac with the two models: `ollama list` shows `qwen3.5:9b` and `bge-m3`.
 - `.env` has `AI_PROVIDER=ollama`.
@@ -144,7 +144,7 @@ for s in nginx-fpm apache-fpm openlitespeed frankenphp frankenphp-octane franken
   BENCH_PARITY_DIR=/tmp/sl46 bench/parity.sh capture >/dev/null
   bench/parity.sh compare bench/parity/$s.txt /tmp/sl46/$s.txt
 done
-ddev server nginx-fpm
+ddev server default
 ddev artisan test --compact
 ddev npm run typecheck && ddev npm run build
 git status --short

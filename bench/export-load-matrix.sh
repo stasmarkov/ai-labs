@@ -2,12 +2,15 @@
 ## Usage: bench/export-load-matrix.sh [--quick] [--dry-run]
 ## Runs the 8 cells of the export matrix: nginx-fpm, apache-fpm, frankenphp and openlitespeed, each with the offload and
 ## the stream mode through bench/export-load.sh (20 clients, 3 repeats per cell, default worker limits).
-## It ends on nginx-fpm, also when a cell fails. --quick passes --quick to every cell. --dry-run prints the commands and runs none.
+## It ends on the default server (`ddev server --default`), also when a cell fails. --quick passes --quick to every cell. --dry-run prints the commands and runs none.
 ## Result files: bench/results/export-load/<UTC date>/<mode>-<server>.json (--quick: bench/results/raw/) (see bench/export-load.sh).
 
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+# shellcheck source=lib/default-server.sh
+source "$SCRIPT_DIR/lib/default-server.sh"
 
 quick=()
 dry=0
@@ -27,8 +30,11 @@ step() {
   fi
 }
 
+# Read the default before the trap exists: a failed read exits 2 without restoring anything.
+read_default_server "$APPROOT" $([[ "$dry" == "1" ]] && echo --dry-run)
+
 restore() {
-  step ddev server nginx-fpm || true
+  restore_default_server "$APPROOT" step || true
 }
 trap restore EXIT
 

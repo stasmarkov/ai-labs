@@ -4,7 +4,7 @@ title: Classic FrankenPHP with the Mercure hub as the project's default server
 type: improvement
 size: M
 priority: P2
-status: approved
+status: in-progress
 ticket:
 stakeholders: [Stanislav Markov]
 approved_by: Stas Markov (standing approval)

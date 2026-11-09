@@ -6,10 +6,10 @@ What this checks: a 50 MiB CSV download no longer ties up a PHP worker for the w
 
 - DDEV is running and you are in `/Users/stasmarkov/work/interview`. App URL: https://interview.ddev.site (the other servers get their own URL; `ddev server --url` prints the current one).
 - The route is a lab endpoint behind the debug gate. In `.env` set `DEBUG_ROUTES=true`, then run `ddev artisan config:clear`.
-- Start on nginx-fpm: `ddev server nginx-fpm`.
+- Start on the default server: `ddev server default`.
 - Use a clean working tree for step 5 (the fingerprint and parity checks compare against committed snapshots).
 - You need about 60 MiB free in `storage/app/exports/` and curl, shasum and jq on the host.
-- Switching servers restarts DDEV and takes about a minute each time. Always run `ddev server nginx-fpm` when you finish a server loop.
+- Switching servers restarts DDEV and takes about a minute each time. Always run `ddev server default` when you finish a server loop.
 
 Helper used below (paste once per terminal):
 
@@ -49,7 +49,7 @@ for s in nginx-fpm apache-fpm frankenphp openlitespeed; do
   curl -sk -D /tmp/h.$s -o /tmp/e.$s.csv "$u/exports/listings?mode=offload"
   echo "$s | $(head -1 /tmp/h.$s | tr -d '\r') | $(grep -i '^x-export-mode' /tmp/h.$s | tr -d '\r') | $(shasum -a 256 /tmp/e.$s.csv | cut -d' ' -f1)"
 done
-ddev server nginx-fpm
+ddev server default
 echo "expected sha: $SHA"
 jq -c '{server,mode,php_held_ms,bytes_sent_by_php}' storage/logs/exports.jsonl
 ```
@@ -95,6 +95,7 @@ Stream mode, memory bound and client disconnect (AC-3, AC-4).
 1. Same bytes in stream mode, on nginx-fpm:
 
 ```sh
+ddev server nginx-fpm
 : > storage/logs/exports.jsonl
 curl -sk -D /tmp/hs -o /tmp/s.csv "$(ddev server --url)/exports/listings?mode=stream"
 grep -i '^x-export-mode' /tmp/hs; shasum -a 256 /tmp/s.csv; echo "expected $SHA"
@@ -154,11 +155,11 @@ Benchmark results and docs (AC-6, AC-7, NFR-1).
 1. `ls bench/results/export-load/2026-11-04` lists 8 files (`offload-` and `stream-` for nginx-fpm, apache-fpm, frankenphp, openlitespeed). Check: `jq -c '{server,mode,repeats,load_integrity_errors}' bench/results/export-load/2026-11-04/*.json`. Expected: repeats 3, `load_integrity_errors` 0 in every file (NFR-1).
 2. Open BENCHMARKS.md and find `## File downloads: offload vs PHP streaming (2026-11-04)`. Expected: the table with server, mode, completed downloads, download p95, php_held_ms, peak memory, CPU per download, health p95 and health timeouts; one Mermaid chart; and the subsections "What the numbers say", "Surprises", "Interview story".
 3. Open docs/learning-guide.md and find `## 20. Letting the web server send the file`. Expected: a walkthrough per server, the four header spellings (X-Accel-Redirect, X-Sendfile, X-LiteSpeed-Location, Caddy intercept), why the path is restricted, the cost of PHP streaming, the measured numbers, and links to code, configs, scripts and official docs. Click a few links; none is broken.
-4. Optional re-run of one cell (about 10 minutes): `bench/export-load.sh --mode stream --quick` on nginx-fpm. Expected: a results table, no integrity errors.
+4. Optional re-run of one cell (about 10 minutes): `ddev server nginx-fpm && bench/export-load.sh --mode stream --quick`, then `ddev server default`. Expected: a results table, no integrity errors.
 
 ## Rollback and cleanup
 
 - Set `DEBUG_ROUTES=false` (or remove the line) in `.env`, run `ddev artisan config:clear`.
-- `ddev server nginx-fpm`.
+- `ddev server default`.
 - Remove test files: `rm -f /tmp/h.* /tmp/e.*.csv /tmp/s.csv /tmp/hs`. The generated CSV can stay or go: `rm storage/app/exports/listings.csv` (the next `exports:generate` recreates it).
 - If a crafted-header probe route was added in step 3, delete it. Run `git status` and confirm no unexpected changes.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ## Usage: bench/http3-matrix.sh [--runs 5] [--only h2-loss0,h3-loss0,h2-loss2,h3-loss2] [--dry-run]
 ## Runs the four netem variants of the HTTP/3 comparison ({h2, h3} x {loss 0, loss 2 %}) on frankenphp with bench/lcp.mjs --net netem.
-## It switches to frankenphp itself (`ddev server frankenphp`) and an EXIT trap always puts nginx-fpm back, also after a failure or a
+## It switches to frankenphp itself (`ddev server frankenphp`) and an EXIT trap always puts the default server back, also after a failure or a
 ## Ctrl-C. Each variant writes bench/results/http3/<UTC date>/lcp-<variant>.json; the date is computed once, so all four files share a folder
 ## (BENCH_DATE overrides it). A variant that fails (loss check outside its window, fewer than --runs valid runs) stops the matrix with its
 ## exit code and writes nothing; rerun that variant with --only. --dry-run prints the commands and runs none.
@@ -11,6 +11,8 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+# shellcheck source=lib/default-server.sh
+source "$SCRIPT_DIR/lib/default-server.sh"
 
 runs=5
 only="h2-loss0,h3-loss0,h2-loss2,h3-loss2"
@@ -45,8 +47,11 @@ step() {
   fi
 }
 
+# Read the default before the trap exists: a failed read exits 2 without restoring anything.
+read_default_server "$APPROOT" $([[ "$dry" == "1" ]] && echo --dry-run)
+
 restore() {
-  (cd "$APPROOT" && step ddev server nginx-fpm) || true
+  restore_default_server "$APPROOT" step || true
 }
 trap restore EXIT
 trap 'exit 130' INT TERM

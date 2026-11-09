@@ -10,7 +10,7 @@ alias dbq='ddev exec -s db psql -U db -d db -tAc'
 
 ## Preconditions
 
-- `ddev start` has run, `ddev server --current` prints `nginx-fpm`, and `ddev artisan migrate` has run.
+- `ddev start` has run, `ddev server nginx-fpm` has run (so `ddev server --current` prints `nginx-fpm`), and `ddev artisan migrate` has run.
 - Ollama is running on the Mac and `ollama list` shows `bge-m3`.
 - Network access to github.com (steps 1 and 2).
 - Write down the listings hash before you start: `dbq "select md5(string_agg(l::text, ',' order by id)) from listings l"`. Expected `6a0f96d2c7139919cc215a520072d3f7`.
@@ -243,7 +243,7 @@ for s in nginx-fpm apache-fpm openlitespeed frankenphp frankenphp-octane franken
   BENCH_PARITY_DIR=/tmp/sl32 bench/parity.sh capture >/dev/null
   bench/parity.sh compare bench/parity/$s.txt /tmp/sl32/$s.txt
 done
-ddev server nginx-fpm
+ddev server default
 ```
 
 Expected: four `200`; `identical` printed six times. If a server fails to start or its Server header check fails, fix that first; it is not a code failure. Only the `/listings/1` hash differed from the pre-slice baselines (Vite rebuild, Decision 5), and the baselines were re-captured.

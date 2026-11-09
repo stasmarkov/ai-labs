@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ## Usage: bench/http3.sh [--server <name>|current] [--path <path>] [--label <name>]
 ## Records whether a server answers over HTTP/3. By default it switches to frankenphp (`ddev server frankenphp`), measures, and an EXIT
-## trap always puts nginx-fpm back and restores .env; `--server nginx-fpm` measures that server instead, `--server current` measures
+## trap always puts the default server back and restores .env; `--server nginx-fpm` measures that server instead, `--server current` measures
 ## the server that is up now and switches nothing. One GET of <path> (default /listings/1) goes over HTTP/2 and one over HTTP/3 only
 ## (`curl --http3-only`), both from a curl container on ddev_default straight at the web container (`--resolve <host>:443:<web container IP>`,
 ## so the DDEV router, which has no UDP 443 published, is skipped). It records the status and negotiated ALPN of each, the sha256 of both
@@ -51,17 +51,20 @@ done
 
 # shellcheck source=lib/env-switch.sh
 source "$SCRIPT_DIR/lib/env-switch.sh"
+# shellcheck source=lib/default-server.sh
+source "$SCRIPT_DIR/lib/default-server.sh"
 SWITCHED_SERVER=0
 WORK=""
 cleanup() {
   [ -z "$WORK" ] || rm -rf "$WORK"
   env_switch_restore
-  if [ "$SWITCHED_SERVER" = 1 ]; then (cd "$APPROOT" && ddev server nginx-fpm >/dev/null 2>&1) || true; fi
+  if [ "$SWITCHED_SERVER" = 1 ]; then restore_default_server "$APPROOT" >/dev/null 2>&1 || true; fi
 }
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 
 if [ "$TARGET" != current ]; then
+  read_default_server "$APPROOT"
   SWITCHED_SERVER=1
   (cd "$APPROOT" && ddev server "$TARGET" >/dev/null)
 fi

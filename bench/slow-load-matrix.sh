@@ -3,13 +3,16 @@
 ## Runs the 8 cells of the slow-load matrix: nginx-fpm with 8 and 32 workers, frankenphp with a fixed 14 threads and
 ## with autoscale 14 to 64 threads (max-wait 5 s), each with the http and the sse workload through bench/slow-load.sh
 ## (3 repeats per cell, 100 users for http and 30 for sse). Each setting is applied once and both workloads run under it.
-## At the end it restores the default worker limits and the nginx-fpm server, also when a cell fails.
+## At the end it restores the default worker limits and the default server (`ddev server --default`), also when a cell fails.
 ## --quick passes --quick to every cell. --dry-run prints the commands and runs none of them.
 ## Result files: bench/results/slow-load/<UTC date>/<workload>-<label>.json (--quick: bench/results/raw/) (see bench/slow-load.sh).
 
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+# shellcheck source=lib/default-server.sh
+source "$SCRIPT_DIR/lib/default-server.sh"
 
 quick=()
 dry=0
@@ -29,9 +32,12 @@ step() {
   fi
 }
 
+# Read the default before the trap exists: a failed read exits 2 without restarting DDEV or restoring anything.
+read_default_server "$APPROOT" $([[ "$dry" == "1" ]] && echo --dry-run)
+
 restore() {
   step bash "$SCRIPT_DIR/concurrency.sh" default || true
-  step ddev server nginx-fpm || true
+  restore_default_server "$APPROOT" step || true
 }
 trap restore EXIT
 

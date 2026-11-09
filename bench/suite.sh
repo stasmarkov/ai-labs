@@ -6,12 +6,14 @@
 ## --servers runs only the listed servers (any of the six, worker servers included). The ratio baseline is
 ## nginx-fpm when it is listed, otherwise frankenphp; the baseline server runs first and the list must
 ## contain one of them. The timeout comparison runs only without --servers. On exit it restores default
-## concurrency, default timeouts and nginx-fpm.
+## concurrency, default timeouts and the default server (`ddev server --default`).
 
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+# shellcheck source=lib/default-server.sh
+source "$SCRIPT_DIR/lib/default-server.sh"
 SERVERS=(nginx-fpm apache-fpm openlitespeed frankenphp)
 SCENARIOS=(ping search)
 SWEEP=(8 16 32)
@@ -98,13 +100,14 @@ if [[ -n "$(cd "$APPROOT" && git ls-files -- "bench/results/$BENCH_DATE" 2>/dev/
   exit 2
 fi
 
+read_default_server "$APPROOT"
 marker="$(mktemp)"
 
 cleanup() {
   rm -f "$marker"
   bash "$SCRIPT_DIR/concurrency.sh" default || true
   bash "$SCRIPT_DIR/timeouts.sh" apply defaults || true
-  ddev server nginx-fpm || true
+  restore_default_server "$APPROOT" || true
 }
 trap cleanup EXIT
 trap 'exit 130' INT TERM

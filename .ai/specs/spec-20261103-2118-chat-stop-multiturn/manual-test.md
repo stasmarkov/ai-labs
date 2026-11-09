@@ -18,7 +18,7 @@ last() { ddev artisan tinker --execute 'echo json_encode(App\Models\AiRun::where
 
 If `last` fails on a column name, run `ddev artisan tinker --execute 'echo json_encode(App\Models\AiRun::latest("id")->first());'` and adjust the list.
 
-Rollback: nothing here changes code. Steps 2 and 3 switch the web server; always finish with `ddev server nginx-fpm`. Test rows stay in `ai_runs`, which is harmless. The migration `2026_11_03_210000_add_stop_columns_to_ai_runs_table` can be undone with `ddev artisan migrate:rollback --step=1`, but only do that if you are reverting the whole feature.
+Rollback: nothing here changes code. Steps 2 and 3 switch the web server; always finish with `ddev server default`. Test rows stay in `ai_runs`, which is harmless. The migration `2026_11_03_210000_add_stop_columns_to_ai_runs_table` can be undone with `ddev artisan migrate:rollback --step=1`, but only do that if you are reverting the whole feature.
 
 ## Step 1
 
@@ -45,7 +45,7 @@ Stop on a worker mode (AC-1). Octane used to keep generating all 320 tokens afte
 
 Expected: a `stopped` row with a small `tokens_out` (about 1 to 5 beyond what you received; not 320). If this mode cannot see the disconnect the row says so honestly (`completed` with a large `tokens_out`); that counts as "reported", not as a pass, and should be noted.
 
-3. Run `ddev server nginx-fpm` to finish.
+3. Run `ddev server default` to finish.
 
 ## Step 3
 
@@ -59,7 +59,7 @@ Expected:
 - One table per mode: median tokens after Stop, probe latency against the idle baseline, and stopped rows `5/5`.
 - On every mode the median tokens after Stop is at most 10 and the median probe is at most 1.5 x the idle median + 1000 ms (the JSON fields `probe_within_budget` and `lag_within_budget` are `true`). A mode that cannot detect the abort is printed with its numbers, not left out.
 - Six files appear in `bench/results/chat-stop/<today UTC>/` (`nginx-fpm.json`, `apache-fpm.json`, `openlitespeed.json`, `frankenphp.json`, `frankenphp-octane.json`, `frankenphp-worker.json`), each with 5 runs.
-- The script ends on nginx-fpm. Confirm with `ddev server --url` or by opening https://interview.ddev.site/up (`200`).
+- The script ends on the default server. Confirm with `ddev server --url` or by opening https://interview.ddev.site/up (`200`).
 
 ## Step 4
 
@@ -125,7 +125,7 @@ Fingerprint, parity and the suite (MNC-1 to MNC-4).
 1. `ddev artisan test --compact`. Expected: all tests pass, no network needed (878 tests at the last run).
 2. `git status --short tests/Feature/DocsAskTest.php tests/Feature/DocsCacheTest.php` prints nothing: those two files are unedited.
 3. `ddev npm run build`, then `bench/asset-fingerprint.sh`. Expected: the CSS and JS hashes match the ones recorded at `BENCHMARKS.md` lines 596-597.
-4. Parity on all six servers: run the parity capture used in earlier slices (see `BENCHMARKS.md`) on each of nginx-fpm, apache-fpm, openlitespeed, frankenphp, frankenphp-octane, frankenphp-worker. Expected: `identical` six times. End on nginx-fpm.
+4. Parity on all six servers: run the parity capture used in earlier slices (see `BENCHMARKS.md`) on each of nginx-fpm, apache-fpm, openlitespeed, frankenphp, frankenphp-octane, frankenphp-worker. Expected: `identical` six times. End on the default server.
 5. `ddev artisan rag:eval` (if you have the model running). Expected: runs without history, finishes with the same kind of report as before; committed results under `bench/results/` for SL-33 and SL-40 show no `git diff`.
 6. Describe stream unchanged: open https://interview.ddev.site/ai/describe, generate a description for a listing. Expected: it streams as before, with no new events; a forced error still shows the generic masked message.
 

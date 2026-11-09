@@ -10,7 +10,7 @@ cd /Users/stasmarkov/work/interview
 
 ## Preconditions
 
-- DDEV is running and the project is on nginx-fpm: `ddev server --current` prints `nginx-fpm`.
+- DDEV is running. This plan starts on nginx-fpm on purpose: run `ddev server nginx-fpm`, then `ddev server --current` prints `nginx-fpm`.
 - The database is seeded (`ddev artisan migrate:fresh --seed` if unsure). Listing 1 must exist.
 - Docker is running. The first switch builds the OLS image, so allow several minutes.
 - `.env` has `DEBUG_ROUTES=false` (or no such line). Step 4 turns it on and step 6 turns it off again.
@@ -20,7 +20,7 @@ cd /Users/stasmarkov/work/interview
 If anything goes wrong, or when you are done:
 
 ```sh
-ddev server nginx-fpm
+ddev server default
 rm -f .ddev/docker-compose.openlitespeed.yaml && ddev restart   # only if the file is still there
 sed -i '' '/^DEBUG_ROUTES=/d' .env && ddev artisan optimize:clear
 git checkout -- bench/parity/nginx-fpm.txt bench/parity/openlitespeed.txt
@@ -152,7 +152,7 @@ Expected:
 Restore:
 
 ```sh
-ddev server nginx-fpm
+ddev server default
 sed -i '' '/^DEBUG_ROUTES=/d' .env && ddev artisan optimize:clear
 curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/runtime
 git diff --exit-code .ddev/config.yaml && echo untouched

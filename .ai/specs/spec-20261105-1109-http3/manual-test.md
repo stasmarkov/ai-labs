@@ -2,11 +2,11 @@
 
 Run everything from `/Users/stasmarkov/work/interview` on the host, with DDEV running (`ddev start`) and Docker up. The app is at https://interview.ddev.site. Needs `jq`, `node` and `docker` on the host. Nothing here needs a login or seeded data beyond the default seeders (listing 1 must exist).
 
-Rollback: the steps switch the web server and, in step 2 and 3, the segmentation offloads of the web container's eth0. Always finish with `ddev server nginx-fpm`; if a netem run was interrupted hard (kill -9), also run `bench/lib/netem.sh web-offloads restore ddev-interview-web` and `docker rm -f netem-client`. The scripts do this themselves on exit, Ctrl-C and SIGTERM. No step changes tracked files except result files under `bench/results/http3/<date>/`; use a throwaway date (`BENCH_DATE=manual-check`) to keep the committed results untouched, and delete that folder afterwards.
+Rollback: the steps switch the web server and, in step 2 and 3, the segmentation offloads of the web container's eth0. Always finish with `ddev server default`; if a netem run was interrupted hard (kill -9), also run `bench/lib/netem.sh web-offloads restore ddev-interview-web` and `docker rm -f netem-client`. The scripts do this themselves on exit, Ctrl-C and SIGTERM. No step changes tracked files except result files under `bench/results/http3/<date>/`; use a throwaway date (`BENCH_DATE=manual-check`) to keep the committed results untouched, and delete that folder afterwards.
 
 ## Step 1
 
-One request over HTTP/3 (AC-1), including the case that used to fail: a server with no UDP listener. The script switches servers itself and puts nginx-fpm back.
+One request over HTTP/3 (AC-1), including the case that used to fail: a server with no UDP listener. The script switches servers itself and puts the default server back.
 
 ```sh
 BENCH_DATE=manual-check bench/http3.sh; echo "exit=$?"
@@ -23,7 +23,7 @@ Expected:
 - `EARLY_HINTS=false` is set in `.env` only while the requests run (the quiche-based curl cannot parse the 103 that `/listings/1` sends over h3); `git status` shows no change and `ls .env.bench-backup` finds nothing afterwards.
 - The trace has no certificate subject or issuer lines and shows `<ip>` instead of addresses.
 - nginx-fpm: exit 0, `h3_ok: false`, `h2_status: 200`, `reason` like `no HTTP/3: curl exit 7`.
-- `ddev server --current` prints `nginx-fpm`. No `.html` body files appear under `bench/results/http3/`; a body mismatch would write them to `bench/results/raw/` (gitignored).
+- `ddev server --current` prints the name `ddev server --default` prints (the script put the default back). No `.html` body files appear under `bench/results/http3/`; a body mismatch would write them to `bench/results/raw/` (gitignored).
 
 ## Step 2
 
@@ -40,7 +40,7 @@ NETEM_LOSS=2 bench/lib/netem.sh drops netem-client | jq .qdisc
 bench/lib/netem.sh clear netem-client
 docker rm -f netem-client
 bench/lib/netem.sh web-offloads restore ddev-interview-web
-ddev server nginx-fpm
+ddev server default
 ```
 
 Expected:
@@ -51,7 +51,7 @@ Expected:
 
 ## Step 3
 
-Page timings and committed variants (AC-3, AC-4). The matrix wrapper switches to frankenphp, runs the four variants (each a few minutes) and always puts nginx-fpm back.
+Page timings and committed variants (AC-3, AC-4). The matrix wrapper switches to frankenphp, runs the four variants (each a few minutes) and always puts the default server back.
 
 ```sh
 node bench/lcp.mjs --dry-run --variant h3-loss2 --path direct --path-reason "netem needs the direct path: the router has no HTTP/3" --net netem --protocol h3 --loss 2
@@ -60,7 +60,7 @@ BENCH_DATE=manual-check bench/http3-matrix.sh
 ddev server --current
 ```
 
-One variant on its own (the same command the matrix runs; start with `ddev server frankenphp` and finish with `ddev server nginx-fpm`):
+One variant on its own (the same command the matrix runs; start with `ddev server frankenphp` and finish with `ddev server default`):
 
 ```sh
 BENCH_DATE=manual-check node bench/lcp.mjs --variant h3-loss2 --path direct --path-reason "netem needs the direct path: the router has no HTTP/3" --net netem --protocol h3 --loss 2
@@ -78,7 +78,7 @@ Expected:
 - Each file has `lcp_ms`, `fcp_ms`, `ttfb_ms` and `load_ms` with `min`, `median`, `max`, plus `net` with the profile, `rtt_ms`, `qdisc` rates and counts, `sidecar_image_digest` and `offloads` (client before/after, web before/after/restored).
 - A loss 2 variant can fail with "drop rate ... outside 1-3.5%": that is the check working and nothing is written; rerun it with `bench/http3-matrix.sh --only h3-loss2`.
 - Committed values: see the table in `BENCHMARKS.md` under the HTTP/3 section and compare its four rows with `jq '.load_ms.median' bench/results/http3/2026-11-05/lcp-*-loss*.json`. The table, the Mermaid chart, "What the numbers say", "Surprises" and "Interview story" (with at least one measured number) are all present.
-- `ddev server --current` prints `nginx-fpm` and `docker ps` shows no `lcp-netem-*` container.
+- `ddev server --current` prints the name `ddev server --default` prints and `docker ps` shows no `lcp-netem-*` container.
 
 ## Step 4
 
@@ -100,7 +100,7 @@ Nothing else changed (MNC-1, MNC-3).
 git diff --stat HEAD -- .ddev
 bench/asset-fingerprint.sh
 for s in nginx-fpm apache-fpm openlitespeed frankenphp frankenphp-octane frankenphp-worker; do ddev server $s >/dev/null; BENCH_PARITY_DIR=/tmp/sl12 bench/parity.sh capture >/dev/null; bench/parity.sh compare bench/parity/$s.txt /tmp/sl12/$s.txt; done
-ddev server nginx-fpm
+ddev server default
 ddev artisan test --compact
 bench/run.sh ping --quick; echo "exit=$?"
 ```

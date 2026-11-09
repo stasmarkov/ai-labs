@@ -4,7 +4,7 @@ Run everything from the project root (`/Users/stasmarkov/work/interview`) in a h
 
 ## Preconditions
 
-- DDEV is running and the project is on nginx-fpm: `ddev server --current` prints `nginx-fpm`.
+- DDEV is running. This plan starts on nginx-fpm on purpose: run `ddev server nginx-fpm`, then `ddev server --current` prints `nginx-fpm`.
 - Database is seeded (`/listings/1` opens a listing).
 - `DEBUG_ROUTES` is unset or `false` in `.env`.
 - The frankenphp web image has been built once before, or allow several minutes for the first switch.
@@ -12,10 +12,10 @@ Run everything from the project root (`/Users/stasmarkov/work/interview`) in a h
 
 ## Rollback
 
-If anything goes wrong, put the project back on nginx-fpm with debug routes off:
+If anything goes wrong, put the project back on the default server with debug routes off:
 
 ```sh
-ddev server nginx-fpm
+ddev server default
 sed -i '' '/^DEBUG_ROUTES=/d' .env && ddev artisan optimize:clear
 git checkout -- bench/parity
 ```
@@ -204,7 +204,7 @@ Expected: all tests pass (165 at last run), phpstan reports no errors, and the t
 
 ```sh
 sed -i '' '/^DEBUG_ROUTES=/d' .env && ddev artisan optimize:clear
-ddev server nginx-fpm
+ddev server default
 rm -rf /tmp/wm-check
 curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/runtime
 ```

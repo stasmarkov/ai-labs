@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
 ## Description: Show or switch the web server (nginx-fpm, apache-fpm, frankenphp, openlitespeed, frankenphp-octane or frankenphp-worker)
-## Usage: server [--current|--url|nginx-fpm|apache-fpm|frankenphp|openlitespeed|frankenphp-octane|frankenphp-worker]
+## Usage: server [--current|--url|--default|--check <name>|default|nginx-fpm|apache-fpm|frankenphp|openlitespeed|frankenphp-octane|frankenphp-worker]
 ## Example: ddev server frankenphp
+## Example: ddev server default
 
 set -Eeuo pipefail
 
@@ -11,6 +12,8 @@ set -Eeuo pipefail
 # activate in activated_files. A server may reuse another stash's file or override one of them;
 # activated_owner says which stash a file comes from.
 SUPPORTED=(nginx-fpm apache-fpm frankenphp openlitespeed frankenphp-octane frankenphp-worker)
+# The project's resting server. Scripts ask for it with "ddev server --default" instead of naming it.
+DEFAULT_SERVER=frankenphp
 APPROOT="${DDEV_APPROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
 OVERLAY="$APPROOT/.ddev/config.zz-server.yaml"
 STASH="$APPROOT/.ddev/servers"
@@ -194,8 +197,24 @@ active_server() {
 }
 
 if [[ $# -eq 0 ]]; then
-  echo "Active: $(active_server)"
+  echo "Active: $(active_server) (default: $DEFAULT_SERVER)"
   echo "Supported: ${SUPPORTED[*]}"
+  [[ -f "$OVERLAY" ]] || echo "Not set up: run ddev setup"
+  exit 0
+fi
+
+if [[ "$1" == "--default" ]]; then
+  echo "$DEFAULT_SERVER"
+  exit 0
+fi
+
+# --check <name|default>: exit 0 when that server is fully applied (overlay, activated files, no bench overlays), else 1. Changes nothing.
+if [[ "$1" == "--check" ]]; then
+  check="${2:-}"
+  [[ "$check" != "default" ]] || check="$DEFAULT_SERVER"
+  [[ -n "$check" && -f "$OVERLAY" && "$(active_server)" == "$check" ]] || exit 1
+  content="$(overlay_for "$check")" || exit 1
+  is_current "$check" "$content" || exit 1
   exit 0
 fi
 
@@ -210,6 +229,7 @@ if [[ "$1" == "--url" ]]; then
 fi
 
 target="$1"
+[[ "$target" == "default" ]] && target="$DEFAULT_SERVER"
 known=0
 for server in "${SUPPORTED[@]}"; do
   [[ "$server" == "$target" ]] && known=1

@@ -4,14 +4,14 @@ Run from the project root (`/Users/stasmarkov/work/interview`) in a host termina
 
 ## Preconditions
 
-- Project running on nginx-fpm: `ddev server --current` prints `nginx-fpm`.
+- DDEV is running. Step 1 begins with `ddev server nginx-fpm`, so the switch to frankenphp is a real one even though frankenphp is the default.
 - Database seeded once: `ddev artisan migrate:fresh --seed` (skip if already seeded since the SL-02 captures).
 - The first switch to frankenphp builds the web image; allow several minutes.
 
 ## Rollback
 
 ```sh
-ddev server nginx-fpm
+ddev server default
 rm -f .ddev/docker-compose.frankenphp.yaml .ddev/web-build/*.frankenphp   # only if any remain
 sed -i '' '/^DEBUG_ROUTES=/d' .env && ddev artisan optimize:clear
 git checkout -- bench/parity
@@ -20,6 +20,7 @@ git checkout -- bench/parity
 ## Step 1: switch to FrankenPHP
 
 ```sh
+ddev server nginx-fpm
 ddev server frankenphp
 ddev server --current
 curl -sI https://interview.ddev.site/up | grep -i '^server'
@@ -85,7 +86,7 @@ ddev server --current
 
 After step 5 the project is on nginx-fpm, so the first command is a real switch (prints `Active: frankenphp`); run the three commands once more afterwards if you want to see the no-op.
 
-Expected: the second `ddev server frankenphp` prints `frankenphp already active` and does not restart ddev (it returns at once). `ddev server` prints `Active: frankenphp` and `Supported: nginx-fpm apache-fpm frankenphp`. `--current` prints `frankenphp`. Then `ddev server nginx-fpm` to go back.
+Expected: the second `ddev server frankenphp` prints `frankenphp already active` and does not restart ddev (it returns at once). `ddev server` prints `Active: frankenphp` and `Supported: nginx-fpm apache-fpm frankenphp`. `--current` prints `frankenphp`. Then `ddev server default` to go back.
 
 ## Step 7: stash matches the add-on v1.3.0 and nothing is left behind
 
@@ -123,11 +124,12 @@ Start on nginx-fpm. Expected: recovery messages are printed, `exit=1`, `overlay-
 ```sh
 sed -i '' '/^DEBUG_ROUTES=/d' .env && ddev artisan optimize:clear
 curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/runtime
+ddev server default
 ddev server --current
 git diff --exit-code .ddev/config.yaml && echo untouched
 ```
 
-Expected: `404`, `nginx-fpm`, `untouched`.
+Expected: `404`, the name `ddev server --default` prints (`frankenphp`), `untouched`.
 
 ## Step 10: docs and suite
 

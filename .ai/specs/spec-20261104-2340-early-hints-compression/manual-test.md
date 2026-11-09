@@ -6,7 +6,7 @@ The problem this slice addresses: the listing detail page made the browser wait 
 
 - DDEV is running: `cd /Users/stasmarkov/work/interview && ddev start`.
 - The site answers at https://interview.ddev.site and listing 1 exists (it does in the seeded database).
-- Start on nginx-fpm: `ddev server nginx-fpm`, then `ddev server --current` prints `nginx-fpm`.
+- Start on the default server: `ddev server default`, then `ddev server --current` prints the name `ddev server --default` prints.
 - Tools used: `curl` 8.x with HTTP/2 on the host (`curl --version` lists `HTTP2`), Docker running (the bench scripts use pinned containers), `jq`.
 - Steps 3, 4, 5, 7 and 8 switch servers and edit `.env`. Rollback for all of them is in the last section.
 - Known open item: on `frankenphp-octane` a `103` is still sent (converge tasks 9.2 and 16 are open). Step 4 expects no `103` there, which is what the spec requires. If you see one, record it as a failure of AC-2, not a mistake in the test.
@@ -36,7 +36,7 @@ for s in nginx-fpm apache-fpm frankenphp frankenphp-octane frankenphp-worker ope
   echo "== $s"
   curl -skI "$(ddev server --url)/listings/1" | grep -iE '^(HTTP|link)'
 done
-ddev server nginx-fpm
+ddev server default
 ```
 
 Expected: for each of the six servers, status `200` and the same two preload values as in step 1 (openlitespeed is served on its own port, `ddev server --url` supplies it; the host in the URLs may differ, the file names must not). No server shows a different fingerprint.
@@ -77,7 +77,7 @@ for s in nginx-fpm apache-fpm frankenphp-worker frankenphp-octane; do
   echo "== $s"
   curl -sk -o /dev/null -v --http2 https://interview.ddev.site/listings/1 2>&1 | grep -cE '^< HTTP/2 103'
 done
-ddev server nginx-fpm
+ddev server default
 ```
 
 Expected: `0` for every server. Today `frankenphp-octane` prints a non-zero count (open defect, see "Before you start"); the other three print `0`.
@@ -129,7 +129,7 @@ for s in frankenphp nginx-fpm; do
     curl -sk -o /dev/null -H "Accept-Encoding: $e" -w "$e -> %{size_download} bytes, encoding=%header{content-encoding}\n" https://interview.ddev.site$CSS
   done
 done
-ddev server nginx-fpm
+ddev server default
 ```
 
 Expected:
@@ -187,7 +187,7 @@ curl -sk https://interview.ddev.site/listings/1 | shasum -a 256
 Expected:
 - The snapshot folder has no changes (nothing to re-baseline), and each compare line says `identical`.
 - The hash is `98e943eb...` (the same first characters on every server, and with `EARLY_HINTS=false` too).
-- Finish with `ddev server nginx-fpm`.
+- Finish with `ddev server default`.
 
 ## Step 11
 
@@ -244,7 +244,7 @@ The hint code never breaks a request (NFR-2).
 ddev artisan test --compact tests/Feature/EarlyHintsTest.php tests/Feature/PreloadLinksTest.php
 : > storage/logs/laravel.log
 for s in nginx-fpm frankenphp; do ddev server $s; for i in 1 2 3; do curl -sk -o /dev/null -w "$s %{http_code}\n" https://interview.ddev.site/listings/1; done; done
-ddev server nginx-fpm
+ddev server default
 grep -ci 'early\|headers_send' storage/logs/laravel.log
 ```
 
@@ -253,8 +253,8 @@ Expected: tests pass; six lines ending in `200`; the final count is `0` (no exce
 ## Cleanup and rollback
 
 ```sh
-ddev server nginx-fpm
-ddev server --current                     # nginx-fpm
+ddev server default
+ddev server --current                     # frankenphp, the name `ddev server --default` prints
 grep -nE '^(EARLY_HINTS|DEBUG_ROUTES)' .env   # prints nothing; if EARLY_HINTS is there, delete the line
 ddev artisan config:clear
 git status --short .ddev bench/parity     # empty

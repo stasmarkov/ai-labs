@@ -18,6 +18,7 @@ echo "ddev $*" >> "$STUB_LOG"
 case "$*" in
   "server --current") cat "$STUB_STATE" ;;
   "server --url") echo "https://interview.ddev.site" ;;
+  "server --default") echo "${STUB_DEFAULT-frankenphp}" ;;
   "server "*) echo "${2}" > "$STUB_STATE" ;;
 esac
 BASH,
@@ -122,22 +123,22 @@ it('AC-1 http3 sets EARLY_HINTS=false for the requests, records why, and restore
         ->and(file_get_contents($this->root.'/calls.log'))->toContain('ddev artisan config:clear');
 });
 
-it('AC-1 http3 switches to frankenphp itself and the trap puts nginx-fpm back', function (): void {
-    $process = ($this->http3)([]);
-    $servers = array_values(array_filter(explode("\n", file_get_contents($this->root.'/calls.log')), fn (string $line): bool => preg_match('/^ddev server (frankenphp|nginx-fpm)$/', $line) === 1));
+it('AC-3 http3 switches to frankenphp itself and the trap puts the default server back', function (): void {
+    $process = ($this->http3)(['STUB_DEFAULT' => 'apache-fpm']);
+    $servers = array_values(array_filter(explode("\n", file_get_contents($this->root.'/calls.log')), fn (string $line): bool => preg_match('/^ddev server (frankenphp|apache-fpm)$/', $line) === 1));
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
-        ->and($servers)->toBe(['ddev server frankenphp', 'ddev server nginx-fpm'])
-        ->and(trim(file_get_contents($this->root.'/state')))->toBe('nginx-fpm');
+        ->and($servers)->toBe(['ddev server frankenphp', 'ddev server apache-fpm'])
+        ->and(trim(file_get_contents($this->root.'/state')))->toBe('apache-fpm');
 });
 
-it('AC-1 http3 puts nginx-fpm back and writes no result when the h2 request fails', function (): void {
-    $process = ($this->http3)(['STUB_H2_STATUS' => '500']);
+it('AC-3 http3 puts the default server back and writes no result when the h2 request fails', function (): void {
+    $process = ($this->http3)(['STUB_H2_STATUS' => '500', 'STUB_DEFAULT' => 'apache-fpm']);
 
     expect($process->getExitCode())->toBe(1)
         ->and($process->getErrorOutput())->toContain('not 200')
         ->and(($this->dir)().'/frankenphp.json')->not->toBeFile()
-        ->and(trim(file_get_contents($this->root.'/state')))->toBe('nginx-fpm')
+        ->and(trim(file_get_contents($this->root.'/state')))->toBe('apache-fpm')
         ->and(file_get_contents($this->root.'/app/.env'))->toBe("APP_NAME=x\nEARLY_HINTS=true\n");
 });
 
@@ -191,4 +192,40 @@ it('NFR-2 http3 redacts certificate lines, IP addresses and cookies from the sav
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
         ->and($trace)->toContain('Connected to interview.ddev.site (<ip>) port 443', '< HTTP/3 200', '< HTTP/2 200', 'alt-svc')
         ->not->toContain('subject:', 'issuer:', 'mkcert', 'OU=', '172.19.0.2', 'laravel_session');
+});
+
+it('AC-3 http3-matrix measures on frankenphp, runs the four variants and restores the default server last', function (): void {
+    $process = new Process(['bash', base_path('bench/http3-matrix.sh'), '--dry-run', '--runs', '1'], $this->root, [
+        'BENCH_APPROOT' => $this->root.'/app',
+        'STUB_LOG' => $this->root.'/calls.log',
+        'STUB_STATE' => $this->root.'/state',
+        'STUB_DEFAULT' => 'apache-fpm',
+        'PATH' => $this->root.'/bin:'.getenv('PATH'),
+    ]);
+    $process->run();
+    $lines = array_values(array_filter(explode("\n", $process->getOutput())));
+    $variants = array_values(array_filter($lines, fn (string $line): bool => str_contains($line, 'lcp.mjs')));
+
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
+        ->and($lines[0])->toBe('ddev server frankenphp')
+        ->and($variants)->toHaveCount(4)
+        ->and($variants[0])->toContain('--variant h2-loss0')
+        ->and($variants[3])->toContain('--variant h3-loss2')
+        ->and(end($lines))->toBe('ddev server apache-fpm')
+        ->and(array_keys(array_filter($lines, fn (string $line): bool => str_starts_with($line, 'ddev server '))))->toBe([0, count($lines) - 1]);
+});
+
+it('AC-3 http3-matrix exits 2 without any server switch when the default cannot be read', function (): void {
+    $process = new Process(['bash', base_path('bench/http3-matrix.sh'), '--dry-run', '--runs', '1'], $this->root, [
+        'BENCH_APPROOT' => $this->root.'/app',
+        'STUB_LOG' => $this->root.'/calls.log',
+        'STUB_STATE' => $this->root.'/state',
+        'STUB_DEFAULT' => '',
+        'PATH' => $this->root.'/bin:'.getenv('PATH'),
+    ]);
+    $process->run();
+
+    expect($process->getExitCode())->toBe(2)
+        ->and($process->getOutput())->not->toContain('ddev server frankenphp')
+        ->and(substr_count($process->getErrorOutput(), 'Cannot read the default server'))->toBe(1);
 });

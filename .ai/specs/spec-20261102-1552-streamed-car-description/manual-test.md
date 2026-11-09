@@ -4,7 +4,7 @@ Run from the project root, `/Users/stasmarkov/work/interview`, in a host termina
 
 ## Preconditions
 
-- `ddev start`; `ddev server --current` prints `nginx-fpm`.
+- `ddev start`, then `ddev server nginx-fpm` (the early steps run on nginx-fpm on purpose); `ddev server --current` prints `nginx-fpm`.
 - `.env` has `AI_PROVIDER=fake-stream` (or no `AI_PROVIDER`, which defaults to it) and no `AI_FAKE_*` overrides.
 - `ddev artisan migrate` has run (the `ai_runs` table exists).
 
@@ -33,7 +33,7 @@ Expected: first text event within 1 000 ms, last at 9 500 ms or later, 200 text 
 for s in nginx-fpm apache-fpm openlitespeed frankenphp frankenphp-octane frankenphp-worker; do
   ddev server $s >/dev/null && echo "== $s" && bench/sse.sh; echo "exit=$?"
 done
-ddev server nginx-fpm
+ddev server default
 ```
 
 Expected: `exit=0` for all six with the AC-8 numbers. A buffering server shows the first event at about 10 000 ms (everything arrives at the end) and exit 1.
@@ -47,7 +47,7 @@ for s in nginx-fpm apache-fpm openlitespeed frankenphp frankenphp-octane franken
   BENCH_PARITY_DIR=/tmp/sl20 bench/parity.sh capture >/dev/null
   bench/parity.sh compare bench/parity/$s.txt /tmp/sl20/$s.txt
 done
-ddev server nginx-fpm
+ddev server default
 ```
 
 Expected: `identical` six times.
@@ -122,4 +122,4 @@ Open `docs/learning-guide.md` and find "## 9. Streaming an AI answer". Expected:
 
 ## Rollback
 
-All steps leave the project as found if you finish them. If a step is interrupted: delete any `AI_*` lines you added to `.env`, remove `resources/prompts/car-description.v2.md`, run `ddev artisan config:clear` and `ddev server nginx-fpm`. Test rows in `ai_runs` can stay.
+All steps leave the project as found if you finish them. If a step is interrupted: delete any `AI_*` lines you added to `.env`, remove `resources/prompts/car-description.v2.md`, run `ddev artisan config:clear` and `ddev server default`. Test rows in `ai_runs` can stay.

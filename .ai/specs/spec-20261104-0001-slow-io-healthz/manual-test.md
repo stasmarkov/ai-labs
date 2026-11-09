@@ -4,13 +4,13 @@ Run everything from `/Users/stasmarkov/work/interview` on your Mac, with DDEV in
 
 ## Before you start
 
-- `ddev start`, then `ddev server nginx-fpm` (the active server must be nginx-fpm unless a step says otherwise).
+- `ddev start`, then `ddev server nginx-fpm` (this plan starts on nginx-fpm on purpose, because step 4 expects it at its first command; steps 4 and 5 end with `ddev server default`, and the later steps run on any server).
 - `ddev server --current` prints `nginx-fpm`.
 - Listing 1 exists in the database (the slow endpoint looks up `/listings/1`). Quick check: `curl -s https://interview.ddev.site/listings/1 -H 'Accept: application/json' | head -c 200` returns JSON, not a 404.
 - For the bench steps (2, 3, 6): the `autopulse-oha:1.16.0` image exists locally (`docker image inspect autopulse-oha:1.16.0 >/dev/null && echo ok`), `jq` is installed, and for the sse workload the `grafana/k6:1.0.0` image can be pulled.
 - Commit or stash your changes before a full (non-`--quick`) bench run. `--quick` skips the clean-tree check.
 
-Rollback for anything that goes wrong in the bench steps: `bench/concurrency.sh default && ddev server nginx-fpm`, then `git checkout .env` only if `git diff .env` shows a leftover (the script restores `.env` itself on exit). If the stub is stopped, `docker start ddev-interview-vinstub` or `ddev restart`.
+Rollback for anything that goes wrong in the bench steps: `bench/concurrency.sh default && ddev server default`, then `git checkout .env` only if `git diff .env` shows a leftover (the script restores `.env` itself on exit). If the stub is stopped, `docker start ddev-interview-vinstub` or `ddev restart`.
 
 ## Step 1
 
@@ -128,7 +128,7 @@ bench/concurrency.sh --show
 curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/healthz
 bench/concurrency.sh default
 bench/concurrency.sh --show
-ddev server nginx-fpm
+ddev server default
 git status --short .ddev
 git diff --stat HEAD -- .ddev/config.yaml .ddev/servers
 bench/concurrency.sh --show
@@ -146,7 +146,7 @@ ls public/build/assets | grep -E '^app-.*\.css'
 for s in nginx-fpm apache-fpm frankenphp frankenphp-octane frankenphp-worker openlitespeed; do
   ddev server $s && bench/parity.sh capture && bench/parity.sh compare $s nginx-fpm
 done
-ddev server nginx-fpm
+ddev server default
 ddev artisan test --compact
 bench/run.sh ping --quick; echo "exit $?"
 curl -s -o /dev/null -w '/up %{http_code}\n' https://interview.ddev.site/up

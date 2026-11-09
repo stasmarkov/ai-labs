@@ -1,5 +1,7 @@
 # Benchmarks
 
+The default server is now frankenphp. Run `ddev setup` once on a fresh clone; `ddev server default` returns to it. Results below were measured on the server named in each section; earlier sections that restored nginx-fpm after a run are unchanged history.
+
 ## Versions
 
 Rows come from `bench/versions.sh` (needs `/debug/runtime` enabled with `DEBUG_ROUTES=true`), one per server.

@@ -4,7 +4,7 @@ Run shell commands from `/Users/stasmarkov/work/interview`. Use a desktop browse
 
 ## Preconditions
 
-- `ddev server --current` prints `nginx-fpm`.
+- Run `ddev server nginx-fpm` first (this plan starts on nginx-fpm on purpose); `ddev server --current` prints `nginx-fpm`.
 - `ddev npm run build` has run, and `public/hot` does not exist.
 - `ollama list` shows `qwen3.5:9b` and `bge-m3`.
 - `.env` has `AI_PROVIDER=ollama`.
@@ -110,7 +110,7 @@ Suite, parity and bench (MNC-4, MNC-5).
 ```sh
 bench/asset-fingerprint.sh
 for s in nginx-fpm apache-fpm openlitespeed frankenphp frankenphp-octane frankenphp-worker; do ddev server $s >/dev/null; BENCH_PARITY_DIR=/tmp/sl45 bench/parity.sh capture >/dev/null; bench/parity.sh compare bench/parity/$s.txt /tmp/sl45/$s.txt; done
-ddev server nginx-fpm
+ddev server default
 ddev artisan test --compact && ddev npm run typecheck && ddev npm run build
 bench/run.sh ping --quick; echo "exit=$?"
 ```

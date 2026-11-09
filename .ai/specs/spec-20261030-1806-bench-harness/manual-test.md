@@ -5,7 +5,7 @@ All commands run from the project root (`/Users/stasmarkov/work/interview`) on t
 ## Preconditions
 
 - Docker and DDEV running: `ddev start`. Tools needed on the host: `jq`, `php`, `curl`, `git`.
-- Active server is a classic one: `ddev server --current` prints `nginx-fpm` (the suite refuses `frankenphp-octane` and `frankenphp-worker`).
+- Begin on nginx-fpm on purpose, because the early steps read `nginx-fpm` result folders: run `ddev server nginx-fpm`, then `ddev server --current` prints `nginx-fpm` (the suite refuses `frankenphp-octane` and `frankenphp-worker`). Step 5 puts the project back on the default server.
 - Quiet machine: close other heavy apps. A full run takes hours (4 servers x 2 scenarios x fair/sweep/tuned x 3 x 90 s, plus the timeout runs). For a smoke test use `--quick` or `BENCH_WARMUP=5 BENCH_MEASURE=15 BENCH_REPEATS=1`.
 - Commit order: harness scripts (`bench/*.sh`, `bench/summary.php`, `bench/k6-search.js`, `DebugSleepController`) and the Expectations section must be committed first. Real runs refuse a dirty tree (only `bench/results/` may change).
 - Note the starting state to compare later: `cp .env /tmp/env.before; git status --short > /tmp/status.before; ddev server --current`.
@@ -17,7 +17,7 @@ If anything is interrupted or looks wrong:
 ```sh
 bench/concurrency.sh default
 bench/timeouts.sh apply defaults
-ddev server nginx-fpm
+ddev server default
 test -f .env.bench-backup && mv .env.bench-backup .env
 ddev artisan optimize:clear
 diff .env /tmp/env.before && echo restored
@@ -57,16 +57,16 @@ The harness refuses to start while a stale `.env.bench-backup` exists, so the `m
 3. Expected with defaults: `200` after about 30 s (the PHP max_execution_time of 30 s does not stop `sleep()` under FPM because it counts CPU time). Expected with 10 s: a gateway error (for example 502 or 504) near 10 s from the FPM or proxy layer on FPM servers; a PHP "Maximum execution time" ending near 10 s on FrankenPHP (wall-clock timers in thread-safe PHP). Record what you actually see.
 4. Known open problem: on nginx-fpm the short run ended with 502 from FPM at about 13 s because the location-level `fastcgi_read_timeout` overrides the overlay. If you see this, the layer column should say so, or the overlay needs fixing (task 16).
 5. Open `BENCHMARKS.md`. Expected: a timeout table with all four servers, defaults and 10 s rows, columns HTTP status, time, ending layer, and the short note about CPU time versus wall-clock. Any result that contradicts the note must be in Surprises.
-6. Restore: `bench/timeouts.sh apply defaults; ddev server nginx-fpm`.
+6. Restore: `bench/timeouts.sh apply defaults; ddev server default`.
 
 ## Step 5: Project is back to normal after the runs (MNC-1, MNC-2, MNC-4)
 
-1. Run `bench/concurrency.sh default && bench/timeouts.sh apply defaults && ddev server nginx-fpm`.
-2. State check: `ddev server --current` prints `nginx-fpm`; `diff .env /tmp/env.before` prints nothing; `ls .env.bench-backup` says no such file; `grep DEBUG_ROUTES .env` is empty or `false`; `ls .ddev/config.zz-bench-* .ddev/docker-compose.bench-* .ddev/web-entrypoint.d/zz-bench-* 2>&1` shows no such files.
+1. Run `bench/concurrency.sh default && bench/timeouts.sh apply defaults && ddev server default`.
+2. State check: `ddev server --current` prints the name `ddev server --default` prints (`frankenphp`); `diff .env /tmp/env.before` prints nothing; `ls .env.bench-backup` says no such file; `grep DEBUG_ROUTES .env` is empty or `false`; `ls .ddev/config.zz-bench-* .ddev/docker-compose.bench-* .ddev/web-entrypoint.d/zz-bench-* 2>&1` shows no such files.
 3. MNC-1: `git diff --exit-code .ddev/config.yaml; echo $?` prints `0`.
 4. MNC-4 route check: `curl -sk -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/sleep/1` prints `404`.
-5. MNC-2 parity on nginx-fpm: `bench/parity.sh capture` (still on nginx-fpm), then `bench/parity.sh compare nginx-fpm bench/parity/nginx-fpm.txt` is trivially the same file, so instead check `git diff --stat bench/parity/` after capture. Expected: no change to the committed snapshots.
-6. Repeat on FrankenPHP: `ddev server frankenphp && bench/parity.sh capture && git diff --stat bench/parity/ && ddev server nginx-fpm`. Expected: no diff. Also `bench/parity.sh compare nginx-fpm frankenphp` prints `identical`.
+5. MNC-2 parity on nginx-fpm: `ddev server nginx-fpm && bench/parity.sh capture`, then `bench/parity.sh compare nginx-fpm bench/parity/nginx-fpm.txt` is trivially the same file, so instead check `git diff --stat bench/parity/` after capture. Expected: no change to the committed snapshots.
+6. Repeat on FrankenPHP: `ddev server frankenphp && bench/parity.sh capture && git diff --stat bench/parity/ && ddev server default`. Expected: no diff. Also `bench/parity.sh compare nginx-fpm frankenphp` prints `identical`.
 7. Expected: `git status --short` matches `/tmp/status.before` plus only new files under `bench/results/` and the docs.
 
 ## Step 6: Run conditions are enforced (BR-20)

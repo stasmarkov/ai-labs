@@ -603,3 +603,181 @@ it('AC-6 committed worker-mode snapshots match nginx-fpm', function (string $ser
         ->and($rows($server))->toHaveCount(7)
         ->and($rows($server))->toBe($rows('nginx-fpm'));
 })->with(['frankenphp-octane', 'frankenphp-worker']);
+
+/**
+ * The parts of a script where a server name would be a restore (Q4): trap lines, cleanup/restore function bodies and the last 10 lines.
+ *
+ * @return list<string>
+ */
+function benchRestoreRegions(string $text): array
+{
+    $regions = [];
+    preg_match_all('/^[ \t]*trap\b[^\n]*$/m', $text, $traps);
+    preg_match_all('/^([ \t]*)(?:function\s+)?\w*(?:cleanup|restore)\w*\s*\(\)\s*\{.*?^\1\}/ms', $text, $functions);
+    $lines = explode("\n", rtrim($text));
+
+    return array_merge($traps[0], $functions[0], [implode("\n", array_slice($lines, -10))]);
+}
+
+const BENCH_NAMED_RESTORE = '/ddev server nginx-fpm(?![\w-])/';
+
+it('AC-3 the restore guard flags a named nginx-fpm switch followed by any non-name character and ignores labels', function (string $line, bool $flagged): void {
+    expect(preg_match(BENCH_NAMED_RESTORE, $line))->toBe($flagged ? 1 : 0);
+})->with([
+    'space' => ['step ddev server nginx-fpm || true', true],
+    'close paren' => ['(cd "$APPROOT" && step ddev server nginx-fpm) || true', true],
+    'end of line' => ['ddev server nginx-fpm', true],
+    'quote' => ['ddev server nginx-fpm"', true],
+    'semicolon' => ['ddev server nginx-fpm;', true],
+    'label with suffix' => ['--label nginx-fpm-8', false],
+    'longer name' => ['ddev server nginx-fpm-8', false],
+    'default lookup' => ['ddev server --default', false],
+]);
+
+it('AC-3 no bench script restores a server by name and every restore goes through the default-server library', function (): void {
+    $scripts = array_merge(glob(base_path('bench/*.sh')) ?: [], [base_path('bench/lcp.mjs')]);
+    $restoring = [];
+
+    foreach ($scripts as $script) {
+        $text = (string) file_get_contents($script);
+
+        foreach (benchRestoreRegions($text) as $region) {
+            expect($region)->not->toMatch(BENCH_NAMED_RESTORE, basename($script).' restores a server by name');
+        }
+
+        if (preg_match('/restore_default_server|ddev server "\$/', $text) === 1) {
+            $restoring[] = basename($script);
+            expect($text)->toContain('lib/default-server.sh')->toContain('restore_default_server');
+        }
+    }
+
+    expect($restoring)->toContain('chat-stop.sh', 'export-load-matrix.sh', 'http3-matrix.sh', 'http3.sh', 'slow-load-matrix.sh', 'suite.sh');
+});
+
+it('AC-3 the restore guard sees a named restore hidden in a trap, a cleanup function or the tail', function (): void {
+    $viaTrap = "trap '(cd \"\$R\" && ddev server nginx-fpm)' EXIT\n";
+    $viaFunction = "cleanup() {\n  rm -f x\n  step ddev server nginx-fpm\n}\n";
+    $viaTail = str_repeat("echo x\n", 20)."ddev server nginx-fpm\n";
+    $measurement = "step ddev server nginx-fpm\n".str_repeat("echo x\n", 20);
+
+    foreach ([$viaTrap, $viaFunction, $viaTail] as $text) {
+        expect(implode("\n", benchRestoreRegions($text)))->toMatch(BENCH_NAMED_RESTORE);
+    }
+    expect(implode("\n", benchRestoreRegions($measurement)))->not->toMatch(BENCH_NAMED_RESTORE);
+});
+
+it('AC-3 default-server library reads the default once and exits 2 when ddev answers nothing', function (): void {
+    $dir = sys_get_temp_dir().'/bench-defsrv-'.bin2hex(random_bytes(4));
+    mkdir($dir.'/bin', 0777, true);
+    file_put_contents($dir.'/bin/ddev', "#!/usr/bin/env bash\necho \"\$*\" >> \"\$STUB_LOG\"\n[[ \"\$*\" == \"server --default\" ]] && echo \"\${STUB_DEFAULT-}\"\nexit 0\n");
+    chmod($dir.'/bin/ddev', 0755);
+    $lib = base_path('bench/lib/default-server.sh');
+    $run = function (string $default, string $body) use ($dir, $lib): Process {
+        $process = new Process(['bash', '-c', 'source '.escapeshellarg($lib).'; '.$body], null, [
+            'PATH' => $dir.'/bin:'.getenv('PATH'), 'STUB_LOG' => $dir.'/log', 'STUB_DEFAULT' => $default, 'APPROOT' => $dir,
+        ]);
+        $process->run();
+
+        return $process;
+    };
+
+    $ok = $run('openlitespeed', 'restore_default_server "'.$dir.'"; restore_default_server "'.$dir.'"');
+    $log = array_values(array_filter(explode("\n", (string) file_get_contents($dir.'/log'))));
+    unlink($dir.'/log');
+    $empty = $run('', 'restore_default_server "'.$dir.'"');
+
+    expect($ok->getExitCode())->toBe(0, $ok->getErrorOutput())
+        ->and($log)->toBe(['server --default', 'server openlitespeed', 'server openlitespeed'])
+        ->and($empty->getExitCode())->toBe(2)
+        ->and($empty->getErrorOutput())->toContain('ddev server --default')
+        ->and(file_get_contents($dir.'/log'))->not->toContain('server openlitespeed');
+
+    exec('rm -rf '.escapeshellarg($dir));
+});
+
+it('AC-3 default-server library takes its root from the argument or its own path and never from an exported APPROOT', function (): void {
+    $dir = sys_get_temp_dir().'/bench-defsrv-'.bin2hex(random_bytes(4));
+    mkdir($dir.'/bin', 0777, true);
+    mkdir($dir.'/stray');
+    file_put_contents($dir.'/bin/ddev', "#!/usr/bin/env bash\npwd >> \"\$STUB_LOG\"\n[[ \"\$*\" == \"server --default\" ]] && echo frankenphp\nexit 0\n");
+    chmod($dir.'/bin/ddev', 0755);
+    $lib = base_path('bench/lib/default-server.sh');
+    $run = function (string $body) use ($dir, $lib): Process {
+        $process = new Process(['bash', '-c', 'source '.escapeshellarg($lib).'; '.$body], null, [
+            'PATH' => $dir.'/bin:'.getenv('PATH'), 'STUB_LOG' => $dir.'/log', 'APPROOT' => $dir.'/stray',
+        ]);
+        $process->run();
+
+        return $process;
+    };
+
+    $own = $run('read_default_server');
+    $explicit = $run('read_default_server '.escapeshellarg($dir));
+    $cwds = array_values(array_filter(explode("\n", (string) file_get_contents($dir.'/log'))));
+
+    expect($own->getExitCode())->toBe(0)
+        ->and($explicit->getExitCode())->toBe(0)
+        ->and($cwds[0])->toBe(realpath(base_path()))
+        ->and($cwds[1])->toBe(realpath($dir))
+        ->and($cwds)->not->toContain(realpath($dir.'/stray'));
+    exec('rm -rf '.escapeshellarg($dir));
+});
+
+/**
+ * Runs a matrix script with a stub `ddev` on PATH that logs every call, or with no `ddev` at all.
+ *
+ * @param  array<int, string>  $args
+ * @return array{Process, string}
+ */
+function benchRunMatrix(string $script, array $args, ?string $default, bool $withDdev = true): array
+{
+    $dir = sys_get_temp_dir().'/bench-matrix-'.bin2hex(random_bytes(4));
+    mkdir($dir.'/bin', 0777, true);
+    foreach (['bash', 'sed', 'head', 'tr', 'date', 'dirname', 'cat', 'node'] as $tool) {
+        $path = trim((string) shell_exec('command -v '.$tool));
+        if ($path !== '') {
+            symlink($path, $dir.'/bin/'.$tool);
+        }
+    }
+    if ($withDdev) {
+        file_put_contents($dir.'/bin/ddev', "#!/usr/bin/env bash\necho \"ddev \$*\" >> \"\$STUB_LOG\"\n[[ \"\$*\" == \"server --default\" ]] && echo \"\${STUB_DEFAULT-}\"\nexit 0\n");
+        chmod($dir.'/bin/ddev', 0755);
+    }
+    $process = new Process(['bash', base_path('bench/'.$script), ...$args], null, [
+        'PATH' => $dir.'/bin', 'STUB_LOG' => $dir.'/log', 'STUB_DEFAULT' => (string) $default,
+    ]);
+    $process->run();
+    $log = is_file($dir.'/log') ? (string) file_get_contents($dir.'/log') : '';
+    exec('rm -rf '.escapeshellarg($dir));
+
+    return [$process, $log];
+}
+
+it('AC-3 a matrix script fails closed when the default cannot be read: exit 2, one message, no switch, no restart, no restore', function (string $script, array $args): void {
+    [$process, $log] = benchRunMatrix($script, $args, '');
+
+    expect($process->getExitCode())->toBe(2)
+        ->and(substr_count($process->getErrorOutput(), 'Cannot read the default server'))->toBe(1)
+        ->and($process->getOutput())->not->toContain('ddev server', 'concurrency.sh')
+        ->and($log)->toBe("ddev server --default\n");
+})->with([
+    'slow-load-matrix' => ['slow-load-matrix.sh', ['--dry-run']],
+    'export-load-matrix' => ['export-load-matrix.sh', ['--dry-run']],
+    'http3-matrix' => ['http3-matrix.sh', ['--dry-run']],
+    'slow-load-matrix live' => ['slow-load-matrix.sh', []],
+    'export-load-matrix live' => ['export-load-matrix.sh', []],
+    'http3-matrix live' => ['http3-matrix.sh', []],
+]);
+
+it('AC-3 a matrix --dry-run needs no ddev and plans the default from the server command file', function (string $script, array $args): void {
+    [$process, $log] = benchRunMatrix($script, $args, null, false);
+    $lines = array_values(array_filter(explode("\n", $process->getOutput())));
+
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
+        ->and($log)->toBe('')
+        ->and(end($lines))->toBe('ddev server frankenphp');
+})->with([
+    'slow-load-matrix' => ['slow-load-matrix.sh', ['--dry-run']],
+    'export-load-matrix' => ['export-load-matrix.sh', ['--dry-run']],
+    'http3-matrix' => ['http3-matrix.sh', ['--dry-run', '--runs', '1']],
+]);

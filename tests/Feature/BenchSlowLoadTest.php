@@ -368,8 +368,13 @@ it('NFR-1 slow-load keeps a spread of 0 when every repeat is 0 and prints n/a fo
         ->and($process->getOutput())->toContain('n/a (median 0)');
 });
 
-it('NFR-2 slow-load-matrix plans the 8 cells and restores the defaults', function (): void {
-    $process = new Process(['bash', base_path('bench/slow-load-matrix.sh'), '--dry-run']);
+it('NFR-2 AC-3 slow-load-matrix plans the 8 cells and restores the defaults and the default server', function (): void {
+    $stubDir = sys_get_temp_dir().'/bench-default-'.bin2hex(random_bytes(4));
+    mkdir($stubDir);
+    file_put_contents($stubDir.'/ddev', "#!/usr/bin/env bash\n[[ \"\$*\" == \"server --default\" ]] && echo apache-fpm\n");
+    chmod($stubDir.'/ddev', 0755);
+    $env = ['PATH' => $stubDir.':'.getenv('PATH')];
+    $process = new Process(['bash', base_path('bench/slow-load-matrix.sh'), '--dry-run'], null, $env);
     $process->run();
     $lines = explode("\n", trim($process->getOutput()));
     $runs = array_values(array_filter($lines, fn (string $line): bool => str_contains($line, 'slow-load.sh')));
@@ -379,16 +384,17 @@ it('NFR-2 slow-load-matrix plans the 8 cells and restores the defaults', functio
         ->and($process->getOutput())
         ->toContain('concurrency.sh 8', 'concurrency.sh 32', 'concurrency.sh 14', 'autoscale --threads 14 --max-threads 64 --max-wait 5')
         ->toContain('--workload http --users 100 --label nginx-fpm-8', '--workload sse --users 30 --label frankenphp-autoscale-14-64')
-        ->and(end($lines))->toBe('ddev server nginx-fpm')
+        ->and(end($lines))->toBe('ddev server apache-fpm')
         ->and($lines[count($lines) - 2])->toContain('concurrency.sh default');
 
-    $quick = new Process(['bash', base_path('bench/slow-load-matrix.sh'), '--dry-run', '--quick']);
+    $quick = new Process(['bash', base_path('bench/slow-load-matrix.sh'), '--dry-run', '--quick'], null, $env);
     $quick->run();
     expect(substr_count($quick->getOutput(), '--quick'))->toBe(8);
 
-    $bad = new Process(['bash', base_path('bench/slow-load-matrix.sh'), '--nope']);
+    $bad = new Process(['bash', base_path('bench/slow-load-matrix.sh'), '--nope'], null, $env);
     $bad->run();
     expect($bad->getExitCode())->toBe(2);
+    exec('rm -rf '.escapeshellarg($stubDir));
 });
 
 it('NFR-1 slow-load marks a probe that got no answer as starved: a null answered p95, the 10 s timeout in the all-sent p95', function (): void {

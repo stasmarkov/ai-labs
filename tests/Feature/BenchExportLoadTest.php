@@ -248,16 +248,21 @@ it('AC-6 export-load rejects a bad mode, label and rate', function (): void {
         ->and(($this->exportLoad)([], '--mode', 'stream', '--rate', 'fast')->getExitCode())->toBe(2);
 });
 
-it('AC-6 export-load matrix lists 8 cells ending on nginx-fpm', function (): void {
-    $process = new Process(['bash', base_path('bench/export-load-matrix.sh'), '--dry-run', '--quick']);
+it('AC-6 AC-3 export-load matrix lists 8 cells ending on the default server', function (): void {
+    $stubDir = sys_get_temp_dir().'/bench-default-'.bin2hex(random_bytes(4));
+    mkdir($stubDir);
+    file_put_contents($stubDir.'/ddev', "#!/usr/bin/env bash\n[[ \"\$*\" == \"server --default\" ]] && echo apache-fpm\n");
+    chmod($stubDir.'/ddev', 0755);
+    $process = new Process(['bash', base_path('bench/export-load-matrix.sh'), '--dry-run', '--quick'], null, ['PATH' => $stubDir.':'.getenv('PATH')]);
     $process->mustRun();
     $lines = array_values(array_filter(explode("\n", $process->getOutput())));
     $cells = array_filter($lines, fn (string $l): bool => str_contains($l, 'export-load.sh'));
 
     expect($cells)->toHaveCount(8)
         ->and(implode("\n", $cells))->toContain('--mode offload --label apache-fpm --quick', '--mode stream --label openlitespeed --quick')
-        ->and(end($lines))->toBe('ddev server nginx-fpm')
+        ->and(end($lines))->toBe('ddev server apache-fpm')
         ->and(implode("\n", $lines))->toContain('ddev server frankenphp');
+    exec('rm -rf '.escapeshellarg($stubDir));
 });
 
 it('MNC-4 slow-load and export-load share one probe library instead of copies', function (): void {

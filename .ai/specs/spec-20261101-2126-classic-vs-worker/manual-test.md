@@ -4,13 +4,13 @@ Everything runs from the project root, `/Users/stasmarkov/work/interview`, in a 
 
 ## Preconditions
 
-- DDEV is running (`ddev start`) and the active server is nginx-fpm: `ddev server --current` prints `nginx-fpm`.
+- DDEV is running (`ddev start`). This plan starts on nginx-fpm on purpose: run `ddev server nginx-fpm`, then `ddev server --current` prints `nginx-fpm`.
 - The git tree is clean apart from `bench/results` and `.ai/session` (`git status --porcelain -- . ':!bench/results' ':!.ai/session'` prints nothing). `bench/run.sh` and `bench/memory.sh` refuse a dirty tree.
 - `.env` has its normal values. Note them: `grep -E '^(APP_ENV|APP_DEBUG|DEBUG_ROUTES)=' .env` (normally `APP_ENV=local`, `APP_DEBUG=true`).
 - Pick a results folder that does not exist yet and use it in every run step: `export BENCH_DATE=2026-11-01-classic-vs-worker`. Today's date is 2026-11-01, which is the SL-06 folder, so never run the suite or memory script without this variable.
 - Steps 5 and 6 take hours. Do not use the machine for anything else while they run (BR-20 run conditions).
 
-Rollback for any aborted run: `bench/concurrency.sh default && ddev server nginx-fpm`, then restore `.env` from `.env.bench-backup` if that file exists (`mv .env.bench-backup .env`), then `git checkout -- bench/results/2026-11-01` if SL-06 files changed.
+Rollback for any aborted run: `bench/concurrency.sh default && ddev server default`, then restore `.env` from `.env.bench-backup` if that file exists (`mv .env.bench-backup .env`), then `git checkout -- bench/results/2026-11-01` if SL-06 files changed.
 
 ## Step 1: expectations were committed first (AC-4)
 
@@ -50,7 +50,7 @@ ddev exec curl -s localhost:2019/frankenphp/threads | grep -c 'Worker PHP Thread
 git status --short .ddev
 ```
 
-Expected: same four outputs as step 2 (`8 workers, max-requests 1000000`, `8`, `4 workers, max-requests 500`, `4`) and nothing from `git status`. Then `ddev server nginx-fpm`.
+Expected: same four outputs as step 2 (`8 workers, max-requests 1000000`, `8`, `4 workers, max-requests 500`, `4`) and nothing from `git status`. Then `ddev server default`.
 
 ## Step 4: the suite refuses to overwrite an existing results folder (reported failing case)
 
@@ -88,7 +88,7 @@ export BENCH_DATE=2026-11-01-classic-vs-worker
 ddev server frankenphp-octane && bench/memory.sh
 ddev server frankenphp-worker && bench/memory.sh
 ddev server frankenphp        && bench/memory.sh
-ddev server nginx-fpm
+ddev server default
 ls bench/results/$BENCH_DATE/memory-*.json
 grep -E '^(APP_ENV|APP_DEBUG|DEBUG_ROUTES)=' .env
 ls .env.bench-backup 2>&1
@@ -157,7 +157,7 @@ for s in frankenphp-octane frankenphp-worker; do
   mkdir -p /tmp/sl08 && BENCH_PARITY_DIR=/tmp/sl08 bench/parity.sh capture >/dev/null
   bench/parity.sh compare bench/parity/$s.txt /tmp/sl08/$s.txt
 done
-ddev server frankenphp && bench/concurrency.sh --show; ddev server nginx-fpm
+ddev server frankenphp && bench/concurrency.sh --show; ddev server default
 ddev server --current
 grep -E '^(APP_ENV|APP_DEBUG|DEBUG_ROUTES)=' .env
 ls .env.bench-backup 2>&1

@@ -87,7 +87,7 @@ Expected:
 ```sh
 bench/asset-fingerprint.sh
 for s in nginx-fpm apache-fpm openlitespeed frankenphp frankenphp-octane frankenphp-worker; do ddev server $s >/dev/null; BENCH_PARITY_DIR=/tmp/sl33 bench/parity.sh capture >/dev/null; bench/parity.sh compare bench/parity/$s.txt /tmp/sl33/$s.txt; done
-ddev server nginx-fpm
+ddev server default
 ddev artisan test --compact
 ```
 
@@ -150,5 +150,5 @@ Expected:
 
 - Remove check output: `rm -rf bench/results/rag-eval/$(date -u +%F)/check* /tmp/check-run1 /tmp/bad.jsonl /tmp/sl33`.
 - Restore settings: `cp /tmp/env.before-sl33 .env && ddev artisan config:clear`, then `ddev artisan docs:index` and wait for the embeddings (step 4.5).
-- Leave the server on nginx-fpm: `ddev server nginx-fpm`.
+- Leave the server on the default server: `ddev server default`.
 - The new migration only adds nullable chunk-setting columns to `docs_documents`; if needed, `ddev artisan migrate:rollback --step=1` removes them.

@@ -11,7 +11,7 @@
 ## Per run: tokens_after_stop = tokens_out of the row minus the text events the client received; probe_ms = Ollama latency.
 ## NFR-1 (reported, not a gate): median probe_ms <= 1.5 x idle median + 1000 and median tokens_after_stop <= 10.
 ## Writes bench/results/chat-stop/<UTC date>/<mode>.json and prints one table per mode.
-## --modes switches with `ddev server <mode>` and ends on nginx-fpm; without it the active server is measured.
+## --modes switches with `ddev server <mode>` and ends on the default server; without it the active server is measured.
 ## Env: CHAT_STOP_BASE_URL (default: `ddev server --url`), CHAT_STOP_OLLAMA_URL (default http://localhost:11434),
 ##      OLLAMA_NUM_PARALLEL (recorded as metadata.ollama_num_parallel; 'default' when unset),
 ##      CHAT_STOP_MODEL (default OLLAMA_MODEL from .env, else qwen3.5:9b), CHAT_STOP_SETTLE (seconds to wait for the row, default 4).
@@ -19,6 +19,9 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+APPROOT="$ROOT"
+# shellcheck source=lib/default-server.sh
+source "$ROOT/bench/lib/default-server.sh"
 OLLAMA="${CHAT_STOP_OLLAMA_URL:-http://localhost:11434}"
 SETTLE="${CHAT_STOP_SETTLE:-4}"
 MODES=""
@@ -178,6 +181,7 @@ for mode in ${MODES//,/ }; do
     exit 2
   fi
   if [[ "$MODES" == *,* ]] || [ "$mode" != "$(cd "$ROOT" && ddev server --current)" ]; then
+    read_default_server "$ROOT"
     (cd "$ROOT" && ddev server "$mode" >/dev/null)
     SWITCHED=1
   fi
@@ -185,7 +189,7 @@ for mode in ${MODES//,/ }; do
 done
 
 if [ "$SWITCHED" -eq 1 ]; then
-  (cd "$ROOT" && ddev server nginx-fpm >/dev/null)
+  restore_default_server "$ROOT" >/dev/null
 fi
 
 echo "Results: $OUT"

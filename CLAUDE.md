@@ -8,7 +8,7 @@ Fresh Laravel 13 skeleton (PHP 8.4 in container, Tailwind 4 + Vite 8, PHPUnit 12
 
 ## Environment: DDEV
 
-The app runs in DDEV (`.ddev/config.yaml`: nginx-fpm, PHP 8.4, MariaDB 11.8, Node 24) at https://interview.ddev.site. `.env` points to `DB_HOST=db`, which only resolves inside the container — so run PHP/Artisan/Composer/npm through DDEV, not the host (host PHP is 8.3):
+The app runs in DDEV (`.ddev/config.yaml`: PHP 8.4, MariaDB 11.8, Node 24; the web server is frankenphp by default, chosen by `ddev server`, so run `ddev setup` once on a fresh clone: it creates `.env`, installs Composer and npm dependencies, generates `APP_KEY`, switches the server, creates the Mercure keys and migrates; `.ddev/config.yaml` still says `webserver_type: nginx-fpm` on purpose) at https://interview.ddev.site. `.env` points to `DB_HOST=db`, which only resolves inside the container — so run PHP/Artisan/Composer/npm through DDEV, not the host (host PHP is 8.3):
 
 ```sh
 ddev start
