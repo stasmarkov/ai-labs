@@ -623,8 +623,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-26, BR-27
 - **Depends on:** SL-13
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261109-1040-frankenphp-default
 - **Source:** owner request 2026-11-05 (Stanislav Markov: "after implementing fully frankenphp and mercure - keep it as default")
 - **Run:** `/sdd "SL-47: make classic FrankenPHP with the Mercure hub the default server: the committed server overlay, every bench script's end-of-run restore target, parity and fingerprint baselines, and the docs that say nginx-fpm is the default; .ddev/config.yaml only if unavoidable (ask first). Rules in product-brief.md."`
 
