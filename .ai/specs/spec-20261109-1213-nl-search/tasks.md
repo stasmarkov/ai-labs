@@ -148,3 +148,5 @@
   - Full suite 1377 passed (15498 assertions); Pint passed; PHPStan no errors; typecheck and build clean.
   - Fingerprint unchanged (`app-DNob7CFE.css`, `app-PTzu1QaN.js`); parity `identical` on all six servers; server left on frankenphp.
   - Not run: `bench/run.sh ping --quick` (needs a clean tree after the commit).
+
+- Owner-side notes: committed as 26fae20; `bench/run.sh ping --quick` exit 0 on a clean tree on frankenphp; 1377 tests.

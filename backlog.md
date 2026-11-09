@@ -303,7 +303,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-92, BR-90
 - **Depends on:** SL-22
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261109-1213-nl-search
 - **Source:** brief (Phase 11)
 - **Run:** `/sdd "SL-23: NL search — a structured-output agent turns free text into the /listings filters, validated by the same rules (422 on invalid), never producing queries (BR-92, BR-90). Rules in product-brief.md."`
