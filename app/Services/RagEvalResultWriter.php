@@ -83,6 +83,54 @@ final readonly class RagEvalResultWriter
     }
 
     /**
+     * @throws RagEvalResultException when the file exists and $force is false, or when it is not a plain file.
+     */
+    public function assertWritableFile(string $directory, string $name, bool $force): void
+    {
+        $target = "{$directory}/{$name}";
+
+        if (! File::exists($target) && ! is_link($target)) {
+            return;
+        }
+
+        if (! $force) {
+            throw RagEvalResultException::labelExists($target);
+        }
+
+        if (is_link($target) || ! is_file($target)) {
+            throw RagEvalResultException::cannotWrite($target);
+        }
+    }
+
+    /**
+     * Writes one JSON file into a contained directory: to a temporary sibling file that is then renamed over the target,
+     * so a failure leaves nothing and an existing file is replaced whole.
+     *
+     * @param  array<string, mixed>  $data
+     *
+     * @throws RagEvalResultException when the file exists and $force is false, or when it cannot be written.
+     * @throws JsonException
+     */
+    public function writeFile(string $directory, string $name, array $data, bool $force): void
+    {
+        $this->assertWritableFile($directory, $name, $force);
+        $target = "{$directory}/{$name}";
+
+        File::ensureDirectoryExists($directory);
+        $temporary = "{$directory}/.{$name}.tmp-".Str::lower(Str::random(8));
+
+        try {
+            File::put($temporary, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)."\n");
+
+            if (! rename($temporary, $target)) {
+                throw RagEvalResultException::cannotWrite($target);
+            }
+        } finally {
+            File::delete($temporary);
+        }
+    }
+
+    /**
      * @param  array<string, array<string, mixed>>  $files  JSON content by file name
      *
      * @throws RagEvalResultException

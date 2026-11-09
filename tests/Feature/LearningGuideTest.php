@@ -586,3 +586,66 @@ test('AC-7 guide section 23 explains Mercure, quotes the measured numbers and se
     expect($map[0] ?? '')->toContain('section 23')->toContain('Mercure');
     expect($map[0] ?? '')->toMatch('/Notify the browser when something changes[^\n]*section 23/');
 });
+
+test('AC-9 guide section 24 explains structured output with a validation boundary and quotes the eval numbers', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+    $result = json_decode((string) file_get_contents(base_path('bench/results/nl-search/2026-11-09/run.json')), true, flags: JSON_THROW_ON_ERROR);
+
+    preg_match('/^## 24\. From words to filters: structured output with a validation boundary\n(.*?)(?=^---$|^## \d+\. |^## Planned sections|\z)/ms', $guide, $matches);
+    $section = $matches[1] ?? '';
+    expect($section)->not->toBe('');
+
+    foreach (['structured output', 'ListingFilterRules', 'unsupported', 'extracted', 'bound', 'refused', 'validation_failed', 'nl:eval', 'exact match', 'unsupported recall', 'median', 'p95', 'alias', 'ListingSearchService', 'allowedModels'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    foreach ($result['models'] as $model) {
+        expect($section)->toContain(sprintf('| %s | %.3f | %d/%d | %d ms | %d ms |', $model['model'], $model['exact_match']['rate'], $model['unsupported_recall']['caught'], $model['unsupported_recall']['expected'], $model['latency_ms']['median'], $model['latency_ms']['p95']));
+    }
+
+    foreach ([
+        '../app/Ai/ListingFilterAgent.php',
+        '../app/Services/NlSearchService.php',
+        '../app/Rules/ListingFilterRules.php',
+        '../app/Console/Commands/NlEvalCommand.php',
+        '../app/Services/NlEvalScorer.php',
+        '../resources/prompts/listing-filters.v1.md',
+        '../bench/nl-search/queries.v1.jsonl',
+        '../bench/results/nl-search/2026-11-09/',
+        '../tests/Feature/NlSearchTest.php',
+        '../BENCHMARKS.md',
+        '../.ai/specs/spec-20261109-1213-nl-search/',
+    ] as $link) {
+        expect($section)->toContain("]({$link}");
+    }
+    expect($section)->toMatch('/\]\(https:\/\/[^)]*laravel\.com\/docs\/13\.x\/ai-sdk/');
+
+    preg_match_all('/\]\((\.\.\/[^)#]+)/', $section, $links);
+    foreach ($links[1] as $link) {
+        expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$link))->toBeTrue("missing: {$link}");
+    }
+
+    preg_match('/^## 16\. .*?(?=^## 17\. )/ms', $guide, $map);
+    expect($map[0] ?? '')->toContain('section 24')->toContain('NlSearchService')->toContain('NlSearchController')->toContain('NlEvalCommand');
+    expect($guide)->toContain('Section 24 (SL-23)');
+});
+
+test('AC-9 guide section 24 describes recall per term and section 16 has the free-text row', function () {
+    $guide = file_get_contents(base_path('docs/learning-guide.md'));
+
+    preg_match('/^## 24\. .*?(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    $section = $matches[0] ?? '';
+    expect($section)
+        ->toContain('per term')
+        ->toContain('12 expected terms over 10 queries')
+        ->toContain('case-insensitive substring')
+        ->not->toContain('got a non-empty `unsupported` list');
+
+    preg_match('/^### Common feature requests and where they land\n(.*?)(?=^\*\*|^## )/ms', $guide, $rows);
+    $row = collect(explode("\n", $rows[1] ?? ''))->first(fn (string $line): bool => str_contains($line, 'free text into structured'));
+    expect($row)->not->toBeNull()
+        ->toContain('ListingFilterAgent')
+        ->toContain('ListingFilterRules')
+        ->toContain('NlSearchService')
+        ->toContain('section 24');
+});

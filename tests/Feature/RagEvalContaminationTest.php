@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\DTOs\RagEvalQuestion;
 use App\Services\DocsCachePairSet;
 use App\Services\DocsCorpus;
+use App\Services\NlEvalSet;
 use App\Services\RagEvalSet;
 
 /**
@@ -36,7 +37,7 @@ function indexedCorpusTexts(): array
 }
 
 /**
- * Eval text that must not occur in an indexed file: every question, every cache pair text, and every on-topic answer of 6 or more words
+ * Eval text that must not occur in an indexed file: every question, every natural-language search query, every cache pair text, and every on-topic answer of 6 or more words
  * (shorter answers only as a whole line). Off-topic answers are the fixed "I don't know." and are exempt.
  *
  * @return array<string, string> label => normalized text
@@ -56,6 +57,10 @@ function guardedEvalTexts(): array
     foreach ((new DocsCachePairSet)->load() as $pair) {
         $guarded["{$pair->id} a"] = RagEvalSet::normalizeText($pair->a);
         $guarded["{$pair->id} b"] = RagEvalSet::normalizeText($pair->b);
+    }
+
+    foreach ((new NlEvalSet)->load() as $query) {
+        $guarded["{$query->id} nl query"] = RagEvalSet::normalizeText($query->query);
     }
 
     return $guarded;
@@ -86,5 +91,5 @@ it('AC-2 scans the repository corpus and never the eval set itself', function ()
     $paths = array_column(indexedCorpusTexts(), 'path');
 
     expect($paths)->toContain('repo:README.md')
-        ->and(array_filter($paths, fn (string $path): bool => str_contains($path, 'rag-eval/questions')))->toBe([]);
+        ->and(array_filter($paths, fn (string $path): bool => str_contains($path, 'rag-eval/questions') || str_contains($path, 'nl-search/queries')))->toBe([]);
 });

@@ -42,7 +42,7 @@ it('AC-1 the overview shows models, Ollama status, capabilities and recent runs'
             ->where('embeddingProvider', 'ollama')
             ->where('embeddingModel', config('ai.providers.ollama.models.embeddings.default'))
             ->where('ollama.reachable', true)
-            ->has('capabilities', 5)
+            ->has('capabilities', 6)
             ->has('capabilities.0', fn (Assert $card) => $card
                 ->where('key', 'describe')
                 ->where('route', '/ai/describe')
@@ -50,10 +50,10 @@ it('AC-1 the overview shows models, Ollama status, capabilities and recent runs'
                 ->where('status', 'ready')
                 ->where('slice', 'SL-22')
                 ->etc())
-            ->where('capabilities.3.status', 'ready')
-            ->where('capabilities.3.slice', 'SL-45')
-            ->where('capabilities.4.status', 'coming')
-            ->where('capabilities.4.slice', 'SL-36')
+            ->where('capabilities.4.status', 'ready')
+            ->where('capabilities.4.slice', 'SL-45')
+            ->where('capabilities.5.status', 'coming')
+            ->where('capabilities.5.slice', 'SL-36')
             ->has('recentRuns', 20)
             ->has('recentRuns.0', fn (Assert $run) => $run
                 ->where('invocation_id', 'run-25')
@@ -125,7 +125,7 @@ it('AC-1 every capability card links to a page that opens, including the one com
 
     $cards = collect($this->get('/ai')->assertOk()->inertiaProps('capabilities'));
 
-    expect($cards)->toHaveCount(5)
+    expect($cards)->toHaveCount(6)
         ->and($cards->where('status', 'coming')->pluck('route')->all())->toBe(['/ai/photos']);
 
     foreach ($cards as $card) {

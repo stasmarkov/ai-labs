@@ -40,6 +40,7 @@ final readonly class EloquentAiRunRepository implements AiRunRepositoryInterface
             'origin' => $record->origin,
             'history_turns' => $record->historyTurns,
             'stopped_after_ms' => $record->stoppedAfterMs,
+            'validation_failed' => $record->validationFailed,
         ]);
     }
 

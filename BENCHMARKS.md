@@ -937,6 +937,49 @@ The first bar is the SL-09 cell `bench/results/slow-load/2026-11-03/sse-frankenp
 
 I wanted to show that Mercure subscribers do not cost PHP workers the way direct SSE does. I opened 100 and 1000 subscribers on FrankenPHP's built-in hub while the SL-09 health probe ran: at 1000 open connections at most 1 of 14 PHP threads was busy and the health p95 was 16 ms, against 10 000 ms with 30 direct SSE answers. 20 price changes reached all 21 000 deliveries, with p50 70 ms and p95 344 ms through the DDEV router, and a private update reached only the token that named its topic. The latency tail is partly my own load generator, one Node process reading every socket.
 
+## Natural-language search (2026-11-09)
+
+`GET /api/listings/nl?q=…` (SL-23) asks a model to turn a plain-language car search into the six `/listings` filters plus a list of `unsupported` parts. The output is validated with the same rules as `/listings` before any query runs. A labelled set of 40 queries (`bench/nl-search/queries.v1.jsonl`, eval set `v1`; this section names queries by id only) was run against two local models through Ollama, on frankenphp, with prompt `listing-filters@v1`. Raw file: [`bench/results/nl-search/2026-11-09/run.json`](bench/results/nl-search/2026-11-09/run.json). Reproduce with `ddev artisan nl:eval --models=qwen3.5:9b,gemma4:12b --label=run`.
+
+Method: a query is an exact match when every one of the six fields equals the label (a field the query does not mention is labelled `null`). Unsupported recall is counted per term: the set has 12 expected terms over 10 queries, and a term is caught when any string the model returned in `unsupported` contains it (case-insensitive substring match). The 422 rate is the share of calls whose output failed validation. Latency is read from the `ai_runs` row of each call that produced model output, so it covers the model call and nothing else; refused and failed calls have no latency and are counted separately (none occurred).
+
+| Model | Exact match | Unsupported recall | 422 rate | Latency median | Latency p95 |
+|-------|-------------|--------------------|----------|----------------|-------------|
+| qwen3.5:9b | 0.950 (38/40) | 9/12 (0.750) | 0/40 | 906 ms | 1123 ms |
+| gemma4:12b | 0.975 (39/40) | 12/12 (1.000) | 0/40 | 1008 ms | 2263 ms |
+
+Per-field accuracy:
+
+| Model | make | model | city | fuel | min_year | max_price_eur |
+|-------|------|-------|------|------|----------|---------------|
+| qwen3.5:9b | 1.000 | 0.975 | 1.000 | 0.975 | 1.000 | 1.000 |
+| gemma4:12b | 1.000 | 1.000 | 1.000 | 0.975 | 1.000 | 1.000 |
+
+### What the numbers say
+
+- Both models read the make, city, year and price correctly on every query. The only misses are three cells: one model name from qwen3.5:9b (nl-31, it put a body type into `model`) and one fuel from each model on the same query (nl-33), where both inferred `electric` from a make that only sells electric cars while the label says the query did not state a fuel. That inference is reasonable but it is not what the user typed, and the label is strict.
+- gemma4:12b caught all 12 expected terms; qwen3.5:9b missed 3. Recall is per term and a substring match, so a long returned string containing the term counts, and it does not check that nothing else was listed.
+- Neither model produced output that failed validation (0 of 40), so the validation boundary never rejected anything on this set. That is a statement about these two models and this set, not a reason to drop the boundary.
+- Latency is close at the median: 906 ms and 1008 ms. The p95 differs more, 1123 ms and 2263 ms, but with 40 calls per model the p95 is the slowest one or two calls, so one slow call moves it. There is no budget for NFR-2; the numbers are recorded per model and the lab page shows the round trip.
+
+### Surprises
+
+- **The schema, not the prompt, forced a fuel.** The first committed run had fuel accuracy 0.400 for both models: in 24 of the 40 queries the label is `null` for fuel and 24 of 24 times (23 `petrol`, 1 `electric`) both models answered with a fuel. The cause was in my schema. I had declared `fuel` as a string whose `enum` listed the five fuels and marked it nullable, but the `enum` did not contain `null`. Ollama turns the schema into a grammar, so constrained decoding could only emit one of the five values: a model that wanted to say "no fuel" had no token to say it with. It picked the first value, `petrol`. The fix was one line, adding `null` to the enum so the schema serializes as `type: ["string","null"]` with `enum: ["petrol","diesel","hybrid","electric","lpg",null]`, with the prompt unchanged (`listing-filters@v1`). Re-run on the same 40 queries:
+
+  | Model | Fuel accuracy before | Fuel accuracy after | Exact match before | Exact match after |
+  |-------|----------------------|---------------------|--------------------|-------------------|
+  | qwen3.5:9b | 0.400 | 0.975 | 0.400 | 0.950 |
+  | gemma4:12b | 0.400 | 0.975 | 0.400 | 0.975 |
+
+  I first read the identical failure of two model families as a sign that the prompt was at fault. It was the shared constraint they were both decoding under.
+- **A wrong guess is not caught by validation.** `petrol` is a valid fuel, so those answers passed the rules and narrowed the search silently. Validation protects the database and the contract; it cannot know what the user meant. Only an eval like this one shows the error.
+- **A schema that cannot say "I don't know" turns doubt into a value.** For every optional field, check that the schema lets the model answer with nothing, in the schema itself and not only in the prompt.
+- **The first run recorded no latency.** The dev database still lacked the migration that adds `ai_runs.validation_failed`, and the recorder swallows save errors, so no rows were written and the median and p95 were null. After `migrate` the run was repeated and the committed file has latency for both models.
+
+### Interview story
+
+I wanted to let a user type "diesel BMW after 2018 under 20k in Munich" and get the same results as the filter form, without letting a model near the database. The model only fills a small JSON object; the app validates it with the exact rules `/listings` uses and passes it to the same search service, so a wrong or hostile value is a 422, never SQL. I added an `unsupported` list so the model says what it could not express, such as "estate" or "cheap", instead of bending it into a filter. Then I measured two local models on 40 labelled queries. Both caught most of the unsupported parts and neither failed validation, but at first both invented a petrol fuel filter for queries that did not mention fuel (exact match 0.400), and validation could not see that because petrol is a legal value. The eval pointed at my own schema: its fuel enum had no `null`, so the decoder had to pick a fuel. Adding `null` took fuel accuracy from 0.400 to 0.975 and exact match to 0.950 and 0.975 with the same prompt. The lesson I would repeat: validation makes the output safe, an eval makes it correct, and you need both.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

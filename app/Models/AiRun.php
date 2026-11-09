@@ -36,7 +36,7 @@ use Illuminate\Database\Eloquent\Model;
     'ttft_ms', 'latency_ms', 'status', 'error_class', 'error_message', 'inputs',
     'retrieved_chunk_ids', 'cited_chunk_ids', 'refusal_reason',
     'cache_kind', 'cache_similarity', 'cache_entry_id', 'saved_latency_ms', 'origin',
-    'history_turns', 'stopped_after_ms',
+    'history_turns', 'stopped_after_ms', 'validation_failed',
 ])]
 class AiRun extends Model
 {
@@ -60,6 +60,7 @@ class AiRun extends Model
             'saved_latency_ms' => 'integer',
             'history_turns' => 'integer',
             'stopped_after_ms' => 'integer',
+            'validation_failed' => 'boolean',
         ];
     }
 }

@@ -30,14 +30,15 @@ final class ApiResponse
 
     /**
      * @param  array<string, list<string>>  $errors
+     * @param  array<string, mixed>  $extra  more top-level keys, after "errors"
      */
-    public static function error(int $status, string $message, array $errors = []): JsonResponse
+    public static function error(int $status, string $message, array $errors = [], array $extra = []): JsonResponse
     {
         return new JsonResponse([
             'success' => false,
             'status' => $status,
             'message' => $message,
             'errors' => (object) $errors,
-        ], $status);
+        ] + $extra, $status);
     }
 }

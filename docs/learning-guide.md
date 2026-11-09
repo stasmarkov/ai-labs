@@ -4,7 +4,7 @@ This guide explains how everything in this project works, in the order it was bu
 
 It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan and its order are in [`backlog.md`](../backlog.md).
 
-**Status (2026-11-03):** sections 1–15 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24, SL-32, SL-33, SL-45 and SL-46. Section 16 is a map of all the AI code: every file and its purpose, four requests traced end to end, and how to handle common feature requests. Section 17 (SL-40) explains the exact and semantic answer cache. Section 18 (SL-41) explains how Stop cancels generation on every server mode and how the chat sends history. Section 19 (SL-09) measures slow I/O, worker pools and the health check. Section 20 (SL-11) explains how a large download is handed to the web server so a PHP worker is not held. Section 21 (SL-10) covers Early Hints and compression. Section 22 (SL-12) explains HTTP/3 and QUIC and measures h2 against h3 under the same network-layer throttle. Section 23 (SL-13) explains live updates through the built-in Mercure hub and measures subscribers against the health check. Planned sections are listed at the end.
+**Status (2026-11-03):** sections 1–15 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24, SL-32, SL-33, SL-45 and SL-46. Section 16 is a map of all the AI code: every file and its purpose, four requests traced end to end, and how to handle common feature requests. Section 17 (SL-40) explains the exact and semantic answer cache. Section 18 (SL-41) explains how Stop cancels generation on every server mode and how the chat sends history. Section 19 (SL-09) measures slow I/O, worker pools and the health check. Section 20 (SL-11) explains how a large download is handed to the web server so a PHP worker is not held. Section 21 (SL-10) covers Early Hints and compression. Section 22 (SL-12) explains HTTP/3 and QUIC and measures h2 against h3 under the same network-layer throttle. Section 23 (SL-13) explains live updates through the built-in Mercure hub and measures subscribers against the health check. Section 24 (SL-23) explains turning a plain-language search into validated filters with structured output, and what the 40-query eval found. Planned sections are listed at the end.
 
 ---
 
@@ -595,6 +595,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`CarDescriptionAgent`](../app/Ai/CarDescriptionAgent.php) | Writes a listing's ad text from its facts; prompt `car-description.v1.md` | SL-20 |
 | [`DocsAnswerAgent`](../app/Ai/DocsAnswerAgent.php) | Answers a docs question from retrieved chunks; builds the escaped `<context><doc>` message and appends the per-request canary | SL-45 |
 | [`RagGraderAgent`](../app/Ai/RagGraderAgent.php) | Grades an answer's correctness and groundedness (0–2) with structured output; prompt `rag-grader.v2.md` | SL-33 |
+| [`ListingFilterAgent`](../app/Ai/ListingFilterAgent.php) | Turns a plain-language car search into filter fields plus an `unsupported` list with structured output; prompt `listing-filters.v1.md` | SL-23 |
 | [`SseProtocol`](../app/Ai/SseProtocol.php) | One `data:` line per SDK event, then `[DONE]`; masks provider errors; drains the generator so FrankenPHP workers send a body | SL-20 |
 | [`AbortWatcher`](../app/Ai/AbortWatcher.php), [`ConnectionAbortWatcher`](../app/Ai/ConnectionAbortWatcher.php) | Tells the stream whether the client has gone; checked after every flush so a Stop ends the model call and writes a `stopped` row | SL-46 |
 | [`DocsAnswerProtocol`](../app/Ai/DocsAnswerProtocol.php) | The answer stream: `sources` first, output guard on every delta, reasoning dropped, `citations` last | SL-45 |
@@ -617,6 +618,17 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`ListingEmbeddingService`](../app/Services/ListingEmbeddingService.php), [`EmbedListingBatchJob`](../app/Jobs/EmbedListingBatchJob.php) | Embed descriptions in queued batches and check vector count and length | SL-24 |
 | [`SemanticSearchService`](../app/Services/SemanticSearchService.php) | Embeds a query (with `Server-Timing` `embed`) and asks pgvector for the nearest listings (`db`) | SL-24 |
 | [`SemanticBenchService`](../app/Services/SemanticBenchService.php) | Measures semantic search for `BENCHMARKS.md` | SL-24 |
+
+**Natural-language search (section 24)**
+
+| File | Purpose | Slice |
+|---|---|---|
+| [`NlSearchService`](../app/Services/NlSearchService.php) | Input guard → `ListingFilterAgent` → `ListingFilterRules` → `ListingSearchService`; writes one `ai_runs` row per outcome; `allowedModels()` is the model allowlist | SL-23 |
+| [`ListingFilterRules`](../app/Rules/ListingFilterRules.php) | The six listing filter rules, shared by `ListListingsRequest` and the model output check | SL-23 |
+| [`NlSearchQuery`](../app/DTOs/NlSearchQuery.php), [`NlSearchResult`](../app/DTOs/NlSearchResult.php) | The input and the outcome of one search | SL-23 |
+| [`NlSearchRefusedException`](../app/Exceptions/NlSearchRefusedException.php), [`NlSearchInvalidException`](../app/Exceptions/NlSearchInvalidException.php), [`NlSearchUnavailableException`](../app/Exceptions/NlSearchUnavailableException.php) | The 422 refused, 422 invalid and 503 outcomes, rendered in `JsonErrorRenderer` | SL-23 |
+| [`NlEvalSet`](../app/Services/NlEvalSet.php), [`NlEvalScorer`](../app/Services/NlEvalScorer.php), [`NlEvalQuery`](../app/DTOs/NlEvalQuery.php), [`NlEvalOutcome`](../app/DTOs/NlEvalOutcome.php), [`RagEvalRepositoryInterface::timings()`](../app/Contracts/RagEvalRepositoryInterface.php) | Load the 40 queries, score them (exact match, fields, unsupported recall, 422 rate), read latency from `ai_runs` | SL-23 |
+| [`bench/results/nl-search/2026-11-09/`](../bench/results/nl-search/2026-11-09/) | The committed eval run for two models | SL-23 |
 
 **Docs: index, search, answer**
 
@@ -675,6 +687,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 |---|---|---|
 | [`DescribeListingController`](../app/Http/Controllers/DescribeListingController.php) | `GET /listings/{id}/describe`, the SSE description | SL-20 |
 | [`SemanticSearchController`](../app/Http/Controllers/SemanticSearchController.php) | `GET /api/listings/semantic` | SL-24 |
+| [`NlSearchController`](../app/Http/Controllers/NlSearchController.php), [`NlSearchRequest`](../app/Http/Requests/NlSearchRequest.php) | `GET /api/listings/nl` (throttle `nl-search`); the request also checks the `model` name | SL-23 |
 | [`SearchDocsController`](../app/Http/Controllers/SearchDocsController.php) | `GET /api/docs/search` | SL-32 |
 | [`AskDocsController`](../app/Http/Controllers/AskDocsController.php), [`DocsAskRequest`](../app/Http/Requests/DocsAskRequest.php) | `POST /api/docs/ask` (JSON only), the SSE answer | SL-45 |
 | [`ValidUtf8Text`](../app/Rules/ValidUtf8Text.php) | Rejects NUL bytes and invalid UTF-8 before PostgreSQL sees them | SL-32 |
@@ -682,9 +695,10 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`IndexDocsCommand`](../app/Console/Commands/IndexDocsCommand.php), [`FetchLaravelDocsCommand`](../app/Console/Commands/FetchLaravelDocsCommand.php), [`SearchDocsCommand`](../app/Console/Commands/SearchDocsCommand.php), [`SearchDocsBenchCommand`](../app/Console/Commands/SearchDocsBenchCommand.php) | `docs:index`, `docs:fetch-laravel`, `docs:search`, `docs:search-bench` | SL-32 |
 | [`EmbedListingsCommand`](../app/Console/Commands/EmbedListingsCommand.php), [`DescribeAllListingsCommand`](../app/Console/Commands/DescribeAllListingsCommand.php) | `listings:embed`, `listings:describe-all` | SL-24 |
 | [`RagEvalCommand`](../app/Console/Commands/RagEvalCommand.php) | `rag:eval`: retrieval, calibration, graded answers | SL-33 |
+| [`NlEvalCommand`](../app/Console/Commands/NlEvalCommand.php) | `nl:eval`: score the 40 queries per model and write one JSON file atomically | SL-23 |
 | [`LabOverviewService`](../app/Services/LabOverviewService.php), [`LabDescribeService`](../app/Services/LabDescribeService.php), `ShowLab*Controller` | Props for the lab pages: capabilities, navigation, recent runs, one run's detail | SL-46 |
 | [`useEventStream.ts`](../resources/js/ai/composables/useEventStream.ts) | Reads SSE with `fetch` + `ReadableStream`, Stop via `AbortController`, TTFT and tokens/s | SL-46 |
-| [`Pages/Lab/`](../resources/js/ai/Pages/Lab/) | Overview, Describe, Semantic, Docs, Chat, Photos | SL-46, SL-45 |
+| [`Pages/Lab/`](../resources/js/ai/Pages/Lab/) | Overview, Describe, Semantic, Docs, Chat, NlSearch, Photos | SL-46, SL-45, SL-23 |
 
 **Schema.** [`docs_answer_cache`](../database/migrations/2026_11_03_170000_create_docs_answer_cache_table.php) (question, vector with HNSW, answer, sources, the four versions; SL-40) and [cache columns on `ai_runs`](../database/migrations/2026_11_03_170100_add_cache_columns_to_ai_runs_table.php) (`cache_kind`, `cache_similarity`, `cache_entry_id`, `saved_latency_ms`, `origin`), then [`ai_runs`](../database/migrations/2026_11_02_160000_create_ai_runs_table.php) (one row per call; [chunk ids and refusals](../database/migrations/2026_11_03_110000_add_answer_columns_to_ai_runs_table.php) added in SL-45), [`docs_documents`](../database/migrations/2026_11_03_090000_create_docs_documents_table.php) and [`docs_chunks`](../database/migrations/2026_11_03_090100_create_docs_chunks_table.php) (vector, `tsvector`, HNSW and GIN indexes), [chunk settings](../database/migrations/2026_11_03_120000_add_chunk_settings_to_docs_documents_table.php) (SL-33), and [pgvector](../database/migrations/2026_10_28_193241_enable_pgvector_extension.php).
 
@@ -701,6 +715,12 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 1. `SemanticSearchRequest` validates the query.
 2. `SemanticSearchService` embeds it, which `RecordEmbeddingsRun` logs; that time goes into `Server-Timing` as `embed`.
 3. The repository runs a pgvector `<=>` query on the HNSW index (`db`), and the controller returns JSON.
+
+**Natural-language search** (`GET /api/listings/nl?q=…`, section 24):
+1. `NlSearchRequest` validates `q`, the paging and that `model` is in `NlSearchService::allowedModels()`.
+2. `NlSearchService` runs `PromptInjectionGuard` (a match is a 422 `refused`, no model call), then `ListingFilterAgent` with structured output (a failure is a masked 503).
+3. `ListingFilterRules` validates the fields; a failure is a 422 with `extracted` and `unsupported`, and the `ai_runs` row has `validation_failed`.
+4. Valid fields go to `ListingSearchService`, the same service as `/listings`, as bound parameters.
 
 **Docs search** (`GET /api/docs/search?q=…&mode=hybrid`):
 1. `DocsSearchRequest` validates the query.
@@ -728,6 +748,9 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | "Answers miss this part of the docs" | Check retrieval first: `docs:search "…" --mode=vector` and `rag:eval` recall. Then chunk size (`AI_DOCS_CHUNK_MAX_TOKENS`, re-index) or k (`AI_DOCS_ANSWER_K`) | an eval question with its evidence phrase |
 | "Make answers cacheable" / "tune the cache" | Behaviour is in `config('ai.docs.cache')`: `AI_DOCS_CACHE_ENABLED`, `AI_DOCS_CACHE_TTL_HOURS`, `AI_DOCS_CACHE_MIN_SIMILARITY`. Never lower the threshold without running `docs:cache-calibrate`: add the pair that fails to `cache-pairs.v1.jsonl` first (new pairs must not appear in an indexed file). A new thing that changes the answer (another prompt, model) must be part of the entry's version check in `DocsAnswerCache`. | a case in `DocsAnswerCacheTest` per version; a `DocsCacheCalibrateTest` fixture; `docs:cache --stats` after a run (section 17) |
 | "Index a new folder of docs" | `DocsCorpus` lists the paths. Never add a folder holding eval questions (the contamination test will fail, as intended) | a `DocsCorpus` test case |
+| "Make the model extract another field" / "a new filter" | Add the rule to `ListingFilterRules` (so `/listings` gets it too), the key to `ListingFilterAgent::schema()` and the prompt (new version file), the field to `NlSearchService::FILTER_FIELDS`, then relabel `bench/nl-search/` and re-run `nl:eval` (section 24). | a case in `NlSearchTest` with faked structured output; an `NlEvalScorer` case |
+| "Turn free text into structured input" (a search box, a form from a sentence) | Follow the NL search: an agent with a JSON schema (`ListingFilterAgent`), the same rules the normal endpoint uses (`ListingFilterRules`), a service that guards, extracts, validates and only then queries (`NlSearchService`). Model output is data: validate it, never build SQL from it. Measure with a labelled set (section 24). | a case in `NlSearchTest` with faked structured output; an `nl:eval` run before and after |
+| "Allow another model on the NL search" | `ai.nl_search.models` in `config/ai.php`; `nl:eval --models=` accepts only names in that list. | an `allowedModels()` case |
 | "Switch the embedding model" | `config('ai.embeddings')`, then re-index everything: vectors from two models cannot be compared, and the stored `embedding_model` keeps them apart | `docs:search-bench` and `rag:eval` before and after |
 | "Log something new about each call" | A nullable column on `ai_runs`, a field on `AiRunRecord`, set it from the recorder (`annotate()` for per-request data) | a feature test on the row |
 | "Show it in the lab" | A Vue page in `resources/js/ai/Pages/Lab/`, a `ShowLab*Controller` returning `Inertia::render`, a capability in `LabOverviewService` (navigation follows) | a page props test like `AiLabChatTest`; typecheck and build |
@@ -1078,9 +1101,51 @@ Compare that with section 19: 30 open direct SSE answers on the same 14 threads 
 
 ---
 
+## 24. From words to filters: structured output with a validation boundary
+
+**What it is.** Sections 9 and 14 stream free text. This one asks a model for a small JSON object instead: `GET /api/listings/nl?q=diesel BMW after 2018 under 20k in Munich` becomes `make`, `model`, `city`, `fuel`, `min_year` and `max_price_eur` plus a list called `unsupported`. The model's job ends there. Everything after it is ordinary code, and that is the point: **model output is data, never a command.** It is checked, bound as parameters and handed to the same search that `/listings` uses.
+
+**Structured output.** [`ListingFilterAgent`](../app/Ai/ListingFilterAgent.php) declares a schema (every key required and nullable; `fuel` is limited to the `Fuel` enum values **and `null`**, see "What the eval found") and the SDK asks the provider to answer in that shape, so the reply is already a decoded array and not text to parse. A schema narrows what the model may say; it does not make it right (see "What the eval found" below).
+
+**One request, step by step.**
+1. `NlSearchRequest` validates `q` (required, length-limited), an optional `model` and the paging. The model name must be in `NlSearchService::allowedModels()`: the active provider's text model plus `gemma4:12b`, or `ai.nl_search.models` when set. A name outside the list is a 422 at the request, before any model runs.
+2. `NlSearchService` runs the same `PromptInjectionGuard` as section 14. A match answers 422 with `refused: true`, calls no model and writes a `refused` row.
+3. The agent returns the structured fields. A model failure becomes a masked 503 and a `failed` row.
+4. [`ListingFilterRules`](../app/Rules/ListingFilterRules.php) validates the fields. These are the same rules `ListListingsRequest` uses for `/listings` (they were extracted into one class so the two cannot drift apart). A failure is a 422 whose body carries `extracted`, `unsupported` and the field errors, and no listing query runs. The row is saved either way, with `validation_failed` set, so the lab and the eval can count how often the boundary fires.
+5. Valid fields go to `ListingSearchService`, the service behind `/listings`, so the same filters give the same listings and total. Values reach SQL only as bound parameters; nothing from the model is concatenated into a query.
+6. The 200 body carries the model name, the extracted filters, the `unsupported` list, the listings and the `invocation_id` of the `ai_runs` row. `Server-Timing` splits `model` from `db`.
+
+**`unsupported` is honesty.** The filters cannot say "estate", a colour, mileage or "cheap". Without a place to put them a model tends to bend them into some filter. The prompt asks it to list them instead, the service trims the list, and the lab shows them as chips so the user sees what was ignored. Matching is case-insensitive and exact, so "Merc" does not find Mercedes. An alias table or embeddings would be the next step; it is left out so that the eval stays easy to read.
+
+**The lab page.** `/ai/nl-search` ([`NlSearch.vue`](../resources/js/ai/Pages/Lab/NlSearch.vue)) shows the query, the model, the validation outcome, the extracted JSON, the errors, the `unsupported` chips, the listings and a link to the logged run. It handles the 200, both 422 kinds, 503 and 429, and the results region is `aria-live="polite"`.
+
+**How it is measured.** [`NlEvalCommand`](../app/Console/Commands/NlEvalCommand.php) (`nl:eval`) runs 40 labelled queries from [`bench/nl-search/queries.v1.jsonl`](../bench/nl-search/queries.v1.jsonl) through the same service, once per model, and [`NlEvalScorer`](../app/Services/NlEvalScorer.php) computes:
+- **exact match:** all six fields equal the label (an unmentioned field is labelled `null`);
+- **per-field accuracy**, to see which field breaks;
+- **unsupported recall:** counted per term: 12 expected terms over 10 queries, and a term is caught when a string the model returned in `unsupported` contains it (case-insensitive substring match);
+- **422 rate:** how often the boundary rejected the output;
+- **latency median and p95**, read from the `ai_runs` rows of calls that produced output.
+
+The eval queries are kept out of every prose document by the same contamination test as the RAG questions, so this section describes them and never quotes them.
+
+**What the eval found** (2026-11-09, prompt `listing-filters@v1`, 40 queries per model, local Ollama):
+
+| Model | Exact match | Unsupported recall | Latency median | Latency p95 |
+|---|---|---|---|---|
+| qwen3.5:9b | 0.950 | 9/12 | 906 ms | 1123 ms |
+| gemma4:12b | 0.975 | 12/12 | 1008 ms | 2263 ms |
+
+Neither model produced a 422 (0 of 40). The first run scored 0.400 for both models, and the cause was my schema, not the prompt: `fuel` was a nullable string whose `enum` listed the five fuels but not `null`. Ollama turns the schema into a grammar, so the decoder could only emit one of the five, and on the 24 queries that do not mention fuel both models answered with one (23 `petrol`, 1 `electric`). Fuel accuracy was 0.400. `petrol` is a legal value, so validation passed it and the search narrowed silently. Adding `null` to the enum, with the prompt unchanged, took fuel accuracy from 0.400 to 0.975 and exact match from 0.400 to 0.950 (qwen3.5:9b) and 0.975 (gemma4:12b). The two cells that still miss are one query where both models inferred `electric` from a make, and one model name from qwen3.5:9b. That is the lesson of the section: **validation makes output safe, an eval makes it correct, and a schema must let the model say "nothing".** Other hardening in the same pass: the model's integers must be real JSON integers (`true`, `2019.0` and `"2019"` are field errors), strings may not contain NUL bytes, the model call has its own 20 s timeout (`ai.nl_search.timeout`) instead of the 120 s streaming one, and `ListingFilter::fromValidated()` is the single place where validated input becomes a filter for both `/listings` and this endpoint. The full tables and the surprises are in the "Natural-language search" section of [`BENCHMARKS.md`](../BENCHMARKS.md).
+
+**In this repo.** Code: [`ListingFilterAgent`](../app/Ai/ListingFilterAgent.php), [`NlSearchService`](../app/Services/NlSearchService.php), [`NlSearchController`](../app/Http/Controllers/NlSearchController.php), [`ListingFilterRules`](../app/Rules/ListingFilterRules.php), [`NlEvalCommand`](../app/Console/Commands/NlEvalCommand.php), [`NlEvalScorer`](../app/Services/NlEvalScorer.php); prompt [`listing-filters.v1.md`](../resources/prompts/listing-filters.v1.md); eval set [`queries.v1.jsonl`](../bench/nl-search/queries.v1.jsonl); results [`bench/results/nl-search/2026-11-09/`](../bench/results/nl-search/2026-11-09/). Tests: [`NlSearchTest`](../tests/Feature/NlSearchTest.php) (one per criterion, with faked structured output), [`NlEvalCommandTest`](../tests/Feature/NlEvalCommandTest.php), [`AiLabNlSearchTest`](../tests/Feature/AiLabNlSearchTest.php). Spec: [`.ai/specs/spec-20261109-1213-nl-search/`](../.ai/specs/spec-20261109-1213-nl-search/).
+
+**Read next.** [Laravel AI SDK: structured output](https://laravel.com/docs/13.x/ai-sdk) · [Ollama: structured outputs](https://ollama.com/blog/structured-outputs) · [OWASP: LLM01 prompt injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/)
+
+---
+
 ## Planned sections
 
 Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):
 
 - **Server track:** Early Hints and compression (SL-10), real-time updates with Reverb (SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
-- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; structured output (SL-23); tool calling (SL-25); evals (SL-26); vision (SL-27); model comparison (SL-28); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39, shown on the `/ai/photos` placeholder); a research agent (SL-42); a prompt playground (SL-43).
+- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; tool calling (SL-25); evals (SL-26); vision (SL-27); model comparison (SL-28); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39, shown on the `/ai/photos` placeholder); a research agent (SL-42); a prompt playground (SL-43).

@@ -3,6 +3,7 @@
 use App\Http\Controllers\AskDocsController;
 use App\Http\Controllers\DescribeListingController;
 use App\Http\Controllers\ListListingsController;
+use App\Http\Controllers\NlSearchController;
 use App\Http\Controllers\SearchDocsController;
 use App\Http\Controllers\SemanticSearchController;
 use App\Http\Controllers\ServeExportController;
@@ -31,6 +32,9 @@ Route::get('/listings/{id}/describe', DescribeListingController::class)
 Route::get('/api/listings/semantic', SemanticSearchController::class)
     ->middleware(['throttle:semantic-search', AddServerTimingHeader::class])
     ->name('listings.semantic');
+Route::get('/api/listings/nl', NlSearchController::class)
+    ->middleware(['throttle:nl-search', AddServerTimingHeader::class])
+    ->name('listings.nl');
 Route::get('/api/docs/search', SearchDocsController::class)
     ->middleware(['throttle:docs-search', AddServerTimingHeader::class])
     ->name('docs.search');

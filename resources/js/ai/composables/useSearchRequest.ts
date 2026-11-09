@@ -1,5 +1,6 @@
 export interface ServerTimings {
     embed: number | null;
+    model: number | null;
     db: number | null;
 }
 
@@ -8,13 +9,13 @@ export type SearchOutcome<T> =
     | { ok: false; message: string; status: number | null };
 
 export function parseServerTiming(header: string | null): ServerTimings {
-    const timings: ServerTimings = { embed: null, db: null };
+    const timings: ServerTimings = { embed: null, model: null, db: null };
 
     for (const entry of (header ?? '').split(',')) {
         const [name, ...params] = entry.trim().split(';');
         const duration = params.map((param) => param.trim()).find((param) => param.startsWith('dur='));
 
-        if ((name === 'embed' || name === 'db') && duration !== undefined) {
+        if ((name === 'embed' || name === 'model' || name === 'db') && duration !== undefined) {
             const value = Number(duration.slice(4));
             timings[name] = Number.isFinite(value) ? value : null;
         }

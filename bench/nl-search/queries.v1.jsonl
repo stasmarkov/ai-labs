@@ -1,0 +1,40 @@
+{"id":"nl-01","query":"petrol Audi A4 in Berlin from 2016 up to 15000 euros","expected":{"make":"Audi","model":"A4","city":"Berlin","fuel":"petrol","min_year":2016,"max_price_eur":15000},"unsupported":[]}
+{"id":"nl-02","query":"electric Tesla Model 3 in Amsterdam under 30k","expected":{"make":"Tesla","model":"Model 3","city":"Amsterdam","fuel":"electric","min_year":null,"max_price_eur":30000},"unsupported":[]}
+{"id":"nl-03","query":"Volkswagen Golf diesel Hamburg","expected":{"make":"Volkswagen","model":"Golf","city":"Hamburg","fuel":"diesel","min_year":null,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-04","query":"hybrid Toyota Corolla after 2020","expected":{"make":"Toyota","model":"Corolla","city":null,"fuel":"hybrid","min_year":2021,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-05","query":"Skoda Octavia in Prague from 2015","expected":{"make":"Skoda","model":"Octavia","city":"Prague","fuel":null,"min_year":2015,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-06","query":"lpg Opel in Dresden","expected":{"make":"Opel","model":null,"city":"Dresden","fuel":"lpg","min_year":null,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-07","query":"Ford Focus petrol under 8000 euros","expected":{"make":"Ford","model":"Focus","city":null,"fuel":"petrol","min_year":null,"max_price_eur":8000},"unsupported":[]}
+{"id":"nl-08","query":"Honda Civic in Lyon, 2019 or newer","expected":{"make":"Honda","model":"Civic","city":"Lyon","fuel":null,"min_year":2019,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-09","query":"Renault Clio after 2017","expected":{"make":"Renault","model":"Clio","city":null,"fuel":null,"min_year":2018,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-10","query":"diesel Volvo XC60 after 2015 in Stuttgart","expected":{"make":"Volvo","model":"XC60","city":"Stuttgart","fuel":"diesel","min_year":2016,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-11","query":"Peugeot 308 from 2018 onwards","expected":{"make":"Peugeot","model":"308","city":null,"fuel":null,"min_year":2018,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-12","query":"Mercedes-Benz C-Class after 2019 under 35k","expected":{"make":"Mercedes-Benz","model":"C-Class","city":null,"fuel":null,"min_year":2020,"max_price_eur":35000},"unsupported":[]}
+{"id":"nl-13","query":"Hyundai Tucson 2018 or newer","expected":{"make":"Hyundai","model":"Tucson","city":null,"fuel":null,"min_year":2018,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-14","query":"Toyota Yaris for €15 000 or less","expected":{"make":"Toyota","model":"Yaris","city":null,"fuel":null,"min_year":null,"max_price_eur":15000},"unsupported":[]}
+{"id":"nl-15","query":"BMW 3 Series under 25k in Cologne","expected":{"make":"BMW","model":"3 Series","city":"Cologne","fuel":null,"min_year":null,"max_price_eur":25000},"unsupported":[]}
+{"id":"nl-16","query":"Volkswagen Polo max 9.5k","expected":{"make":"Volkswagen","model":"Polo","city":null,"fuel":null,"min_year":null,"max_price_eur":9500},"unsupported":[]}
+{"id":"nl-17","query":"electric car below 40k","expected":{"make":null,"model":null,"city":null,"fuel":"electric","min_year":null,"max_price_eur":40000},"unsupported":[]}
+{"id":"nl-18","query":"Audi Q5 diesel up to €22,500","expected":{"make":"Audi","model":"Q5","city":null,"fuel":"diesel","min_year":null,"max_price_eur":22500},"unsupported":[]}
+{"id":"nl-19","query":"show me everything","expected":{"make":null,"model":null,"city":null,"fuel":null,"min_year":null,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-20","query":"what do you have?","expected":{"make":null,"model":null,"city":null,"fuel":null,"min_year":null,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-21","query":"any car will do","expected":{"make":null,"model":null,"city":null,"fuel":null,"min_year":null,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-22","query":"all listings please","expected":{"make":null,"model":null,"city":null,"fuel":null,"min_year":null,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-23","query":"BMW in Lviv","expected":{"make":"BMW","model":null,"city":"Lviv","fuel":null,"min_year":null,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-24","query":"diesel Skoda in Krakow","expected":{"make":"Skoda","model":null,"city":"Krakow","fuel":"diesel","min_year":null,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-25","query":"electric cars in Oslo under 35k","expected":{"make":null,"model":null,"city":"Oslo","fuel":"electric","min_year":null,"max_price_eur":35000},"unsupported":[]}
+{"id":"nl-26","query":"Toyota in Barcelona from 2018","expected":{"make":"Toyota","model":null,"city":"Barcelona","fuel":null,"min_year":2018,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-27","query":"estate Volkswagen Passat in Berlin","expected":{"make":"Volkswagen","model":"Passat","city":"Berlin","fuel":null,"min_year":null,"max_price_eur":null},"unsupported":["estate"]}
+{"id":"nl-28","query":"red Audi A3 under 12k","expected":{"make":"Audi","model":"A3","city":null,"fuel":null,"min_year":null,"max_price_eur":12000},"unsupported":["red"]}
+{"id":"nl-29","query":"cheap diesel Opel in Hannover","expected":{"make":"Opel","model":null,"city":"Hannover","fuel":"diesel","min_year":null,"max_price_eur":null},"unsupported":["cheap"]}
+{"id":"nl-30","query":"BMW X3 with low mileage","expected":{"make":"BMW","model":"X3","city":null,"fuel":null,"min_year":null,"max_price_eur":null},"unsupported":["low mileage"]}
+{"id":"nl-31","query":"SUV Volvo in Vienna after 2016","expected":{"make":"Volvo","model":null,"city":"Vienna","fuel":null,"min_year":2017,"max_price_eur":null},"unsupported":["SUV"]}
+{"id":"nl-32","query":"Ford Fiesta before 2015","expected":{"make":"Ford","model":"Fiesta","city":null,"fuel":null,"min_year":null,"max_price_eur":null},"unsupported":["before 2015"]}
+{"id":"nl-33","query":"black Tesla with leather seats","expected":{"make":"Tesla","model":null,"city":null,"fuel":null,"min_year":null,"max_price_eur":null},"unsupported":["black","leather seats"]}
+{"id":"nl-34","query":"automatic Mercedes-Benz E-Class estate in Frankfurt","expected":{"make":"Mercedes-Benz","model":"E-Class","city":"Frankfurt","fuel":null,"min_year":null,"max_price_eur":null},"unsupported":["automatic","estate"]}
+{"id":"nl-35","query":"convertible petrol Honda under 20k","expected":{"make":"Honda","model":null,"city":null,"fuel":"petrol","min_year":null,"max_price_eur":20000},"unsupported":["convertible"]}
+{"id":"nl-36","query":"Skoda Fabia with under 80,000 km","expected":{"make":"Skoda","model":"Fabia","city":null,"fuel":null,"min_year":null,"max_price_eur":null},"unsupported":["80,000 km"]}
+{"id":"nl-37","query":"Peugeot 208 in Paris","expected":{"make":"Peugeot","model":"208","city":"Paris","fuel":null,"min_year":null,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-38","query":"lpg Renault Captur under 11000","expected":{"make":"Renault","model":"Captur","city":null,"fuel":"lpg","min_year":null,"max_price_eur":11000},"unsupported":[]}
+{"id":"nl-39","query":"Madrid Toyota RAV4 hybrid from 2019","expected":{"make":"Toyota","model":"RAV4","city":"Madrid","fuel":"hybrid","min_year":2019,"max_price_eur":null},"unsupported":[]}
+{"id":"nl-40","query":"Milan Audi A6 diesel","expected":{"make":"Audi","model":"A6","city":"Milan","fuel":"diesel","min_year":null,"max_price_eur":null},"unsupported":[]}

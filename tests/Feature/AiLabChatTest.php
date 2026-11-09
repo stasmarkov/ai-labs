@@ -27,10 +27,10 @@ it('AC-10 the chat capability is ready and the overview lists photos as the only
     $this->get('/ai')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->where('capabilities.3.key', 'chat')
-            ->where('capabilities.3.status', 'ready')
-            ->where('capabilities.4.key', 'photos')
-            ->where('capabilities.4.status', 'coming'));
+            ->where('capabilities.4.key', 'chat')
+            ->where('capabilities.4.status', 'ready')
+            ->where('capabilities.5.key', 'photos')
+            ->where('capabilities.5.status', 'coming'));
 });
 
 it('MNC-3 the overview shows the refused and no_context runs as text', function (): void {

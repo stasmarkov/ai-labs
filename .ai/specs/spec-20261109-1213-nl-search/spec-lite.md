@@ -4,7 +4,7 @@ title: Natural-language search turned into the listing filters by a structured-o
 type: feature
 size: M
 priority: P2
-status: approved
+status: in-progress
 ticket:
 stakeholders: [Stanislav Markov]
 approved_by: Stas Markov (standing approval)

@@ -32,5 +32,6 @@ final readonly class AiRunRecord
         public ?string $origin = null,
         public ?int $historyTurns = null,
         public ?int $stoppedAfterMs = null,
+        public ?bool $validationFailed = null,
     ) {}
 }

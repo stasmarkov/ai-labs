@@ -194,7 +194,7 @@ final class AiRunRecorder
     /**
      * Writes the row of a model call that was not streamed. Returns its invocation id, the SDK's when it has one.
      *
-     * @param  list<int>  $retrieved
+     * @param  list<int>|null  $retrieved
      * @param  list<int>|null  $cited
      */
     public function recordRun(
@@ -204,13 +204,15 @@ final class AiRunRecorder
         string $model,
         ?string $promptVersion,
         int $latencyMs,
-        array $retrieved,
+        ?array $retrieved,
         ?array $cited = null,
         ?int $tokensIn = null,
         ?int $tokensOut = null,
         ?string $invocationId = null,
         ?Throwable $exception = null,
         ?string $refusalReason = null,
+        ?bool $validationFailed = null,
+        ?string $origin = null,
     ): string {
         $invocationId ??= (string) Str::uuid();
 
@@ -230,6 +232,8 @@ final class AiRunRecorder
             retrievedChunkIds: $retrieved,
             citedChunkIds: $cited,
             refusalReason: $refusalReason === null ? null : mb_substr($refusalReason, 0, self::MAX_REASON_LENGTH),
+            origin: $origin,
+            validationFailed: $validationFailed,
         )));
 
         return $invocationId;

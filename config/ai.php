@@ -102,6 +102,15 @@ return [
         ],
     ],
 
+    'nl_search' => [
+        // Requests allowed per minute per IP (each one runs the model), and the models a caller may name; null means
+        // the active provider's text model plus gemma4:12b.
+        'per_minute' => filled(env('AI_NL_SEARCH_PER_MINUTE')) ? (int) env('AI_NL_SEARCH_PER_MINUTE') : 20,
+        'models' => null,
+        // HTTP timeout in seconds of the model call; shorter than the provider's 120 s, which is sized for streamed chat.
+        'timeout' => filled(env('AI_NL_SEARCH_TIMEOUT')) ? max(1, (int) env('AI_NL_SEARCH_TIMEOUT')) : 20,
+    ],
+
     'semantic_per_minute' => filled(env('AI_SEMANTIC_PER_MINUTE')) ? (int) env('AI_SEMANTIC_PER_MINUTE') : 60,
 
     /*
@@ -124,6 +133,7 @@ return [
         'car_description' => env('AI_PROMPT_CAR_DESCRIPTION') ?: 'car-description.v1',
         'docs_answer' => env('AI_PROMPT_DOCS_ANSWER') ?: 'docs-answer.v1',
         'docs_answer_history' => env('AI_PROMPT_DOCS_ANSWER_HISTORY') ?: 'docs-answer.v2',
+        'listing_filters' => env('AI_PROMPT_LISTING_FILTERS') ?: 'listing-filters.v1',
         'rag_grader' => env('AI_PROMPT_RAG_GRADER') ?: 'rag-grader.v2',
     ],
 

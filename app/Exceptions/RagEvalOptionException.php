@@ -32,4 +32,12 @@ final class RagEvalOptionException extends InvalidArgumentException
     {
         return new self("Invalid --output-dir {$path}: result directories must be inside {$root}.");
     }
+
+    /**
+     * @param  list<string>  $allowed
+     */
+    public static function unknownModel(string $model, array $allowed): self
+    {
+        return new self("Unknown model \"{$model}\": use one of ".implode(', ', $allowed).'.');
+    }
 }

@@ -728,3 +728,55 @@ test('AC-6 BENCHMARKS.md quotes the committed Mercure subscriber runs and contra
         expect($doc)->toContain($needle);
     }
 });
+
+test('AC-8 BENCHMARKS.md natural-language search section quotes the committed eval numbers', function (): void {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+    $result = json_decode((string) file_get_contents(base_path('bench/results/nl-search/2026-11-09/run.json')), true, flags: JSON_THROW_ON_ERROR);
+
+    preg_match('/^## Natural-language search \(2026-11-09\)\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $section = $matches[1] ?? '';
+    expect($section)->not->toBe('');
+
+    foreach (['### What the numbers say', '### Surprises', '### Interview story', 'bench/results/nl-search/2026-11-09/', 'queries.v1.jsonl', 'nl:eval', 'listing-filters@v1'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    expect($result['models'])->toHaveCount(2);
+    foreach ($result['models'] as $model) {
+        $row = sprintf(
+            '| %s | %.3f (%d/%d) | %d/%d (%.3f) | %d/%d | %d ms | %d ms |',
+            $model['model'],
+            $model['exact_match']['rate'],
+            $model['exact_match']['count'],
+            $model['queries'],
+            $model['unsupported_recall']['caught'],
+            $model['unsupported_recall']['expected'],
+            $model['unsupported_recall']['recall'],
+            $model['validation_422']['count'],
+            $model['queries'],
+            $model['latency_ms']['median'],
+            $model['latency_ms']['p95'],
+        );
+        expect($section)->toContain($row);
+
+        $fields = sprintf(
+            '| %s | %.3f | %.3f | %.3f | %.3f | %.3f | %.3f |',
+            $model['model'],
+            ...array_values($model['field_accuracy']),
+        );
+        expect($section)->toContain($fields);
+    }
+});
+
+test('AC-9 BENCHMARKS.md describes unsupported recall per term', function () {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+    preg_match('/^## Natural-language search \(2026-11-09\)\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)
+        ->toContain('per term')
+        ->toContain('12 expected terms over 10 queries')
+        ->toContain('case-insensitive substring')
+        ->not->toContain('12 queries')
+        ->not->toContain('is not empty');
+});
