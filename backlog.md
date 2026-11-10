@@ -186,7 +186,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-60, BR-26
 - **Depends on:** SL-13
 - **Blocked by:** none
-- **Status:** approved
+- **Status:** dropped (2026-11-10: servers narrowed to the FrankenPHP family; Reverb on nginx-fpm no longer in scope)
 - **Spec:** —
 - **Source:** brief (Phase 5)
 - **Run:** `/sdd "SL-14: live price updates on nginx-fpm via Laravel Reverb + Echo, and a 500-subscriber load test comparing publish-to-receive latency, memory per 1 000 subscribers and moving parts for Mercure vs Reverb (BR-60, BR-26). Rules in product-brief.md."`
@@ -641,6 +641,45 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Source:** owner request 2026-11-05 (Stanislav Markov: "update the UI to make it better in terms of studying")
 - **Run:** `/sdd "SL-48: make the AI lab UI a study tool: per page a 'how it works' panel synced with the live event log, links to the guide section and code files, the measured numbers from BENCHMARKS.md, and guided experiments (predict, run, compare) for describe, semantic search, docs search, chat with cache and stop, and every AI capability shipped since; keep the lab's design system. Rules in product-brief.md."`
 
+### SL-49 · Rename to ai-lab and a study-lab homescreen
+
+- **Outcome:** The project is called ai-lab everywhere: the DDEV project and URL (https://ai-lab.ddev.site), `APP_NAME`, README, guide, `BENCHMARKS.md`, specs' run lines, scripts and tests. The database is carried over intact. `/` becomes the lab's landing page: what the lab teaches, how to run it (`ddev setup`), the capability map with links into `/ai` and the guide, and the providers and server modes available.
+- **Entry point:** `/`, `.ddev/config.yaml` `name:` (owner-approved 2026-11-10), README
+- **Size:** M
+- **BRs:** BR-27
+- **Depends on:** SL-47
+- **Blocked by:** none
+- **Status:** specced
+- **Spec:** spec-20261110-1014-rename-ai-lab
+- **Source:** owner request 2026-11-10 (Stanislav Markov: "rename the project and call it ai-lab … change the homescreen")
+- **Run:** `/sdd "SL-49: rename the project to ai-lab: DDEV project name (config.yaml, owner-approved) with a DB snapshot carried over, URL https://ai-lab.ddev.site in code, scripts, tests, docs and specs; APP_NAME; README rewritten for learners; / becomes the study-lab landing page (what it teaches, ddev setup, capability map into /ai and the guide, providers and server modes); historical result files keep their recorded URLs. Rules in product-brief.md."`
+
+### SL-50 · FrankenPHP family only
+
+- **Outcome:** The lab runs only on FrankenPHP: classic (default, with Mercure), its native worker mode, and Octane. The nginx-fpm, apache-fpm and OpenLiteSpeed overlays, configs, bench cells, parity baselines and tests are removed, and the remaining scripts and docs describe three modes; past measurements stay as history.
+- **Entry point:** `ddev server`, `.ddev/servers/`, `bench/`, `.ddev/config.yaml` base settings (ask first)
+- **Size:** M
+- **BRs:** BR-26, BR-27
+- **Depends on:** SL-49
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** owner decision 2026-11-10 ("Keep only frankenphp, and drop not needed … interested how to use frankenphp and octane in laravel")
+- **Run:** `/sdd "SL-50: narrow the servers to the FrankenPHP family (classic default with Mercure, native worker, Octane): remove nginx-fpm, apache-fpm and openlitespeed overlays, configs, bench cells, parity baselines, tests and docs references; keep their past results as history; parity across the three FrankenPHP modes; .ddev/config.yaml base only if needed (ask first). Rules in product-brief.md."`
+
+### SL-51 · Optional cloud providers: Claude, OpenAI, Gemini
+
+- **Outcome:** Every AI feature can run on Ollama (default) or, when its key is in `.env`, on Claude (Anthropic), OpenAI or Gemini, switched by configuration only (BR-91). The lab shows which providers are configured and lets the learner pick one per run; `ai_runs` records provider and model; tests stay offline with fakes; the guide explains provider differences (streaming events, structured output, tool calling, embeddings, cost).
+- **Entry point:** `config/ai.php`, `.env.example`, lab provider selector
+- **Size:** M
+- **BRs:** BR-90, BR-91, BR-27
+- **Depends on:** SL-49
+- **Blocked by:** none
+- **Status:** approved
+- **Spec:** —
+- **Source:** owner decision 2026-11-10 ("Ollama default + Claude, OpenAI, Gemini optional")
+- **Run:** `/sdd "SL-51: optional cloud providers through laravel/ai: Anthropic (Claude), OpenAI and Gemini next to the Ollama default, each enabled only by its API key in .env (never committed), per-feature provider/model selection by config and a lab selector, ai_runs provider/model, embeddings provider per feature, offline tests with fakes, a provider capability table in the guide. Rules in product-brief.md."`
+
 ## Intake log
 
 | Date | Source | Item | Class | Went to |
@@ -677,3 +716,4 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 | 2026-11-02 | Claude (standing approval) | SL-32 sized L with 10–12 tasks | Split | SL-32 narrowed to index and hybrid retrieval; answering, citations and guard moved to new SL-45; SL-33, SL-40, SL-41 now depend on SL-45 |
 | 2026-11-03 | Stanislav Markov | UI for AI capabilities (chat streaming, similar photos), Inertia or similar, design by Claude | New slice | SL-46 AI lab UI, before SL-45; SL-41 builds inside it |
 | 2026-11-05 | Stanislav Markov | After SL-13 keep FrankenPHP + Mercure as default; finish everything AI; guide; study-focused UI | New slices + approval | SL-47 (default server), SL-48 (study UI); SL-34, SL-35, SL-42, SL-43 approved; order SL-13 → SL-47 → AI (SL-23, SL-25, SL-26, SL-27, SL-34, SL-35, SL-42, SL-43; SL-28 needs Q-04, SL-36–39 need Q-06) → SL-48 → SL-44 |
+| 2026-11-10 | Stanislav Markov | Rename to ai-lab; study purpose; AI in Laravel with local and cloud providers; keep only FrankenPHP (classic, worker, Octane) | Pivot | product-brief revised; SL-49 rename + homescreen, SL-50 FrankenPHP only, SL-51 cloud providers; SL-14 dropped; order SL-49 → SL-50 → SL-51 → SL-25 … → SL-28 (now models and providers) → SL-48 → SL-44, then SL-15–17 on FrankenPHP |

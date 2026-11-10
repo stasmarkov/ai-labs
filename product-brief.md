@@ -1,5 +1,5 @@
 ---
-product: AutoPulse
+product: ai-lab
 owner: Stanislav Markov
 status: draft
 validated_by:
@@ -7,64 +7,64 @@ validated_at:
 stacks: [laravel]
 ---
 
-# AutoPulse product brief
+# ai-lab product brief
+
+*Renamed from AutoPulse on 2026-11-10 (Stanislav Markov): the project is now a study lab for implementing AI features in Laravel. The car marketplace stays as the demo domain. The history of the server-comparison phase stays in `BENCHMARKS.md` and the guide.*
 
 ## Problem
 
-PHP developers choosing a server setup hear claims like "FrankenPHP is faster" or "Octane gives 10×",
-but rarely have their own numbers. DDEV's own benchmark found nginx-fpm, apache-fpm and FrankenPHP
-classic roughly comparable at default settings and did not test worker mode. Without first-hand
-measurements and a reproduced state leak, it is hard to defend a production choice or tell a credible
-story in an interview.
+A Laravel developer who wants to add AI features finds scattered tutorials. Each one shows one provider, one happy path and no numbers. Questions like these rarely get a worked, runnable answer in one place: how do you stream an answer, cancel it, cite sources, guard against prompt injection, cache, evaluate, call tools, use structured output, embed images, or switch between a local model and Claude, OpenAI or Gemini without rewriting code? And what does each choice cost in latency, accuracy and server resources?
 
-AutoPulse is a small but realistic car marketplace that runs, unchanged, behind five servers on DDEV:
-nginx + PHP-FPM, Apache + PHP-FPM, OpenLiteSpeed + LSAPI, FrankenPHP classic, and FrankenPHP worker
-mode via Octane. Then it adds features that only make sense on FrankenPHP (worker mode, thread
-autoscaling, Early Hints, built-in Mercure, metrics, hot reload, Go extensions, a standalone binary) and
-local-LLM features, and measures what each one actually changes. The output is the app, one DDEV config
-per server, load-test scripts, and BENCHMARKS.md with self-produced numbers, ratios and trade-offs.
+ai-lab is a Laravel 13 app that anyone can clone, start with `ddev setup` and study. Every AI capability is implemented the Laravel way, on a realistic demo domain (a 50 000-listing car marketplace). It is visible in the `/ai` lab with "how it works" next to the live run, measured in `BENCHMARKS.md`, and explained step by step in `docs/learning-guide.md` with links to the code. It runs on FrankenPHP: classic mode, worker mode and Octane, with the built-in Mercure hub. The lab also shows how FrankenPHP and Octane change the way AI features are served (streaming, held workers, live updates).
 
-**Constraints:** Laravel 13 on PHP 8.4, in the existing DDEV project in this repo. PostgreSQL 16 with
-pgvector (replacing the current MariaDB 11.8). Redis for cache and sessions. Pest as the test framework
-(replacing PHPUnit). All LLM work uses local open-weight models from Hugging Face on a MacBook Pro M3 Max
-with 36 GB RAM, or a fake provider.
+**Constraints:**
+- **Stack:** Laravel 13 on PHP 8.4, in DDEV (project `ai-lab`, https://ai-lab.ddev.site). PostgreSQL 16 with pgvector. Redis for cache and sessions. Pest. The Laravel AI SDK (`laravel/ai`) is the client library.
+- **Models:** local open-weight models through Ollama are the default, so the lab runs for free and offline. Claude (Anthropic), OpenAI and Gemini are optional providers, switched on by putting their API key in `.env` (never committed). Every feature works with the local default, and the test suite runs offline with fakes.
+- **Servers:** the FrankenPHP family only: classic, its native worker mode, and Octane. nginx-fpm, apache-fpm and OpenLiteSpeed are removed (owner decision 2026-11-10); their past measurements remain as history.
 
 ## Users and roles
 
 | Role | Who | Can |
 |------|-----|-----|
-| Visitor | anyone, not signed in (load generator included) | search listings, open a listing detail page, receive live price updates, download an export, use the AI features |
-| Developer | Stanislav Markov, on the local machine | switch the server under test, toggle leak-lab modes, run benchmarks, read metrics and logs, restart workers |
-| Interviewer | reader of BENCHMARKS.md and the stories | read results, ratios, trade-offs and conclusions |
+| Learner | any developer who clones the repo | run `ddev setup`, use every AI feature in the lab, read the guide and the code, run the benches and evals, switch providers and server modes |
+| Visitor | anyone using the demo site | search listings, open a listing page, receive live price updates, use the AI features |
+| Maintainer | Stanislav Markov | everything above, plus the backlog and specs |
 
-There is no authentication; every endpoint is public on the local DDEV network.
+There is no authentication; every endpoint is public on the local DDEV network. Debug and lab-only endpoints stay behind `DEBUG_ROUTES`.
 
 ## MVP scope
 
-1. **Marketplace core.** Seeded dealers and listings; JSON ping and health endpoints; paginated, filtered listing search; listing detail page with CSS, JS and a hero image.
-2. **Five server configs.** One DDEV overlay per server (nginx-fpm, apache-fpm, FrankenPHP classic, FrankenPHP worker via Octane, OpenLiteSpeed), each serving identical responses, with a README note on switching.
-3. **Benchmark harness.** Load-test scripts and a repeatable procedure that fills BENCHMARKS.md tables per endpoint and scenario.
-4. **Process vs thread comparison.** Memory, RPS and latency of four non-worker servers, plus request-timeout behaviour.
-5. **Worker mode and state-leak lab.** Four toggleable leaks, a worker-inspection endpoint, and classic vs worker numbers.
-6. **Slow I/O and autoscaling.** A slow endpoint behind a stub external API, a health endpoint that must stay fast, and FPM vs FrankenPHP thread settings compared.
-7. **HTTP features.** 103 Early Hints, zstd/brotli/gzip compression, large CSV export offloaded to the web server, one HTTP/3 request.
-8. **Real-time price updates.** Live price changes via FrankenPHP's built-in Mercure hub, and the same via Reverb on nginx-fpm.
-9. **Observability.** Prometheus + Grafana with FrankenPHP and FPM metrics, structured PHP logs, worker restart through the admin API.
-10. **Developer experience.** Worker watch, hot reload, Xdebug inside a worker.
-11. ~~**Go extension**~~ *(dropped 2026-11-01, Stanislav Markov: optional deep dive, cut to reach the learning guide sooner)*.
-12. ~~**Standalone binary**~~ *(dropped 2026-11-01, Stanislav Markov: optional deep dive)*.
-13. **AI streaming.** A car description streamed token by token over SSE (SL-20). The queued Mercure variant and its load test were dropped 2026-11-01 (Stanislav Markov).
-14. **Local LLM features.** Local model wiring, NL search to filters, semantic search, tool-calling assistant, moderation classifier with an eval set, car-photo vision, and a model/concurrency comparison.
-15. **AI integration lab.** Docs chatbot with RAG and citations, a RAG eval harness, an admin assistant with a hand-written agent loop and an MCP server, similar-car-photos by image embeddings (plus text-to-photo search, hybrid similarity, duplicate detection), a semantic cache, a streaming chat UI, a multi-step research agent and a prompt playground. Each one exists to show how its mechanism works.
+The history items (1–13) are kept for traceability. Struck items were removed by the 2026-11-10 pivot.
+
+1. **Marketplace core.** Seeded dealers and listings; JSON ping and health endpoints; paginated, filtered listing search; listing detail page. *(kept as the demo domain)*
+2. ~~**Five server configs.**~~ *(narrowed 2026-11-10 to the FrankenPHP family: classic, worker, Octane)*
+3. **Benchmark harness.** Load-test scripts and a repeatable procedure that fills `BENCHMARKS.md` tables per endpoint and scenario.
+4. ~~**Process vs thread comparison.**~~ *(history; FPM servers removed 2026-11-10)*
+5. **Worker mode and state-leak lab.** Four toggleable leaks and a worker-inspection endpoint, on FrankenPHP worker mode and Octane.
+6. **Slow I/O and autoscaling.** A slow endpoint and a health check under load, with FrankenPHP thread settings (FPM cells kept as history).
+7. **HTTP features.** 103 Early Hints, compression, file offload, HTTP/3, all on FrankenPHP.
+8. **Real-time updates.** Live price changes through FrankenPHP's built-in Mercure hub. ~~Reverb on nginx-fpm~~ *(dropped 2026-11-10)*.
+9. **Observability on FrankenPHP.** Caddy/FrankenPHP metrics, structured logs, worker restart.
+10. **Worker-mode developer experience.** Octane and FrankenPHP worker watch, hot reload, Xdebug in a worker.
+11. ~~**Go extension**~~ *(dropped 2026-11-01)*
+12. ~~**Standalone binary**~~ *(dropped 2026-11-01)*
+13. **AI streaming.** Answers streamed over SSE, with a Stop that really cancels.
+14. **AI features.**
+    - Provider wiring: local Ollama by default; Claude, OpenAI and Gemini optional; switching by configuration only.
+    - Search and understanding: NL search to filters, semantic search, moderation with an eval set.
+    - Agents and tools: a tool-calling assistant, an admin assistant with a hand-written agent loop, an MCP server, a research agent.
+    - Images: car-photo vision, image embeddings (similar photos, text-to-photo search, duplicates).
+    - Comparing and tuning: a model and provider comparison, a prompt playground.
+15. **AI integration lab.** Docs chatbot with RAG and citations, RAG evaluation, semantic cache, streaming chat UI, and a study-focused UI that explains each capability next to its live run.
 
 ## Non-goals
 
-- Production or cloud deployment, CDN, and TLS tuning (beyond one direct HTTP/3 container run).
-- Benchmarking other frameworks or languages; Swoole and RoadRunner appear only in the cheat sheet.
+- Production deployment, CDN and TLS tuning. The lab is deployable for study, not hardened for production traffic.
+- Servers other than FrankenPHP (classic, worker, Octane). Comparing them was the earlier phase; its numbers stay as history.
 - Real marketplace features: user accounts, payments, image upload, dealer admin.
-- Paid external APIs: the VIN API is a stub; no cloud LLM providers, LLM work is local models or a fake provider only.
-- Declaring a single "winning" server.
-- Go extensions, a single-binary build, the queued AI-streaming variant and its load test (dropped 2026-11-01, Stanislav Markov).
+- Making a cloud provider required. Each cloud provider is optional and needs only its key; no feature may depend on one.
+- Declaring a single "winning" model or provider.
+- Go extensions, a single-binary build, the queued AI-streaming variant (dropped 2026-11-01).
 
 ## Draft business rules
 
