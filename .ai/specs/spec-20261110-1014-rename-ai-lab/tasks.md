@@ -38,7 +38,7 @@
     - Parity (frankenphp, before the project rename, `PARITY_BASE_URL=https://interview.ddev.site`): six lines identical to the snapshots; `/listings/1` differs only through the base-URL rewrite (raw body hash still `097d5a85`); new hash `f840ff18` set in all six snapshots. `/` is not in the fixed request set.
     - Gates: full suite, Pint, PHPStan, `npm run typecheck`, `npm run build` green.
 
-- [ ] 6. Bench on a clean tree (checks)
+- [x] 6. Bench on a clean tree (checks)
   Covers: AC-5
   - [ ] 6.1 After the commit, `bench/run.sh ping --quick` exit 0 on the default server at the new URL
   - [ ] 6.2 **Verify**: recorded here
@@ -66,9 +66,9 @@
 
 ## Done when
 
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
 
 ## Phase: Gaps (converge round 1)
 
@@ -134,3 +134,4 @@
 - Task 10: real captures on all six servers. Only `/up` changed (its `<title>` is the app name), `compare frankenphp <server>` printed identical ×5, and the fingerprint is `app-DNob7CFE.css` / `app-PTzu1QaN.js`, unchanged.
 - Task 14, accepted deviation: test URL literals stay. `RenameTest` already fails on any stale host, and a later rename is one `sed`. Moving about 50 literals in 20 files was not worth the churn in this slice.
 - Not done (minor, recorded): `RenameTest` allowlists `.ddev/commands/host/setup` and `ServerDefaultCommandTest.php` as whole files, not single lines.
+- Task 6: after commit 078513e, `bench/run.sh ping --quick` exited 0 on frankenphp at https://ai-lab.ddev.site (result `bench/results/raw/2026-11-10/frankenphp/ping-fair-101455-s1r1.json`, spread 0 %).

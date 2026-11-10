@@ -649,7 +649,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-27
 - **Depends on:** SL-47
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261110-1014-rename-ai-lab
 - **Source:** owner request 2026-11-10 (Stanislav Markov: "rename the project and call it ai-lab … change the homescreen")
 - **Run:** `/sdd "SL-49: rename the project to ai-lab: DDEV project name (config.yaml, owner-approved) with a DB snapshot carried over, URL https://ai-lab.ddev.site in code, scripts, tests, docs and specs; APP_NAME; README rewritten for learners; / becomes the study-lab landing page (what it teaches, ddev setup, capability map into /ai and the guide, providers and server modes); historical result files keep their recorded URLs. Rules in product-brief.md."`
