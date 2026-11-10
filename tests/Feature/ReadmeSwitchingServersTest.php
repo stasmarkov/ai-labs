@@ -10,13 +10,28 @@ function switchingServersSection(): string
     return $matches[1] ?? '';
 }
 
-test('AC-13 README switching section documents the ddev server command', function (): void {
+test('AC-5 README switching section lists only the three FrankenPHP modes', function (): void {
     $section = switchingServersSection();
 
     expect($section)->not->toBe('')
-        ->toContain('ddev server')
-        ->toContain('nginx-fpm')
-        ->toContain('apache-fpm');
+        ->toContain('The default server is frankenphp')
+        ->toContain('ddev server frankenphp')
+        ->toContain('ddev server frankenphp-worker')
+        ->toContain('ddev server frankenphp-octane')
+        ->toContain('ddev server default')
+        ->not->toMatch('/nginx-fpm|apache-fpm|openlitespeed|8091|\.htaccess/i');
+});
+
+test('AC-5 docs and guides name no removed server outside the history', function (): void {
+    foreach (['README.md', 'docs/getting-started.md', 'docs/architecture.md', 'resources/guides/streaming.php', 'app/Services/LabHomeService.php'] as $file) {
+        expect(file_get_contents(base_path($file)))->not->toMatch('/nginx-fpm|apache-fpm|openlitespeed/i', $file);
+    }
+
+    $guide = file_get_contents(base_path('docs/learning-guide.md'));
+    preg_match('/^## 2\..*?^## 3\./ms', $guide, $section);
+
+    expect($section[0])->toContain('719c0a5')->toContain('frankenphp-octane');
+    expect(file_get_contents(base_path('BENCHMARKS.md')))->toContain('719c0a5');
 });
 
 test('AC-13 README switching section documents the parity workflow', function (): void {
@@ -25,8 +40,8 @@ test('AC-13 README switching section documents the parity workflow', function ()
     expect($section)->toContain('migrate:fresh --seed')
         ->toContain('bench/parity.sh capture')
         ->not->toContain('capture <server>')
-        ->toContain('bench/parity.sh compare frankenphp nginx-fpm')
-        ->toContain('bench/parity.sh compare frankenphp apache-fpm');
+        ->toContain('bench/parity.sh compare frankenphp frankenphp-octane')
+        ->toContain('bench/parity.sh compare frankenphp frankenphp-worker');
     expect(strpos($section, 'migrate:fresh --seed'))->toBeLessThan(strpos($section, 'bench/parity.sh capture'));
 });
 
@@ -40,10 +55,6 @@ test('AC-13 README switching section documents enabling debug runtime', function
         ->toContain('.env.example');
 });
 
-test('AC-13 README switching section notes Apache reads public/.htaccess on every request', function (): void {
-    expect(switchingServersSection())->toContain('public/.htaccess')->toContain('every request');
-});
-
 test('AC-11 README documents frankenphp, ZTS and logs', function (): void {
     $section = switchingServersSection();
 
@@ -54,17 +65,6 @@ test('AC-11 README documents frankenphp, ZTS and logs', function (): void {
         ->toContain('NTS')
         ->toContain('threads')
         ->toContain('ddev logs -f');
-});
-
-test('AC-11 README documents openlitespeed URL and htaccess restart', function (): void {
-    $section = switchingServersSection();
-
-    expect($section)->toContain('ddev server openlitespeed')
-        ->toContain('https://ai-lab.ddev.site:8091')
-        ->toContain('builds the image')
-        ->toContain('.htaccess')
-        ->toContain('start-up')
-        ->toContain('ddev restart');
 });
 
 test('AC-9 README explains how worker mode works', function (): void {
@@ -120,4 +120,14 @@ test('AC-10 manual test documents the octane:reload and logs steps', function ()
         ->toContain('ddev artisan octane:reload')
         ->toContain('Reloading workers')
         ->toContain('ddev logs');
+});
+
+test('AC-5 getting-started and the streaming guide name the three modes and ddev server', function (): void {
+    foreach (['docs/getting-started.md', 'resources/guides/streaming.php'] as $file) {
+        expect(file_get_contents(base_path($file)))
+            ->toContain('frankenphp-worker')
+            ->toContain('frankenphp-octane')
+            ->toContain('ddev server')
+            ->toMatch('/classic/i');
+    }
 });

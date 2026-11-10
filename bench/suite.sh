@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 ## Usage: bench/suite.sh [--quick] [--servers <a,b,c>]
-## Runs the whole matrix on the classic servers nginx-fpm, apache-fpm, openlitespeed and frankenphp:
+## Runs the whole matrix on the three modes frankenphp, frankenphp-worker and frankenphp-octane:
 ## ping and search, each as fair (8 workers), quick sweep (8/16/32), tuned (best sweep setting), then the
-## timeout comparison. Without --servers it refuses to start from a worker server.
-## --servers runs only the listed servers (any of the six, worker servers included). The ratio baseline is
-## nginx-fpm when it is listed, otherwise frankenphp; the baseline server runs first and the list must
-## contain one of them. The timeout comparison runs only without --servers. On exit it restores default
+## timeout comparison.
+## --servers runs only the listed modes. The ratio baseline is frankenphp when it is listed, otherwise the
+## first listed mode; the baseline server runs first. A removed server name exits 2 with the removal
+## message. The timeout comparison runs only without --servers. On exit it restores default
 ## concurrency, default timeouts and the default server (`ddev server --default`).
 
 set -Eeuo pipefail
@@ -14,10 +14,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 # shellcheck source=lib/default-server.sh
 source "$SCRIPT_DIR/lib/default-server.sh"
-SERVERS=(nginx-fpm apache-fpm openlitespeed frankenphp)
+# shellcheck source=lib/servers.sh
+source "$SCRIPT_DIR/lib/servers.sh"
+SERVERS=("${SUPPORTED_SERVERS[@]}")
 SCENARIOS=(ping search)
 SWEEP=(8 16 32)
-KNOWN_SERVERS=(nginx-fpm apache-fpm openlitespeed frankenphp frankenphp-octane frankenphp-worker)
 quick_args=()
 servers_given=0
 while [[ $# -gt 0 ]]; do
@@ -40,10 +41,6 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-is_worker() {
-  [[ "$1" == "frankenphp-octane" || "$1" == "frankenphp-worker" ]]
-}
-
 in_list() {
   local item="$1" entry
   shift
@@ -54,24 +51,24 @@ in_list() {
 }
 
 # The baseline of the ratio column, and the server order with the baseline first.
-BASELINE_SERVER=nginx-fpm
+BASELINE_SERVER=frankenphp
 if [[ $servers_given -eq 1 ]]; then
   if [[ ${#SERVERS[@]} -eq 0 ]]; then
     echo "--servers needs a comma separated list." >&2
     exit 2
   fi
   for entry in "${SERVERS[@]}"; do
-    if ! in_list "$entry" "${KNOWN_SERVERS[@]}"; then
+    if is_removed_server "$entry"; then
+      server_removed_message "$entry" >&2
+      exit 2
+    fi
+    if ! in_list "$entry" "${SUPPORTED_SERVERS[@]}"; then
       echo "Unknown server: $entry" >&2
       exit 2
     fi
   done
-  # Baseline for ratios (SL-08 spec): frankenphp if listed, otherwise nginx-fpm, otherwise the first server.
-  if in_list frankenphp "${SERVERS[@]}"; then
-    BASELINE_SERVER=frankenphp
-  elif in_list nginx-fpm "${SERVERS[@]}"; then
-    BASELINE_SERVER=nginx-fpm
-  else
+  # Baseline for ratios: frankenphp if listed, otherwise the first server.
+  if ! in_list frankenphp "${SERVERS[@]}"; then
     BASELINE_SERVER="${SERVERS[0]}"
   fi
   ordered=("$BASELINE_SERVER")
@@ -84,15 +81,6 @@ fi
 # runs cross midnight UTC. run.sh reads BENCH_DATE.
 BENCH_DATE="${BENCH_DATE:-$(date -u +%Y-%m-%d)}"
 export BENCH_DATE
-
-if [[ $servers_given -eq 0 ]]; then
-  for worker in frankenphp-octane frankenphp-worker; do
-    if [[ "$(ddev server --current)" == "$worker" ]]; then
-      echo "Active server is $worker. The suite runs classic servers only." >&2
-      exit 2
-    fi
-  done
-fi
 
 # Never write into a results folder that already holds committed results (e.g. SL-06's dated folder).
 if [[ -n "$(cd "$APPROOT" && git ls-files -- "bench/results/$BENCH_DATE" 2>/dev/null)" ]]; then
@@ -128,7 +116,7 @@ write_summary() {
   fi
   if [[ "$server" != "$BASELINE_SERVER" ]]; then
     baseline_args=("--baseline=$APPROOT/bench/results/$BENCH_DATE/$BASELINE_SERVER-$scenario-$label.json")
-  elif [[ "$server" != "nginx-fpm" ]]; then
+  else
     baseline_args=(--self-baseline)
   fi
   php "$SCRIPT_DIR/summary.php" "${raw_files[@]}" ${baseline_args[@]+"${baseline_args[@]}"} --write="$out" || [[ $? -eq 3 ]]

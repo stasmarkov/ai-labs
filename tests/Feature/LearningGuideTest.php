@@ -664,3 +664,25 @@ test('AC-8 learning guide section 16 lists every in-app guide file', function ()
         expect($section)->toContain('](../resources/guides/'.basename($file).')');
     }
 });
+
+test('AC-4 learning guide sections 1-8 that name a removed server start with the history line', function (): void {
+    $guide = file_get_contents(base_path('docs/learning-guide.md'));
+    $history = '*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.*';
+
+    foreach (range(1, 8) as $number) {
+        preg_match('/^## '.$number.'\. [^\n]*\n(.*?)(?=^## \d+\. |\z)/ms', $guide, $matches);
+        $section = $matches[1] ?? '';
+
+        expect($section)->not->toBe('');
+
+        if (preg_match('/nginx-fpm|apache-fpm|openlitespeed/i', $section) === 1) {
+            expect(ltrim($section))->toStartWith($history);
+        }
+
+        if ($number === 2) {
+            expect($section)->toContain('`frankenphp`')
+                ->toContain('`frankenphp-worker`')
+                ->toContain('`frankenphp-octane`');
+        }
+    }
+});

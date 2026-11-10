@@ -122,12 +122,12 @@ it('AC-4 NFR-1 lcp reads TTFB from the CDP document response timing, not from na
 });
 
 it('AC-4 lcp goes through the router address on the router path', function (): void {
-    $process = ($this->lcp)([], '--variant', 'nginx-fpm', '--path', 'router', '--path-reason', 'router forwards 103');
+    $process = ($this->lcp)([], '--variant', 'plain-origin', '--path', 'router', '--path-reason', 'router forwards 103');
     $calls = file_get_contents($this->root.'/calls.log');
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
         ->and($calls)->toContain('172.19.0.9')
-        ->and(($this->file)('nginx-fpm'))->toBeFile();
+        ->and(($this->file)('plain-origin'))->toBeFile();
 });
 
 it('AC-4 lcp refuses to run without a recorded path reason or with a bad path', function (): void {
@@ -175,9 +175,9 @@ function lcpRun(int $lcp, ?int $fcp): array
 }
 
 it('AC-4 NFR-1 lcp throttles at the network layer with a pinned toxiproxy container and keeps only the CPU slowdown in CDP', function (): void {
-    $process = ($this->lcp)([], '--variant', 'nginx-fpm', '--path', 'router', '--path-reason', 'r');
+    $process = ($this->lcp)([], '--variant', 'plain-origin', '--path', 'router', '--path-reason', 'r');
     $calls = file_get_contents($this->root.'/calls.log');
-    $result = json_decode(file_get_contents(($this->file)('nginx-fpm')), true);
+    $result = json_decode(file_get_contents(($this->file)('plain-origin')), true);
     $script = file_get_contents(base_path('bench/lcp.mjs'));
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
@@ -405,8 +405,8 @@ it('AC-2 lcp netem mode writes nothing when the qdisc drop rates are outside the
 
 it('MNC-2 AC-3 the toxiproxy result keeps exactly the SL-10 schema: no netem field at top level or in the samples, 3 valid runs are enough', function (): void {
     lcpDockerStub($this->root, [lcpRun(1000, 500), lcpRun(1100, 520), lcpRun(1200, 540), lcpRun(0, 560), lcpRun(1300, null)]);
-    $process = ($this->lcp)([], '--variant', 'nginx-fpm', '--path', 'router', '--path-reason', 'r');
-    $result = json_decode(file_get_contents(($this->file)('nginx-fpm')), true);
+    $process = ($this->lcp)([], '--variant', 'plain-origin', '--path', 'router', '--path-reason', 'r');
+    $result = json_decode(file_get_contents(($this->file)('plain-origin')), true);
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
         ->and(array_keys($result))->toBe([

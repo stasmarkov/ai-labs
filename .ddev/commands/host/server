@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 
-## Description: Show or switch the web server (nginx-fpm, apache-fpm, frankenphp, openlitespeed, frankenphp-octane or frankenphp-worker)
-## Usage: server [--current|--url|--default|--check <name>|default|nginx-fpm|apache-fpm|frankenphp|openlitespeed|frankenphp-octane|frankenphp-worker]
+## Description: Show or switch the web server (frankenphp, frankenphp-worker or frankenphp-octane)
+## Usage: server [--current|--url|--default|--check <name>|default|frankenphp|frankenphp-worker|frankenphp-octane]
 ## Example: ddev server frankenphp
 ## Example: ddev server default
 
 set -Eeuo pipefail
 
-# Supported servers. To add one, append it here and give it a case in overlay_for. A server
+# Supported servers (SUPPORTED_SERVERS in bench/lib/servers.sh). To add one, append it there and give it a case in overlay_for. A server
 # that needs extra files in .ddev/ keeps them in .ddev/servers/<name>/ and lists the ones to
 # activate in activated_files. A server may reuse another stash's file or override one of them;
 # activated_owner says which stash a file comes from.
-SUPPORTED=(nginx-fpm apache-fpm frankenphp openlitespeed frankenphp-octane frankenphp-worker)
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../../../bench/lib/servers.sh
+source "$SELF_DIR/../../../bench/lib/servers.sh"
+SUPPORTED=("${SUPPORTED_SERVERS[@]}")
 # The project's resting server. Scripts ask for it with "ddev server --default" instead of naming it.
 DEFAULT_SERVER=frankenphp
 APPROOT="${DDEV_APPROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
@@ -22,12 +25,10 @@ STASH="$APPROOT/.ddev/servers"
 # when several servers share a webserver_type (e.g. generic for FrankenPHP and Octane).
 overlay_for() {
   case "$1" in
-    nginx-fpm | apache-fpm) printf '# server: %s\nwebserver_type: %s\n' "$1" "$1" ;;
     frankenphp)
       printf '# server: frankenphp\n'
       cat "$STASH/frankenphp/config.frankenphp.yaml"
       ;;
-    openlitespeed) printf '# server: openlitespeed\nwebserver_type: nginx-fpm\n' ;;
     frankenphp-octane)
       printf '# server: frankenphp-octane\n'
       cat "$STASH/frankenphp-octane/config.frankenphp-octane.yaml"
@@ -40,14 +41,9 @@ overlay_for() {
   esac
 }
 
-# Prints the URL the active server answers on. Servers that run beside the web container
-# (openlitespeed) have their own router port; the others answer on the project URL.
+# Prints the URL the active server answers on: the project URL.
 base_url_for() {
-  local host="https://${DDEV_HOSTNAME:-ai-lab.ddev.site}"
-  case "$1" in
-    openlitespeed) echo "$host:8091" ;;
-    *) echo "$host" ;;
-  esac
+  echo "https://${DDEV_HOSTNAME:-ai-lab.ddev.site}"
 }
 
 # Prints the stash files (relative to .ddev/servers/<name>/ and to .ddev/) a server activates.
@@ -57,7 +53,6 @@ activated_files() {
       printf '%s\n' docker-compose.frankenphp.yaml web-build/Caddyfile.frankenphp \
         web-build/Dockerfile.frankenphp web-build/pre.Dockerfile.frankenphp
       ;;
-    openlitespeed) echo docker-compose.openlitespeed.yaml ;;
   esac
 }
 
@@ -71,9 +66,19 @@ activated_owner() {
   esac
 }
 
-# Deletes the activated files of every server except the given one.
+# Deletes files a removed server left in .ddev/ on an older checkout: its activated compose file points at a
+# stash that no longer exists, so ddev restart would fail on its missing build context.
+remove_removed_leftovers() {
+  local server
+  for server in "${REMOVED_SERVERS[@]}"; do
+    rm -f "$APPROOT/.ddev/docker-compose.$server.yaml"
+  done
+}
+
+# Deletes the activated files of every server except the given one, and any removed server's leftovers.
 deactivate_others() {
   local server file
+  remove_removed_leftovers
   for server in "${SUPPORTED[@]}"; do
     [[ "$server" == "$1" ]] && continue
     while IFS= read -r file; do
@@ -123,9 +128,6 @@ stash_files() {
   case "$1" in
     frankenphp | frankenphp-worker) echo frankenphp/config.frankenphp.yaml ;;
     frankenphp-octane) echo frankenphp-octane/config.frankenphp-octane.yaml ;;
-    openlitespeed)
-      printf 'openlitespeed/%s\n' VERSION Dockerfile conf/httpd_config.conf conf/vhosts/interview/vhconf.conf conf/zz-opcache.ini
-      ;;
   esac
   while IFS= read -r file; do
     [[ -z "$file" ]] || printf '%s/%s\n' "$(activated_owner "$1" "$file")" "$file"
@@ -148,7 +150,7 @@ bench_overlays() {
   local path
   for path in "$APPROOT"/.ddev/config.zz*-bench-*.yaml "$APPROOT"/.ddev/docker-compose.bench-*.yaml \
     "$APPROOT"/.ddev/web-entrypoint.d/zz-bench-*.sh "$APPROOT"/.ddev/php/zz-bench-*.ini \
-    "$APPROOT"/.ddev/bench-concurrency "$APPROOT"/.ddev/bench-timeouts "$APPROOT"/.ddev/nginx_full/nginx-site.conf.bench-orig; do
+    "$APPROOT"/.ddev/bench-concurrency "$APPROOT"/.ddev/bench-timeouts; do
     [[ -e "$path" ]] && printf '%s\n' "$path"
   done
   return 0
@@ -158,11 +160,7 @@ clear_bench_overlays() {
   local path
   while IFS= read -r path; do
     [[ -z "$path" ]] && continue
-    if [[ "$path" == *nginx-site.conf.bench-orig ]]; then
-      mv "$path" "${path%.bench-orig}"
-    else
-      rm -rf "$path"
-    fi
+    rm -rf "$path"
   done < <(bench_overlays)
 }
 
@@ -170,11 +168,7 @@ clear_bench_overlays() {
 is_current() {
   local file
   [[ -z "$(bench_overlays)" ]] || return 1
-  if [[ ! -f "$OVERLAY" ]]; then
-    # Active through config.yaml alone: current only for a server with no activated files.
-    [[ -z "$(activated_files "$1")" ]]
-    return
-  fi
+  [[ -f "$OVERLAY" ]] || return 1
   [[ "$(cat "$OVERLAY")" == "$2" ]] || return 1
   while IFS= read -r file; do
     [[ -z "$file" ]] && continue
@@ -182,22 +176,22 @@ is_current() {
   done < <(activated_files "$1")
 }
 
+# Prints the server the overlay names, or "not set up" without an overlay. The base config.yaml is only DDEV's bootstrap.
 active_server() {
-  local file="$OVERLAY" name
-  if [[ -f "$file" ]]; then
-    name="$(sed -n 's/^# server:[[:space:]]*//p' "$file" | head -n 1 | tr -d '[:space:]')"
-    if [[ -n "$name" ]]; then
-      printf '%s\n' "$name"
-      return
-    fi
-  else
-    file="$APPROOT/.ddev/config.yaml"
+  local name=""
+  if [[ -f "$OVERLAY" ]]; then
+    name="$(sed -n 's/^# server:[[:space:]]*//p' "$OVERLAY" | head -n 1 | tr -d '[:space:]')"
   fi
-  sed -n 's/^webserver_type:[[:space:]]*//p' "$file" | head -n 1 | tr -d '[:space:]"'
+  printf '%s\n' "${name:-not set up}"
 }
 
 if [[ $# -eq 0 ]]; then
-  echo "Active: $(active_server) (default: $DEFAULT_SERVER)"
+  active="$(active_server)"
+  if is_removed_server "$active"; then
+    echo "Active: $active (removed; run ddev server default) (default: $DEFAULT_SERVER)"
+  else
+    echo "Active: $active (default: $DEFAULT_SERVER)"
+  fi
   echo "Supported: ${SUPPORTED[*]}"
   [[ -f "$OVERLAY" ]] || echo "Not set up: run ddev setup"
   exit 0
@@ -219,7 +213,14 @@ if [[ "$1" == "--check" ]]; then
 fi
 
 if [[ "$1" == "--current" ]]; then
-  active_server
+  current="$(active_server)"
+  if [[ "$current" == "not set up" ]]; then
+    echo "not set up (run ddev setup)"
+  elif is_removed_server "$current"; then
+    echo "$current (removed; run ddev server default)"
+  else
+    echo "$current"
+  fi
   exit 0
 fi
 
@@ -230,6 +231,10 @@ fi
 
 target="$1"
 [[ "$target" == "default" ]] && target="$DEFAULT_SERVER"
+if is_removed_server "$target"; then
+  server_removed_message "$target" >&2
+  exit 1
+fi
 known=0
 for server in "${SUPPORTED[@]}"; do
   [[ "$server" == "$target" ]] && known=1

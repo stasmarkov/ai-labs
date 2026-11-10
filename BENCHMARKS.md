@@ -2,7 +2,7 @@
 
 These are the measurements of ai-lab, a study lab for AI features in Laravel (see [README.md](README.md)). The project was called AutoPulse until 2026-11-10 and the sections below that compare web servers date from that phase; they keep the URL and server names recorded at the time.
 
-The default server is now frankenphp. Run `ddev setup` once on a fresh clone; `ddev server default` returns to it. Results below were measured on the server named in each section; earlier sections that restored nginx-fpm after a run are unchanged history.
+The default server is now `frankenphp`. Run `ddev setup` once on a fresh clone; `ddev server default` returns to it. The nginx-fpm, apache-fpm and openlitespeed servers were removed after commit `719c0a5`, the last commit that can switch to them; their rows are history and stay as measured. Results below were measured on the server named in each section; earlier sections that restored nginx-fpm after a run are unchanged history.
 
 ## Versions
 

@@ -2,13 +2,19 @@
 ## Usage: bench/versions.sh
 ## Prints one markdown row: | active server | web server version | ddev version | php | sapi | opcache | date |
 ## Needs /debug/runtime enabled: DEBUG_ROUTES=true in .env, then `ddev artisan optimize:clear`.
-## Env: PARITY_BASE_URL (default: `ddev server --url`, e.g. https://ai-lab.ddev.site, :8091 for openlitespeed),
+## Env: PARITY_BASE_URL (default: `ddev server --url`, e.g. https://ai-lab.ddev.site),
 ##      PARITY_INSECURE=1 adds -k.
 
 set -euo pipefail
 
 SERVER_COMMAND="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.ddev/commands/host/server"
 server="$(bash "$SERVER_COMMAND" --current)"
+# shellcheck source=lib/servers.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/servers.sh"
+if is_removed_server "$server"; then
+  server_removed_message "$server" >&2
+  exit 2
+fi
 BASE_URL="${PARITY_BASE_URL:-$(bash "$SERVER_COMMAND" --url)}"
 curl_flags=(-sS --max-time 30 -H 'Accept: application/json')
 [[ "${PARITY_INSECURE:-0}" == "1" ]] && curl_flags+=(-k)
@@ -37,10 +43,7 @@ php_field() {
 }
 
 case "$server" in
-  apache-fpm) web_version="$(ddev exec apache2 -v 2>&1 | sed -nE 's#.*Apache/([0-9]+(\.[0-9]+)*).*#\1#p' | head -n 1)" ;;
   frankenphp | frankenphp-octane | frankenphp-worker) web_version="$(ddev exec frankenphp -v 2>&1 | sed -nE 's/.*FrankenPHP v?([0-9]+(\.[0-9]+)*).*/\1/p' | head -n 1)" ;;
-  openlitespeed) web_version="$(ddev exec -s openlitespeed /usr/local/lsws/bin/lshttpd -v 2>&1 | sed -nE 's/.*LiteSpeed[ \/Vv]*([0-9]+(\.[0-9]+)*).*/\1/p' | head -n 1)" ;;
-  nginx-fpm) web_version="$(ddev exec nginx -v 2>&1 | sed -nE 's#.*nginx/([0-9]+(\.[0-9]+)*).*#\1#p' | head -n 1)" ;;
   *)
     echo "No web server version command for '$server'. Add it to bench/versions.sh." >&2
     exit 1

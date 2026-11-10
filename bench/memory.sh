@@ -27,6 +27,8 @@
 ##      BENCH_SETTLE (seconds to wait for the server after a restart, default 60).
 
 set -Eeuo pipefail
+# shellcheck source=lib/servers.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/servers.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
@@ -61,7 +63,7 @@ done
 
 cd "$APPROOT"
 command -v jq >/dev/null 2>&1 || refuse "jq is required on the host (brew install jq)"
-server="$(ddev server --current)"
+server="$(current_server .)" || exit 2
 case "$server" in
   frankenphp-octane | frankenphp-worker | frankenphp) ;;
   *) refuse "the active server is $server; use frankenphp-octane, frankenphp-worker or frankenphp" ;;

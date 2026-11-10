@@ -4,10 +4,8 @@
 ##        bench/concurrency.sh autoscale --threads <n> --max-threads <m> [--max-wait <seconds>]
 ##        bench/concurrency.sh --show
 ## Sets the PHP worker limit of the active server to n and restarts DDEV; default restores today's values
-## (FPM dynamic, 8 children, recycling after 200 requests; OpenLiteSpeed 10; FrankenPHP 2 x CPUs).
-## n means: FPM pm=static, pm.max_children=n, pm.max_requests=0 (web-entrypoint.d script that edits the pool);
-## OpenLiteSpeed PHP_LSAPI_CHILDREN=n and maxConns n (generated httpd_config.conf mounted by a compose overlay);
-## FrankenPHP num_threads n and max_threads n (FRANKENPHP_CONFIG in a config.zz-*.yaml overlay).
+## (FrankenPHP 2 x CPUs).
+## n means: FrankenPHP num_threads n and max_threads n (FRANKENPHP_CONFIG in a config.zz-*.yaml overlay).
 ## frankenphp-octane: the daemon command of the stash, copied to config.zzz-bench-concurrency.yaml with
 ## --workers=n and --max-requests=m and override_config: true, so it replaces the active daemon. m defaults to
 ## 1000000, "no recycling": Octane's worker script treats 0 as "stop at once". frankenphp-worker: the stash
@@ -18,6 +16,7 @@
 ## All overlays are gitignored and written under .ddev/; .ddev/config.yaml is never touched.
 ## autoscale (frankenphp only): num_threads n, max_threads m (m > n) and max_wait_time s seconds (default 5) in the
 ## same FRANKENPHP_CONFIG overlay, so FrankenPHP starts n threads and adds up to m under load; other servers get an error.
+## A removed server name in the active overlay is refused with the removal message (exit 2).
 ## --show prints "<n> workers" or "default" ("autoscale <n> to <m> threads, max-wait <s>s" after autoscale); on frankenphp-octane and frankenphp-worker it prints
 ## "<n> workers, max-requests <m>" read from the active configuration. Env: BENCH_APPROOT.
 
@@ -26,12 +25,9 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 DDEV_DIR="$APPROOT/.ddev"
-FPM_SCRIPT="$DDEV_DIR/web-entrypoint.d/zz-bench-fpm.sh"
+# shellcheck source=lib/servers.sh
+source "$SCRIPT_DIR/lib/servers.sh"
 FRANKEN_OVERLAY="$DDEV_DIR/config.zz-bench-concurrency.yaml"
-OLS_COMPOSE="$DDEV_DIR/docker-compose.bench-concurrency.yaml"
-OLS_DIR="$DDEV_DIR/bench-concurrency"
-OLS_CONF="$OLS_DIR/httpd_config.conf"
-OLS_SOURCE="$DDEV_DIR/servers/openlitespeed/conf/httpd_config.conf"
 OCTANE_OVERLAY="$DDEV_DIR/config.zzz-bench-concurrency.yaml"
 OCTANE_ACTIVE="$DDEV_DIR/config.zz-server.yaml"
 OCTANE_SOURCE="$DDEV_DIR/servers/frankenphp-octane/config.frankenphp-octane.yaml"
@@ -44,6 +40,12 @@ die2() {
   exit 2
 }
 
+refuse_removed_server() {
+  if is_removed_server "$1"; then
+    die2 "$(server_removed_message "$1")"
+  fi
+}
+
 usage() {
   die2 "Usage: $0 <n> [--max-requests <m>]
        $0 default
@@ -54,7 +56,7 @@ autoscale only on frankenphp, with m greater than n."
 }
 
 remove_overlays() {
-  rm -rf "$FPM_SCRIPT" "$FRANKEN_OVERLAY" "$OLS_COMPOSE" "$OLS_DIR" "$OCTANE_OVERLAY"
+  rm -rf "$FRANKEN_OVERLAY" "$OCTANE_OVERLAY"
 }
 
 write_octane() {
@@ -87,46 +89,18 @@ show_worker_server() {
   esac
 }
 
-write_fpm() {
-  mkdir -p "$(dirname "$FPM_SCRIPT")"
-  cat > "$FPM_SCRIPT" <<SCRIPT
-#!/usr/bin/env bash
-# bench: $1 workers
-for pool in /etc/php/*/fpm/pool.d/www.conf; do
-  sed -i -E \\
-    -e 's/^;?pm = .*/pm = static/' \\
-    -e 's/^;?pm\\.max_children = .*/pm.max_children = $1/' \\
-    -e 's/^;?pm\\.max_requests = .*/pm.max_requests = 0/' "\$pool"
-done
-SCRIPT
-  chmod +x "$FPM_SCRIPT"
-}
-
 write_frankenphp() {
   printf '# bench: %s workers\nweb_environment:\n  - "FRANKENPHP_CONFIG=num_threads %s\\nmax_threads %s"\n' "$1" "$1" "$1" > "$FRANKEN_OVERLAY"
 }
 
-write_openlitespeed() {
-  mkdir -p "$OLS_DIR"
-  sed -E -e "s/^( *maxConns +)[0-9]+/\1$1/" -e "s/PHP_LSAPI_CHILDREN=[0-9]+/PHP_LSAPI_CHILDREN=$1/" "$OLS_SOURCE" > "$OLS_CONF"
-  cat > "$OLS_COMPOSE" <<COMPOSE
-# bench: $1 workers
-services:
-  openlitespeed:
-    volumes:
-      - \${DDEV_APPROOT}/.ddev/bench-concurrency/httpd_config.conf:/usr/local/lsws/conf/httpd_config.conf:ro
-      - \${DDEV_APPROOT}/.ddev/bench-concurrency/httpd_config.conf:/usr/local/lsws/.conf/httpd_config.conf:ro
-COMPOSE
-}
-
 show() {
   local file server
-  server="$(cd "$APPROOT" && ddev server --current)"
+  server="$(current_server "$APPROOT")" || exit 2
   if [[ "$server" == "frankenphp-octane" || "$server" == "frankenphp-worker" ]]; then
     show_worker_server "$server"
     return
   fi
-  for file in "$FPM_SCRIPT" "$FRANKEN_OVERLAY" "$OLS_COMPOSE"; do
+  for file in "$FRANKEN_OVERLAY"; do
     if [[ -f "$file" ]]; then
       sed -n 's/^# bench: //p' "$file" | head -n 1
       return
@@ -156,7 +130,8 @@ if [[ "${1:-}" == "autoscale" ]]; then
     [[ "$number" =~ ^[1-9][0-9]*$ ]] || usage
   done
   (( max_threads > threads )) || usage
-  server="$(cd "$APPROOT" && ddev server --current)"
+  server="$(current_server "$APPROOT")" || exit 2
+  refuse_removed_server "$server"
   if [[ "$server" != "frankenphp" ]]; then
     die2 "autoscale is available on frankenphp only (active server: $server)"
   fi
@@ -183,7 +158,8 @@ elif [[ $# -gt 1 ]]; then
   usage
 fi
 
-server="$(cd "$APPROOT" && ddev server --current)"
+server="$(current_server "$APPROOT")" || exit 2
+refuse_removed_server "$server"
 if [[ -n "$max_requests" && "$server" != "frankenphp-octane" && "$server" != "frankenphp-worker" ]]; then
   usage
 fi
@@ -195,11 +171,9 @@ if [[ "$server" == "frankenphp-worker" && -z "$value" ]]; then
 fi
 if [[ -n "$value" ]]; then
   case "$server" in
-    nginx-fpm | apache-fpm) write_fpm "$value" ;;
     frankenphp) write_frankenphp "$value" ;;
     frankenphp-octane) write_octane "$value" "${max_requests:-$NO_RECYCLING}" ;;
     frankenphp-worker) write_worker "$value" "${max_requests:-$NO_RECYCLING}" ;;
-    openlitespeed) write_openlitespeed "$value" ;;
     *) echo "Unknown server '$server'" >&2; exit 1 ;;
   esac
 fi

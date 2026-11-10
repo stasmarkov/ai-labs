@@ -12,6 +12,7 @@ beforeEach(function (): void {
     chmod($this->root.'/bench/chat-stop.sh', 0755);
     mkdir($this->root.'/bench/lib');
     copy(base_path('bench/lib/default-server.sh'), $this->root.'/bench/lib/default-server.sh');
+    copy(base_path('bench/lib/servers.sh'), $this->root.'/bench/lib/servers.sh');
     file_put_contents($this->root.'/.env', "OLLAMA_MODEL=stub-model\n");
     exec('git -C '.escapeshellarg($this->root).' init -q && git -C '.escapeshellarg($this->root).' -c user.email=a@b -c user.name=t commit -q --allow-empty -m init');
 
@@ -19,7 +20,7 @@ beforeEach(function (): void {
 #!/usr/bin/env bash
 echo "ddev $*" >> "$STUB_LOG"
 case "$1 $2" in
-  "server --current") echo "nginx-fpm" ;;
+  "server --current") echo "frankenphp" ;;
   "server --default") echo "${STUB_DEFAULT-frankenphp}" ;;
   "server --url") echo "https://interview.test" ;;
   "artisan tinker")
@@ -89,16 +90,16 @@ it('AC-2 and NFR-1 measures every run, writes one JSON per mode and prints a tab
     $process = chatStop($this, ['--runs', '2'], ['STUB_TOKENS_OUT' => '12']);
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput().$process->getOutput())
-        ->and($process->getOutput())->toContain('mode nginx-fpm')
+        ->and($process->getOutput())->toContain('mode frankenphp')
         ->and($process->getOutput())->toContain('stopped rows')
         ->and($process->getOutput())->toContain('tokens_out');
 
-    $files = glob($this->root.'/bench/results/chat-stop/*/nginx-fpm.json');
+    $files = glob($this->root.'/bench/results/chat-stop/*/frankenphp.json');
     expect($files)->toHaveCount(1);
 
     $result = json_decode((string) file_get_contents($files[0]), true, flags: JSON_THROW_ON_ERROR);
 
-    expect($result['metadata']['mode'])->toBe('nginx-fpm')
+    expect($result['metadata']['mode'])->toBe('frankenphp')
         ->and($result['metadata']['model'])->toBe('stub-model')
         ->and($result['requests'])->toHaveCount(2)
         ->and($result['stopped_rows'])->toBe(2)
@@ -114,7 +115,7 @@ it('AC-2 and NFR-1 measures every run, writes one JSON per mode and prints a tab
 
 it('AC-2 attributes a row by invocation id and reports no_row when that run has none', function (): void {
     $process = chatStop($this, ['--runs', '2'], ['STUB_NO_ROW' => '1']);
-    $result = json_decode((string) file_get_contents(glob($this->root.'/bench/results/chat-stop/*/nginx-fpm.json')[0]), true);
+    $result = json_decode((string) file_get_contents(glob($this->root.'/bench/results/chat-stop/*/frankenphp.json')[0]), true);
 
     expect($process->getExitCode())->toBe(0)
         ->and(array_column($result['requests'], 'status'))->toBe(['no_row', 'no_row'])
@@ -124,7 +125,7 @@ it('AC-2 attributes a row by invocation id and reports no_row when that run has 
 
 it('AC-2 reports a mode that cannot detect the abort with its numbers', function (): void {
     $process = chatStop($this, ['--runs', '1'], ['STUB_STATUS' => 'completed', 'STUB_TOKENS_OUT' => '320']);
-    $result = json_decode((string) file_get_contents(glob($this->root.'/bench/results/chat-stop/*/nginx-fpm.json')[0]), true);
+    $result = json_decode((string) file_get_contents(glob($this->root.'/bench/results/chat-stop/*/frankenphp.json')[0]), true);
 
     expect($process->getExitCode())->toBe(0)
         ->and($result['stopped_rows'])->toBe(0)
@@ -134,12 +135,21 @@ it('AC-2 reports a mode that cannot detect the abort with its numbers', function
 });
 
 it('AC-3 switches modes with ddev server and ends on the default server', function (): void {
-    chatStop($this, ['--modes', 'apache-fpm,frankenphp', '--runs', '1'], ['STUB_DEFAULT' => 'openlitespeed']);
+    chatStop($this, ['--modes', 'frankenphp-worker,frankenphp-octane', '--runs', '1'], ['STUB_DEFAULT' => 'frankenphp']);
     $log = (string) file_get_contents($this->root.'/stub.log');
 
     expect(glob($this->root.'/bench/results/chat-stop/*/*.json'))->toHaveCount(2)
-        ->and(strpos($log, 'ddev server apache-fpm'))->toBeLessThan(strpos($log, 'ddev server frankenphp'))
-        ->and(trim((string) array_slice(explode("\n", trim($log)), -1)[0]))->toBe('ddev server openlitespeed');
+        ->and(strpos($log, 'ddev server frankenphp-worker'))->toBeLessThan(strpos($log, 'ddev server frankenphp-octane'))
+        ->and(trim((string) array_slice(explode("\n", trim($log)), -1)[0]))->toBe('ddev server frankenphp');
+});
+
+it('AC-2 refuses a removed mode before measuring anything', function (): void {
+    $process = chatStop($this, ['--modes', 'frankenphp,nginx-fpm', '--runs', '1']);
+
+    expect($process->getExitCode())->toBe(2)
+        ->and($process->getErrorOutput())->toContain('nginx-fpm was removed in SL-50')
+        ->and(glob($this->root.'/bench/results/chat-stop/*/*.json'))->toBe([])
+        ->and((string) @file_get_contents($this->root.'/stub.log'))->not->toContain('ddev server frankenphp');
 });
 
 it('AC-2 refuses to overwrite a mode result without --force', function (): void {
@@ -152,7 +162,7 @@ it('AC-2 refuses to overwrite a mode result without --force', function (): void 
 
 it('AC-2 and NFR-1 records the Ollama parallel setting from the environment', function (): void {
     chatStop($this, ['--runs', '1'], ['OLLAMA_NUM_PARALLEL' => '2']);
-    $result = json_decode((string) file_get_contents(glob($this->root.'/bench/results/chat-stop/*/nginx-fpm.json')[0]), true);
+    $result = json_decode((string) file_get_contents(glob($this->root.'/bench/results/chat-stop/*/frankenphp.json')[0]), true);
 
     expect($result['metadata']['ollama_num_parallel'])->toBe('2')
         ->and($result['idle_probe_ms'])->toHaveCount(5);

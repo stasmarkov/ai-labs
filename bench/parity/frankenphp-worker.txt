@@ -1,4 +1,4 @@
-# server=frankenphp-worker base=https://ai-lab.ddev.site captured=2026-11-10T10:05:43Z
+# server=frankenphp-worker base=https://ai-lab.ddev.site captured=2026-11-10T15:58:00Z
 /up	200	text/html	95ad988e2489c7025128eb96f24cbd66aa2866bd7d2029982010ba168101c503
 /api/ping	200	application/json	eccc50588ca1183a3dd7798a0d8005aa6ff52b18b8562598fc604d9decd36ad5
 /listings	200	application/json	a289d479736b4b6c3521d431e447f13c1f29cb64d7d37231439746b013226140

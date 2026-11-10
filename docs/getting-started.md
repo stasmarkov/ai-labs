@@ -41,6 +41,19 @@ ddev npm run dev        # Vite dev server (optional; `ddev npm run build` is eno
 ddev launch             # open the site
 ```
 
+## server modes
+
+The default is classic FrankenPHP with Mercure. Two other FrankenPHP modes are available, and `ddev server` switches between them:
+
+```sh
+ddev server frankenphp-worker    # worker mode: the app boots once and serves many requests
+ddev server frankenphp-octane    # Laravel Octane on FrankenPHP
+ddev server default              # back to classic FrankenPHP with Mercure
+ddev server --current            # show the active mode
+```
+
+Every route answers the same on the three modes; see the README for the parity check.
+
 ## database
 
 ```sh
@@ -70,7 +83,7 @@ ddev artisan optimize:clear
 
 ## versions actually installed
 
-- Laravel 13, PHP 8.4, nginx-fpm, PostgreSQL 16 (pgvector), Redis, Node 24, Tailwind 4, Vite 8
+- Laravel 13, PHP 8.4, FrankenPHP, PostgreSQL 16 (pgvector), Redis, Node 24, Tailwind 4, Vite 8
 - Pest 5.3 with pest-plugin-laravel 5 on PHPUnit 13. The design called for Pest 4 / PHPUnit 12; composer resolved the newer major versions, and they are kept. Larastan is installed and kept.
 
 ## troubleshooting

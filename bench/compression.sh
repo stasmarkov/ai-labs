@@ -21,6 +21,8 @@
 ## Env: DECODE_IMAGE (default curlimages/curl:8.11.1), BENCH_REPEATS, BENCH_DATE, BENCH_APPROOT, BENCH_MAX_TIME (seconds per request, default 300), BENCH_EXPORT_ID (default listings).
 
 set -euo pipefail
+# shellcheck source=lib/servers.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/servers.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
@@ -50,7 +52,7 @@ done
 [[ "$REPEATS" =~ ^[1-9][0-9]*$ ]] || { echo "BENCH_REPEATS must be a positive integer (got '$REPEATS')." >&2; exit 2; }
 [[ -z "$LABEL" || "$LABEL" =~ ^[a-z0-9-]+$ ]] || { echo "Invalid --label '$LABEL': use a-z, 0-9 and -." >&2; exit 2; }
 
-SERVER="$(cd "$APPROOT" && ddev server --current | tr -d '[:space:]')"
+SERVER="$(current_server "$APPROOT")" || exit 2
 BASE_URL="$(cd "$APPROOT" && ddev server --url | tr -d '[:space:]')"
 [ -n "$LABEL" ] || LABEL="$SERVER"
 DAY="${BENCH_DATE:-$(date -u +%Y-%m-%d)}"

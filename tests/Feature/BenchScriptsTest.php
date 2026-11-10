@@ -27,7 +27,7 @@ while [[ \$# -gt 0 ]]; do
 done
 if [[ "\$url" == */debug/runtime ]]; then
   if [[ "$runtimeStatus" == "200" ]]; then
-    printf '{"data":{"sapi":"%s","php_version":"8.4.1","opcache_enabled":true,"server_software":"nginx/1.28"}}' "\${STUB_SAPI-fpm-fcgi}" > "\$out"
+    printf '{"data":{"sapi":"%s","php_version":"8.4.1","opcache_enabled":true,"server_software":"Caddy"}}' "\${STUB_SAPI-frankenphp}" > "\$out"
   else
     printf '{"message":"nope"}' > "\$out"
   fi
@@ -41,9 +41,7 @@ fi
 header="\${STUB_SERVER_HEADER-auto}"
 if [[ "\$header" == "auto" ]]; then
   case "\$(sed -n 's/^# server: *//p' "\$DDEV_APPROOT/.ddev/config.zz-server.yaml" 2>/dev/null)" in
-    apache-fpm) header="Apache/2.4.68" ;;
     frankenphp|frankenphp-octane|frankenphp-worker) header="Caddy" ;;
-    openlitespeed) header="LiteSpeed" ;;
     *) header="nginx" ;;
   esac
 fi
@@ -61,10 +59,7 @@ case "\$1" in
   version) printf ' ITEM              VALUE \\n DDEV version      v1.25.4 \\n architecture      arm64 \\n' ;;
   exec)
     case "\$2" in
-      -s) echo "LiteSpeed V1.9.4 Open" ;;
-      nginx) echo "nginx version: nginx/1.26.3" >&2 ;;
       frankenphp) echo "FrankenPHP v1.12.1 PHP 8.4.13 Caddy v2.10.2 h1:abc123=" ;;
-      *) echo "Server version: Apache/2.4.68 (Debian)" ;;
     esac ;;
 esac
 BASH;
@@ -72,10 +67,9 @@ BASH;
         chmod($this->root.'/bin/ddev', 0755);
     };
     $this->setServer = function (string $server): void {
-        file_put_contents($this->root.'/ddev/.ddev/config.yaml', "webserver_type: nginx-fpm\n");
+        file_put_contents($this->root.'/ddev/.ddev/config.yaml', "webserver_type: frankenphp\n");
         $webserverType = match ($server) {
             'frankenphp', 'frankenphp-octane', 'frankenphp-worker' => 'generic',
-            'openlitespeed' => 'nginx-fpm',
             default => $server,
         };
         file_put_contents($this->root.'/ddev/.ddev/config.zz-server.yaml', "# server: {$server}\nwebserver_type: {$webserverType}\n");
@@ -108,9 +102,9 @@ afterEach(function (): void {
 
 it('AC-8 capture writes a snapshot per server', function (): void {
     ($this->writeCurl)();
-    ($this->setServer)('nginx-fpm');
+    ($this->setServer)('frankenphp');
     $process = ($this->run)('parity.sh', 'capture');
-    $snapshot = $this->root.'/parity/nginx-fpm.txt';
+    $snapshot = $this->root.'/parity/frankenphp.txt';
 
     expect($process->getExitCode())->toBe(0)
         ->and(file_exists($snapshot))->toBeTrue()
@@ -120,59 +114,49 @@ it('AC-8 capture writes a snapshot per server', function (): void {
 
 it('SL-13 capture masks the per-request data-price-rendered-ms attribute so two captures of the same page agree', function (): void {
     ($this->writeCurl)(' data-price-rendered-ms="\'$RANDOM\'"');
-    ($this->setServer)('nginx-fpm');
+    ($this->setServer)('frankenphp');
     ($this->run)('parity.sh', 'capture');
-    ($this->setServer)('apache-fpm');
+    ($this->setServer)('frankenphp-worker');
     ($this->run)('parity.sh', 'capture');
 
-    $same = ($this->run)('parity.sh', 'compare', 'nginx-fpm', 'apache-fpm');
+    $same = ($this->run)('parity.sh', 'compare', 'frankenphp', 'frankenphp-worker');
 
     expect($same->getExitCode())->toBe(0)->and($same->getOutput())->toContain('identical');
 });
 
 it('AC-9 compare exits 0 when identical and 1 with the path when different', function (): void {
     ($this->writeCurl)();
-    ($this->setServer)('nginx-fpm');
+    ($this->setServer)('frankenphp');
     ($this->run)('parity.sh', 'capture');
-    ($this->setServer)('apache-fpm');
+    ($this->setServer)('frankenphp-worker');
     ($this->run)('parity.sh', 'capture');
-    $same = ($this->run)('parity.sh', 'compare', 'nginx-fpm', 'apache-fpm');
+    $same = ($this->run)('parity.sh', 'compare', 'frankenphp', 'frankenphp-worker');
 
     expect($same->getExitCode())->toBe(0)
         ->and($same->getOutput())->toContain('identical');
 
     ($this->writeCurl)('-changed');
     ($this->run)('parity.sh', 'capture');
-    $different = ($this->run)('parity.sh', 'compare', 'nginx-fpm', 'apache-fpm');
+    $different = ($this->run)('parity.sh', 'compare', 'frankenphp', 'frankenphp-worker');
 
     expect($different->getExitCode())->toBe(1)
-        ->and($different->getOutput().$different->getErrorOutput())->toContain($this->root.'/parity/apache-fpm.txt');
+        ->and($different->getOutput().$different->getErrorOutput())->toContain($this->root.'/parity/frankenphp-worker.txt');
 });
 
 it('AC-11 versions prints one markdown row', function (): void {
     ($this->writeCurl)();
-    ($this->writeDdev)('nginx-fpm');
-    ($this->setServer)('nginx-fpm');
+    ($this->writeDdev)('frankenphp');
+    ($this->setServer)('frankenphp');
     $process = ($this->run)('versions.sh');
 
     expect($process->getExitCode())->toBe(0)
-        ->and(trim($process->getOutput()))->toMatch('/^\| nginx-fpm \| 1\.26\.3 \| 1\.25\.4 \| 8\.4\.1 \| fpm-fcgi \| true \| \d{4}-\d\d-\d\d \|$/');
-});
-
-it('AC-11 versions uses apache2 -v when apache-fpm is active', function (): void {
-    ($this->writeCurl)();
-    ($this->writeDdev)('apache-fpm');
-    ($this->setServer)('apache-fpm');
-    $process = ($this->run)('versions.sh');
-
-    expect($process->getExitCode())->toBe(0)
-        ->and(trim($process->getOutput()))->toMatch('/^\| apache-fpm \| 2\.4\.68 \| 1\.25\.4 \| 8\.4\.1 \| fpm-fcgi \| true \| \d{4}-\d\d-\d\d \|$/');
+        ->and(trim($process->getOutput()))->toMatch('/^\| frankenphp \| 1\.12\.1 \| 1\.25\.4 \| 8\.4\.1 \| frankenphp \| true \| \d{4}-\d\d-\d\d \|$/');
 });
 
 it('AC-11 versions exits 1 with a hint when the endpoint is 404', function (): void {
     ($this->writeCurl)('', '404');
-    ($this->writeDdev)('nginx-fpm');
-    ($this->setServer)('nginx-fpm');
+    ($this->writeDdev)('frankenphp');
+    ($this->setServer)('frankenphp');
     $process = ($this->run)('versions.sh');
 
     expect($process->getExitCode())->toBe(1)
@@ -203,12 +187,6 @@ it('MNC-1 capture accepts a Server header that only the 103 response carries', f
 
     expect($accepted->getExitCode())->toBe(0)
         ->and(file_exists($this->root.'/parity/frankenphp.txt'))->toBeTrue();
-
-    ($this->setServer)('nginx-fpm');
-    $rejected = ($this->runWith)(['STUB_SERVER_ONLY_IN_103' => '1'], 'parity.sh', 'capture');
-
-    expect($rejected->getExitCode())->toBe(4)
-        ->and(file_exists($this->root.'/parity/nginx-fpm.txt'))->toBeFalse();
 });
 
 it('AC-9 versions parses the FrankenPHP version', function (): void {
@@ -223,12 +201,12 @@ it('AC-9 versions parses the FrankenPHP version', function (): void {
 
 it('AC-9 render time is masked in the /up body only', function (): void {
     ($this->writeCurl)(' Response rendered in 5ms.');
-    ($this->setServer)('nginx-fpm');
+    ($this->setServer)('frankenphp');
     ($this->run)('parity.sh', 'capture');
     ($this->writeCurl)(' Response rendered in 13ms.');
-    ($this->setServer)('apache-fpm');
+    ($this->setServer)('frankenphp-worker');
     ($this->run)('parity.sh', 'capture');
-    $process = ($this->run)('parity.sh', 'compare', 'nginx-fpm', 'apache-fpm');
+    $process = ($this->run)('parity.sh', 'compare', 'frankenphp', 'frankenphp-worker');
 
     expect($process->getExitCode())->toBe(1)
         ->and($process->getOutput())->toContain('Differs: /api/ping')
@@ -237,42 +215,42 @@ it('AC-9 render time is masked in the /up body only', function (): void {
 
 it('AC-9 compare ignores content type parameters', function (): void {
     ($this->writeCurl)();
-    ($this->setServer)('nginx-fpm');
+    ($this->setServer)('frankenphp');
     ($this->runWith)(['STUB_CONTENT_TYPE' => 'application/json; charset=utf-8'], 'parity.sh', 'capture');
-    ($this->setServer)('apache-fpm');
+    ($this->setServer)('frankenphp-worker');
     ($this->runWith)(['STUB_CONTENT_TYPE' => 'application/json'], 'parity.sh', 'capture');
 
-    expect(($this->run)('parity.sh', 'compare', 'nginx-fpm', 'apache-fpm')->getExitCode())->toBe(0);
+    expect(($this->run)('parity.sh', 'compare', 'frankenphp', 'frankenphp-worker')->getExitCode())->toBe(0);
 });
 
 it('AC-8 a failed request leaves the existing snapshot untouched', function (): void {
     ($this->writeCurl)();
-    ($this->setServer)('nginx-fpm');
+    ($this->setServer)('frankenphp');
     ($this->run)('parity.sh', 'capture');
-    $before = file_get_contents($this->root.'/parity/nginx-fpm.txt');
+    $before = file_get_contents($this->root.'/parity/frankenphp.txt');
 
     $process = ($this->runWith)(['STUB_CURL_FAIL' => '1'], 'parity.sh', 'capture');
 
     expect($process->getExitCode())->toBe(3)
         ->and($process->getErrorOutput())->toContain('Snapshot not written')
-        ->and(file_get_contents($this->root.'/parity/nginx-fpm.txt'))->toBe($before);
+        ->and(file_get_contents($this->root.'/parity/frankenphp.txt'))->toBe($before);
 });
 
 it('AC-8 capture refuses when the Server header does not match the active server', function (): void {
     ($this->writeCurl)();
-    ($this->setServer)('nginx-fpm');
+    ($this->setServer)('frankenphp');
     $process = ($this->runWith)(['STUB_SERVER_HEADER' => 'Apache/2.4.68'], 'parity.sh', 'capture');
 
     expect($process->getExitCode())->toBe(4)
-        ->and(file_exists($this->root.'/parity/nginx-fpm.txt'))->toBeFalse();
+        ->and(file_exists($this->root.'/parity/frankenphp.txt'))->toBeFalse();
 
-    expect(($this->runWith)(['STUB_SERVER_HEADER' => 'nginx/1.26.3'], 'parity.sh', 'capture')->getExitCode())->toBe(0);
+    expect(($this->runWith)(['STUB_SERVER_HEADER' => 'Caddy'], 'parity.sh', 'capture')->getExitCode())->toBe(0);
 });
 
 it('AC-11 versions explains an unreachable site and honours PARITY_INSECURE', function (): void {
     ($this->writeCurl)();
-    ($this->writeDdev)('nginx-fpm');
-    ($this->setServer)('nginx-fpm');
+    ($this->writeDdev)('frankenphp');
+    ($this->setServer)('frankenphp');
     $failed = ($this->runWith)(['STUB_CURL_FAIL' => '1'], 'versions.sh');
 
     expect($failed->getExitCode())->toBe(1)
@@ -287,12 +265,12 @@ it('AC-11 versions explains an unreachable site and honours PARITY_INSECURE', fu
 
 it('AC-8 capture writes the header line and the seven requests in spec order', function (): void {
     ($this->writeCurl)();
-    ($this->setServer)('apache-fpm');
+    ($this->setServer)('frankenphp-worker');
     $process = ($this->run)('parity.sh', 'capture');
-    $lines = explode("\n", trim(file_get_contents($this->root.'/parity/apache-fpm.txt')));
+    $lines = explode("\n", trim(file_get_contents($this->root.'/parity/frankenphp-worker.txt')));
 
     expect($process->getExitCode())->toBe(0)
-        ->and($lines[0])->toMatch('/^# server=apache-fpm base=http:\/\/stub\.test captured=\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/')
+        ->and($lines[0])->toMatch('/^# server=frankenphp-worker base=http:\/\/stub\.test captured=\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/')
         ->and($lines)->toHaveCount(8);
 
     $paths = [];
@@ -318,7 +296,7 @@ it('AC-8 capture writes the header line and the seven requests in spec order', f
 
 it('AC-8 capture sends no Accept header, no redirect following and no -k by default', function (): void {
     ($this->writeCurl)();
-    ($this->setServer)('nginx-fpm');
+    ($this->setServer)('frankenphp');
     ($this->run)('parity.sh', 'capture');
     $log = file_get_contents($this->root.'/curl.log');
 
@@ -330,7 +308,7 @@ it('AC-8 capture sends no Accept header, no redirect following and no -k by defa
 
 it('AC-8 capture adds -k only when PARITY_INSECURE is 1', function (): void {
     ($this->writeCurl)();
-    ($this->setServer)('nginx-fpm');
+    ($this->setServer)('frankenphp');
     ($this->runWith)(['PARITY_INSECURE' => '1'], 'parity.sh', 'capture');
 
     expect(file_get_contents($this->root.'/curl.log'))->toContain('-k');
@@ -338,11 +316,11 @@ it('AC-8 capture adds -k only when PARITY_INSECURE is 1', function (): void {
 
 it('AC-8 capture honours PARITY_BASE_URL and defaults to the DDEV site', function (): void {
     ($this->writeCurl)();
-    ($this->setServer)('nginx-fpm');
+    ($this->setServer)('frankenphp');
     ($this->runWith)(['PARITY_BASE_URL' => 'http://other.test'], 'parity.sh', 'capture');
 
     expect(file_get_contents($this->root.'/curl.log'))->toContain('http://other.test/up')
-        ->and(file_get_contents($this->root.'/parity/nginx-fpm.txt'))->toContain('base=http://other.test');
+        ->and(file_get_contents($this->root.'/parity/frankenphp.txt'))->toContain('base=http://other.test');
 
     unlink($this->root.'/curl.log');
     $env = ['PARITY_BASE_URL' => false, 'BASE_URL' => false];
@@ -353,10 +331,10 @@ it('AC-8 capture honours PARITY_BASE_URL and defaults to the DDEV site', functio
 
 it('AC-8 capture records the lowercased media type without parameters', function (): void {
     ($this->writeCurl)();
-    ($this->setServer)('nginx-fpm');
+    ($this->setServer)('frankenphp');
     ($this->runWith)(['STUB_CONTENT_TYPE' => ' Text/HTML; Charset=UTF-8 '], 'parity.sh', 'capture');
 
-    expect(file_get_contents($this->root.'/parity/nginx-fpm.txt'))->toContain("\t200\ttext/html\t");
+    expect(file_get_contents($this->root.'/parity/frankenphp.txt'))->toContain("\t200\ttext/html\t");
 });
 
 it('AC-9 compare reports identical when only the header lines differ', function (): void {
@@ -403,10 +381,10 @@ it('AC-9 compare exits 2 and names a missing snapshot', function (): void {
 
 it('AC-9 compare reads an argument containing a slash as a path', function (): void {
     mkdir($this->root.'/x');
-    file_put_contents($this->root.'/x/nginx-fpm.txt', "# a\n/up\t200\ttext/html\taaa\n");
+    file_put_contents($this->root.'/x/frankenphp.txt', "# a\n/up\t200\ttext/html\taaa\n");
     file_put_contents($this->root.'/x/other.txt', "# b\n/up\t200\ttext/html\taaa\n");
-    $same = ($this->run)('parity.sh', 'compare', './x/nginx-fpm.txt', $this->root.'/x/other.txt');
-    $missing = ($this->run)('parity.sh', 'compare', './x/nginx-fpm.txt', './x/nope.txt');
+    $same = ($this->run)('parity.sh', 'compare', './x/frankenphp.txt', $this->root.'/x/other.txt');
+    $missing = ($this->run)('parity.sh', 'compare', './x/frankenphp.txt', './x/nope.txt');
 
     expect($same->getExitCode())->toBe(0)
         ->and($same->getOutput())->toContain('identical')
@@ -417,7 +395,7 @@ it('AC-9 compare reads an argument containing a slash as a path', function (): v
 it('AC-10 committed snapshots use the spec format and cover the seven requests', function (): void {
     $paths = ['/up', '/api/ping', '/listings', '/listings?make=BMW&fuel=diesel&per_page=5', '/listings?per_page=99', '/listings/1', '/listings/999999'];
 
-    foreach (['nginx-fpm', 'apache-fpm'] as $server) {
+    foreach (['frankenphp', 'frankenphp-worker', 'frankenphp-octane'] as $server) {
         $lines = file(base_path("bench/parity/{$server}.txt"), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
         expect($lines[0])->toMatch('/^# server='.$server.' base=https:\/\/ai-lab\.ddev\.site captured=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/');
@@ -434,17 +412,19 @@ it('AC-10 committed snapshots use the spec format and cover the seven requests',
     }
 });
 
-it('AC-8 committed frankenphp snapshot matches both FPM snapshots', function (): void {
+it('AC-3 committed snapshots of the three modes are identical', function (): void {
     $rows = fn (string $server): array => array_values(array_filter(
         file(base_path("bench/parity/{$server}.txt"), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES),
         fn (string $line): bool => ! str_starts_with($line, '#'),
     ));
 
-    expect(file_exists(base_path('bench/parity/frankenphp.txt')))->toBeTrue()
-        ->and(file(base_path('bench/parity/frankenphp.txt'))[0])->toStartWith('# server=frankenphp base=https://ai-lab.ddev.site captured=')
+    expect(file(base_path('bench/parity/frankenphp.txt'))[0])->toStartWith('# server=frankenphp base=https://ai-lab.ddev.site captured=')
         ->and($rows('frankenphp'))->toHaveCount(7)
-        ->and($rows('frankenphp'))->toBe($rows('nginx-fpm'))
-        ->and($rows('frankenphp'))->toBe($rows('apache-fpm'));
+        ->and($rows('frankenphp-worker'))->toBe($rows('frankenphp'))
+        ->and($rows('frankenphp-octane'))->toBe($rows('frankenphp'))
+        ->and(file_exists(base_path('bench/parity/nginx-fpm.txt')))->toBeFalse()
+        ->and(file_exists(base_path('bench/parity/apache-fpm.txt')))->toBeFalse()
+        ->and(file_exists(base_path('bench/parity/openlitespeed.txt')))->toBeFalse();
 });
 
 it('AC-7 capture refuses a server missing from the token map', function (): void {
@@ -459,12 +439,12 @@ it('AC-7 capture refuses a server missing from the token map', function (): void
 
 it('AC-7 capture refuses a response without a Server header', function (): void {
     ($this->writeCurl)();
-    ($this->setServer)('nginx-fpm');
+    ($this->setServer)('frankenphp');
     $process = ($this->runWith)(['STUB_SERVER_HEADER' => ''], 'parity.sh', 'capture');
 
     expect($process->getExitCode())->toBe(4)
         ->and($process->getErrorOutput())->toContain('<missing>')
-        ->and(file_exists($this->root.'/parity/nginx-fpm.txt'))->toBeFalse();
+        ->and(file_exists($this->root.'/parity/frankenphp.txt'))->toBeFalse();
 });
 
 it('AC-9 versions refuses a server it has no version command for', function (): void {
@@ -478,33 +458,6 @@ it('AC-9 versions refuses a server it has no version command for', function (): 
         ->and($process->getOutput())->toBe('');
 });
 
-it('AC-7 openlitespeed capture defaults to port 8091 and expects a LiteSpeed header', function (): void {
-    ($this->writeCurl)();
-    ($this->setServer)('openlitespeed');
-    $env = ['PARITY_BASE_URL' => false, 'BASE_URL' => false];
-    $accepted = ($this->runWith)($env + ['STUB_SERVER_HEADER' => 'LiteSpeed'], 'parity.sh', 'capture');
-
-    expect($accepted->getExitCode())->toBe(0)
-        ->and(file_get_contents($this->root.'/curl.log'))->toContain('https://ai-lab.ddev.site:8091/up')
-        ->and(file_get_contents($this->root.'/parity/openlitespeed.txt'))->toContain('base=https://ai-lab.ddev.site:8091');
-
-    unlink($this->root.'/parity/openlitespeed.txt');
-    $rejected = ($this->runWith)($env + ['STUB_SERVER_HEADER' => 'nginx/1.26.3'], 'parity.sh', 'capture');
-
-    expect($rejected->getExitCode())->toBe(4)
-        ->and(file_exists($this->root.'/parity/openlitespeed.txt'))->toBeFalse();
-});
-
-it('AC-7 PARITY_BASE_URL overrides the openlitespeed default', function (): void {
-    ($this->writeCurl)();
-    ($this->setServer)('openlitespeed');
-    $process = ($this->runWith)(['PARITY_BASE_URL' => 'http://other.test'], 'parity.sh', 'capture');
-
-    expect($process->getExitCode())->toBe(0)
-        ->and(file_get_contents($this->root.'/curl.log'))->toContain('http://other.test/up')
-        ->and(file_get_contents($this->root.'/curl.log'))->not->toContain(':8091');
-});
-
 it('AC-7 other servers keep the plain DDEV default URL', function (): void {
     ($this->writeCurl)();
     ($this->setServer)('frankenphp');
@@ -516,43 +469,12 @@ it('AC-7 other servers keep the plain DDEV default URL', function (): void {
 
 it('AC-7 capture rewrites the base URL in the body before hashing', function (): void {
     ($this->writeCurl)();
-    ($this->setServer)('openlitespeed');
+    ($this->setServer)('frankenphp-octane');
     ($this->runWith)(['PARITY_BASE_URL' => 'http://other.test'], 'parity.sh', 'capture');
-    $line = collect(file($this->root.'/parity/openlitespeed.txt', FILE_IGNORE_NEW_LINES))
+    $line = collect(file($this->root.'/parity/frankenphp-octane.txt', FILE_IGNORE_NEW_LINES))
         ->first(fn (string $row): bool => str_starts_with($row, "/api/ping\t"));
 
     expect(explode("\t", $line)[3])->toBe(hash('sha256', 'body:https://ai-lab.ddev.site/api/ping'));
-});
-
-it('AC-9 versions parses the OpenLiteSpeed version', function (): void {
-    ($this->writeCurl)();
-    ($this->writeDdev)('openlitespeed');
-    ($this->setServer)('openlitespeed');
-    $process = ($this->runWith)(['STUB_SAPI' => 'litespeed'], 'versions.sh');
-
-    expect($process->getExitCode())->toBe(0)
-        ->and(trim($process->getOutput()))->toMatch('/^\| openlitespeed \| 1\.9\.4 \| 1\.25\.4 \| 8\.4\.1 \| litespeed \| true \| \d{4}-\d\d-\d\d \|$/');
-});
-
-it('AC-7 versions requests /debug/runtime on the openlitespeed port by default', function (): void {
-    ($this->writeCurl)();
-    ($this->writeDdev)('openlitespeed');
-    ($this->setServer)('openlitespeed');
-    ($this->runWith)(['PARITY_BASE_URL' => false, 'BASE_URL' => false], 'versions.sh');
-
-    expect(file_get_contents($this->root.'/curl.log'))->toContain('https://ai-lab.ddev.site:8091/debug/runtime');
-});
-
-it('AC-8 committed openlitespeed snapshot matches nginx-fpm', function (): void {
-    $rows = fn (string $server): array => array_values(array_filter(
-        file(base_path("bench/parity/{$server}.txt"), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES),
-        fn (string $line): bool => ! str_starts_with($line, '#'),
-    ));
-
-    expect(file_exists(base_path('bench/parity/openlitespeed.txt')))->toBeTrue()
-        ->and(file(base_path('bench/parity/openlitespeed.txt'))[0])->toStartWith('# server=openlitespeed base=https://ai-lab.ddev.site:8091 captured=')
-        ->and($rows('openlitespeed'))->toHaveCount(7)
-        ->and($rows('openlitespeed'))->toBe($rows('nginx-fpm'));
 });
 
 it('AC-6 worker servers accept a Caddy server header and reject others', function (string $server): void {
@@ -593,18 +515,6 @@ it('AC-10 versions 404 hint mentions restarting workers', function (): void {
         ->and($process->getErrorOutput())->toContain('octane:reload');
 });
 
-it('AC-6 committed worker-mode snapshots match nginx-fpm', function (string $server): void {
-    $rows = fn (string $name): array => array_values(array_filter(
-        file(base_path("bench/parity/{$name}.txt"), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES),
-        fn (string $line): bool => ! str_starts_with($line, '#'),
-    ));
-
-    expect(file_exists(base_path("bench/parity/{$server}.txt")))->toBeTrue()
-        ->and(file(base_path("bench/parity/{$server}.txt"))[0])->toStartWith("# server={$server} base=https://ai-lab.ddev.site captured=")
-        ->and($rows($server))->toHaveCount(7)
-        ->and($rows($server))->toBe($rows('nginx-fpm'));
-})->with(['frankenphp-octane', 'frankenphp-worker']);
-
 /**
  * The parts of a script where a server name would be a restore (Q4): trap lines, cleanup/restore function bodies and the last 10 lines.
  *
@@ -620,18 +530,18 @@ function benchRestoreRegions(string $text): array
     return array_merge($traps[0], $functions[0], [implode("\n", array_slice($lines, -10))]);
 }
 
-const BENCH_NAMED_RESTORE = '/ddev server nginx-fpm(?![\w-])/';
+const BENCH_NAMED_RESTORE = '/ddev server frankenphp-worker(?![\w-])/';
 
-it('AC-3 the restore guard flags a named nginx-fpm switch followed by any non-name character and ignores labels', function (string $line, bool $flagged): void {
+it('AC-3 the restore guard flags a named frankenphp-worker switch followed by any non-name character and ignores labels', function (string $line, bool $flagged): void {
     expect(preg_match(BENCH_NAMED_RESTORE, $line))->toBe($flagged ? 1 : 0);
 })->with([
-    'space' => ['step ddev server nginx-fpm || true', true],
-    'close paren' => ['(cd "$APPROOT" && step ddev server nginx-fpm) || true', true],
-    'end of line' => ['ddev server nginx-fpm', true],
-    'quote' => ['ddev server nginx-fpm"', true],
-    'semicolon' => ['ddev server nginx-fpm;', true],
-    'label with suffix' => ['--label nginx-fpm-8', false],
-    'longer name' => ['ddev server nginx-fpm-8', false],
+    'space' => ['step ddev server frankenphp-worker || true', true],
+    'close paren' => ['(cd "$APPROOT" && step ddev server frankenphp-worker) || true', true],
+    'end of line' => ['ddev server frankenphp-worker', true],
+    'quote' => ['ddev server frankenphp-worker"', true],
+    'semicolon' => ['ddev server frankenphp-worker;', true],
+    'label with suffix' => ['--label frankenphp-worker-8', false],
+    'longer name' => ['ddev server frankenphp-worker-8', false],
     'default lookup' => ['ddev server --default', false],
 ]);
 
@@ -656,10 +566,10 @@ it('AC-3 no bench script restores a server by name and every restore goes throug
 });
 
 it('AC-3 the restore guard sees a named restore hidden in a trap, a cleanup function or the tail', function (): void {
-    $viaTrap = "trap '(cd \"\$R\" && ddev server nginx-fpm)' EXIT\n";
-    $viaFunction = "cleanup() {\n  rm -f x\n  step ddev server nginx-fpm\n}\n";
-    $viaTail = str_repeat("echo x\n", 20)."ddev server nginx-fpm\n";
-    $measurement = "step ddev server nginx-fpm\n".str_repeat("echo x\n", 20);
+    $viaTrap = "trap '(cd \"\$R\" && ddev server frankenphp-worker)' EXIT\n";
+    $viaFunction = "cleanup() {\n  rm -f x\n  step ddev server frankenphp-worker\n}\n";
+    $viaTail = str_repeat("echo x\n", 20)."ddev server frankenphp-worker\n";
+    $measurement = "step ddev server frankenphp-worker\n".str_repeat("echo x\n", 20);
 
     foreach ([$viaTrap, $viaFunction, $viaTail] as $text) {
         expect(implode("\n", benchRestoreRegions($text)))->toMatch(BENCH_NAMED_RESTORE);
@@ -682,16 +592,16 @@ it('AC-3 default-server library reads the default once and exits 2 when ddev ans
         return $process;
     };
 
-    $ok = $run('openlitespeed', 'restore_default_server "'.$dir.'"; restore_default_server "'.$dir.'"');
+    $ok = $run('frankenphp-octane', 'restore_default_server "'.$dir.'"; restore_default_server "'.$dir.'"');
     $log = array_values(array_filter(explode("\n", (string) file_get_contents($dir.'/log'))));
     unlink($dir.'/log');
     $empty = $run('', 'restore_default_server "'.$dir.'"');
 
     expect($ok->getExitCode())->toBe(0, $ok->getErrorOutput())
-        ->and($log)->toBe(['server --default', 'server openlitespeed', 'server openlitespeed'])
+        ->and($log)->toBe(['server --default', 'server frankenphp-octane', 'server frankenphp-octane'])
         ->and($empty->getExitCode())->toBe(2)
         ->and($empty->getErrorOutput())->toContain('ddev server --default')
-        ->and(file_get_contents($dir.'/log'))->not->toContain('server openlitespeed');
+        ->and(file_get_contents($dir.'/log'))->not->toContain('server frankenphp-octane');
 
     exec('rm -rf '.escapeshellarg($dir));
 });
@@ -782,3 +692,17 @@ it('AC-3 a matrix --dry-run needs no ddev and plans the default from the server 
     'export-load-matrix' => ['export-load-matrix.sh', ['--dry-run']],
     'http3-matrix' => ['http3-matrix.sh', ['--dry-run', '--runs', '1']],
 ]);
+
+it('AC-2 capture and versions refuse a removed server with the removal message', function (string $server): void {
+    ($this->writeCurl)();
+    ($this->writeDdev)($server);
+    ($this->setServer)($server);
+    $capture = ($this->runWith)(['STUB_SERVER_HEADER' => 'Caddy'], 'parity.sh', 'capture');
+    $versions = ($this->run)('versions.sh');
+
+    expect($capture->getExitCode())->not->toBe(0)
+        ->and(file_exists($this->root."/parity/{$server}.txt"))->toBeFalse()
+        ->and($versions->getExitCode())->toBe(2)
+        ->and($versions->getErrorOutput())->toContain($server.' was removed')
+        ->and($versions->getOutput())->toBe('');
+})->with(['nginx-fpm', 'apache-fpm', 'openlitespeed']);

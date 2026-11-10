@@ -14,7 +14,7 @@ use Throwable;
  *
  * cpu_ms is user plus system CPU of the whole request: the getrusage() reading taken in public/index.php
  * (LARAVEL_START_RUSAGE) is the baseline, so framework boot is included. That only holds where one PHP
- * process serves one request at a time (FPM, Apache, OpenLiteSpeed lsphp). FrankenPHP runs requests as
+ * process serves one request at a time (FPM, Apache, lsphp). FrankenPHP runs requests as
  * threads of one process and PHP has no per-thread getrusage, so there cpu_ms is null and cpu_scope is
  * "process"; the bench reports that as "n/a (shared process)".
  */

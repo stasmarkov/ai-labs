@@ -19,7 +19,7 @@ beforeEach(function (): void {
 #!/usr/bin/env bash
 echo "ddev $*" >> "$STUB_LOG"
 case "$*" in
-  "server --current") echo "${STUB_SERVER-nginx-fpm}" ;;
+  "server --current") echo "${STUB_SERVER-frankenphp}" ;;
   "server --url") echo "https://ai-lab.ddev.site" ;;
   "artisan config:show app.env") echo "${STUB_APP_ENV-production}" ;;
   "artisan config:show app.debug") echo "${STUB_APP_DEBUG-false}" ;;
@@ -29,7 +29,7 @@ case "$*" in
   "exec sh -c cat storage/logs/exports.jsonl"*)
     tag="$(cat "$STUB_COUNTER.tag" 2>/dev/null || true)"
     for i in 1 2 3; do
-      echo '{"invocation_id":"x'$i'","export_id":"listings","server":"nginx-fpm","mode":"'"${STUB_PHP_MODE-offload}"'","bench_run":"'"$tag"'","php_held_ms":'$((i * 10))',"peak_memory_bytes":2097152,"cpu_ms":'"${STUB_PHP_CPU-1.5}"',"cpu_scope":"'"${STUB_PHP_CPU_SCOPE-request}"'","bytes_sent_by_php":'"${STUB_PHP_BYTES-0}"',"aborted":false}'
+      echo '{"invocation_id":"x'$i'","export_id":"listings","server":"frankenphp","mode":"'"${STUB_PHP_MODE-offload}"'","bench_run":"'"$tag"'","php_held_ms":'$((i * 10))',"peak_memory_bytes":2097152,"cpu_ms":'"${STUB_PHP_CPU-1.5}"',"cpu_scope":"'"${STUB_PHP_CPU_SCOPE-request}"'","bytes_sent_by_php":'"${STUB_PHP_BYTES-0}"',"aborted":false}'
     done
     echo '{"invocation_id":"other","bench_run":"someone-else","php_held_ms":9999,"peak_memory_bytes":999999999,"cpu_ms":1,"bytes_sent_by_php":1,"aborted":true}'
     echo 'not json' ;;
@@ -111,7 +111,7 @@ afterEach(function (): void {
 });
 
 it('AC-6 export-load runs rate-limited clients and the shared probe as two capped containers and prints a table', function (): void {
-    $process = ($this->exportLoad)([], '--mode', 'offload', '--quick', '--label', 'nginx-fpm');
+    $process = ($this->exportLoad)([], '--mode', 'offload', '--quick', '--label', 'frankenphp');
     $calls = ($this->calls)();
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
@@ -121,10 +121,10 @@ it('AC-6 export-load runs rate-limited clients and the shared probe as two cappe
         ->and(substr_count($calls, '--cpus=2'))->toBe(2)
         ->and($process->getOutput())->toContain('mode=offload', 'downloads', 'integrity', 'health_p95_ms', 'median', 'health p95 spread');
 
-    $result = ($this->result)('offload-nginx-fpm');
+    $result = ($this->result)('offload-frankenphp');
 
     expect($result)->toMatchArray([
-        'server' => 'nginx-fpm', 'mode' => 'offload', 'label' => 'nginx-fpm', 'commit' => 'abc1234',
+        'server' => 'frankenphp', 'mode' => 'offload', 'label' => 'frankenphp', 'commit' => 'abc1234',
         'clients' => 20, 'rate' => '10M', 'measure_s' => 15, 'repeats' => 1, 'quick' => true, 'flagged' => false,
     ])
         ->and($result['median']['load_downloads'])->toEqual(4)
@@ -143,7 +143,7 @@ it('AC-6 export-load reads only the PHP log lines of its own run tag', function 
         ->and($result['median']['php_held_ms_p95'])->toEqual(30)
         ->and($result['median']['php_peak_memory_bytes_max'])->toEqual(2097152)
         ->and($result['median']['php_aborted'])->toEqual(0)
-        ->and($result['runs'][0]['bench_run'])->toContain('export-load-nginx-fpm-stream-x-');
+        ->and($result['runs'][0]['bench_run'])->toContain('export-load-frankenphp-stream-x-');
 });
 
 it('AC-6 export-load reports CPU as n/a for a server whose PHP threads share one process, and sums it elsewhere', function (): void {
@@ -248,20 +248,22 @@ it('AC-6 export-load rejects a bad mode, label and rate', function (): void {
         ->and(($this->exportLoad)([], '--mode', 'stream', '--rate', 'fast')->getExitCode())->toBe(2);
 });
 
-it('AC-6 AC-3 export-load matrix lists 8 cells ending on the default server', function (): void {
+it('AC-6 AC-3 export-load matrix lists 4 cells, offload only where X-Sendfile exists, ending on the default server', function (): void {
     $stubDir = sys_get_temp_dir().'/bench-default-'.bin2hex(random_bytes(4));
     mkdir($stubDir);
-    file_put_contents($stubDir.'/ddev', "#!/usr/bin/env bash\n[[ \"\$*\" == \"server --default\" ]] && echo apache-fpm\n");
+    file_put_contents($stubDir.'/ddev', "#!/usr/bin/env bash\n[[ \"\$*\" == \"server --default\" ]] && echo frankenphp-worker\n");
     chmod($stubDir.'/ddev', 0755);
     $process = new Process(['bash', base_path('bench/export-load-matrix.sh'), '--dry-run', '--quick'], null, ['PATH' => $stubDir.':'.getenv('PATH')]);
     $process->mustRun();
     $lines = array_values(array_filter(explode("\n", $process->getOutput())));
     $cells = array_filter($lines, fn (string $l): bool => str_contains($l, 'export-load.sh'));
 
-    expect($cells)->toHaveCount(8)
-        ->and(implode("\n", $cells))->toContain('--mode offload --label apache-fpm --quick', '--mode stream --label openlitespeed --quick')
-        ->and(end($lines))->toBe('ddev server apache-fpm')
-        ->and(implode("\n", $lines))->toContain('ddev server frankenphp');
+    expect($cells)->toHaveCount(4)
+        ->and(implode("\n", $cells))->toContain('--mode offload --label frankenphp --quick', '--mode stream --label frankenphp-octane --quick', '--mode stream --label frankenphp-worker --quick')
+        ->and(implode("\n", $cells))->not->toContain('--mode offload --label frankenphp-worker')
+        ->and(implode("\n", $cells))->not->toContain('--mode offload --label frankenphp-octane')
+        ->and(end($lines))->toBe('ddev server frankenphp-worker')
+        ->and(implode("\n", $lines))->toContain('ddev server frankenphp', 'ddev server frankenphp-octane');
     exec('rm -rf '.escapeshellarg($stubDir));
 });
 

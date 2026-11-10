@@ -49,6 +49,10 @@ return [
             'body' => 'Request the stream with `curl --no-buffer` and watch the lines arrive one by one. If they come in a burst, look at the buffering of the proxy in front.',
         ],
         [
+            'title' => 'Stream on each of the three FrankenPHP modes',
+            'body' => 'The lab runs classic FrankenPHP (the default, with Mercure), worker mode and Octane. Switch with `ddev server frankenphp-worker`, `ddev server frankenphp-octane` or `ddev server default`, then repeat the curl check. Streaming was measured earlier on PHP-FPM; the three modes are what runs now.',
+        ],
+        [
             'title' => 'Test with a slow fake provider',
             'body' => 'Set the provider to the slow fake entry and the delay per piece to a visible value. No real model is needed.',
             'snippet' => 'App\Ai\FakeStreamProvider',
@@ -63,7 +67,7 @@ return [
         [
             'name' => 'Streaming tests',
             'status' => 'guarded',
-            'note' => 'Feature tests read the stream line by line, and a bench checks flushing on every web server.',
+            'note' => 'Feature tests read the stream line by line, and a bench checks flushing on each of the three FrankenPHP modes.',
         ],
         [
             'name' => 'A stream hangs',

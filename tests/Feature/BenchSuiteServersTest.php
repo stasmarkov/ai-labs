@@ -10,11 +10,12 @@ beforeEach(function (): void {
     mkdir($this->dir.'/bench', 0777, true);
     $this->log = $this->dir.'/log';
     touch($this->log);
-    file_put_contents($this->dir.'/current', "nginx-fpm\n");
+    file_put_contents($this->dir.'/current', "frankenphp\n");
 
     copy(base_path('bench/suite.sh'), $this->dir.'/bench/suite.sh');
     mkdir($this->dir.'/bench/lib');
     copy(base_path('bench/lib/default-server.sh'), $this->dir.'/bench/lib/default-server.sh');
+    copy(base_path('bench/lib/servers.sh'), $this->dir.'/bench/lib/servers.sh');
 
     $stub = function (string $path, string $body): void {
         file_put_contents($path, "#!/usr/bin/env bash\n".$body);
@@ -84,16 +85,11 @@ it('AC-2 suite skips the timeout step in --servers runs', function (): void {
 });
 
 it('AC-2 suite uses frankenphp as the baseline when it is listed, and runs it first', function (): void {
-    ($this->suite)(['--servers', 'nginx-fpm,frankenphp']);
+    ($this->suite)(['--servers', 'frankenphp-octane,frankenphp']);
     $log = ($this->log)();
 
     expect(array_values(array_filter($log, fn (string $line): bool => str_starts_with($line, 'ddev server ')))[0])->toBe('ddev server frankenphp')
-        ->and($log)->toContain('summary ping-fair-1.json --baseline=frankenphp-ping-fair.json --write=nginx-fpm-ping-fair.json');
-});
-
-it('AC-2 suite falls back to nginx-fpm, then to the first listed server, as the baseline', function (): void {
-    ($this->suite)(['--servers', 'apache-fpm,nginx-fpm']);
-    expect(array_values(array_filter(($this->log)(), fn (string $line): bool => str_starts_with($line, 'ddev server ')))[0])->toBe('ddev server nginx-fpm');
+        ->and($log)->toContain('summary ping-fair-1.json --baseline=frankenphp-ping-fair.json --write=frankenphp-octane-ping-fair.json');
 });
 
 it('AC-2 suite with only worker servers uses the first one as the baseline', function (): void {
@@ -109,27 +105,36 @@ it('AC-2 suite rejects unknown server names and a missing --servers value', func
         ->and(($this->suite)(['--servers'])->getErrorOutput())->toContain('needs a comma separated list');
 });
 
-it('MNC-1 suite without --servers runs the default four classic servers in order', function (): void {
+it('AC-2 suite exits non-zero for a removed server, with the removal message, before switching anything', function (string $removed): void {
+    $process = ($this->suite)(['--servers', 'frankenphp,'.$removed]);
+
+    expect($process->getExitCode())->toBe(2)
+        ->and($process->getErrorOutput())->toContain($removed.' was removed', 'frankenphp-worker')
+        ->and(($this->log)())->toBe([]);
+})->with(['nginx-fpm', 'apache-fpm', 'openlitespeed']);
+
+it('MNC-1 suite without --servers runs the three modes in order, frankenphp as the baseline', function (): void {
     ($this->suite)(['--quick']);
     $log = ($this->log)();
 
     $servers = array_values(array_filter(array_map(fn (string $line): string => str_starts_with($line, 'ddev server ') ? substr($line, 12) : '', $log)));
 
-    expect(array_slice($servers, 0, 4))->toBe(['nginx-fpm', 'apache-fpm', 'openlitespeed', 'frankenphp'])
-        ->and(array_values(array_filter($log, fn (string $line): bool => $line === 'timeouts run')))->toHaveCount(4)
-        ->and($log)->toContain('summary ping-fair-1.json --baseline=nginx-fpm-ping-fair.json --write=apache-fpm-ping-fair.json');
+    expect(array_slice($servers, 0, 3))->toBe(['frankenphp', 'frankenphp-worker', 'frankenphp-octane'])
+        ->and(array_values(array_filter($log, fn (string $line): bool => $line === 'timeouts run')))->toHaveCount(3)
+        ->and($log)->toContain('summary ping-fair-1.json --self-baseline --write=frankenphp-ping-fair.json')
+        ->and($log)->toContain('summary ping-fair-1.json --baseline=frankenphp-ping-fair.json --write=frankenphp-worker-ping-fair.json');
 });
 
-it('AC-3 suite ends on the default server it reads from ddev, not on nginx-fpm', function (): void {
-    $process = ($this->suite)(['--quick', '--servers', 'nginx-fpm,apache-fpm'], 'openlitespeed');
+it('AC-3 suite ends on the default server it reads from ddev, not on frankenphp', function (): void {
+    $process = ($this->suite)(['--quick', '--servers', 'frankenphp,frankenphp-worker'], 'frankenphp-octane');
     $switches = array_values(array_filter(($this->log)(), fn (string $line): bool => str_starts_with($line, 'ddev server ')));
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
-        ->and(end($switches))->toBe('ddev server openlitespeed');
+        ->and(end($switches))->toBe('ddev server frankenphp-octane');
 });
 
 it('AC-3 suite exits 2 before switching anything when the default server cannot be read', function (): void {
-    $process = ($this->suite)(['--quick', '--servers', 'nginx-fpm'], '');
+    $process = ($this->suite)(['--quick', '--servers', 'frankenphp'], '');
 
     expect($process->getExitCode())->toBe(2)
         ->and($process->getErrorOutput())->toContain('ddev server --default')

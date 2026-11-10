@@ -8,7 +8,7 @@ ai-lab: a study lab for implementing AI features in Laravel 13 (PHP 8.4 in conta
 
 ## Environment: DDEV
 
-The app runs in DDEV (`.ddev/config.yaml`: PHP 8.4, PostgreSQL 16 with pgvector, Redis, Node 24; the web server is frankenphp by default, chosen by `ddev server`, so run `ddev setup` once on a fresh clone: it creates `.env`, installs Composer and npm dependencies, generates `APP_KEY`, switches the server, creates the Mercure keys and migrates; `.ddev/config.yaml` still says `webserver_type: nginx-fpm` on purpose) at https://ai-lab.ddev.site. `.env` points to `DB_HOST=db`, which only resolves inside the container — so run PHP/Artisan/Composer/npm through DDEV, not the host (host PHP is 8.3):
+The app runs in DDEV (`.ddev/config.yaml`: PHP 8.4, PostgreSQL 16 with pgvector, Redis, Node 24; the web server is frankenphp by default, chosen by `ddev server`, so run `ddev setup` once on a fresh clone: it creates `.env`, installs Composer and npm dependencies, generates `APP_KEY`, switches the server, creates the Mercure keys and migrates; `.ddev/config.yaml` still says `webserver_type: nginx-fpm` on purpose; `ddev server` supports only `frankenphp`, `frankenphp-worker` and `frankenphp-octane`) at https://ai-lab.ddev.site. `.env` points to `DB_HOST=db`, which only resolves inside the container — so run PHP/Artisan/Composer/npm through DDEV, not the host (host PHP is 8.3):
 
 ```sh
 ddev start

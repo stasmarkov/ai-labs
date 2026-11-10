@@ -10,7 +10,9 @@ It is a living document: every slice adds or updates its section when it ships (
 
 ## 1. The app and one request on nginx-fpm
 
-> This section describes the request on nginx-fpm, which is still one `ddev server nginx-fpm` away; the default server is set out in section 2.
+*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.*
+
+> This section describes the request as it ran on nginx-fpm, a server that has since been removed (commit `719c0a5` is the last one that can switch to it); the servers that remain are set out in section 2.
 
 **What it is.** A small car marketplace on Laravel 13 and PHP 8.4: 500 dealers and 50 000 listings in PostgreSQL 16, with Redis for cache and sessions. It runs in DDEV, which starts a `web` container (nginx + PHP-FPM until `ddev setup` switches it to the default server), a `db` container and a `redis` container behind a shared router.
 
@@ -32,14 +34,16 @@ It is a living document: every slice adds or updates its section when it ships (
 
 ## 2. Switching servers and proving they answer the same
 
-> The default server is now frankenphp (`ddev setup` on a fresh clone switches to it; `ddev server default` returns to it). Every other server is one `ddev server <name>` away.
+*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.*
 
-**What it is.** One command, `ddev server <name>`, swaps the web server without touching `.ddev/config.yaml`. It writes a gitignored overlay `.ddev/config.zz-server.yaml`. DDEV merges every `config.*.yaml` over `config.yaml` in name order, so `zz` wins. Then it restarts the project. A parity script then proves every server returns the same responses.
+> The default server is now `frankenphp` (`ddev setup` on a fresh clone switches to it; `ddev server default` returns to it). Only the FrankenPHP family is left: `frankenphp-worker` and `frankenphp-octane` are one `ddev server <name>` away. nginx-fpm, apache-fpm and OpenLiteSpeed were removed after commit `719c0a5`; the text below keeps how they worked.
+
+**What it is.** One command, `ddev server <name>`, swaps the web server without touching `.ddev/config.yaml`. It writes a gitignored overlay `.ddev/config.zz-server.yaml`. DDEV merges every `config.*.yaml` over `config.yaml` in name order, so `zz` wins. Then it restarts the project. A parity script then proves the three remaining modes return the same responses.
 
 **How parity works.** `bench/parity.sh capture` sends 7 fixed requests and stores, per request, the status, the media type and a SHA-256 of the body. `compare` diffs two snapshots line by line. A few differences are expected and normalised:
 - the `/up` page prints its own render time, which is masked;
-- nginx adds `; charset=utf-8` to JSON, so only the media type is compared;
-- OpenLiteSpeed answers on its own port, so its base URL is rewritten.
+- the media type is compared without its charset, because some servers added `; charset=utf-8` to JSON (nginx did);
+- a server on its own port gets its base URL rewritten before hashing (OpenLiteSpeed did).
 
 The `Server` header must match the active server, so a snapshot can never be filed under the wrong name.
 
@@ -53,6 +57,10 @@ The `Server` header must match the active server, so a snapshot can never be fil
 **Read next.** [DDEV config overrides](https://docs.ddev.com/en/stable/users/extend/customization-extendibility/) · [DDEV custom commands](https://docs.ddev.com/en/stable/users/extend/custom-commands/)
 
 ## 3. Four ways to run PHP behind a web server
+
+*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.*
+
+> The first three rows describe servers that were removed after commit `719c0a5`; only the FrankenPHP family remains, and section 4 covers its worker modes.
 
 **What it is.** The servers differ less as HTTP servers than in *how PHP is executed*:
 
@@ -70,7 +78,7 @@ The `Server` header must match the active server, so a snapshot can never be fil
 - **OpenLiteSpeed:** runs as an extra container. Its OPcache settings were matched to the FPM pool, because lsphp's defaults (128 MB, 10 000 files) would overflow on this app's ~10 600 PHP files.
 
 **In this repo.**
-- Stashes: [`.ddev/servers/frankenphp/`](../.ddev/servers/frankenphp/) and [`.ddev/servers/openlitespeed/`](../.ddev/servers/openlitespeed/).
+- Stash: [`.ddev/servers/frankenphp/`](../.ddev/servers/frankenphp/); the OpenLiteSpeed stash was deleted with the server.
 - The PHP settings table per server: [`BENCHMARKS.md`](../BENCHMARKS.md).
 - Specs: [FrankenPHP](../.ai/specs/spec-20261029-1221-frankenphp-classic/) and [OpenLiteSpeed](../.ai/specs/spec-20261029-2027-openlitespeed/).
 
@@ -110,6 +118,8 @@ The `Server` header must match the active server, so a snapshot can never be fil
 
 ## 5. Measuring fairly
 
+*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.*
+
 **What it is.** A benchmark is only worth something if you can defend it. The harness enforces the rules instead of trusting you to remember them:
 - It refuses to run unless `APP_ENV=production`, `APP_DEBUG=false`, caches are built, OPcache is on, Xdebug is off and the git tree is clean (so every result has one commit).
 - Each run is a 30 s warm-up, then a 60 s measurement, repeated 3 times. The median by RPS is reported.
@@ -137,6 +147,8 @@ The `Server` header must match the active server, so a snapshot can never be fil
 **Read next.** [k6 docs](https://grafana.com/docs/k6/latest/) · [oha](https://github.com/hatoo/oha) · [Brendan Gregg on latency percentiles and methodology](https://www.brendangregg.com/methodology.html)
 
 ## 6. What was measured (SL-06)
+
+*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.*
 
 Full tables, the Expectations written before the runs and the Surprises are in [`BENCHMARKS.md`](../BENCHMARKS.md). The short version:
 
@@ -235,7 +247,7 @@ After both fixes: the static-array leak grows a steady 0.5 KB per request (11.3 
 | Server | first_text_ms | last_text_ms | text_events | distinct_ms | Needed |
 |---|---|---|---|---|---|
 | nginx-fpm | 84 | 10771 | 200 | 200 | nothing; `X-Accel-Buffering: no` from the app turns FastCGI buffering off |
-| apache-fpm | 228 | 10699 | 200 | 200 | `ProxySet flushpackets=on` on the PHP-FPM proxy worker in `.ddev/apache/apache-site.conf` |
+| apache-fpm | 228 | 10699 | 200 | 200 | `ProxySet flushpackets=on` on the PHP-FPM proxy worker in the apache site config (removed in commit `719c0a5`) |
 | openlitespeed | 409 | 11013 | 200 | 200 | nothing |
 | frankenphp | 255 | 10929 | 200 | 200 | nothing |
 | frankenphp-octane | 119 | 10676 | 200 | 199 | `SseProtocol::response()` drains the generator and flushes per chunk |
@@ -1001,7 +1013,7 @@ Every mode wrote a `stopped` row for 5 of 5 runs. nginx-fpm went from no row to 
 - Stream from PHP only when the bytes must be produced or transformed on the way (an on-the-fly archive, a generated report too big to keep), and size the pool for it as in section 19.
 - Treat the directory the server may serve as a security boundary: one directory, no user-controlled path, no direct URL.
 
-**In this repo.** Tests: `ExportGenerateTest`, `ServeExportTest`, `ExportOffloadConfigTest`, `BenchExportLoadTest`, `ExportLoadResultsTest`. Configs: [`.ddev/nginx_full/nginx-site.conf`](../.ddev/nginx_full/nginx-site.conf), [`.ddev/apache/apache-site.conf`](../.ddev/apache/apache-site.conf), [`.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp`](../.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp), [`.ddev/servers/openlitespeed/conf/vhosts/interview/vhconf.conf`](../.ddev/servers/openlitespeed/conf/vhosts/interview/vhconf.conf). Results: [`bench/results/export-load/`](../bench/results/export-load/). Spec: [`.ai/specs/spec-20261104-1944-export-offload/`](../.ai/specs/spec-20261104-1944-export-offload/).
+**In this repo.** Tests: `ExportGenerateTest`, `ServeExportTest`, `ExportOffloadConfigTest`, `BenchExportLoadTest`, `ExportLoadResultsTest`. Configs: [`.ddev/nginx_full/nginx-site.conf`](../.ddev/nginx_full/nginx-site.conf), the apache site config (removed in commit `719c0a5`), [`.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp`](../.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp). Results: [`bench/results/export-load/`](../bench/results/export-load/). Spec: [`.ai/specs/spec-20261104-1944-export-offload/`](../.ai/specs/spec-20261104-1944-export-offload/).
 
 **Read next.** [nginx: X-Accel-Redirect and `internal`](https://nginx.org/en/docs/http/ngx_http_core_module.html#internal) · [mod_xsendfile](https://tn123.org/mod_xsendfile/) · [Caddy `intercept`](https://caddyserver.com/docs/caddyfile/directives/intercept) · [OpenLiteSpeed: X-LiteSpeed-Location](https://docs.openlitespeed.org/config/advanced/) · [FrankenPHP: X-Sendfile](https://frankenphp.dev/docs/x-sendfile/)
 

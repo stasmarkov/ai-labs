@@ -28,6 +28,8 @@
 ##      BENCH_OHA_IMAGE, BENCH_K6_IMAGE.
 
 set -Eeuo pipefail
+# shellcheck source=lib/servers.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/servers.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
@@ -123,7 +125,7 @@ if [[ -e "$BACKUP" ]]; then
 fi
 [[ -f "$ENV_FILE" ]] || { echo "No .env at $ENV_FILE" >&2; exit 2; }
 
-server="$(ddev server --current)"
+server="$(current_server .)" || exit 2
 BASE_URL="${BENCH_BASE_URL:-$(ddev server --url)}"
 HOST="${BASE_URL#*://}"
 HOST="${HOST%%/*}"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ## Usage: bench/http3.sh [--server <name>|current] [--path <path>] [--label <name>]
 ## Records whether a server answers over HTTP/3. By default it switches to frankenphp (`ddev server frankenphp`), measures, and an EXIT
-## trap always puts the default server back and restores .env; `--server nginx-fpm` measures that server instead, `--server current` measures
+## trap always puts the default server back and restores .env; `--server frankenphp-worker` measures that mode instead, `--server current` measures
 ## the server that is up now and switches nothing. One GET of <path> (default /listings/1) goes over HTTP/2 and one over HTTP/3 only
 ## (`curl --http3-only`), both from a curl container on ddev_default straight at the web container (`--resolve <host>:443:<web container IP>`,
 ## so the DDEV router, which has no UDP 443 published, is skipped). It records the status and negotiated ALPN of each, the sha256 of both
@@ -11,7 +11,7 @@
 ## early_hints_during_h3: false and early_hints_reason; h2 and h3 see the same setting, so the body comparison stays fair.
 ## Writes bench/results/http3/<UTC date>/<label>.json and <label>.trace (label defaults to the server name). The trace is redacted:
 ## certificate subject/issuer lines and cookies are dropped and IP addresses become <ip>.
-## A server with no UDP listener (nginx-fpm) is not an error: h3_ok is false, `reason` says "no HTTP/3: curl exit <code>" and the exit is 0.
+## A server with no UDP listener is not an error: h3_ok is false, `reason` says "no HTTP/3: curl exit <code>" and the exit is 0.
 ## Exits 1 when the h3 body differs from the h2 body (both bodies go to bench/results/raw/, which is gitignored, never into the results
 ## tree), non-zero without a result when the h2 request fails or its status is not 200.
 ## Env: CURL_IMAGE (default alpine/curl-http3, pinned by digest), BENCH_DATE, BENCH_APPROOT, BENCH_H3_MAX_TIME (seconds, default 5).
@@ -46,6 +46,9 @@ while [ $# -gt 0 ]; do
   esac
 done
 [[ "$TARGET" =~ ^[a-z0-9-]+$ ]] || { echo "Invalid --server '$TARGET'." >&2; exit 2; }
+# shellcheck source=lib/servers.sh
+source "$SCRIPT_DIR/lib/servers.sh"
+if is_removed_server "$TARGET"; then server_removed_message "$TARGET" >&2; exit 2; fi
 [[ "$URL_PATH" == /* ]] || { echo "Invalid --path '$URL_PATH': it must start with /." >&2; exit 2; }
 [[ -z "$LABEL" || "$LABEL" =~ ^[a-z0-9-]+$ ]] || { echo "Invalid --label '$LABEL': use a-z, 0-9 and -." >&2; exit 2; }
 
@@ -68,7 +71,7 @@ if [ "$TARGET" != current ]; then
   SWITCHED_SERVER=1
   (cd "$APPROOT" && ddev server "$TARGET" >/dev/null)
 fi
-SERVER="$(cd "$APPROOT" && ddev server --current | tr -d '[:space:]')"
+SERVER="$(current_server "$APPROOT")" || exit 2
 BASE_URL="$(cd "$APPROOT" && ddev server --url | tr -d '[:space:]')"
 HOST_NAME="${BASE_URL#*://}"
 HOST_NAME="${HOST_NAME%%/*}"

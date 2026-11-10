@@ -1,6 +1,6 @@
 # architecture
 
-Lightweight ADR for slice SL-01 (walking skeleton). Business rules covered: BR-01, BR-03, BR-04, BR-05, BR-10, BR-11. Cross-cutting rules not to violate: BR-02 (identical responses on every server), BR-20 (production env, cached config), BR-30/31 (no state leaks). The product brief is still a draft, so the filter semantics below are recorded assumptions.
+Lightweight ADR for slice SL-01 (walking skeleton). Business rules covered: BR-01, BR-03, BR-04, BR-05, BR-10, BR-11. Cross-cutting rules not to violate: BR-02 (identical responses on every FrankenPHP mode), BR-20 (production env, cached config), BR-30/31 (no state leaks). The product brief is still a draft, so the filter semantics below are recorded assumptions.
 
 ## overview
 

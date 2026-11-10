@@ -5,7 +5,7 @@
 ## Ctrl-C. Each variant writes bench/results/http3/<UTC date>/lcp-<variant>.json; the date is computed once, so all four files share a folder
 ## (BENCH_DATE overrides it). A variant that fails (loss check outside its window, fewer than --runs valid runs) stops the matrix with its
 ## exit code and writes nothing; rerun that variant with --only. --dry-run prints the commands and runs none.
-## The curl proof is a separate script: bench/http3.sh (and `bench/http3.sh --server nginx-fpm`).
+## The curl proof is a separate script: bench/http3.sh (and `bench/http3.sh --server frankenphp-worker`).
 
 set -Eeuo pipefail
 

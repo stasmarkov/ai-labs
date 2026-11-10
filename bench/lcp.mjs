@@ -2,7 +2,7 @@
 // Usage: node bench/lcp.mjs --variant <name> --path <router|direct> --path-reason <text> [--runs 5] [--listing 1] [--dry-run]
 // Measures LCP, FCP and TTFB of GET /listings/<id> on the server that is up now (`ddev server --current`), in a pinned
 // Playwright Chromium container on ddev_default. One variant per invocation; the matrix (server, EARLY_HINTS on or off) is
-// set up by the caller and named by --variant (for example frankenphp-hints, frankenphp-no-hints, nginx-fpm).
+// set up by the caller and named by --variant (for example frankenphp-hints, frankenphp-no-hints).
 //   --path router  the browser resolves the site host to the DDEV router (Traefik)
 //   --path direct  the browser resolves it to the web container (TLS on 443), skipping the router
 //   --path-reason  why that path was chosen (from bench/early-hints.sh); written into the result file
@@ -256,6 +256,12 @@ if (options.dryRun) {
 }
 
 const server = sh('ddev', ['server', '--current'], appRoot);
+const SUPPORTED_SERVERS = ['frankenphp', 'frankenphp-worker', 'frankenphp-octane'];
+if (!SUPPORTED_SERVERS.includes(server)) {
+    // Same rule as bench/lib/servers.sh current_server: never label a result with "not set up" or a removed server.
+    console.error(`The project is not on a FrankenPHP mode (${server}); run ddev setup or ddev server default.`);
+    process.exit(2);
+}
 
 function digestOf(imageName) {
   sh('docker', ['pull', imageName], appRoot);

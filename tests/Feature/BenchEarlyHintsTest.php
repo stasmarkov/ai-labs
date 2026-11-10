@@ -94,9 +94,9 @@ it('AC-3 early-hints records a 103 through the router and straight at the web co
         ->and($process->getOutput())->toContain('router_103=yes', 'direct_103=yes');
 });
 
-it('AC-3 early-hints records no 103 on nginx-fpm', function (): void {
-    $process = ($this->earlyHints)(['STUB_SERVER' => 'nginx-fpm']);
-    $result = json_decode(file_get_contents(($this->dir)().'/nginx-fpm.json'), true);
+it('AC-3 early-hints records no 103 on a server that sends none', function (): void {
+    $process = ($this->earlyHints)(['STUB_SERVER' => 'frankenphp-worker']);
+    $result = json_decode(file_get_contents(($this->dir)().'/frankenphp-worker.json'), true);
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
         ->and($result['router_103'])->toBeFalse()

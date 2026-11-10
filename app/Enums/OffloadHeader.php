@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * The internal-redirect header a web server understands: a URI for the nginx and OpenLiteSpeed spellings,
+ * The internal-redirect header a web server understands: a URI for the nginx and LiteSpeed spellings,
  * an absolute path for X-Sendfile (Apache mod_xsendfile and the FrankenPHP Caddy intercept).
  */
 enum OffloadHeader: string

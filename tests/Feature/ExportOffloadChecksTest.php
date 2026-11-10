@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-const CHECKS_SERVERS = ['nginx-fpm', 'apache-fpm', 'frankenphp', 'frankenphp-octane', 'frankenphp-worker', 'openlitespeed'];
+const CHECKS_SERVERS = ['frankenphp', 'frankenphp-octane', 'frankenphp-worker'];
 
 function checksRoot(string $relative = ''): string
 {
     return rtrim(dirname(__DIR__, 2).'/'.$relative, '/');
 }
 
-test('MNC-1 the parity snapshots of the six servers carry the same hashes', function () {
+test('MNC-1 the parity snapshots of the three modes carry the same hashes', function () {
     $bodies = [];
 
     foreach (CHECKS_SERVERS as $server) {
@@ -17,10 +17,10 @@ test('MNC-1 the parity snapshots of the six servers carry the same hashes', func
         $bodies[$server] = array_values(array_filter($lines, fn (string $line): bool => ! str_starts_with($line, '#')));
     }
 
-    expect($bodies['nginx-fpm'])->toHaveCount(7);
+    expect($bodies['frankenphp'])->toHaveCount(7);
 
     foreach (CHECKS_SERVERS as $server) {
-        expect($bodies[$server])->toBe($bodies['nginx-fpm']);
+        expect($bodies[$server])->toBe($bodies['frankenphp']);
     }
 });
 

@@ -60,7 +60,7 @@ Both evals need Ollama running with the models above.
 
 ## History
 
-The project began as a PHP server comparison (nginx, Apache, FrankenPHP, OpenLiteSpeed, worker mode) on a car marketplace, and was renamed ai-lab on 2026-11-10 when it became a study lab for AI features in Laravel. The server work stays below and in [BENCHMARKS.md](BENCHMARKS.md). The old DDEV URL is gone; use https://ai-lab.ddev.site.
+The project began as a PHP server comparison (five web servers and worker mode; only the FrankenPHP family is kept) on a car marketplace, and was renamed ai-lab on 2026-11-10 when it became a study lab for AI features in Laravel. The server work stays below and in [BENCHMARKS.md](BENCHMARKS.md). The old DDEV URL is gone; use https://ai-lab.ddev.site.
 
 The DDEV project name comes from `name:` in `.ddev/config.yaml`, not from the folder, so the folder (for example `~/work/interview`) can be renamed at any time:
 
@@ -72,54 +72,38 @@ cd ~/work/ai-lab && ddev start
 
 ## Switching servers
 
-The default server is frankenphp (`.ddev/config.yaml` is never modified and still says nginx-fpm; the default lives in the `ddev server` command). On a fresh clone, run `ddev setup`: it copies `.env.example` to `.env` if `.env` is missing, starts DDEV, runs `composer install` and `key:generate` when they are needed, switches to the default server, creates the Mercure keys if they are missing, migrates, and builds the front end (`npm install && npm run build`) when `public/build` is missing. A second run prints `Already set up: frankenphp`. `ddev server --default` prints the default name, and `ddev server default` switches to it. Switch the web server with the DDEV host command:
+The default server is frankenphp. Only the FrankenPHP family is supported: `frankenphp` (classic), `frankenphp-worker` and `frankenphp-octane`. `.ddev/config.yaml` is never modified; the default lives in the `ddev server` command. On a fresh clone, run `ddev setup`: it copies `.env.example` to `.env` if `.env` is missing, starts DDEV, runs `composer install` and `key:generate` when they are needed, switches to the default server, creates the Mercure keys if they are missing, migrates, and builds the front end (`npm install && npm run build`) when `public/build` is missing. A second run prints `Already set up: frankenphp`. `ddev server --default` prints the default name, and `ddev server default` switches to it. Switch the web server with the DDEV host command:
 
 ```sh
 ddev server                 # show the active and supported servers
-ddev server apache-fpm      # write the gitignored overlay .ddev/config.zz-server.yaml and restart
 ddev server frankenphp      # FrankenPHP in classic mode (no worker), Caddy in front
-ddev server openlitespeed   # OpenLiteSpeed with LSAPI on https://ai-lab.ddev.site:8091
 ddev server frankenphp-octane  # FrankenPHP worker mode, started by Laravel Octane
 ddev server frankenphp-worker  # FrankenPHP worker mode, started by the add-on's Caddyfile
-ddev server nginx-fpm       # plain DDEV nginx + PHP-FPM
 ddev server default         # back to the default server
 ```
 
-The first switch to `frankenphp` builds the web image and can take several minutes; later switches reuse it. FrankenPHP runs PHP inside its own process as threads, so it needs the thread-safe (ZTS) build of PHP. nginx-fpm and apache-fpm run PHP-FPM worker processes on the non-thread-safe (NTS) build. Switching away from `frankenphp` removes the copied add-on files, so `php -v` shows the NTS build again. FrankenPHP logs are in `ddev logs -f`.
+The command writes the gitignored overlay `.ddev/config.zz-server.yaml` and restarts the project. The first switch to a FrankenPHP mode builds the web image and can take several minutes; later switches reuse it. FrankenPHP runs PHP inside its own process as threads, so it needs the thread-safe (ZTS) build of PHP, unlike the non-thread-safe (NTS) build of a PHP-FPM setup. FrankenPHP logs are in `ddev logs -f`.
 
 FrankenPHP is not a DDEV `webserver_type`, so its files come from the `ddev/ddev-frankenphp` add-on (version in `.ddev/servers/frankenphp/VERSION`), committed unchanged under `.ddev/servers/frankenphp/` rather than installed with `ddev add-on get`. `ddev server frankenphp` copies `docker-compose.frankenphp.yaml` and `web-build/{Caddyfile,Dockerfile,pre.Dockerfile}.frankenphp` from there into `.ddev/` (all four are gitignored) and writes the add-on's `config.frankenphp.yaml` into the overlay. If `ddev restart` fails, the command puts back the previous overlay and add-on files and restarts the previous server.
 
-`openlitespeed` runs as its own `openlitespeed` service from `.ddev/servers/openlitespeed/`; the `web` container stays on its nginx-fpm base and idle, so the main URL keeps answering. Open the app at `https://ai-lab.ddev.site:8091`. The first switch builds the image and can take several minutes; later switches reuse it. Switching away removes the copied `docker-compose.openlitespeed.yaml` and the service stops.
+The other servers this project once compared were removed; asking for one by its old name exits 1 with a message. Their measurements stay in [BENCHMARKS.md](BENCHMARKS.md).
 
-OpenLiteSpeed is not a DDEV `webserver_type` either. `ddev server openlitespeed` copies `docker-compose.openlitespeed.yaml` from `.ddev/servers/openlitespeed/` into `.ddev/` (gitignored) and writes an overlay that keeps `webserver_type: nginx-fpm`. The service image is built from the stash's `Dockerfile`: the base image tag is recorded in `VERSION`, `lsphp84-pgsql` is added at build time, and the server and vhost configs come from `conf/httpd_config.conf` and `conf/vhosts/interview/vhconf.conf` (document root `public/`, PHP through LSAPI). If any of these files is missing, the command stops, names the missing file and changes nothing. PHP runs as a user with your DDEV UID and GID, so files it writes to `storage/` stay owned by you. Server output is in `ddev logs -s openlitespeed`; the access and error logs are in `/usr/local/lsws/logs/` inside that container. OpenLiteSpeed reads the `.htaccess` rewrite rules at start-up, so changes to `public/.htaccess` need a `ddev restart` (unlike Apache).
-
-Apache reads `public/.htaccess` on every request, so rewrite and header rules in that file apply to Apache only and are not cached between requests; nginx ignores it.
-
-Check that the servers answer identically. Seed once so every capture sees the same data, then capture on each server and compare:
+Check that the three modes answer identically. Seed once so every capture sees the same data, then capture on each mode and compare:
 
 ```sh
 ddev artisan migrate:fresh --seed
 ddev server frankenphp
 bench/parity.sh capture                       # reference: writes bench/parity/frankenphp.txt
-ddev server nginx-fpm
-bench/parity.sh capture                       # writes bench/parity/nginx-fpm.txt
-bench/parity.sh compare frankenphp nginx-fpm  # prints "identical" (exit 0) or the differing requests (exit 1)
-ddev server apache-fpm
-bench/parity.sh capture                       # writes bench/parity/apache-fpm.txt
-bench/parity.sh compare frankenphp apache-fpm
-ddev server openlitespeed
-bench/parity.sh capture                       # uses port 8091, writes bench/parity/openlitespeed.txt
-bench/parity.sh compare frankenphp openlitespeed
 ddev server frankenphp-octane
 bench/parity.sh capture                       # writes bench/parity/frankenphp-octane.txt
-bench/parity.sh compare frankenphp frankenphp-octane
+bench/parity.sh compare frankenphp frankenphp-octane  # prints "identical" (exit 0) or the differing requests (exit 1)
 ddev server frankenphp-worker
 bench/parity.sh capture                       # writes bench/parity/frankenphp-worker.txt
 bench/parity.sh compare frankenphp frankenphp-worker
 ddev server default                           # back to the default server
 ```
 
-Each snapshot line holds the path, status, media type (charset and other parameters dropped) and body SHA-256. Only the `/up` page has its render time masked before hashing. `capture` writes nothing if a request fails (exit 3) or the `Server` header does not match the active server (exit 4); set `PARITY_INSECURE=1` if the DDEV certificate is not trusted. The header must contain `nginx` on nginx-fpm, `apache` on apache-fpm, `caddy` on frankenphp and `litespeed` on openlitespeed (case-insensitive); a server missing from that list makes `capture` stop with exit 2. `capture` and `bench/versions.sh` take their base URL from `ddev server --url` (`https://ai-lab.ddev.site:8091` on openlitespeed, `https://ai-lab.ddev.site` on the others); set `PARITY_BASE_URL` to override it. When the base URL is not `https://ai-lab.ddev.site`, `capture` replaces it in each body with that URL before hashing (using `perl` on the host), so snapshots taken on port 8091 compare directly with the others.
+Each snapshot line holds the path, status, media type (charset and other parameters dropped) and body SHA-256. Only the `/up` page has its render time masked before hashing. `capture` writes nothing if a request fails (exit 3) or the `Server` header does not match the active server (exit 4); set `PARITY_INSECURE=1` if the DDEV certificate is not trusted. The header must contain `caddy` on all three modes (case-insensitive); a server missing from that list makes `capture` stop with exit 2. `capture` and `bench/versions.sh` take their base URL from `ddev server --url` (`https://ai-lab.ddev.site`); set `PARITY_BASE_URL` to override it.
 
 To record versions in `BENCHMARKS.md`, enable `/debug/runtime` and run `bench/versions.sh` on each server:
 

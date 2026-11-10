@@ -16,7 +16,7 @@ beforeEach(function (): void {
 #!/usr/bin/env bash
 echo "ddev $*" >> "$STUB_LOG"
 case "$*" in
-  "server --current") echo "${STUB_SERVER-nginx-fpm}" ;;
+  "server --current") echo "${STUB_SERVER-frankenphp}" ;;
   "server --url") echo "https://ai-lab.ddev.site" ;;
   "artisan config:show app.env") echo "${STUB_APP_ENV-production}" ;;
   "artisan config:show app.debug") echo "${STUB_APP_DEBUG-false}" ;;
@@ -122,7 +122,7 @@ afterEach(function (): void {
 });
 
 it('AC-4 slow-load http runs a slow load and a health probe as two capped containers and prints a table', function (): void {
-    $process = ($this->slowLoad)([], '--workload', 'http', '--quick', '--label', 'nginx-fpm-8');
+    $process = ($this->slowLoad)([], '--workload', 'http', '--quick', '--label', 'frankenphp-8');
     $calls = ($this->calls)();
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
@@ -131,10 +131,10 @@ it('AC-4 slow-load http runs a slow load and a health probe as two capped contai
         ->and($calls)->toContain('-c 100')
         ->and($process->getOutput())->toContain('workload=http', 'load_rps', 'health_p95_ms', 'median', 'health p95 spread');
 
-    $result = ($this->result)('http-nginx-fpm-8');
+    $result = ($this->result)('http-frankenphp-8');
 
     expect($result)->toMatchArray([
-        'server' => 'nginx-fpm', 'workload' => 'http', 'label' => 'nginx-fpm-8', 'commit' => 'abc1234',
+        'server' => 'frankenphp', 'workload' => 'http', 'label' => 'frankenphp-8', 'commit' => 'abc1234',
         'concurrency' => 'default', 'users' => 100, 'warmup_s' => 5, 'measure_s' => 15, 'repeats' => 1, 'quick' => true, 'flagged' => false,
     ])
         ->and($result['median']['load_rps'])->toEqual(100)
@@ -220,7 +220,7 @@ it('AC-4 slow-load sets the benchmark env, and for sse the fake stream, then res
 #!/usr/bin/env bash
 echo "ddev \$*" >> "\$STUB_LOG"
 case "\$*" in
-  "server --current") echo nginx-fpm ;;
+  "server --current") echo frankenphp ;;
   "server --url") echo "https://ai-lab.ddev.site" ;;
   "artisan optimize") cat "$this->root/app/.env" > "$before" ;;
   "artisan config:show app.env") echo production ;;
@@ -243,7 +243,7 @@ it('AC-1 slow-load http enables the slow route (DEBUG_ROUTES) and raises its lim
 #!/usr/bin/env bash
 echo "ddev \$*" >> "\$STUB_LOG"
 case "\$*" in
-  "server --current") echo nginx-fpm ;;
+  "server --current") echo frankenphp ;;
   "server --url") echo "https://ai-lab.ddev.site" ;;
   "artisan optimize") cat "$this->root/app/.env" > "$during" ;;
   "artisan config:show app.env") echo production ;;
@@ -368,10 +368,10 @@ it('NFR-1 slow-load keeps a spread of 0 when every repeat is 0 and prints n/a fo
         ->and($process->getOutput())->toContain('n/a (median 0)');
 });
 
-it('NFR-2 AC-3 slow-load-matrix plans the 8 cells and restores the defaults and the default server', function (): void {
+it('NFR-2 AC-3 slow-load-matrix plans the 4 cells and restores the defaults and the default server', function (): void {
     $stubDir = sys_get_temp_dir().'/bench-default-'.bin2hex(random_bytes(4));
     mkdir($stubDir);
-    file_put_contents($stubDir.'/ddev', "#!/usr/bin/env bash\n[[ \"\$*\" == \"server --default\" ]] && echo apache-fpm\n");
+    file_put_contents($stubDir.'/ddev', "#!/usr/bin/env bash\n[[ \"\$*\" == \"server --default\" ]] && echo frankenphp-worker\n");
     chmod($stubDir.'/ddev', 0755);
     $env = ['PATH' => $stubDir.':'.getenv('PATH')];
     $process = new Process(['bash', base_path('bench/slow-load-matrix.sh'), '--dry-run'], null, $env);
@@ -380,16 +380,16 @@ it('NFR-2 AC-3 slow-load-matrix plans the 8 cells and restores the defaults and 
     $runs = array_values(array_filter($lines, fn (string $line): bool => str_contains($line, 'slow-load.sh')));
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
-        ->and($runs)->toHaveCount(8)
+        ->and($runs)->toHaveCount(4)
         ->and($process->getOutput())
-        ->toContain('concurrency.sh 8', 'concurrency.sh 32', 'concurrency.sh 14', 'autoscale --threads 14 --max-threads 64 --max-wait 5')
-        ->toContain('--workload http --users 100 --label nginx-fpm-8', '--workload sse --users 30 --label frankenphp-autoscale-14-64')
-        ->and(end($lines))->toBe('ddev server apache-fpm')
+        ->toContain('concurrency.sh 14', 'autoscale --threads 14 --max-threads 64 --max-wait 5')
+        ->toContain('--workload http --users 100 --label frankenphp-14', '--workload sse --users 30 --label frankenphp-autoscale-14-64')
+        ->and(end($lines))->toBe('ddev server frankenphp-worker')
         ->and($lines[count($lines) - 2])->toContain('concurrency.sh default');
 
     $quick = new Process(['bash', base_path('bench/slow-load-matrix.sh'), '--dry-run', '--quick'], null, $env);
     $quick->run();
-    expect(substr_count($quick->getOutput(), '--quick'))->toBe(8);
+    expect(substr_count($quick->getOutput(), '--quick'))->toBe(4);
 
     $bad = new Process(['bash', base_path('bench/slow-load-matrix.sh'), '--nope'], null, $env);
     $bad->run();

@@ -47,7 +47,7 @@ return [
     | that server understands. "offload_header" forces one header for every
     | server, and "offload_enabled" lists the headers that may be used: any other
     | one answers with X-Export-Mode: stream-fallback. "uri_prefix" is the
-    | internal location that the nginx and OpenLiteSpeed configs alias to the
+    | internal location that the nginx config aliases to the
     | exports directory.
     |
     */

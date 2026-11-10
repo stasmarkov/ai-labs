@@ -280,3 +280,14 @@ it('AC-6 tables render the worker memory table from memory files', function (): 
     array_map('unlink', glob("$dir/*.json"));
     rmdir($dir);
 });
+
+it('MNC-4 summary renders the committed historical result of the removed servers unchanged', function (): void {
+    $tables = benchTables(base_path('bench/results/2026-11-01'));
+
+    expect($tables)->toContain('RPS vs nginx-fpm')
+        ->toContain('| nginx-fpm | fair: 8 workers | 4812 |')
+        ->toContain('| apache-fpm | fair: 8 workers | 5654 |')
+        ->toContain('| openlitespeed | fair: 8 workers | 5844 |')
+        ->toContain('| frankenphp | fair: 8 workers | 6235 |')
+        ->toContain('### Memory and CPU at 50 concurrent users');
+});

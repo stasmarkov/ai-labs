@@ -64,7 +64,7 @@ done
 chosen=""
 case "$url" in
   *"/exports/"*|*"/build/"*|*"/listings/"*)
-    if [[ "${STUB_SERVER-frankenphp}" == nginx-fpm ]]; then
+    if [[ "${STUB_SERVER-frankenphp}" == frankenphp-worker ]]; then
       [[ "$enc" == *gzip* ]] && chosen="gzip"
     else
       case "$enc" in
@@ -187,9 +187,9 @@ it('MNC-3 compression reads the export size and sha256 from the file without cha
         ->and($calls)->toContain('docker run --rm --network ddev_default --add-host ai-lab.ddev.site:172.19.0.2', '--compressed');
 });
 
-it('AC-5 compression records nginx-fpm answering gzip or nothing', function (): void {
-    $process = ($this->compression)(['STUB_SERVER' => 'nginx-fpm']);
-    $result = json_decode(file_get_contents(($this->file)('nginx-fpm')), true);
+it('AC-5 compression records a server answering gzip or nothing', function (): void {
+    $process = ($this->compression)(['STUB_SERVER' => 'frankenphp-worker']);
+    $result = json_decode(file_get_contents(($this->file)('frankenphp-worker')), true);
     $encodings = collect($result['resources'])->pluck('content_encoding')->unique()->sort()->values()->all();
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())

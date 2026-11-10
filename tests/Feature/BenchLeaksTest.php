@@ -83,7 +83,7 @@ afterEach(function (): void {
 });
 
 it('AC-8 leaks.sh prints a count per scenario and mode and restores .env', function (): void {
-    $process = ($this->leaks)('nginx-fpm');
+    $process = ($this->leaks)('frankenphp');
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput());
 
@@ -96,14 +96,14 @@ it('AC-8 leaks.sh prints a count per scenario and mode and restores .env', funct
         ->and($lines[3])->toMatch('/^price-cache\s+fixed\s+leaked 0\/20$/')
         ->and($lines[4])->toMatch('/^number-locale\s+leak\s+leaked 0\/20$/')
         ->and($lines[7])->toMatch('/^request-at-boot\s+fixed\s+leaked 0\/20$/')
-        ->and($process->getOutput())->toContain('nginx-fpm')
+        ->and($process->getOutput())->toContain('frankenphp')
         ->and(($this->calls)())->toContain('DEBUG_ROUTES seen: DEBUG_ROUTES=true')
         ->and(file_get_contents($this->root.'/app/.env'))->toBe($this->envBefore)
         ->and(file_exists($this->root.'/app/.env.bench-backup'))->toBeFalse();
 });
 
 it('AC-8 leaks.sh sends 20 requests as dealer 1 then 20 as dealer 2 per row', function (): void {
-    ($this->leaks)('nginx-fpm');
+    ($this->leaks)('frankenphp');
 
     expect(substr_count(($this->calls)(), 'DEBUG_ROUTES seen'))->toBeGreaterThanOrEqual(8 * 40);
 });
@@ -128,7 +128,7 @@ it('AC-8 leaks.sh restarts the Octane daemon after switching .env, because a rel
 });
 
 it('AC-8 leaks.sh refuses when the debug routes stay disabled and restores .env', function (): void {
-    $process = ($this->leaks)('nginx-fpm', [], ['STUB_STATUS' => '404', 'BENCH_SETTLE' => '1']);
+    $process = ($this->leaks)('frankenphp', [], ['STUB_STATUS' => '404', 'BENCH_SETTLE' => '1']);
 
     expect($process->getExitCode())->toBe(2)
         ->and($process->getErrorOutput())->toContain('DEBUG_ROUTES')
@@ -140,7 +140,7 @@ it('AC-8 leaks.sh refuses when the debug routes stay disabled and restores .env'
 it('AC-8 leaks.sh refuses to run over a stale .env backup', function (): void {
     file_put_contents($this->root.'/app/.env.bench-backup', "APP_ENV=old\n");
 
-    $process = ($this->leaks)('nginx-fpm');
+    $process = ($this->leaks)('frankenphp');
 
     expect($process->getExitCode())->toBe(2)
         ->and($process->getErrorOutput())->toContain('Stale')
@@ -161,7 +161,7 @@ it('AC-8 leaks.sh --max-requests writes the overlay for the restart and removes 
 });
 
 it('AC-8 leaks.sh --max-requests is refused on servers without the Octane daemon', function (): void {
-    $process = ($this->leaks)('nginx-fpm', ['--max-requests', '1']);
+    $process = ($this->leaks)('frankenphp', ['--max-requests', '1']);
 
     expect($process->getExitCode())->toBe(2)
         ->and($process->getErrorOutput())->toContain('frankenphp-octane')

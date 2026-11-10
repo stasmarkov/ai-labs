@@ -11,6 +11,8 @@
 ## Env: CURL_IMAGE (default curlimages/curl:8.11.1), BENCH_DATE, BENCH_APPROOT.
 
 set -euo pipefail
+# shellcheck source=lib/servers.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/servers.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
@@ -30,7 +32,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-SERVER="$(cd "$APPROOT" && ddev server --current | tr -d '[:space:]')"
+SERVER="$(current_server "$APPROOT")" || exit 2
 BASE_URL="$(cd "$APPROOT" && ddev server --url | tr -d '[:space:]')"
 HOST_NAME="${BASE_URL#*://}"
 HOST_NAME="${HOST_NAME%%/*}"
@@ -73,7 +75,7 @@ docker run --rm --network ddev_default "$CURL_IMAGE" --max-time 30 -o /dev/null 
   || { echo "direct request failed (trace not kept)" >&2; rm -f "$OUT/.direct.raw"; exit 1; }
 redact < "$OUT/.direct.raw" > "$OUT/$LABEL-direct.trace" || true
 has_direct="$(grep -Ec '^< HTTP/[0-9.]+ 103' "$OUT/.direct.raw" || true)"
-# The protocol the final response really used (nginx in DDEV answers HTTP/1.1 on 443; the 103 needs HTTP/2 in Chromium).
+# The protocol the final response really used (the 103 needs HTTP/2 in Chromium).
 DIRECT_PROTOCOL="${DIRECT_SCHEME} $(grep -Eo '^< HTTP/[0-9.]+' "$OUT/.direct.raw" | tail -n1 | cut -c3-)"
 rm -f "$OUT/.direct.raw"
 

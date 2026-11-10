@@ -5,9 +5,8 @@
 ## bench/parity/<active server>.txt. Only the /up body has its render time
 ## ("rendered in Nms") masked, because Laravel prints it and it differs per request.
 ## The snapshot is written only when every request succeeds and the Server header
-## matches the active server's token (read from any response of the exchange, since a 103 can carry it alone) (nginx-fpm: nginx, apache-fpm: apache, frankenphp, frankenphp-octane, frankenphp-worker: caddy,
-## openlitespeed: litespeed).
-## Env: PARITY_BASE_URL (default: `ddev server --url`, e.g. https://ai-lab.ddev.site, :8091 for openlitespeed),
+## matches the active server's token (read from any response of the exchange, since a 103 can carry it alone) (frankenphp, frankenphp-octane and frankenphp-worker: caddy).
+## Env: PARITY_BASE_URL (default: `ddev server --url`, e.g. https://ai-lab.ddev.site),
 ##      PARITY_INSECURE=1 adds -k.
 ## The detail page's data-price-rendered-ms attribute (server time at render, SL-13) is masked to N before hashing for the same reason.
 ## Absolute URLs of the base URL in response bodies are rewritten to https://ai-lab.ddev.site before hashing.
@@ -22,10 +21,7 @@ REQUESTS=(/up /api/ping /listings "/listings?make=BMW&fuel=diesel&per_page=5" "/
 # Expected Server header token per server. A new server must be added here explicitly.
 header_token() {
   case "$1" in
-    nginx-fpm) echo nginx ;;
-    apache-fpm) echo apache ;;
     frankenphp | frankenphp-octane | frankenphp-worker) echo caddy ;;
-    openlitespeed) echo litespeed ;;
     *) return 1 ;;
   esac
 }

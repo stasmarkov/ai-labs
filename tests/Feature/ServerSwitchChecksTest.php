@@ -10,7 +10,7 @@ test('MNC-1 .ddev/config.yaml keeps nginx-fpm and no per-server settings', funct
 });
 
 test('MNC-2 every server keeps a parity baseline', function (): void {
-    foreach (['nginx-fpm', 'apache-fpm', 'openlitespeed', 'frankenphp', 'frankenphp-octane', 'frankenphp-worker'] as $server) {
+    foreach (['frankenphp', 'frankenphp-octane', 'frankenphp-worker'] as $server) {
         expect(base_path("bench/parity/{$server}.txt"))->toBeFile();
     }
 });

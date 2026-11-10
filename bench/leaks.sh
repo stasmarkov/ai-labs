@@ -13,6 +13,8 @@
 ##      BENCH_SETTLE (seconds to wait for the server after a restart, default 60).
 
 set -Eeuo pipefail
+# shellcheck source=lib/servers.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/servers.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
@@ -112,7 +114,7 @@ if [[ -e "$BACKUP" ]]; then
 fi
 [[ -f "$ENV_FILE" ]] || refuse "no .env at $ENV_FILE"
 
-server="$(ddev server --current)"
+server="$(current_server .)" || exit 2
 BASE_URL="${BENCH_BASE_URL:-$(ddev server --url)}"
 if [[ -n "$max_requests" && "$server" != "frankenphp-octane" ]]; then
   refuse "--max-requests needs the frankenphp-octane server (active: $server)"

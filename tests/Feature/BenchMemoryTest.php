@@ -13,6 +13,8 @@ beforeEach(function (): void {
     touch($this->dir.'/log');
 
     copy(base_path('bench/memory.sh'), $this->dir.'/bench/memory.sh');
+    mkdir($this->dir.'/bench/lib', 0777, true);
+    copy(base_path('bench/lib/servers.sh'), $this->dir.'/bench/lib/servers.sh');
 
     $stub = function (string $path, string $body): void {
         file_put_contents($path, "#!/usr/bin/env bash\n".$body);
@@ -176,8 +178,8 @@ it('AC-3 restores .env and the default worker settings when the server stops ans
         ->and(array_slice(($this->log)(), -2))->toContain('concurrency default');
 });
 
-it('AC-3 refuses servers without a worker lab and bad arguments before touching anything', function (): void {
-    $process = ($this->memory)('nginx-fpm', ['--requests', '200']);
+it('AC-3 refuses a server outside the frankenphp family and bad arguments before touching anything', function (): void {
+    $process = ($this->memory)('caddy', ['--requests', '200']);
     expect($process->getExitCode())->toBe(2)
         ->and(file_get_contents($this->dir.'/.env'))->toBe($this->envBefore);
 

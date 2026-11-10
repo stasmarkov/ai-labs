@@ -25,6 +25,13 @@ beforeEach(function (): void {
     foreach ($this->activated as $file) {
         file_put_contents($this->stash.'/'.$file, 'stash '.$file."\n");
     }
+    $this->octaneStash = $this->root.'/.ddev/servers/frankenphp-octane';
+    $this->workerStash = $this->root.'/.ddev/servers/frankenphp-worker';
+    mkdir($this->octaneStash, 0777, true);
+    mkdir($this->workerStash.'/web-build', 0777, true);
+    file_put_contents($this->octaneStash.'/config.frankenphp-octane.yaml', "webserver_type: generic\nweb_extra_daemons: octane\n");
+    file_put_contents($this->workerStash.'/web-build/Caddyfile.frankenphp', "worker caddyfile\n");
+    $this->caddyfile = $this->root.'/.ddev/web-build/Caddyfile.frankenphp';
     $this->configBefore = file_get_contents($this->root.'/.ddev/config.yaml');
 
     $this->server = function (string ...$args): Process {
@@ -43,48 +50,75 @@ afterEach(function (): void {
     (new Process(['rm', '-rf', $this->root]))->run();
 });
 
-it('AC-1 apache-fpm writes the overlay and restarts', function (): void {
-    $process = ($this->server)('apache-fpm');
+it('AC-1 frankenphp-worker writes the overlay and restarts', function (): void {
+    $process = ($this->server)('frankenphp-worker');
 
     expect($process->getExitCode())->toBe(0)
-        ->and(file_get_contents($this->overlay))->toContain('webserver_type: apache-fpm')
+        ->and(file_get_contents($this->overlay))->toContain('# server: frankenphp-worker')
         ->and(file_get_contents($this->root.'/ddev-calls.log'))->toContain('restart')
-        ->and($process->getOutput())->toContain('apache-fpm');
+        ->and($process->getOutput())->toContain('frankenphp-worker');
 });
 
-it('AC-2 nginx-fpm switches back', function (): void {
-    ($this->server)('apache-fpm');
-    $process = ($this->server)('nginx-fpm');
+it('AC-1 switching between the three modes works', function (): void {
+    foreach (['frankenphp', 'frankenphp-worker', 'frankenphp-octane', 'frankenphp'] as $server) {
+        $process = ($this->server)($server);
 
-    expect($process->getExitCode())->toBe(0)
-        ->and(file_get_contents($this->overlay))->toContain('webserver_type: nginx-fpm')
-        ->and($process->getOutput())->toContain('nginx-fpm');
+        expect($process->getExitCode())->toBe(0)
+            ->and($process->getOutput())->toContain('Active: '.$server)
+            ->and(file_get_contents($this->overlay))->toContain('# server: '.$server."\n");
+    }
 });
 
-it('AC-3 no argument prints the active and supported servers without restarting', function (): void {
+it('AC-1 no argument lists exactly the three modes without restarting', function (): void {
     $process = ($this->server)();
 
     expect($process->getExitCode())->toBe(0)
-        ->and($process->getOutput())->toContain('nginx-fpm')
-        ->and($process->getOutput())->toContain('apache-fpm')
+        ->and($process->getOutput())->toContain('Supported: frankenphp frankenphp-worker frankenphp-octane')
+        ->and($process->getOutput())->toContain('Active: not set up')
+        ->and($process->getOutput())->not->toContain('nginx')
+        ->and($process->getOutput())->not->toContain('apache')
+        ->and($process->getOutput())->not->toContain('litespeed')
         ->and(file_exists($this->overlay))->toBeFalse()
         ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
 
-    ($this->server)('apache-fpm');
-    expect(($this->server)()->getOutput())->toContain('Active: apache-fpm');
+    ($this->server)('frankenphp-worker');
+    expect(($this->server)()->getOutput())->toContain('Active: frankenphp-worker');
 });
+
+it('AC-1 a removed server exits 1 with the removal message and leaves the overlay untouched', function (string $removed): void {
+    $message = $removed.' was removed in SL-50; the lab runs on the FrankenPHP family: frankenphp, frankenphp-worker, frankenphp-octane';
+
+    $fresh = ($this->server)($removed);
+
+    expect($fresh->getExitCode())->toBe(1)
+        ->and(trim($fresh->getErrorOutput()))->toBe($message)
+        ->and(file_exists($this->overlay))->toBeFalse()
+        ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
+
+    ($this->server)('frankenphp-octane');
+    $before = file_get_contents($this->overlay);
+    unlink($this->root.'/ddev-calls.log');
+
+    $process = ($this->server)($removed);
+
+    expect($process->getExitCode())->toBe(1)
+        ->and(trim($process->getErrorOutput()))->toBe($message)
+        ->and(file_get_contents($this->overlay))->toBe($before)
+        ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
+})->with(['nginx-fpm', 'apache-fpm', 'openlitespeed']);
 
 it('AC-4 invalid argument exits non-zero, prints supported values and changes nothing', function (): void {
     $process = ($this->server)('foo');
 
     expect($process->getExitCode())->toBe(1)
-        ->and($process->getErrorOutput())->toContain('nginx-fpm apache-fpm')
+        ->and($process->getErrorOutput())->toContain("Unknown server 'foo'")
+        ->and($process->getErrorOutput())->toContain('frankenphp frankenphp-worker frankenphp-octane')
         ->and(file_exists($this->overlay))->toBeFalse()
         ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
 });
 
 it('AC-4 invalid argument leaves an existing overlay untouched', function (): void {
-    ($this->server)('apache-fpm');
+    ($this->server)('frankenphp-worker');
     $before = file_get_contents($this->overlay);
     unlink($this->root.'/ddev-calls.log');
 
@@ -96,9 +130,9 @@ it('AC-4 invalid argument leaves an existing overlay untouched', function (): vo
 });
 
 it('AC-1 overlay names the server so later servers can share a webserver_type', function (): void {
-    ($this->server)('apache-fpm');
+    ($this->server)('frankenphp-worker');
 
-    expect(file_get_contents($this->overlay))->toContain("# server: apache-fpm\n");
+    expect(file_get_contents($this->overlay))->toContain("# server: frankenphp-worker\n");
 
     file_put_contents($this->overlay, "# server: frankenphp\nwebserver_type: generic\n");
 
@@ -108,7 +142,7 @@ it('AC-1 overlay names the server so later servers can share a webserver_type', 
 it('AC-4 restart failure restores the overlay and tries to restart the previous server', function (): void {
     touch($this->root.'/ddev-fail');
 
-    $process = ($this->server)('apache-fpm');
+    $process = ($this->server)('frankenphp-worker');
 
     expect($process->getExitCode())->toBe(1)
         ->and(substr_count(file_get_contents($this->root.'/ddev-calls.log'), 'restart'))->toBe(2)
@@ -122,36 +156,58 @@ it('AC-5 overlay is gitignored', function (): void {
     expect($ignored->getExitCode())->toBe(0);
 });
 
-it('MNC-1 never modifies config.yaml', function (): void {
-    ($this->server)('apache-fpm');
+it('MNC-6 never modifies config.yaml', function (): void {
+    ($this->server)('frankenphp-worker');
     ($this->server)('foo');
+    ($this->server)('nginx-fpm');
 
     expect(file_get_contents($this->root.'/.ddev/config.yaml'))->toBe($this->configBefore);
 });
 
 it('AC-3 --current prints only the active server', function (): void {
+    ($this->server)('frankenphp-worker');
     $process = ($this->server)('--current');
 
     expect($process->getExitCode())->toBe(0)
-        ->and(trim($process->getOutput()))->toBe('nginx-fpm')
+        ->and(trim($process->getOutput()))->toBe('frankenphp-worker');
+});
+
+it('AC-1 --current without an overlay says not set up and never reports the base config', function (): void {
+    $process = ($this->server)('--current');
+
+    expect($process->getExitCode())->toBe(0)
+        ->and(trim($process->getOutput()))->toBe('not set up (run ddev setup)')
         ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
+});
 
-    ($this->server)('apache-fpm');
+it('AC-1 --current flags an overlay that names a removed server and --check default refuses it', function (): void {
+    file_put_contents($this->overlay, "# server: openlitespeed\nwebserver_type: nginx-fpm\n");
 
-    expect(trim(($this->server)('--current')->getOutput()))->toBe('apache-fpm');
+    $process = ($this->server)('--current');
+
+    expect($process->getExitCode())->toBe(0)
+        ->and(trim($process->getOutput()))->toBe('openlitespeed (removed; run ddev server default)')
+        ->and(($this->server)('--check', 'default')->getExitCode())->toBe(1)
+        ->and(($this->server)('--check', 'nginx-fpm')->getExitCode())->toBe(1);
+});
+
+it('MNC-1 switching away from a removed server deletes its leftover compose file and shows the hint first', function (): void {
+    file_put_contents($this->overlay, "# server: openlitespeed\nwebserver_type: nginx-fpm\n");
+    file_put_contents($this->root.'/.ddev/docker-compose.openlitespeed.yaml', "services: {}\n");
+
+    expect(($this->server)()->getOutput())->toContain('Active: openlitespeed (removed; run ddev server default)');
+
+    $process = ($this->server)('default');
+
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput().$process->getOutput())
+        ->and(file_exists($this->root.'/.ddev/docker-compose.openlitespeed.yaml'))->toBeFalse()
+        ->and(trim(($this->server)('--current')->getOutput()))->toBe('frankenphp');
 });
 
 it('AC-2 switching to the already active server is skipped', function (): void {
-    $process = ($this->server)('nginx-fpm');
-
-    expect($process->getExitCode())->toBe(0)
-        ->and($process->getOutput())->toContain('already active')
-        ->and(file_exists($this->overlay))->toBeFalse()
-        ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
-
-    ($this->server)('apache-fpm');
+    ($this->server)('frankenphp-worker');
     unlink($this->root.'/ddev-calls.log');
-    $again = ($this->server)('apache-fpm');
+    $again = ($this->server)('frankenphp-worker');
 
     expect($again->getExitCode())->toBe(0)
         ->and($again->getOutput())->toContain('already active')
@@ -161,18 +217,18 @@ it('AC-2 switching to the already active server is skipped', function (): void {
 it('AC-1 restart failure removes the new overlay when there was none', function (): void {
     touch($this->root.'/ddev-fail');
 
-    $process = ($this->server)('apache-fpm');
+    $process = ($this->server)('frankenphp-worker');
 
     expect($process->getExitCode())->toBe(1)
         ->and(file_exists($this->overlay))->toBeFalse();
 });
 
 it('AC-1 restart failure restores the previous overlay', function (): void {
-    ($this->server)('apache-fpm');
+    ($this->server)('frankenphp-worker');
     $previous = file_get_contents($this->overlay);
     touch($this->root.'/ddev-fail');
 
-    $process = ($this->server)('nginx-fpm');
+    $process = ($this->server)('frankenphp');
 
     expect($process->getExitCode())->toBe(1)
         ->and(file_get_contents($this->overlay))->toBe($previous);
@@ -221,25 +277,7 @@ it('AC-1 frankenphp activates the stash and writes its overlay', function (): vo
         ->and(file_exists($this->root.'/.ddev/VERSION'))->toBeFalse();
 });
 
-it('AC-2 switching away from frankenphp removes the activated files', function (): void {
-    ($this->server)('frankenphp');
-    $process = ($this->server)('apache-fpm');
-
-    expect($process->getExitCode())->toBe(0)
-        ->and(file_get_contents($this->overlay))->toContain('webserver_type: apache-fpm');
-
-    foreach ($this->activated as $file) {
-        expect(file_exists($this->root.'/.ddev/'.$file))->toBeFalse();
-    }
-
-    expect(file_exists($this->stash.'/config.frankenphp.yaml'))->toBeTrue();
-});
-
 it('AC-3 frankenphp is a supported server', function (): void {
-    $listed = ($this->server)();
-
-    expect($listed->getOutput())->toContain('Supported: nginx-fpm apache-fpm frankenphp');
-
     ($this->server)('frankenphp');
 
     expect(trim(($this->server)('--current')->getOutput()))->toBe('frankenphp')
@@ -264,7 +302,7 @@ it('AC-4 failed switch away from frankenphp puts the activated files back', func
     $previous = file_get_contents($this->overlay);
     touch($this->root.'/ddev-fail');
 
-    $process = ($this->server)('nginx-fpm');
+    $process = ($this->server)('frankenphp-octane');
 
     expect($process->getExitCode())->toBe(1)
         ->and(file_get_contents($this->overlay))->toBe($previous);
@@ -336,16 +374,16 @@ it('AC-3 frankenphp active with an outdated stash is re-applied', function (): v
         ->and(file_get_contents($this->overlay))->toContain('php-zts-opcache');
 });
 
-it('MNC-1 frankenphp switches never modify config.yaml', function (): void {
+it('MNC-6 frankenphp switches never modify config.yaml', function (): void {
     ($this->server)('frankenphp');
-    ($this->server)('nginx-fpm');
+    ($this->server)('frankenphp-worker');
     touch($this->root.'/ddev-fail');
     ($this->server)('frankenphp');
 
     expect(file_get_contents($this->root.'/.ddev/config.yaml'))->toBe($this->configBefore);
 });
 
-it('AC-2 AC-3 frankenphp already active is a no-op and switching back to nginx-fpm succeeds', function (): void {
+it('AC-2 AC-3 frankenphp already active is a no-op and switching to octane succeeds', function (): void {
     ($this->server)('frankenphp');
     unlink($this->root.'/ddev-calls.log');
     $overlay = file_get_contents($this->overlay);
@@ -361,29 +399,15 @@ it('AC-2 AC-3 frankenphp already active is a no-op and switching back to nginx-f
         expect(file_get_contents($this->root.'/.ddev/'.$file))->toBe('stash '.$file."\n");
     }
 
-    $back = ($this->server)('nginx-fpm');
+    $next = ($this->server)('frankenphp-octane');
 
-    expect($back->getExitCode())->toBe(0)
-        ->and($back->getOutput())->toContain('Active: nginx-fpm')
+    expect($next->getExitCode())->toBe(0)
+        ->and($next->getOutput())->toContain('Active: frankenphp-octane')
         ->and(file_get_contents($this->root.'/ddev-calls.log'))->toContain('restart')
-        ->and(file_get_contents($this->overlay))->toContain('# server: nginx-fpm');
-
-    foreach ($this->activated as $file) {
-        expect(file_exists($this->root.'/.ddev/'.$file))->toBeFalse();
-    }
+        ->and(file_get_contents($this->overlay))->toContain('# server: frankenphp-octane');
 });
 
 describe('worker servers', function (): void {
-    beforeEach(function (): void {
-        $this->octaneStash = $this->root.'/.ddev/servers/frankenphp-octane';
-        $this->workerStash = $this->root.'/.ddev/servers/frankenphp-worker';
-        mkdir($this->octaneStash, 0777, true);
-        mkdir($this->workerStash.'/web-build', 0777, true);
-        file_put_contents($this->octaneStash.'/config.frankenphp-octane.yaml', "webserver_type: generic\nweb_extra_daemons: octane\n");
-        file_put_contents($this->workerStash.'/web-build/Caddyfile.frankenphp', "worker caddyfile\n");
-        $this->caddyfile = $this->root.'/.ddev/web-build/Caddyfile.frankenphp';
-    });
-
     it('AC-1 frankenphp-octane and frankenphp-worker activate their files and overlays', function (): void {
         $octane = ($this->server)('frankenphp-octane');
 
@@ -427,16 +451,10 @@ describe('worker servers', function (): void {
         ($this->server)('frankenphp-worker');
         expect(file_get_contents($this->caddyfile))->toBe("worker caddyfile\n");
 
-        $away = ($this->server)('nginx-fpm');
-
-        expect($away->getExitCode())->toBe(0);
-        foreach ($this->activated as $file) {
-            expect(file_exists($this->root.'/.ddev/'.$file))->toBeFalse();
-        }
     });
 
     it('AC-3 worker servers are supported and answer on the project URL', function (): void {
-        expect(($this->server)()->getOutput())->toContain('Supported: nginx-fpm apache-fpm frankenphp openlitespeed frankenphp-octane frankenphp-worker');
+        expect(($this->server)()->getOutput())->toContain('Supported: frankenphp frankenphp-worker frankenphp-octane');
 
         foreach (['frankenphp-octane', 'frankenphp-worker'] as $server) {
             ($this->server)($server);
@@ -501,10 +519,9 @@ describe('worker servers', function (): void {
         expect(file_get_contents($this->caddyfile))->toBe("worker caddyfile\n");
     });
 
-    it('MNC-1 never modifies config.yaml when switching worker servers', function (): void {
+    it('MNC-6 never modifies config.yaml when switching worker servers', function (): void {
         ($this->server)('frankenphp-octane');
         ($this->server)('frankenphp-worker');
-        ($this->server)('nginx-fpm');
 
         expect(file_get_contents($this->root.'/.ddev/config.yaml'))->toBe($this->configBefore);
     });
@@ -539,152 +556,53 @@ describe('worker servers', function (): void {
     });
 });
 
-describe('openlitespeed', function (): void {
-    beforeEach(function (): void {
-        $this->olsStash = $this->root.'/.ddev/servers/openlitespeed';
-        $this->olsCompose = $this->root.'/.ddev/docker-compose.openlitespeed.yaml';
-        $this->olsStashFiles = [
-            'docker-compose.openlitespeed.yaml',
-            'Dockerfile',
-            'conf/httpd_config.conf',
-            'conf/vhosts/interview/vhconf.conf',
-            'conf/zz-opcache.ini',
-            'VERSION',
-        ];
-        mkdir($this->olsStash.'/conf/vhosts/interview', 0777, true);
-        foreach ($this->olsStashFiles as $file) {
-            file_put_contents($this->olsStash.'/'.$file, 'stash '.$file."\n");
-        }
-    });
-
-    it('AC-1 openlitespeed activates its compose file and keeps web on nginx-fpm', function (): void {
-        $process = ($this->server)('openlitespeed');
-
-        expect($process->getExitCode())->toBe(0)
-            ->and($process->getOutput())->toContain('Active: openlitespeed')
-            ->and(file_get_contents($this->overlay))->toBe("# server: openlitespeed\nwebserver_type: nginx-fpm\n")
-            ->and(file_get_contents($this->olsCompose))->toBe("stash docker-compose.openlitespeed.yaml\n")
-            ->and(file_exists($this->root.'/.ddev/Dockerfile'))->toBeFalse()
-            ->and(file_get_contents($this->root.'/ddev-calls.log'))->toContain('restart')
-            ->and(trim(($this->server)('--current')->getOutput()))->toBe('openlitespeed');
-    });
-
-    it('AC-2 switching away from openlitespeed removes its compose file', function (): void {
-        ($this->server)('openlitespeed');
-        $process = ($this->server)('nginx-fpm');
-
-        expect($process->getExitCode())->toBe(0)
-            ->and(file_exists($this->olsCompose))->toBeFalse()
-            ->and(file_get_contents($this->overlay))->toContain('# server: nginx-fpm')
-            ->and(file_exists($this->olsStash.'/docker-compose.openlitespeed.yaml'))->toBeTrue();
-    });
-
-    it('AC-2 switching from frankenphp to openlitespeed swaps the activated files', function (): void {
-        ($this->server)('frankenphp');
-        ($this->server)('openlitespeed');
-
-        expect(file_exists($this->olsCompose))->toBeTrue()
-            ->and(file_exists($this->root.'/.ddev/docker-compose.frankenphp.yaml'))->toBeFalse();
-    });
-
-    it('AC-3 openlitespeed is a supported server', function (): void {
-        expect(($this->server)()->getOutput())->toContain('Supported: nginx-fpm apache-fpm frankenphp openlitespeed');
-    });
-
-    it('AC-3 openlitespeed already active is a no-op, a missing compose file is re-applied', function (): void {
-        ($this->server)('openlitespeed');
-        unlink($this->root.'/ddev-calls.log');
-
-        $again = ($this->server)('openlitespeed');
-
-        expect($again->getExitCode())->toBe(0)
-            ->and($again->getOutput())->toContain('openlitespeed already active')
-            ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
-
-        unlink($this->olsCompose);
-        $reapplied = ($this->server)('openlitespeed');
-
-        expect($reapplied->getOutput())->toContain('re-applying')
-            ->and(file_exists($this->olsCompose))->toBeTrue();
-    });
-
-    it('AC-3 an incomplete openlitespeed stash names the missing file and changes nothing', function (): void {
-        unlink($this->olsStash.'/conf/httpd_config.conf');
-
-        $process = ($this->server)('openlitespeed');
-
-        expect($process->getExitCode())->toBe(1)
-            ->and($process->getErrorOutput())->toContain('conf/httpd_config.conf is missing')
-            ->and(file_exists($this->overlay))->toBeFalse()
-            ->and(file_exists($this->olsCompose))->toBeFalse()
-            ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
-    });
-
-    it('AC-3 an openlitespeed stash without VERSION is incomplete and changes nothing', function (): void {
-        unlink($this->olsStash.'/VERSION');
-
-        $process = ($this->server)('openlitespeed');
-
-        expect($process->getExitCode())->toBe(1)
-            ->and($process->getErrorOutput())->toContain('VERSION is missing')
-            ->and(file_exists($this->overlay))->toBeFalse()
-            ->and(file_exists($this->olsCompose))->toBeFalse()
-            ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
-    });
-
-    it('AC-3 failed restart rolls back the openlitespeed switch', function (): void {
-        touch($this->root.'/ddev-fail');
-
-        $process = ($this->server)('openlitespeed');
-
-        expect($process->getExitCode())->toBe(1)
-            ->and(file_exists($this->overlay))->toBeFalse()
-            ->and(file_exists($this->olsCompose))->toBeFalse();
-    });
-
-    it('MNC-1 openlitespeed switches never modify config.yaml', function (): void {
-        ($this->server)('openlitespeed');
-        ($this->server)('nginx-fpm');
-
-        expect(file_get_contents($this->root.'/.ddev/config.yaml'))->toBe($this->configBefore);
-    });
-
-    it('AC-1 openlitespeed compose path is gitignored', function (): void {
-        expect(file(base_path('.gitignore'), FILE_IGNORE_NEW_LINES))->toContain('.ddev/docker-compose.openlitespeed.yaml');
-    });
-});
-
 it('AC-7 --url prints the URL the active server answers on', function (): void {
     expect(trim(($this->server)('--url')->getOutput()))->toBe('https://ai-lab.ddev.site');
 
-    file_put_contents($this->overlay, "# server: openlitespeed\nwebserver_type: nginx-fpm\n");
+    ($this->server)('frankenphp-octane');
+    unlink($this->root.'/ddev-calls.log');
 
-    expect(trim(($this->server)('--url')->getOutput()))->toBe('https://ai-lab.ddev.site:8091')
+    expect(trim(($this->server)('--url')->getOutput()))->toBe('https://ai-lab.ddev.site')
         ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
 });
 
 it('switching servers removes bench overlays so they never carry over to another server', function (): void {
     mkdir($this->root.'/.ddev/web-entrypoint.d', 0777, true);
-    mkdir($this->root.'/.ddev/nginx_full', 0777, true);
     file_put_contents($this->root.'/.ddev/config.zzz-bench-concurrency.yaml', "override_config: true\n");
     file_put_contents($this->root.'/.ddev/web-entrypoint.d/zz-bench-fpm.sh', "#!/bin/sh\n");
-    file_put_contents($this->root.'/.ddev/nginx_full/nginx-site.conf', "edited\n");
-    file_put_contents($this->root.'/.ddev/nginx_full/nginx-site.conf.bench-orig', "#ddev-generated\noriginal\n");
 
-    $process = ($this->server)('apache-fpm');
+    $process = ($this->server)('frankenphp');
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
         ->and(file_exists($this->root.'/.ddev/config.zzz-bench-concurrency.yaml'))->toBeFalse()
-        ->and(file_exists($this->root.'/.ddev/web-entrypoint.d/zz-bench-fpm.sh'))->toBeFalse()
-        ->and(file_get_contents($this->root.'/.ddev/nginx_full/nginx-site.conf'))->toBe("#ddev-generated\noriginal\n");
+        ->and(file_exists($this->root.'/.ddev/web-entrypoint.d/zz-bench-fpm.sh'))->toBeFalse();
 });
 
 it('re-running the active server with a leftover bench overlay resets it instead of saying already active', function (): void {
+    ($this->server)('frankenphp');
     file_put_contents($this->root.'/.ddev/config.zzz-bench-concurrency.yaml', "override_config: true\n");
 
-    $process = ($this->server)('nginx-fpm');
+    $process = ($this->server)('frankenphp');
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
         ->and($process->getOutput())->not->toContain('already active')
         ->and(file_exists($this->root.'/.ddev/config.zzz-bench-concurrency.yaml'))->toBeFalse();
+});
+
+it('AC-1 the --help annotations list exactly the three modes and default, no removed name', function (): void {
+    $script = file_get_contents(base_path('.ddev/commands/host/server'));
+    preg_match('/^## Description: (.+)$/m', $script, $description);
+    preg_match('/^## Usage: server \[(.+)\]$/m', $script, $usage);
+
+    $names = array_values(array_filter(
+        explode('|', preg_replace('/--[a-z]+( <name>)?/', '', $usage[1])),
+        static fn (string $name): bool => $name !== '',
+    ));
+    sort($names);
+
+    expect($names)->toBe(['default', 'frankenphp', 'frankenphp-octane', 'frankenphp-worker'])
+        ->and($description[1])->toContain('frankenphp, frankenphp-worker or frankenphp-octane');
+    foreach (['nginx-fpm', 'apache-fpm', 'openlitespeed'] as $removed) {
+        expect($usage[1].$description[1])->not->toContain($removed);
+    }
 });

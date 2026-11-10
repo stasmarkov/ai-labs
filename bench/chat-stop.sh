@@ -17,6 +17,8 @@
 ##      CHAT_STOP_MODEL (default OLLAMA_MODEL from .env, else qwen3.5:9b), CHAT_STOP_SETTLE (seconds to wait for the row, default 4).
 
 set -euo pipefail
+# shellcheck source=lib/servers.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/servers.sh"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APPROOT="$ROOT"
@@ -55,8 +57,21 @@ OUT="$ROOT/bench/results/chat-stop/$DAY${LABEL:+/$LABEL}"
 mkdir -p "$OUT"
 
 if [ -z "$MODES" ]; then
-  MODES="$(cd "$ROOT" && ddev server --current)"
+  MODES="$(current_server "$ROOT")" || exit 2
 fi
+
+# Check the whole --modes list before the first measurement, so a bad name never leaves a partial run behind.
+IFS=',' read -r -a REQUESTED_MODES <<< "$MODES"
+for mode in "${REQUESTED_MODES[@]}"; do
+  if is_removed_server "$mode"; then
+    server_removed_message "$mode" >&2
+    exit 2
+  fi
+  if [[ " ${SUPPORTED_SERVERS[*]} " != *" $mode "* ]]; then
+    echo "chat-stop: unknown mode '$mode'. Supported: ${SUPPORTED_SERVERS[*]}" >&2
+    exit 2
+  fi
+done
 
 STARTS=()
 WORK="$(mktemp -d)"
@@ -180,7 +195,7 @@ for mode in ${MODES//,/ }; do
     echo "$OUT/$mode.json exists; pass --force to overwrite" >&2
     exit 2
   fi
-  if [[ "$MODES" == *,* ]] || [ "$mode" != "$(cd "$ROOT" && ddev server --current)" ]; then
+  if [[ "$MODES" == *,* ]] || [ "$mode" != "$(current_server "$ROOT")" ]; then
     read_default_server "$ROOT"
     (cd "$ROOT" && ddev server "$mode" >/dev/null)
     SWITCHED=1

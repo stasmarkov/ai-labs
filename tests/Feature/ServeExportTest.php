@@ -197,7 +197,7 @@ test('AC-2 an offload download is logged with zero bytes written by PHP', functi
     serveExportFile('listings', 100);
     config(['exports.offload_header' => 'x-accel']);
 
-    $this->withServerVariables(['SERVER_SOFTWARE' => 'nginx/1.27'])->withHeaders(['X-Bench-Run' => 'nginx-fpm-offload-1-42'])->get('/exports/listings');
+    $this->withServerVariables(['SERVER_SOFTWARE' => 'nginx/1.27'])->withHeaders(['X-Bench-Run' => 'frankenphp-offload-1-42'])->get('/exports/listings');
     $lines = serveExportLog();
 
     expect($lines)->toHaveCount(1)
@@ -205,7 +205,7 @@ test('AC-2 an offload download is logged with zero bytes written by PHP', functi
         ->and($lines[0]['aborted'])->toBeFalse()
         ->and($lines[0]['mode'])->toBe('offload')
         ->and($lines[0]['server'])->toBe('nginx/1.27')
-        ->and($lines[0]['bench_run'])->toBe('nginx-fpm-offload-1-42');
+        ->and($lines[0]['bench_run'])->toBe('frankenphp-offload-1-42');
 });
 
 test('AC-3 stream mode returns the identical bytes in 64 KiB chunks and logs every byte', function () {
@@ -400,7 +400,7 @@ test('AC-4 X-Bench-Run keeps only [A-Za-z0-9._-] up to 80 characters, else the l
 
     expect(serveExportLog()[0]['bench_run'])->toBe($logged);
 })->with([
-    'plain' => ['export-load-nginx-fpm-offload-1.2_x', 'export-load-nginx-fpm-offload-1.2_x'],
+    'plain' => ['export-load-frankenphp-offload-1.2_x', 'export-load-frankenphp-offload-1.2_x'],
     'too long' => [str_repeat('a', 100), str_repeat('a', 80)],
     'space' => ['two words', null],
     'quote' => ['a"b', null],

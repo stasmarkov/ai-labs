@@ -87,7 +87,7 @@ it('AC-1 default behaves as frankenphp', function (): void {
 it('AC-1 no arguments print the active and default servers and the not-set-up hint', function (): void {
     $output = ($this->run)('server')->getOutput();
 
-    expect($output)->toContain('Active: nginx-fpm (default: frankenphp)')
+    expect($output)->toContain('Active: not set up (default: frankenphp)')
         ->and($output)->toContain('Supported:')
         ->and($output)->toContain('Not set up: run ddev setup');
 
@@ -169,13 +169,15 @@ it('AC-2 setup stops with exit 2 naming the missing keys when no file holds a co
         ->and($log)->not->toContain('migrate');
 });
 
-it('MNC-1 MNC-3 other servers stay reachable and config.yaml is untouched', function (): void {
+it('MNC-1 MNC-6 a removed server is refused, the default stays active and config.yaml is untouched', function (): void {
     $before = file_get_contents($this->root.'/.ddev/config.yaml');
     ($this->run)('server', 'default');
+    $overlay = file_get_contents($this->overlay);
     $process = ($this->run)('server', 'apache-fpm');
 
-    expect($process->getExitCode())->toBe(0)
-        ->and(file_get_contents($this->overlay))->toContain('webserver_type: apache-fpm')
+    expect($process->getExitCode())->toBe(1)
+        ->and($process->getErrorOutput())->toContain('apache-fpm was removed in SL-50')
+        ->and(file_get_contents($this->overlay))->toBe($overlay)
         ->and(file_get_contents($this->root.'/.ddev/config.yaml'))->toBe($before);
 });
 
@@ -185,7 +187,7 @@ it('server --check default exits 0 only when overlay, activated files and no ben
     ($this->run)('server', 'default');
     expect(($this->run)('server', '--check', 'default')->getExitCode())->toBe(0)
         ->and(($this->run)('server', '--check', 'frankenphp')->getExitCode())->toBe(0)
-        ->and(($this->run)('server', '--check', 'nginx-fpm')->getExitCode())->toBe(1);
+        ->and(($this->run)('server', '--check', 'frankenphp-worker')->getExitCode())->toBe(1);
 
     unlink($this->root.'/.ddev/web-build/Caddyfile.frankenphp');
     expect(($this->run)('server', '--check', 'default')->getExitCode())->toBe(1);
@@ -354,4 +356,16 @@ it('AC-1 setup does not add APP_NAME or APP_URL when the .env has no such lines'
     ($this->run)('setup');
 
     expect(file_get_contents($this->root.'/.env'))->toBe($content);
+});
+
+it('MNC-1 setup recovers from an overlay naming a removed server: switches to frankenphp, no already set up', function (): void {
+    file_put_contents($this->overlay, "# server: openlitespeed\nwebserver_type: generic\n");
+
+    $process = ($this->run)('setup');
+
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
+        ->and($process->getOutput())->not->toContain('Already set up')
+        ->and(file_get_contents($this->calls))->toContain('server default')
+        ->and(file_get_contents($this->overlay))->toContain('# server: frankenphp')
+        ->and(file_get_contents($this->overlay))->not->toContain('openlitespeed');
 });

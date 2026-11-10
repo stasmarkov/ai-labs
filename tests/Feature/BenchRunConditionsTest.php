@@ -18,7 +18,7 @@ if [[ -n "${STUB_DDEV_FAIL-}" && "$*" == *"$STUB_DDEV_FAIL"* ]]; then
   exit 1
 fi
 case "$*" in
-  "server --current") echo "${STUB_SERVER-nginx-fpm}" ;;
+  "server --current") echo "${STUB_SERVER-frankenphp}" ;;
   "server --url") echo "https://ai-lab.ddev.site" ;;
   "artisan config:show app.env") echo "${STUB_APP_ENV-production}" ;;
   "artisan config:show app.debug") echo "${STUB_APP_DEBUG-false}" ;;
@@ -130,14 +130,14 @@ it('AC-3 run refuses when a run condition fails', function (string $check, array
 
 it('AC-1 run writes one result file per run and restores the env', function (): void {
     $process = ($this->bench)([], 'ping', '--quick');
-    $files = glob($this->root.'/app/bench/results/raw/*/nginx-fpm/ping-*.json') ?: [];
+    $files = glob($this->root.'/app/bench/results/raw/*/frankenphp/ping-*.json') ?: [];
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
         ->and($files)->toHaveCount(1);
 
     $result = json_decode(file_get_contents($files[0]), true);
 
-    expect($result)->toMatchArray(['server' => 'nginx-fpm', 'scenario' => 'ping', 'commit' => 'abc1234'])
+    expect($result)->toMatchArray(['server' => 'frankenphp', 'scenario' => 'ping', 'commit' => 'abc1234'])
         ->and($result['rps'])->toEqual(1234.5)
         ->and($result['p50_ms'])->toEqual(10)
         ->and($result['error_percent'])->toEqual(10)
@@ -150,7 +150,7 @@ it('AC-1 run writes one result file per run and restores the env', function (): 
 
 it('AC-1 a registry image is pulled before its digest is read and the digest is recorded', function (): void {
     $process = ($this->bench)(['BENCH_OHA_IMAGE' => 'example.com/oha:1.0'], 'ping', '--quick');
-    $files = glob($this->root.'/app/bench/results/raw/*/nginx-fpm/ping-*.json') ?: [];
+    $files = glob($this->root.'/app/bench/results/raw/*/frankenphp/ping-*.json') ?: [];
     $log = file_get_contents($this->root.'/calls.log');
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
@@ -198,7 +198,7 @@ it('AC-1 seeded data gives make=BMW at least 100 pages at the default page size'
 it('AC-2 run reruns once when the spread is above 5 percent and discards the first set', function (): void {
     file_put_contents($this->root.'/seq', '1000,1200,800,1000,1010,990');
     $process = ($this->bench)(['BENCH_REPEATS' => '3', 'STUB_RPS_SEQ' => $this->root.'/seq'], 'ping');
-    $files = glob($this->root.'/app/bench/results/raw/*/nginx-fpm/ping-*.json') ?: [];
+    $files = glob($this->root.'/app/bench/results/raw/*/frankenphp/ping-*.json') ?: [];
     sort($files);
     $results = array_map(fn (string $file): array => json_decode(file_get_contents($file), true), $files);
     $discarded = array_values(array_filter($results, fn (array $result): bool => ($result['discarded'] ?? false) === true));
@@ -215,7 +215,7 @@ it('AC-2 run keeps a single set when the spread is within 5 percent', function (
     $process = ($this->bench)(['BENCH_REPEATS' => '3', 'STUB_RPS_SEQ' => $this->root.'/seq'], 'ping');
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
-        ->and(glob($this->root.'/app/bench/results/raw/*/nginx-fpm/ping-*.json'))->toHaveCount(3);
+        ->and(glob($this->root.'/app/bench/results/raw/*/frankenphp/ping-*.json'))->toHaveCount(3);
 });
 
 it('AC-3 changes in the tooling log .ai/session do not block a run', function (): void {
@@ -263,3 +263,13 @@ it('AC-2 classic servers are not restarted after .env is restored', function ():
         ->and(file_get_contents($this->root.'/calls.log'))->toContain('ddev artisan optimize:clear')
         ->not->toContain('ddev restart');
 });
+
+it('AC-2 run exits non-zero for a removed server before touching .env or Docker', function (string $server): void {
+    $process = ($this->bench)(['STUB_SERVER' => $server], 'ping', '--quick');
+    $log = file_exists($this->root.'/calls.log') ? file_get_contents($this->root.'/calls.log') : '';
+
+    expect($process->getExitCode())->toBe(2)
+        ->and($process->getErrorOutput())->toContain($server.' was removed')
+        ->and($log)->not->toContain('docker run')
+        ->and(file_get_contents($this->root.'/app/.env'))->toBe("APP_ENV=local\nAPP_DEBUG=true\nDEBUG_ROUTES=false\nSECRET=keep\n");
+})->with(['nginx-fpm', 'apache-fpm', 'openlitespeed']);

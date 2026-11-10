@@ -7,9 +7,8 @@ use Symfony\Component\Process\Process;
 beforeEach(function (): void {
     $this->root = sys_get_temp_dir().'/bench-concurrency-'.bin2hex(random_bytes(4));
     mkdir($this->root.'/bin', 0777, true);
-    mkdir($this->root.'/app/.ddev/servers/openlitespeed/conf', 0777, true);
-    copy(base_path('.ddev/servers/openlitespeed/conf/httpd_config.conf'), $this->root.'/app/.ddev/servers/openlitespeed/conf/httpd_config.conf');
-    file_put_contents($this->root.'/app/.ddev/config.yaml', "name: interview\nwebserver_type: nginx-fpm\n");
+    mkdir($this->root.'/app/.ddev', 0777, true);
+    file_put_contents($this->root.'/app/.ddev/config.yaml', "name: interview\nwebserver_type: frankenphp\n");
 
     file_put_contents($this->root.'/bin/ddev', <<<'BASH'
 #!/usr/bin/env bash
@@ -67,23 +66,13 @@ it('AC-4 concurrency sets and restores the worker limit per server', function (s
         ->and(($this->overlayFiles)())->toBe([])
         ->and(substr_count(($this->ddevCalls)(), 'ddev restart'))->toBe(2)
         ->and(($this->concurrency)($server, '--show')->getOutput())->toBe("default\n")
-        ->and(file_get_contents($this->root.'/app/.ddev/config.yaml'))->toBe("name: interview\nwebserver_type: nginx-fpm\n");
+        ->and(file_get_contents($this->root.'/app/.ddev/config.yaml'))->toBe("name: interview\nwebserver_type: frankenphp\n");
 })->with([
-    'nginx-fpm' => ['nginx-fpm', 'web-entrypoint.d/zz-bench-fpm.sh', ['pm = static', 'pm.max_children = 16', 'pm.max_requests = 0']],
-    'apache-fpm' => ['apache-fpm', 'web-entrypoint.d/zz-bench-fpm.sh', ['pm.max_children = 16']],
     'frankenphp' => ['frankenphp', 'config.zz-bench-concurrency.yaml', ['FRANKENPHP_CONFIG', 'num_threads 16', 'max_threads 16']],
-    'openlitespeed' => ['openlitespeed', 'bench-concurrency/httpd_config.conf', ['PHP_LSAPI_CHILDREN=16', 'maxConns                16']],
 ]);
 
-it('AC-4 openlitespeed mounts the generated config through a compose overlay', function (): void {
-    ($this->concurrency)('openlitespeed', '12');
-
-    expect(file_get_contents($this->root.'/app/.ddev/docker-compose.bench-concurrency.yaml'))
-        ->toContain('openlitespeed:', '/usr/local/lsws/conf/httpd_config.conf', '/usr/local/lsws/.conf/httpd_config.conf');
-});
-
 it('AC-4 concurrency switching a server leaves no overlay of another server behind', function (): void {
-    ($this->concurrency)('nginx-fpm', '8');
+    ($this->concurrency)('frankenphp-worker', '8');
     $process = ($this->concurrency)('frankenphp', '8');
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
@@ -91,7 +80,7 @@ it('AC-4 concurrency switching a server leaves no overlay of another server behi
 });
 
 it('AC-4 concurrency rejects values that are not positive integers', function (string $value): void {
-    $process = ($this->concurrency)('nginx-fpm', $value);
+    $process = ($this->concurrency)('frankenphp', $value);
 
     expect($process->getExitCode())->toBe(2)
         ->and($process->getErrorOutput())->toContain('Usage')
@@ -176,7 +165,7 @@ it('AC-6 autoscale on frankenphp writes threads, max threads and max wait, shows
         ->and(file_get_contents($overlay))->toContain('FRANKENPHP_CONFIG', 'num_threads 14', 'max_threads 64', 'max_wait_time 5s')
         ->and(($this->ddevCalls)())->toContain('ddev restart')
         ->and(($this->concurrency)('frankenphp', '--show')->getOutput())->toBe("autoscale 14 to 64 threads, max-wait 5s\n")
-        ->and(file_get_contents($this->root.'/app/.ddev/config.yaml'))->toBe("name: interview\nwebserver_type: nginx-fpm\n");
+        ->and(file_get_contents($this->root.'/app/.ddev/config.yaml'))->toBe("name: interview\nwebserver_type: frankenphp\n");
 
     $restore = ($this->concurrency)('frankenphp', 'default');
 
@@ -200,8 +189,6 @@ it('AC-6 autoscale is an error on other servers and on bad values, with no overl
         ->and(($this->overlayFiles)())->toBe([])
         ->and(($this->ddevCalls)())->not->toContain('ddev restart');
 })->with([
-    'nginx-fpm' => ['nginx-fpm', ['--threads', '8', '--max-threads', '32']],
-    'openlitespeed' => ['openlitespeed', ['--threads', '8', '--max-threads', '32']],
     'frankenphp-worker' => ['frankenphp-worker', ['--threads', '8', '--max-threads', '32']],
     'frankenphp-octane' => ['frankenphp-octane', ['--threads', '8', '--max-threads', '32']],
     'missing threads' => ['frankenphp', ['--max-threads', '32']],
@@ -220,4 +207,17 @@ it('AC-6 the one usage text lists every form including autoscale, and every bad 
     'bad value' => [['abc']],
     'autoscale without values' => [['autoscale']],
     'autoscale not above' => [['autoscale', '--threads', '8', '--max-threads', '8']],
+]);
+
+it('AC-2 concurrency refuses a removed server with the removal message and changes nothing', function (string $server, array $args): void {
+    $process = ($this->concurrency)($server, ...$args);
+
+    expect($process->getExitCode())->toBe(2)
+        ->and($process->getErrorOutput())->toContain($server.' was removed', 'frankenphp-octane')
+        ->and(($this->overlayFiles)())->toBe([])
+        ->and(($this->ddevCalls)())->not->toContain('ddev restart');
+})->with([
+    'nginx-fpm' => ['nginx-fpm', ['8']],
+    'apache-fpm' => ['apache-fpm', ['default']],
+    'openlitespeed' => ['openlitespeed', ['autoscale', '--threads', '8', '--max-threads', '32']],
 ]);

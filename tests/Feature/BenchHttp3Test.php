@@ -9,7 +9,7 @@ beforeEach(function (): void {
     mkdir($this->root.'/bin', 0777, true);
     mkdir($this->root.'/app');
     file_put_contents($this->root.'/app/.env', "APP_NAME=x\nEARLY_HINTS=true\n");
-    file_put_contents($this->root.'/state', "nginx-fpm\n");
+    file_put_contents($this->root.'/state', "frankenphp-octane\n");
 
     $stubs = [
         'ddev' => <<<'BASH'
@@ -124,21 +124,21 @@ it('AC-1 http3 sets EARLY_HINTS=false for the requests, records why, and restore
 });
 
 it('AC-3 http3 switches to frankenphp itself and the trap puts the default server back', function (): void {
-    $process = ($this->http3)(['STUB_DEFAULT' => 'apache-fpm']);
-    $servers = array_values(array_filter(explode("\n", file_get_contents($this->root.'/calls.log')), fn (string $line): bool => preg_match('/^ddev server (frankenphp|apache-fpm)$/', $line) === 1));
+    $process = ($this->http3)(['STUB_DEFAULT' => 'frankenphp-worker']);
+    $servers = array_values(array_filter(explode("\n", file_get_contents($this->root.'/calls.log')), fn (string $line): bool => preg_match('/^ddev server (frankenphp|frankenphp-worker)$/', $line) === 1));
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
-        ->and($servers)->toBe(['ddev server frankenphp', 'ddev server apache-fpm'])
-        ->and(trim(file_get_contents($this->root.'/state')))->toBe('apache-fpm');
+        ->and($servers)->toBe(['ddev server frankenphp', 'ddev server frankenphp-worker'])
+        ->and(trim(file_get_contents($this->root.'/state')))->toBe('frankenphp-worker');
 });
 
 it('AC-3 http3 puts the default server back and writes no result when the h2 request fails', function (): void {
-    $process = ($this->http3)(['STUB_H2_STATUS' => '500', 'STUB_DEFAULT' => 'apache-fpm']);
+    $process = ($this->http3)(['STUB_H2_STATUS' => '500', 'STUB_DEFAULT' => 'frankenphp-worker']);
 
     expect($process->getExitCode())->toBe(1)
         ->and($process->getErrorOutput())->toContain('not 200')
         ->and(($this->dir)().'/frankenphp.json')->not->toBeFile()
-        ->and(trim(file_get_contents($this->root.'/state')))->toBe('apache-fpm')
+        ->and(trim(file_get_contents($this->root.'/state')))->toBe('frankenphp-worker')
         ->and(file_get_contents($this->root.'/app/.env'))->toBe("APP_NAME=x\nEARLY_HINTS=true\n");
 });
 
@@ -147,12 +147,12 @@ it('AC-1 http3 with --server current switches nothing', function (): void {
     $process = ($this->http3)([], '--server', 'current');
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
-        ->and(file_get_contents($this->root.'/calls.log'))->not->toMatch('/^ddev server (frankenphp|nginx-fpm)$/m');
+        ->and(file_get_contents($this->root.'/calls.log'))->not->toMatch('/^ddev server (frankenphp|frankenphp-octane)$/m');
 });
 
-it('AC-1 http3 reports h3_ok false with the curl exit code on nginx-fpm and exits 0', function (): void {
-    $process = ($this->http3)(['STUB_H3_EXIT' => '28'], '--server', 'nginx-fpm');
-    $result = json_decode(file_get_contents(($this->dir)().'/nginx-fpm.json'), true);
+it('AC-1 http3 reports h3_ok false with the curl exit code on frankenphp-octane and exits 0', function (): void {
+    $process = ($this->http3)(['STUB_H3_EXIT' => '28'], '--server', 'frankenphp-octane');
+    $result = json_decode(file_get_contents(($this->dir)().'/frankenphp-octane.json'), true);
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
         ->and($result['h3_ok'])->toBeFalse()
@@ -199,7 +199,7 @@ it('AC-3 http3-matrix measures on frankenphp, runs the four variants and restore
         'BENCH_APPROOT' => $this->root.'/app',
         'STUB_LOG' => $this->root.'/calls.log',
         'STUB_STATE' => $this->root.'/state',
-        'STUB_DEFAULT' => 'apache-fpm',
+        'STUB_DEFAULT' => 'frankenphp-worker',
         'PATH' => $this->root.'/bin:'.getenv('PATH'),
     ]);
     $process->run();
@@ -211,7 +211,7 @@ it('AC-3 http3-matrix measures on frankenphp, runs the four variants and restore
         ->and($variants)->toHaveCount(4)
         ->and($variants[0])->toContain('--variant h2-loss0')
         ->and($variants[3])->toContain('--variant h3-loss2')
-        ->and(end($lines))->toBe('ddev server apache-fpm')
+        ->and(end($lines))->toBe('ddev server frankenphp-worker')
         ->and(array_keys(array_filter($lines, fn (string $line): bool => str_starts_with($line, 'ddev server '))))->toBe([0, count($lines) - 1]);
 });
 
@@ -229,3 +229,11 @@ it('AC-3 http3-matrix exits 2 without any server switch when the default cannot 
         ->and($process->getOutput())->not->toContain('ddev server frankenphp')
         ->and(substr_count($process->getErrorOutput(), 'Cannot read the default server'))->toBe(1);
 });
+
+it('AC-2 http3 exits non-zero for a removed server and switches nothing', function (string $server): void {
+    $process = ($this->http3)([], '--server', $server);
+
+    expect($process->getExitCode())->toBe(2)
+        ->and($process->getErrorOutput())->toContain($server.' was removed')
+        ->and(file_exists($this->root.'/calls.log') ? file_get_contents($this->root.'/calls.log') : '')->not->toContain('ddev server');
+})->with(['nginx-fpm', 'apache-fpm', 'openlitespeed']);

@@ -18,8 +18,8 @@ test('AC-4 README and CLAUDE.md name frankenphp as the default and never call ng
 });
 
 test('AC-4 the guide and BENCHMARKS.md carry a default-server note', function (): void {
-    expect(file_get_contents(base_path('docs/learning-guide.md')))->toContain('The default server is now frankenphp');
-    expect(file_get_contents(base_path('BENCHMARKS.md')))->toContain('The default server is now frankenphp');
+    expect(file_get_contents(base_path('docs/learning-guide.md')))->toContain('The default server is now `frankenphp`');
+    expect(file_get_contents(base_path('BENCHMARKS.md')))->toContain('The default server is now `frankenphp`');
 });
 
 test('AC-4 manual-test plans do not name nginx-fpm as the resting server', function (): void {
@@ -32,8 +32,8 @@ test('AC-4 the guide puts the default-server note in section 2 and never says ng
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
 
     expect(preg_match('/^## 2\..*?^## 3\./ms', $guide, $section))->toBe(1);
-    expect($section[0])->toContain('The default server is now frankenphp');
-    expect(substr_count($guide, 'The default server is now frankenphp'))->toBe(1);
+    expect($section[0])->toContain('The default server is now `frankenphp`');
+    expect(substr_count($guide, 'The default server is now `frankenphp`'))->toBe(1);
     expect($guide)->not->toContain('nginx + PHP-FPM by default');
 });
 
@@ -57,7 +57,7 @@ test('AC-4 the doc pattern matches every sentence that calls nginx-fpm the defau
 test('AC-4 README parity examples compare against frankenphp and end on the default server, and CLAUDE.md explains config.yaml', function (): void {
     $readme = file_get_contents(base_path('README.md'));
 
-    expect(substr_count($readme, 'compare frankenphp '))->toBe(5);
+    expect(substr_count($readme, 'compare frankenphp '))->toBe(2);
     expect($readme)->not->toContain('compare nginx-fpm');
     expect(preg_match('/```sh\n(?:(?!```).)*bench\/parity\.sh compare frankenphp frankenphp-worker\nddev server default[^\n]*\n```/s', $readme))->toBe(1);
     expect(file_get_contents(base_path('CLAUDE.md')))->toContain('still says `webserver_type: nginx-fpm` on purpose');
@@ -102,6 +102,6 @@ test('AC-4 BENCHMARKS.md top note and the guide section 2 note both mention ddev
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
     preg_match('/^## 2\..*?^## 3\./ms', $guide, $section);
 
-    expect($top)->toContain('The default server is now frankenphp')->toContain('ddev setup');
+    expect($top)->toContain('The default server is now `frankenphp`')->toContain('ddev setup');
     expect($section[0])->toContain('ddev setup');
 });

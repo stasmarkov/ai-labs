@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ## Usage: bench/slow-load-matrix.sh [--quick] [--dry-run]
-## Runs the 8 cells of the slow-load matrix: nginx-fpm with 8 and 32 workers, frankenphp with a fixed 14 threads and
+## Runs the 4 cells of the slow-load matrix: frankenphp with a fixed 14 threads and
 ## with autoscale 14 to 64 threads (max-wait 5 s), each with the http and the sse workload through bench/slow-load.sh
 ## (3 repeats per cell, 100 users for http and 30 for sse). Each setting is applied once and both workloads run under it.
 ## At the end it restores the default worker limits and the default server (`ddev server --default`), also when a cell fails.
@@ -43,8 +43,6 @@ trap restore EXIT
 
 # server | label | concurrency.sh arguments
 settings=(
-  "nginx-fpm|nginx-fpm-8|8"
-  "nginx-fpm|nginx-fpm-32|32"
   "frankenphp|frankenphp-14|14"
   "frankenphp|frankenphp-autoscale-14-64|autoscale --threads 14 --max-threads 64 --max-wait 5"
 )

@@ -42,18 +42,8 @@ it('AC-5 sweep picks the fewest errors when every setting exceeds 1 percent', fu
     expect(($this->pick)([8 => [800, 5], 16 => [900, 3], 32 => [1500, 4]]))->toBe('16');
 });
 
-it('AC-5 suite refuses a worker server with exit code 2', function (): void {
-    file_put_contents($this->dir.'/bin/ddev', "#!/usr/bin/env bash\n[[ \"\$*\" == 'server --current' ]] && echo frankenphp-octane\nexit 0\n");
-    chmod($this->dir.'/bin/ddev', 0755);
-    $process = new Process(['bash', base_path('bench/suite.sh')], null, ['PATH' => $this->dir.'/bin:'.getenv('PATH')]);
-    $process->run();
-
-    expect($process->getExitCode())->toBe(2)
-        ->and($process->getErrorOutput())->toContain('frankenphp-octane');
-});
-
 it('MNC-1 suite refuses a results folder that already holds committed results', function (): void {
-    file_put_contents($this->dir.'/bin/ddev', "#!/usr/bin/env bash\necho \"ddev \$*\" >> \"$this->dir/log\"\n[[ \"\$*\" == 'server --current' ]] && echo nginx-fpm\nexit 0\n");
+    file_put_contents($this->dir.'/bin/ddev', "#!/usr/bin/env bash\necho \"ddev \$*\" >> \"$this->dir/log\"\n[[ \"\$*\" == 'server --current' ]] && echo frankenphp\nexit 0\n");
     chmod($this->dir.'/bin/ddev', 0755);
     $process = new Process(['bash', base_path('bench/suite.sh'), '--servers', 'frankenphp'], null, [
         'PATH' => $this->dir.'/bin:'.getenv('PATH'),

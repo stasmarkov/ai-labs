@@ -24,6 +24,8 @@
 ##      BENCH_READY_TIMEOUT (seconds to wait for every subscriber to be answered, default 180), BENCH_OHA_IMAGE, BENCH_NODE_IMAGE.
 
 set -Eeuo pipefail
+# shellcheck source=lib/servers.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/servers.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
@@ -104,7 +106,7 @@ refuse() {
 grep -q '^MERCURE_PUBLISHER_JWT_KEY=.' "$ENV_FILE" && grep -q '^MERCURE_SUBSCRIBER_JWT_KEY=.' "$ENV_FILE" \
   || refuse "the Mercure keys are not in .env: run ddev artisan mercure:keys and ddev restart"
 
-server="$(ddev server --current)"
+server="$(current_server .)" || exit 2
 BASE_URL="${BENCH_BASE_URL:-$(ddev server --url)}"
 HOST="${BASE_URL#*://}"
 HOST="${HOST%%/*}"

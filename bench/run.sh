@@ -17,6 +17,8 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+# shellcheck source=lib/servers.sh
+source "$SCRIPT_DIR/lib/servers.sh"
 SITE="${DDEV_SITENAME:-ai-lab}"
 OHA_IMAGE="${BENCH_OHA_IMAGE:-ai-lab-oha:1.16.0}"   # built locally from bench/oha/Dockerfile
 K6_IMAGE="${BENCH_K6_IMAGE:-grafana/k6:1.0.0}"
@@ -98,7 +100,11 @@ if [[ -e "$BACKUP" ]]; then
 fi
 [[ -f "$ENV_FILE" ]] || { echo "No .env at $ENV_FILE" >&2; exit 2; }
 
-server="$(ddev server --current)"
+server="$(current_server .)" || exit 2
+if is_removed_server "$server"; then
+  server_removed_message "$server" >&2
+  exit 2
+fi
 BASE_URL="${BENCH_BASE_URL:-$(ddev server --url)}"
 HOST="${BASE_URL#*://}"
 HOST="${HOST%%/*}"
@@ -150,10 +156,7 @@ check_conditions() {
 }
 check_conditions
 
-serving="web"
-[[ "$server" == "openlitespeed" ]] && serving="openlitespeed"
-containers=("ddev-$SITE-$serving" "ddev-$SITE-db")
-[[ "$serving" != "web" ]] && containers+=("ddev-$SITE-web")
+containers=("ddev-$SITE-web" "ddev-$SITE-db")
 
 router_ip=""
 # The router can get a new IP when `ddev restart` recreates it, so this runs after the restart.

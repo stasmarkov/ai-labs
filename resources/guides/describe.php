@@ -39,7 +39,7 @@ return [
     'failures' => [
         [
             'title' => 'All the text appears at once at the end',
-            'body' => "**Cause:** a proxy or the web server holds the bytes back until its buffer fills.\n\n**Fix:** the response already sends `X-Accel-Buffering: no`; Apache needs `flushpackets` on its PHP proxy. Check with `curl --no-buffer` to see the lines arrive one by one.",
+            'body' => "**Cause:** a proxy or the web server holds the bytes back until its buffer fills.\n\n**Fix:** the response already sends `X-Accel-Buffering: no` for any proxy in front, and FrankenPHP flushes each chunk on all three modes (Apache needed `flushpackets` when it was measured earlier on PHP-FPM). Check with `curl --no-buffer` to see the lines arrive one by one.",
             'snippet' => 'App\Ai\SseProtocol::headers',
         ],
         [
