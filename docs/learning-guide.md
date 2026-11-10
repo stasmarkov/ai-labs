@@ -443,7 +443,7 @@ Throughput counts from the first model call of a run, not from dispatch: worker 
 
 **In this repo.**
 - Front end: [`resources/js/ai/`](../resources/js/ai/) (pages, layout, design components, composables); first page controller: [`ShowLabOverviewController`](../app/Http/Controllers/ShowLabOverviewController.php).
-- Placeholders: `/ai/chat` (SL-45, SL-41) and `/ai/photos` (SL-36, blocked by Q-06) say what is coming; the real pages are built inside this UI.
+- Pages: `/ai/chat` (SL-45) and `/ai/photos` (SL-27) are built inside this UI; the image-similarity part of the photos page (SL-36) is still to come.
 - Tests: `AiLabOverviewTest`, `AiLabDescribeTest`, `AiLabSearchPagesTest`, `AiLabPlaceholderTest`.
 - Spec: [`.ai/specs/spec-20261103-0012-ai-lab-ui/`](../.ai/specs/spec-20261103-0012-ai-lab-ui/).
 
@@ -609,6 +609,8 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`CarDescriptionAgent`](../app/Ai/CarDescriptionAgent.php) | Writes a listing's ad text from its facts; prompt `car-description.v1.md` | SL-20 |
 | [`DocsAnswerAgent`](../app/Ai/DocsAnswerAgent.php) | Answers a docs question from retrieved chunks; builds the escaped `<context><doc>` message and appends the per-request canary | SL-45 |
 | [`RagGraderAgent`](../app/Ai/RagGraderAgent.php) | Grades an answer's correctness and groundedness (0–2) with structured output; prompt `rag-grader.v2.md` | SL-33 |
+| [`PhotoVisionAgent`](../app/Ai/PhotoVisionAgent.php) | Sends one stored photo to the vision model and asks for caption, tags, colours, body type, damage and people count; prompt `photo-vision.v1.md`, feature `photo-vision` | SL-27 |
+| [`OllamaVisionModels`](../app/Ai/OllamaVisionModels.php) | Checks that a model is installed on Ollama and reports the `vision` capability, so `photos:extract --model` refuses text-only models | SL-27 |
 | [`ListingFilterAgent`](../app/Ai/ListingFilterAgent.php) | Turns a plain-language car search into filter fields plus an `unsupported` list with structured output; prompt `listing-filters.v1.md` | SL-23 |
 | [`SseProtocol`](../app/Ai/SseProtocol.php) | One `data:` line per SDK event, then `[DONE]`; masks provider errors; drains the generator so FrankenPHP workers send a body | SL-20 |
 | [`AbortWatcher`](../app/Ai/AbortWatcher.php), [`ConnectionAbortWatcher`](../app/Ai/ConnectionAbortWatcher.php) | Tells the stream whether the client has gone; checked after every flush so a Stop ends the model call and writes a `stopped` row | SL-46 |
@@ -668,6 +670,25 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`DocsChatTurn`](../app/DTOs/DocsChatTurn.php) | One validated history turn (`user` or `assistant`); the request's `history` becomes a list of these, escaped into a `<history>` block by the agent. Needs `docs-answer@v2` ([`resources/prompts/docs-answer.v2.md`](../resources/prompts/docs-answer.v2.md)) | SL-41 |
 | [`DocsAnswerContext`](../app/Services/DocsAnswerContext.php) | The relevance gate (similarity or operator-free full-text hit) and the 4 000-token budget | SL-45 |
 | [`PromptInjectionGuard`](../app/Services/PromptInjectionGuard.php) | Matches a question against the pattern file before any retrieval | SL-45 |
+
+**Photos: download, import, extract, eval (SL-27)**
+
+| File | Purpose | Slice |
+|---|---|---|
+| [`bench/datasets/stanford-cars.sh`](../bench/datasets/stanford-cars.sh), [`docs/datasets/stanford-cars.md`](datasets/stanford-cars.md) | Prints the dataset terms, refuses to run without `--accept-terms`, downloads the pinned mirror files; the page records source, terms URL and checksums | SL-27 |
+| [`ImportPhotosCommand`](../app/Console/Commands/ImportPhotosCommand.php), [`PhotoImportService`](../app/Services/PhotoImportService.php) | `photos:import`: keep classes whose make and model are in the catalogue, give each photo to a listing, resize and store it | SL-27 |
+| [`StanfordCarsClassParser`](../app/Services/StanfordCarsClassParser.php), [`PhotoMatcher`](../app/Services/PhotoMatcher.php), [`PhotoBodyMapper`](../app/Services/PhotoBodyMapper.php) | Class name to make, model, year and body; nearest-year listing choice; dataset body word to catalogue body type | SL-27 |
+| [`StanfordCarsDataset`](../app/Support/StanfordCarsDataset.php), [`PhotoImageResizer`](../app/Support/PhotoImageResizer.php) | Reads `classes.csv` and `images/`; GD resize to at most 1024 px as JPEG | SL-27 |
+| [`ListingPhoto`](../app/Models/ListingPhoto.php), [`ListingPhotoRepositoryInterface`](../app/Contracts/ListingPhotoRepositoryInterface.php) | The `listing_photos` table (unique sha256) and its repository | SL-27 |
+| [`PhotoVisionAgent`](../app/Ai/PhotoVisionAgent.php), [`PhotoExtractionRules`](../app/Rules/PhotoExtractionRules.php) | One stored photo plus the versioned prompt, structured output; the same limits checked again in PHP | SL-27 |
+| [`ExtractPhotosCommand`](../app/Console/Commands/ExtractPhotosCommand.php), [`ExtractPhotoJob`](../app/Jobs/ExtractPhotoJob.php), [`PhotoExtractionService`](../app/Services/PhotoExtractionService.php) | `photos:extract`: one job per pending photo on the `ai-vision` queue, up to three attempts, one `ai_runs` row per attempt | SL-27 |
+| [`EvalPhotosCommand`](../app/Console/Commands/EvalPhotosCommand.php), [`PhotoEvalService`](../app/Services/PhotoEvalService.php), [`PhotoEvalScorer`](../app/Services/PhotoEvalScorer.php) | `photos:eval`: a sha256-ordered sample per model; validity, attempts, latency, body type agreement and colour presence into `run.json` | SL-27 |
+| [`PhotoLabService`](../app/Services/PhotoLabService.php), [`ShowLabPhotosController`](../app/Http/Controllers/ShowLabPhotosController.php) | The `/ai/photos` page; endpoints take a photo id only, never a path | SL-27 |
+| [`ExtractLabPhotoController`](../app/Http/Controllers/ExtractLabPhotoController.php), [`ShowLabPhotoStatusController`](../app/Http/Controllers/ShowLabPhotoStatusController.php), [`PhotoExtractionInFlightException`](../app/Exceptions/PhotoExtractionInFlightException.php) | "Run extraction" queues one job for a photo id (409 while one is queued or running); the status endpoint the page polls | SL-27 |
+| [`PhotoLabRepositoryInterface`](../app/Contracts/PhotoLabRepositoryInterface.php), [`EloquentPhotoLabRepository`](../app/Repositories/EloquentPhotoLabRepository.php), [`PhotoExtraction`](../app/Models/PhotoExtraction.php) | The grid, the detail with the effective model's result and the other models' results, and the `photo_extractions` table (one row per photo, provider, model and prompt version) | SL-27 |
+| [`create_listing_photos_table`](../database/migrations/2026_11_11_090000_create_listing_photos_table.php), [`create_photo_extractions_table`](../database/migrations/2026_11_11_100000_create_photo_extractions_table.php), [`stanford-cars-convert.py`](../bench/datasets/stanford-cars-convert.py) | The two tables, and the converter the download script runs in a pinned container to turn the mirror's files into `images/` plus `classes.csv` | SL-27 |
+| [`PhotoLabPageTest`](../tests/Feature/PhotoLabPageTest.php), [`PhotoVisionAgentTest`](../tests/Feature/PhotoVisionAgentTest.php), [`PhotoDatasetScriptTest`](../tests/Feature/PhotoDatasetScriptTest.php) | The lab page and its endpoints, the agent and its configuration, the download script's terms gate and checksums | SL-27 |
+| [`PhotoImportTest`](../tests/Feature/PhotoImportTest.php), [`PhotoExtractTest`](../tests/Feature/PhotoExtractTest.php), [`PhotoEvalTest`](../tests/Feature/PhotoEvalTest.php) | Offline tests with generated fixture images and a faked agent | SL-27 |
 
 **Stop and conversations (section 18)**
 
@@ -805,7 +826,7 @@ The guide files:
 - [`docs.php`](../resources/guides/docs.php): docs search
 - [`guards.php`](../resources/guides/guards.php): the guards around a model call
 - [`nl-search.php`](../resources/guides/nl-search.php): words to filters
-- [`photos.php`](../resources/guides/photos.php): the planned photo feature
+- [`photos.php`](../resources/guides/photos.php): reading a car photo with a vision model
 - [`prompts.php`](../resources/guides/prompts.php): versioned prompts
 - [`providers.php`](../resources/guides/providers.php): providers and models
 - [`run-log.php`](../resources/guides/run-log.php): the `ai_runs` log
@@ -1198,4 +1219,4 @@ Neither model produced a 422 (0 of 40). The first run scored 0.400 for both mode
 Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):
 
 - **Server track:** Early Hints and compression (SL-10), real-time updates with Reverb (SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
-- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; tool calling (SL-25); evals (SL-26); vision (SL-27); model comparison (SL-28); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39, shown on the `/ai/photos` placeholder); a research agent (SL-42); a prompt playground (SL-43).
+- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; tool calling (SL-25); evals (SL-26); vision (SL-27); model comparison (SL-28); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39, building on the photos and extractions of `/ai/photos`); a research agent (SL-42); a prompt playground (SL-43).

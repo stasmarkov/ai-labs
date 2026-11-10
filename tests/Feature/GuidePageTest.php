@@ -22,7 +22,8 @@ it('AC-4 the index lists every guide with title and summary and labels the plann
             ->where('guides', fn ($guides): bool => collect($guides)->every(
                 fn (array $guide): bool => $guide['title'] !== '' && $guide['summary'] !== ''
             ))
-            ->where('guides', fn ($guides): bool => collect($guides)->firstWhere('key', 'photos')['planned'] === true
+            ->where('guides', fn ($guides): bool => collect($guides)->firstWhere('key', 'photos')['planned'] === false
+                && collect($guides)->firstWhere('key', 'photos')['group'] === 'capability'
                 && collect($guides)->firstWhere('key', 'describe')['planned'] === false
                 && collect($guides)->firstWhere('key', 'describe')['group'] === 'capability'
                 && collect($guides)->firstWhere('key', 'providers')['group'] === 'foundation')
@@ -61,18 +62,7 @@ it('AC-2 a capability guide has the six tabs, each with content', function (stri
             ->where('guide.experiments', fn ($experiments): bool => count($experiments) >= 1
                 && collect($experiments)->every(fn (array $experiment): bool => str_starts_with($experiment['href'], '/ai/')))
         );
-})->with(['describe', 'semantic', 'nl-search', 'docs', 'chat']);
-
-it('AC-4 the planned guide shows the works and plan tabs with plan html', function (): void {
-    $this->get('/ai/guides/photos')
-        ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
-            ->where('guide.planned', true)
-            ->where('guide.tabs', fn ($tabs): bool => collect($tabs)->pluck('key')->all() === ['works', 'plan'])
-            ->where('guide.plan', fn ($plan): bool => count($plan) >= 1
-                && collect($plan)->every(fn (string $html): bool => trim(strip_tags($html)) !== ''))
-        );
-});
+})->with(['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos']);
 
 it('AC-2 the guide page resolves related keys to titles', function (): void {
     $this->get('/ai/guides/describe')
@@ -113,6 +103,7 @@ it('AC-6 every experiment preset URL uses only parameters its target page reads'
         'ai.docs' => ['q'],
         'ai.chat' => ['q'],
         'ai.nl-search' => ['q'],
+        'ai.photos' => [],
     ];
     $repository = app(GuideRepository::class);
 

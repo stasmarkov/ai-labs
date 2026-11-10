@@ -40,7 +40,7 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 360),
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 480), // above the longest job timeout (photo extraction, 420 s)
             'after_commit' => false,
         ],
 

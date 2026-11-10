@@ -58,6 +58,19 @@ ddev artisan nl:eval                        # natural-language search turned int
 
 Both evals need Ollama running with the models above.
 
+## Photos
+
+The photos lab sends a car photo to a vision model and stores a checked caption, tags, colours, body type, damage and people count. The photos come from the Stanford Cars dataset, which you download yourself and never commit; terms and source are in [docs/datasets/stanford-cars.md](docs/datasets/stanford-cars.md).
+
+```sh
+bench/datasets/stanford-cars.sh --accept-terms   # download the dataset (about 1.9 GB)
+ddev artisan photos:import                       # match photos to listings, resize, store
+ddev artisan photos:extract --limit=50           # queue the vision jobs (queue ai-vision)
+ddev artisan photos:eval                         # measure models on a sample, writes run.json
+```
+
+Extraction needs a vision model on Ollama (default `gemma4:12b`) and a worker for the `ai-vision` queue: `ddev artisan queue:work --queue=ai-vision`. The tests run offline with fixture images.
+
 ## History
 
 The project began as a PHP server comparison (five web servers and worker mode; only the FrankenPHP family is kept) on a car marketplace, and was renamed ai-lab on 2026-11-10 when it became a study lab for AI features in Laravel. The server work stays below and in [BENCHMARKS.md](BENCHMARKS.md). The old DDEV URL is gone; use https://ai-lab.ddev.site.

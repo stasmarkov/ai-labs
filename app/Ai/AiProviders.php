@@ -20,7 +20,13 @@ use Laravel\Ai\Providers\OpenAiProvider;
  */
 final readonly class AiProviders
 {
-    private const TEXT_FEATURES = ['describe', 'nl-search', 'docs-answer', 'rag-grader'];
+    private const TEXT_FEATURES = ['describe', 'nl-search', 'docs-answer', 'rag-grader', 'photo-vision'];
+
+    /** Text features whose default model is the provider's vision model, when its entry names one. */
+    private const VISION_FEATURES = ['photo-vision'];
+
+    /** Features whose model may be chosen per request by the lab selector; the rest always run as configured. */
+    public const OVERRIDABLE_FEATURES = ['describe', 'nl-search', 'docs-answer'];
 
     private const EMBEDDING_FEATURES = ['embeddings-listings', 'embeddings-docs'];
 
@@ -116,7 +122,9 @@ final readonly class AiProviders
             return $this->choice($override, $this->defaultModel($override, false));
         }
 
-        $model = (string) (config("ai.features.{$feature}.model") ?: $this->defaultModel($provider, $embeddings));
+        $model = (string) (config("ai.features.{$feature}.model")
+            ?: (in_array($feature, self::VISION_FEATURES, true) ? config("ai.providers.{$provider}.models.vision.default") : null)
+            ?: $this->defaultModel($provider, $embeddings));
 
         return $this->choice($provider, $model);
     }

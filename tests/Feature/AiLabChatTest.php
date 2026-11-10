@@ -21,7 +21,7 @@ it('AC-10 the chat page gets the ask endpoint, the run lookup and the question l
             ->missing('blockedBy'));
 });
 
-it('AC-10 the chat capability is ready and the overview lists photos as the only page coming', function (): void {
+it('AC-10 the chat capability is ready and the overview lists photos as ready too', function (): void {
     Http::fake(['*/api/version' => Http::response(['version' => '0.12.0'])]);
 
     $this->get('/ai')
@@ -30,7 +30,7 @@ it('AC-10 the chat capability is ready and the overview lists photos as the only
             ->where('capabilities.4.key', 'chat')
             ->where('capabilities.4.status', 'ready')
             ->where('capabilities.5.key', 'photos')
-            ->where('capabilities.5.status', 'coming'));
+            ->where('capabilities.5.status', 'ready'));
 });
 
 it('MNC-3 the overview shows the refused and no_context runs as text', function (): void {

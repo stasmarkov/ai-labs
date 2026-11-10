@@ -4,7 +4,7 @@ title: Car photos and vision extraction
 type: feature
 size: L
 priority: P1
-status: approved
+status: in-progress
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-11; standing approval)

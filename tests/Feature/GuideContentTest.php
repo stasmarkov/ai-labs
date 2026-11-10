@@ -8,13 +8,13 @@ use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
 use App\Guides\SnippetResolver;
 
-const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat'];
+const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos'];
 
 const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards'];
 
 const ALL_FILLED_GUIDES = [...CAPABILITY_GUIDES, ...FOUNDATION_GUIDES];
 
-const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat'];
+const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat', 'ai.photos'];
 
 /**
  * @return list<string>
@@ -50,7 +50,7 @@ it('AC-4 declares the kind of every guide file, the one source for capability, f
 
     expect(array_keys(array_filter($kinds, fn (string $kind): bool => $kind === 'capability')))->toEqualCanonicalizing(CAPABILITY_GUIDES)
         ->and(array_keys(array_filter($kinds, fn (string $kind): bool => $kind === 'foundation')))->toEqualCanonicalizing(FOUNDATION_GUIDES)
-        ->and(array_keys(array_filter($kinds, fn (string $kind): bool => $kind === 'planned')))->toBe(['photos']);
+        ->and(array_keys(array_filter($kinds, fn (string $kind): bool => $kind === 'planned')))->toBe([]);
 });
 
 it('AC-2 meets the minimum counts of the six tabs', function (string $key): void {
@@ -129,7 +129,7 @@ it('AC-1 keeps slice ids, markdown files and repo paths out of the prose', funct
     }
 })->with(ALL_FILLED_GUIDES);
 
-it('AC-4 ships the foundation guides and the planned photos guide', function (): void {
+it('AC-4 ships the foundation guides and the photos guide', function (): void {
     expect(app(GuideRepository::class)->keys())->toContain(...[...FOUNDATION_GUIDES, 'photos']);
 });
 
@@ -146,19 +146,19 @@ it('AC-4 meets the minimum counts of a foundation guide', function (string $key)
         ->and(count($guide->experiments))->toBeGreaterThanOrEqual(1);
 })->with(FOUNDATION_GUIDES);
 
-it('AC-4 marks photos as planned with works and a relaxed minimum', function (): void {
+it('AC-7 counts photos as a capability guide with six non-empty tabs and no references', function (): void {
     $guide = app(GuideRepository::class)->find('photos');
     $rendered = app(GuideRenderer::class)->render('photos');
 
-    expect($guide->planned)->toBeTrue()
-        ->and(count($guide->works))->toBeGreaterThanOrEqual(3)
-        ->and(count($guide->plan))->toBeGreaterThanOrEqual(1)
-        ->and($guide->snippetReferences())->toBeEmpty()
-        ->and($rendered['works'])->not->toBeEmpty();
-
-    foreach (guideTexts($guide) as $text) {
-        expect($text)->not->toMatch('/\bSL-\d+/')->not->toMatch('/\.md\b/');
-    }
+    expect($guide->kind)->toBe('capability')
+        ->and($guide->planned)->toBeFalse()
+        ->and($guide->plan)->toBeEmpty()
+        ->and($rendered['works'])->not->toBeEmpty()
+        ->and($rendered['failures'])->not->toBeEmpty()
+        ->and($rendered['recipes'])->not->toBeEmpty()
+        ->and($rendered['support'])->not->toBeEmpty()
+        ->and($rendered['numbers'])->not->toBeEmpty()
+        ->and($rendered['experiments'])->not->toBeEmpty();
 });
 
 it('AC-6 every experiment offers 2 to 4 predictions and its answer id is one of them', function (string $key): void {
@@ -180,4 +180,32 @@ it('AC-6 the providers guide covers the capability table, key setup, the add-a-p
     foreach (['anthropic_api_key', 'openai_api_key', 'gemini_api_key', 'add a provider', '1024', 'index_not_built', 'provider_not_enabled', 'cloud-ai'] as $needle) {
         expect($text)->toContain($needle);
     }
+});
+
+it('AC-7 photos works steps carry request_sent, response_received, validation_failed and request_failed', function (): void {
+    $events = array_column(app(GuideRepository::class)->find('photos')->works, 'event');
+
+    expect($events)->toContain('request_sent', 'response_received', 'validation_failed', 'request_failed');
+});
+
+it('AC-7 a photos recipe covers adding a field to the schema', function (): void {
+    $recipe = null;
+    foreach (app(GuideRepository::class)->find('photos')->recipes as $candidate) {
+        if (str_contains(mb_strtolower($candidate->title), 'add a field to the schema')) {
+            $recipe = $candidate;
+        }
+    }
+    $text = $recipe === null ? '' : $recipe->title."\n".$recipe->body;
+
+    expect($recipe)->not->toBeNull()
+        ->and($text)->toContain('PhotoExtractionRules')
+        ->and(mb_strtolower($text))->toContain('schema')
+        ->and(mb_strtolower($text))->toContain('prompt version');
+});
+
+it('AC-5 the photos empty state names both the download script and photos:import', function (): void {
+    $source = file_get_contents(resource_path('js/ai/Pages/Lab/Photos.vue'));
+
+    expect($source)->toContain('stanford-cars.sh --accept-terms')
+        ->and($source)->toContain('photos:import');
 });

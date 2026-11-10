@@ -31,7 +31,8 @@ final class LimitCloudAi
 
         foreach ($features as $feature) {
             // Only text features take the lab override; embeddings always run on their configured provider.
-            $provider = $this->providers->configured($feature, str_starts_with($feature, 'embeddings-') ? null : $override)->provider;
+            // Only the lab-selectable text features take the override; the others always run on their configured provider.
+            $provider = $this->providers->configured($feature, in_array($feature, AiProviders::OVERRIDABLE_FEATURES, true) ? $override : null)->provider;
             $cloud = $cloud || ($this->providers->isCloud($provider) && $this->providers->isEnabled($provider));
         }
 

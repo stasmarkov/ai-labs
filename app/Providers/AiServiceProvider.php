@@ -69,6 +69,8 @@ class AiServiceProvider extends ServiceProvider
         RateLimiter::for('semantic-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.semantic_per_minute'))->by((string) $request->ip()));
         RateLimiter::for('nl-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.nl_search.per_minute'))->by((string) $request->ip()));
         RateLimiter::for('docs-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.docs.search_per_minute'))->by((string) $request->ip()));
+        // Each extraction holds the vision model for seconds, so the lab endpoint is limited per IP.
+        RateLimiter::for('photo-extract', fn (Request $request): Limit => Limit::perMinute(30)->by((string) $request->ip()));
         RateLimiter::for('docs-ask', fn (Request $request): Limit => Limit::perMinute((int) config('ai.docs.answer.per_minute'))->by((string) $request->ip()));
     }
 }

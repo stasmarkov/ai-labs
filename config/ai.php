@@ -56,6 +56,11 @@ return [
             'provider' => env('AI_RAG_GRADER_PROVIDER') ?: null,
             'model' => env('AI_RAG_GRADER_MODEL') ?: null,
         ],
+        'photo-vision' => [
+            'provider' => env('AI_PHOTO_VISION_PROVIDER') ?: 'ollama',
+            // Empty means the provider's vision model (Ollama: gemma4:12b), or its text model when it names none.
+            'model' => env('AI_PHOTO_VISION_MODEL') ?: null,
+        ],
         'embeddings-listings' => [
             'provider' => env('AI_EMBEDDINGS_LISTINGS_PROVIDER') ?: null,
             'model' => env('AI_EMBEDDINGS_LISTINGS_MODEL') ?: null,
@@ -193,6 +198,7 @@ return [
         'docs_answer_history' => env('AI_PROMPT_DOCS_ANSWER_HISTORY') ?: 'docs-answer.v2',
         'listing_filters' => env('AI_PROMPT_LISTING_FILTERS') ?: 'listing-filters.v1',
         'rag_grader' => env('AI_PROMPT_RAG_GRADER') ?: 'rag-grader.v2',
+        'photo_vision' => env('AI_PROMPT_PHOTO_VISION') ?: 'photo-vision.v1',
     ],
     // guide:end prompts
 
@@ -247,6 +253,7 @@ return [
             ],
             'models' => [
                 'text' => ['default' => env('OLLAMA_MODEL') ?: 'qwen3.5:9b'],
+                'vision' => ['default' => env('OLLAMA_VISION_MODEL') ?: 'gemma4:12b'],
                 'embeddings' => ['default' => env('OLLAMA_EMBED_MODEL') ?: 'bge-m3', 'dimensions' => 1024],
             ],
         ],
