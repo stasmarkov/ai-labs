@@ -355,8 +355,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-90, BR-27
 - **Depends on:** SL-22
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261111-0000-photo-vision
 - **Source:** brief (Phase 11), user 2026-10-28 (images), widened by intake 2026-10-30 (auto-tagging pipeline)
 - **Run:** `/sdd "SL-27: queued batch sends each stored car photo to the local vision model and stores a schema-validated {caption, tags, dominant colours, body type, visible damage, people count}, retrying on invalid JSON (BR-90, BR-27). Rules in product-brief.md."`
 
@@ -732,3 +732,4 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 | 2026-11-10 | Stanislav Markov | Rename to ai-lab; study purpose; AI in Laravel with local and cloud providers; keep only FrankenPHP (classic, worker, Octane) | Pivot | product-brief revised; SL-49 rename + homescreen, SL-50 FrankenPHP only, SL-51 cloud providers; SL-14 dropped; order SL-49 → SL-50 → SL-51 → SL-25 … → SL-28 (now models and providers) → SL-48 → SL-44, then SL-15–17 on FrankenPHP |
 | 2026-11-10 | Stanislav Markov | In-app interactive guides instead of md links on the site; no slice ids, `.md` or repo-path references in the UI | Revised slice | SL-48 rewritten and specced (spec-20261110-1149-in-app-guides); moved forward to run right after SL-49 so every later AI slice adds a `resources/guides/` file instead of links; order SL-49 → SL-48 → SL-50 → SL-51 → AI slices → SL-28 → SL-44 |
 | 2026-11-10 | Stanislav Markov | Switch the LLM or other models via the UI, no login, local only | New slice | SL-52 local settings page (spec-20261110-2155-model-settings-ui), after SL-51; BR-91 to be revised in that slice; order SL-51 → SL-52 → SL-25 … |
+| 2026-11-11 | Stanislav Markov | Photos next: import Stanford Cars, vision extraction with the local models | Revised slice | SL-27 widened with the photo import (spec-20261111-0000-photo-vision), taken before SL-52 and SL-25 at the owner's request; SL-52 spec reads features from AiProviders so it covers photo-vision |

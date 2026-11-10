@@ -159,7 +159,7 @@ Self-decided under the owner's standing approval.
 ## Clarity gate answers (binding, self-decided 2026-11-10)
 
 1. **Lab override and saved model.** A request `provider` replaces only the provider. The model then comes from the highest level whose provider equals it: the saved setting, then the configuration, then that provider's `models.*.default`. So a request naming the saved provider uses the saved model.
-2. **Feature keys** are the SL-51 keys, exactly: `describe`, `nl-search`, `docs-answer`, `rag-grader`, `embeddings-listings`, `embeddings-docs`. They are used as the table key, the route parameter (`whereIn`) and the validation rule.
+2. **Feature keys** are the features registered in `AiProviders` at build time (the SL-51 keys `describe`, `nl-search`, `docs-answer`, `rag-grader`, `embeddings-listings`, `embeddings-docs`, plus `photo-vision` from SL-27). They are read from `AiProviders`, never from a list of their own; `photo-vision` is a text feature whose Ollama model list keeps only models with the `vision` capability. (Amended 2026-11-11 for SL-27.) They are used as the table key, the route parameter (`whereIn`) and the validation rule.
 3. **Ollama model kind** comes from `/api/show` `capabilities`:
    - `embedding` → an embedding model;
    - `completion` → a text model;
