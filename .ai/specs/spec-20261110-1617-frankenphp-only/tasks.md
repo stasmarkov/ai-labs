@@ -182,3 +182,4 @@ Checks:
 - `ddev server`: lists the three modes. `ddev server nginx-fpm` prints the removal message and exits 1. `--current` prints `frankenphp`, and `--check default` exits 0.
 - `git diff --stat 719c0a5 -- .ddev/config.yaml .ddev/servers/frankenphp*` is empty (MNC-3, MNC-6).
 - Last commit with the old servers: `719c0a5`.
+- Clean-tree bench: after commit ff77fb7, `bench/run.sh ping --quick` exited 0 on frankenphp (`bench/results/raw/2026-11-10/frankenphp/ping-fair-160247-s1r1.json`).
