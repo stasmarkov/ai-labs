@@ -54,12 +54,19 @@ interface Guide {
     }>;
     plan: string[];
     facts: Array<{ label: string; value: string }>;
+    table: { columns: string[]; rows: Array<Record<string, string>> } | null;
     related: Array<{ key: string; title: string }>;
 }
 
 const props = defineProps<{
     guide: Guide;
 }>();
+
+function omitProvider(row: Record<string, string>): Record<string, string> {
+    const { provider: _provider, ...rest } = row;
+
+    return rest;
+}
 
 const active = ref(props.guide.tabs[0]?.key ?? 'works');
 const tabButtons = ref<HTMLButtonElement[]>([]);
@@ -148,6 +155,22 @@ const statusLabel: Record<string, string> = {
                     <dd class="m-0 font-mono text-[13px]">{{ fact.value }}</dd>
                 </div>
             </dl>
+            <div v-if="guide.table" class="overflow-x-auto">
+                <table class="w-full border-collapse text-left text-[13px]">
+                    <caption class="pb-2 text-left text-[13px] text-muted">What each provider can do here, and whether its key is set</caption>
+                    <thead>
+                        <tr>
+                            <th v-for="column in guide.table.columns" :key="column" scope="col" class="border-b border-rule py-2 pr-4 font-semibold">{{ column }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in guide.table.rows" :key="row.provider">
+                            <th scope="row" class="border-b border-rule py-2 pr-4 font-mono font-normal">{{ row.provider }}</th>
+                            <td v-for="(value, column) in omitProvider(row)" :key="column" class="border-b border-rule py-2 pr-4">{{ value }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
             <ol class="m-0 flex list-none flex-col gap-5 p-0">
                 <li v-for="(step, index) in guide.works" :key="index" class="min-w-0 border-b border-rule pb-5">
                     <h3 class="m-0 text-[16px] font-semibold">{{ index + 1 }}. {{ step.title }}</h3>

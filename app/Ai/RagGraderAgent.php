@@ -44,14 +44,14 @@ final class RagGraderAgent implements Agent, HasProviderOptions, HasStructuredOu
         ];
     }
 
-    public function providerName(): string
+    protected function feature(): string
     {
-        return (string) config('ai.default');
+        return 'rag-grader';
     }
 
     public function modelName(): string
     {
-        return $this->model ?? (string) ($this->activeProviderEntry()['models']['text']['default'] ?? '');
+        return $this->model ?? app(AiProviders::class)->configured($this->feature())->model;
     }
 
     /**

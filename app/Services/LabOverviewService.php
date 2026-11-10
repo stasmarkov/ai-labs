@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Ai\AiProviders;
 use App\Ai\OllamaServerInfo;
 use App\Contracts\AiRunRepositoryInterface;
 use App\DTOs\LabCapability;
@@ -28,19 +29,20 @@ final readonly class LabOverviewService
         private AiRunRepositoryInterface $runs,
         private OllamaServerInfo $ollama,
         private GuideRepository $guides,
+        private AiProviders $providers,
     ) {}
 
     public function overview(): LabOverview
     {
-        $textProvider = (string) config('ai.default');
-        $embeddingProvider = (string) config('ai.default_for_embeddings');
+        $text = $this->providers->configured('describe');
+        $embeddings = $this->providers->configured('embeddings-listings');
 
         return new LabOverview(
-            textProvider: $textProvider,
-            textModel: (string) config("ai.providers.{$textProvider}.models.text.default"),
-            embeddingProvider: $embeddingProvider,
-            embeddingModel: (string) config("ai.providers.{$embeddingProvider}.models.embeddings.default"),
-            ollamaReachable: $this->usesOllama([$textProvider, $embeddingProvider]) ? $this->ollama->reachable() : 'not-used',
+            textProvider: $text->provider,
+            textModel: $text->model,
+            embeddingProvider: $embeddings->provider,
+            embeddingModel: $embeddings->model,
+            ollamaReachable: $this->usesOllama($this->featureProviders()) ? $this->ollama->reachable() : 'not-used',
             capabilities: $this->capabilities(),
             recentRuns: $this->runs->recent(self::RECENT_RUNS),
         );
@@ -51,16 +53,16 @@ final readonly class LabOverviewService
      */
     public function topBar(): array
     {
-        $textProvider = (string) config('ai.default');
-        $embeddingProvider = (string) config('ai.default_for_embeddings');
+        $text = $this->providers->configured('describe');
+        $embeddings = $this->providers->configured('embeddings-listings');
 
         return [
-            'textProvider' => $textProvider,
-            'textModel' => (string) config("ai.providers.{$textProvider}.models.text.default"),
-            'embeddingProvider' => $embeddingProvider,
-            'embeddingModel' => (string) config("ai.providers.{$embeddingProvider}.models.embeddings.default"),
+            'textProvider' => $text->provider,
+            'textModel' => $text->model,
+            'embeddingProvider' => $embeddings->provider,
+            'embeddingModel' => $embeddings->model,
             'ollama' => [
-                'reachable' => $this->usesOllama([$textProvider, $embeddingProvider]) ? $this->ollama->reachable() : 'not-used',
+                'reachable' => $this->usesOllama($this->featureProviders()) ? $this->ollama->reachable() : 'not-used',
             ],
             'navigation' => $this->navigation(),
         ];
@@ -105,6 +107,19 @@ final readonly class LabOverviewService
             ['href' => route('ai.guides.index', absolute: false), 'label' => 'Guides'],
             ...array_map(fn (array $page): array => ['href' => route($page[2], absolute: false), 'label' => $page[1]], self::PAGES),
         ];
+    }
+
+    /**
+     * The configured provider of every AI feature, so the Ollama status shows when any of them runs on Ollama.
+     *
+     * @return list<string>
+     */
+    private function featureProviders(): array
+    {
+        return array_map(
+            fn (string $feature): string => $this->providers->configured($feature)->provider,
+            ['describe', 'nl-search', 'docs-answer', 'rag-grader', 'embeddings-listings', 'embeddings-docs'],
+        );
     }
 
     /**

@@ -40,6 +40,7 @@ final readonly class GuideRenderer
             'value' => $this->facts->number($number['file'], $number['path'], $number['pending']),
         ], $rendered['numbers']);
         $rendered['facts'] = $this->facts->live($guide->key);
+        $rendered['table'] = $this->facts->table($guide->key);
 
         return $rendered;
     }

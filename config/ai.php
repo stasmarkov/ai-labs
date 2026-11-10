@@ -28,6 +28,46 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Features
+    |--------------------------------------------------------------------------
+    |
+    | The provider and model each feature runs on, read by App\Ai\AiProviders.
+    | An empty provider falls back to "default" (text features) or
+    | "default_for_embeddings"; an empty model to that provider's default
+    | model. The model applies only while the feature runs on its configured
+    | provider.
+    |
+    */
+
+    'features' => [
+        'describe' => [
+            'provider' => env('AI_DESCRIBE_PROVIDER') ?: null,
+            'model' => env('AI_DESCRIBE_MODEL') ?: null,
+        ],
+        'nl-search' => [
+            'provider' => env('AI_NL_SEARCH_PROVIDER') ?: null,
+            'model' => env('AI_NL_SEARCH_MODEL') ?: null,
+        ],
+        'docs-answer' => [
+            'provider' => env('AI_DOCS_ANSWER_PROVIDER') ?: null,
+            'model' => env('AI_DOCS_ANSWER_MODEL') ?: null,
+        ],
+        'rag-grader' => [
+            'provider' => env('AI_RAG_GRADER_PROVIDER') ?: null,
+            'model' => env('AI_RAG_GRADER_MODEL') ?: null,
+        ],
+        'embeddings-listings' => [
+            'provider' => env('AI_EMBEDDINGS_LISTINGS_PROVIDER') ?: null,
+            'model' => env('AI_EMBEDDINGS_LISTINGS_MODEL') ?: null,
+        ],
+        'embeddings-docs' => [
+            'provider' => env('AI_EMBEDDINGS_DOCS_PROVIDER') ?: null,
+            'model' => env('AI_EMBEDDINGS_DOCS_MODEL') ?: null,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Embedding Batches
     |--------------------------------------------------------------------------
     |
@@ -139,6 +179,13 @@ return [
 
     'describe_per_minute' => filled(env('AI_DESCRIBE_PER_MINUTE')) ? (int) env('AI_DESCRIBE_PER_MINUTE') : 20,
 
+    /*
+    | Cloud-provider requests allowed per minute per IP across describe, NL search and docs ask.
+    */
+
+    'cloud_per_minute' => filled(env('AI_CLOUD_PER_MINUTE')) ? (int) env('AI_CLOUD_PER_MINUTE') : 20,
+    'cloud_global_per_minute' => filled(env('AI_CLOUD_GLOBAL_PER_MINUTE')) ? (int) env('AI_CLOUD_GLOBAL_PER_MINUTE') : 60,
+
     // guide:start prompts
     'prompts' => [
         'car_description' => env('AI_PROMPT_CAR_DESCRIPTION') ?: 'car-description.v1',
@@ -204,6 +251,44 @@ return [
             ],
         ],
         // guide:end provider-ollama
+
+        // guide:start provider-cloud
+        // Cloud providers are enabled by their key alone. Model ids are the SDK's current defaults; see the slice's decisions.md.
+        'anthropic' => [
+            'driver' => 'anthropic',
+            'key' => env('ANTHROPIC_API_KEY') ?: null,
+            'url' => env('ANTHROPIC_URL') ?: 'https://api.anthropic.com/v1',
+            'max_tokens' => filled(env('AI_CLOUD_MAX_TOKENS')) ? (int) env('AI_CLOUD_MAX_TOKENS') : 400,
+            'timeout' => filled(env('AI_CLOUD_TIMEOUT')) ? (int) env('AI_CLOUD_TIMEOUT') : 60,
+            'models' => [
+                'text' => ['default' => env('ANTHROPIC_MODEL') ?: 'claude-haiku-5-5'],
+            ],
+        ],
+
+        'openai' => [
+            'driver' => 'openai',
+            'key' => env('OPENAI_API_KEY') ?: null,
+            'url' => env('OPENAI_URL') ?: 'https://api.openai.com/v1',
+            'max_tokens' => filled(env('AI_CLOUD_MAX_TOKENS')) ? (int) env('AI_CLOUD_MAX_TOKENS') : 400,
+            'timeout' => filled(env('AI_CLOUD_TIMEOUT')) ? (int) env('AI_CLOUD_TIMEOUT') : 60,
+            'models' => [
+                'text' => ['default' => env('OPENAI_MODEL') ?: 'gpt-6-luna'],
+                'embeddings' => ['default' => env('OPENAI_EMBED_MODEL') ?: 'text-embedding-3-small', 'dimensions' => 1024],
+            ],
+        ],
+
+        'gemini' => [
+            'driver' => 'gemini',
+            'key' => env('GEMINI_API_KEY') ?: null,
+            'url' => env('GEMINI_URL') ?: 'https://generativelanguage.googleapis.com/v1beta/',
+            'max_tokens' => filled(env('AI_CLOUD_MAX_TOKENS')) ? (int) env('AI_CLOUD_MAX_TOKENS') : 400,
+            'timeout' => filled(env('AI_CLOUD_TIMEOUT')) ? (int) env('AI_CLOUD_TIMEOUT') : 60,
+            'models' => [
+                'text' => ['default' => env('GEMINI_MODEL') ?: 'gemini-3.1-flash-lite'],
+                'embeddings' => ['default' => env('GEMINI_EMBED_MODEL') ?: 'gemini-embedding-2', 'dimensions' => 1024],
+            ],
+        ],
+        // guide:end provider-cloud
 
     ],
 

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Contracts\DocsSearchRepositoryInterface;
+use App\Contracts\EmbeddingIndexRepositoryInterface;
 use App\DTOs\DocsHit;
 use App\DTOs\DocsMatch;
 use App\Enums\DocsSearchMode;
 use App\Exceptions\DocsSearchUnavailableException;
+use App\Exceptions\IndexNotBuiltException;
 use App\Exceptions\SemanticSearchUnavailableException;
 use App\Support\ServerTiming;
 
@@ -22,6 +24,7 @@ final readonly class DocsSearchService
         private DocsSearchRepositoryInterface $chunks,
         private SemanticSearchService $queries,
         private ListingEmbeddingService $embeddings,
+        private EmbeddingIndexRepositoryInterface $index,
         private ServerTiming $timing,
     ) {}
 
@@ -57,11 +60,18 @@ final readonly class DocsSearchService
      * @return list<float>
      *
      * @throws DocsSearchUnavailableException when the query cannot be embedded.
+     * @throws IndexNotBuiltException when the chunks were embedded with another model.
      */
     public function embedQuery(string $query): array
     {
+        $model = $this->embeddings->modelLabel(ListingEmbeddingService::DOCS_FEATURE);
+
+        if ($this->index->docsEmbeddedOnlyByOtherModels($model)) {
+            throw IndexNotBuiltException::forModel($model, 'php artisan docs:index');
+        }
+
         try {
-            return $this->queries->embedQuery($query);
+            return $this->queries->embedQuery($query, ListingEmbeddingService::DOCS_FEATURE);
         } catch (SemanticSearchUnavailableException $e) {
             throw DocsSearchUnavailableException::because($e->getPrevious() ?? $e);
         }
@@ -75,7 +85,7 @@ final readonly class DocsSearchService
     {
         $vector = $queryVector ?? $this->embedQuery($query);
 
-        return $this->timing->measure('db', fn (): array => $this->chunks->nearest($vector, $this->embeddings->modelLabel(), $limit, (int) config('ai.embeddings.ef_search')));
+        return $this->timing->measure('db', fn (): array => $this->chunks->nearest($vector, $this->embeddings->modelLabel(ListingEmbeddingService::DOCS_FEATURE), $limit, (int) config('ai.embeddings.ef_search')));
     }
 
     /**

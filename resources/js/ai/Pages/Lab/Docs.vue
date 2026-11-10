@@ -50,6 +50,7 @@ const props = defineProps<{
     maxQueryLength: number;
     k: number;
     maxK: number;
+    embeddingsProvider: { provider: string; model: string };
 }>();
 
 const MODES: Array<Pick<Column, 'mode' | 'title' | 'note'>> = [
@@ -142,6 +143,10 @@ async function search(): Promise<void> {
     <h1 class="m-0 text-[28px] font-semibold">Docs search</h1>
     <p class="mt-2 text-[15px] text-muted">
         Runs one query in three modes at once. A chunk found by more than one mode is marked.
+    </p>
+
+    <p class="mt-1 text-[13px] text-muted">
+        Embeddings: <span class="font-mono">{{ embeddingsProvider.provider }}</span> / <span class="font-mono">{{ embeddingsProvider.model }}</span>
     </p>
 
     <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />

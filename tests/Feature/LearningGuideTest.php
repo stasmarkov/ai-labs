@@ -686,3 +686,30 @@ test('AC-4 learning guide sections 1-8 that name a removed server start with the
         }
     }
 });
+
+test('AC-8 learning guide section 16 lists the cloud provider files and the add-a-provider recipe', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+    preg_match('/^## 16\. .*?(?=^## 17\. )/ms', $guide, $map);
+    $section = $map[0] ?? '';
+
+    foreach ([
+        'app/Http/Middleware/LimitCloudAi.php',
+        'app/Exceptions/ProviderNotConfiguredException.php',
+        'app/Exceptions/ProviderNotEnabledException.php',
+        'app/Exceptions/IndexNotBuiltException.php',
+        'app/Exceptions/EmbeddingDimensionsException.php',
+        'app/Contracts/EmbeddingIndexRepositoryInterface.php',
+        'app/Repositories/EloquentEmbeddingIndexRepository.php',
+        'app/Services/LabProviderService.php',
+        'app/DTOs/LabProviderOption.php',
+        'app/Http/Requests/DescribeListingRequest.php',
+        'app/Http/Requests/Concerns/NamesProvider.php',
+        'resources/js/ai/components/LabProviderSelect.vue',
+        'resources/js/ai/composables/useProviderChoice.ts',
+    ] as $file) {
+        expect($section)->toContain('](../'.$file.')');
+        expect(file_exists(base_path($file)))->toBeTrue();
+    }
+
+    expect($section)->toContain('"Add a provider"')->toContain('ANTHROPIC_API_KEY');
+});

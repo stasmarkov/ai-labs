@@ -1,0 +1,729 @@
+{
+    "metadata": {
+        "label": "202915",
+        "generated_at": "2026-11-10T20:29:15+00:00",
+        "eval_set_version": "v1",
+        "queries": 40,
+        "models": [
+            "claude-haiku-5-5"
+        ],
+        "provider": "anthropic",
+        "prompt_version": "listing-filters@v1"
+    },
+    "models": [
+        {
+            "model": "claude-haiku-5-5",
+            "queries": 40,
+            "exact_match": {
+                "count": 0,
+                "rate": 0
+            },
+            "field_accuracy": {
+                "make": 0,
+                "model": 0,
+                "city": 0,
+                "fuel": 0,
+                "min_year": 0,
+                "max_price_eur": 0
+            },
+            "unsupported_recall": {
+                "expected": 12,
+                "caught": 0,
+                "recall": 0
+            },
+            "validation_422": {
+                "count": 0,
+                "rate": 0
+            },
+            "refused": 0,
+            "failed": 40,
+            "latency_ms": {
+                "count": 0,
+                "median": null,
+                "p95": null
+            }
+        }
+    ],
+    "results": [
+        {
+            "id": "nl-01",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-02",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-03",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-04",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-05",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-06",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-07",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-08",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-09",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-10",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-11",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-12",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-13",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-14",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-15",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-16",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-17",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-18",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-19",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-20",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-21",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-22",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-23",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-24",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-25",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-26",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-27",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-28",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-29",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-30",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-31",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-32",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-33",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-34",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-35",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-36",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-37",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-38",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-39",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        },
+        {
+            "id": "nl-40",
+            "model": "claude-haiku-5-5",
+            "status": "failed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "city",
+                "fuel",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": null,
+            "unsupported": [],
+            "invocation_id": null
+        }
+    ]
+}

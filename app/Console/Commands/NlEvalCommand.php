@@ -13,6 +13,7 @@ use App\DTOs\RagRunTiming;
 use App\Exceptions\NlSearchInvalidException;
 use App\Exceptions\NlSearchRefusedException;
 use App\Exceptions\NlSearchUnavailableException;
+use App\Exceptions\ProviderNotConfiguredException;
 use App\Exceptions\RagEvalOptionException;
 use App\Exceptions\RagEvalResultException;
 use App\Exceptions\RagEvalSetException;
@@ -71,18 +72,24 @@ final class NlEvalCommand extends Command
         $reports = [];
         $results = [];
 
-        foreach ($models as $model) {
-            $this->line("Searching with {$model}: ".count($queries).' queries');
-            $outcomes = array_map(fn (NlEvalQuery $query): NlEvalOutcome => $this->search($search, $query, $model), $queries);
-            $ids = array_values(array_filter(array_map(
-                fn (NlEvalOutcome $outcome): ?string => $outcome->hasModelOutput() ? $outcome->invocationId : null,
-                $outcomes,
-            )));
-            $reports[] = $scorer->score($model, $queries, $outcomes, array_map(fn (RagRunTiming $timing): int => $timing->latencyMs, $runs->timings($ids)));
+        try {
+            foreach ($models as $model) {
+                $this->line("Searching with {$model}: ".count($queries).' queries');
+                $outcomes = array_map(fn (NlEvalQuery $query): NlEvalOutcome => $this->search($search, $query, $model), $queries);
+                $ids = array_values(array_filter(array_map(
+                    fn (NlEvalOutcome $outcome): ?string => $outcome->hasModelOutput() ? $outcome->invocationId : null,
+                    $outcomes,
+                )));
+                $reports[] = $scorer->score($model, $queries, $outcomes, array_map(fn (RagRunTiming $timing): int => $timing->latencyMs, $runs->timings($ids)));
 
-            foreach ($queries as $index => $query) {
-                $results[] = $this->resultRow($scorer, $model, $query, $outcomes[$index]);
+                foreach ($queries as $index => $query) {
+                    $results[] = $this->resultRow($scorer, $model, $query, $outcomes[$index]);
+                }
             }
+        } catch (ProviderNotConfiguredException $e) {
+            $this->error($e->getMessage());
+
+            return self::FAILURE;
         }
 
         $this->table(
@@ -106,7 +113,7 @@ final class NlEvalCommand extends Command
                 'eval_set_version' => NlEvalSet::VERSION,
                 'queries' => count($queries),
                 'models' => $models,
-                'provider' => (string) config('ai.default'),
+                'provider' => (new ListingFilterAgent)->providerName(),
                 'prompt_version' => (new ListingFilterAgent)->promptVersion(),
             ],
             'models' => $reports,

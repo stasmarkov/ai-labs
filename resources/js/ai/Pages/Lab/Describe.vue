@@ -11,6 +11,9 @@ import LabButton from '../../components/LabButton.vue';
 import LabEventRow from '../../components/LabEventRow.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabTextInput from '../../components/LabTextInput.vue';
+import LabProviderSelect from '../../components/LabProviderSelect.vue';
+import type { ProviderOption } from '../../components/LabProviderSelect.vue';
+import { useProviderChoice } from '../../composables/useProviderChoice';
 import { useEventStream } from '../../composables/useEventStream';
 import type { GuideStep } from '../../composables/useGuideSteps';
 
@@ -41,12 +44,14 @@ const props = defineProps<{
     describeUrl: string;
     runUrl: string;
     idPlaceholder: string;
+    enabledTextProviders: ProviderOption[];
 }>();
 
 const RUN_LOOKUP_ATTEMPTS = 5;
 const RUN_LOOKUP_DELAY_MS = 300;
 
 const stream = useEventStream();
+const { provider, override: providerOverride } = useProviderChoice(props.enabledTextProviders);
 const selectedId = ref(props.listings[0] !== undefined ? String(props.listings[0].id) : '');
 const freeId = ref('');
 const run = ref<RunRow | null>(null);
@@ -128,7 +133,8 @@ function start(): void {
     lookupToken++;
     run.value = null;
     runMessage.value = null;
-    void stream.start(props.describeUrl.replace(props.idPlaceholder, listingId.value));
+    const url = props.describeUrl.replace(props.idPlaceholder, listingId.value);
+    void stream.start(providerOverride.value === null ? url : `${url}?${new URLSearchParams({ provider: providerOverride.value }).toString()}`);
 }
 
 // A failed stream is logged too (status failed), so its row is looked up like a finished one.
@@ -173,6 +179,7 @@ onBeforeUnmount(() => {
         <div class="sm:w-40">
             <LabTextInput id="describe-free-id" v-model="freeId" label="Or a listing id" placeholder="e.g. 4812" />
         </div>
+        <LabProviderSelect id="describe-provider" v-model="provider" :providers="enabledTextProviders" :disabled="isStreaming" />
         <div class="flex gap-2">
             <LabButton type="submit" :disabled="!canStart">Start</LabButton>
             <LabButton variant="secondary" :disabled="!isStreaming" @click="stream.stop()">Stop</LabButton>

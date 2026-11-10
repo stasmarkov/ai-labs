@@ -138,6 +138,23 @@ it('AC-1 serves an exact repeat without an embedding or a model call', function 
         ->and($events[3]['unknown'])->toBe([]);
 });
 
+it('AC-1 misses when the docs-answer provider changes but the model id stays, and hits on the same provider', function (): void {
+    config(['ai.features.docs-answer.provider' => 'fake-stream', 'ai.features.docs-answer.model' => 'shared-model']);
+    ckEmbeddings();
+    ckAnswer('Limiters cap requests [1].');
+    ckAsk($this);
+
+    expect(ckTypes(ckAsk($this)))->toContain('cache_hit');
+
+    config(['ai.features.docs-answer.provider' => 'fake-instant']);
+    app(AiManager::class)->forgetInstance('fake-instant');
+    config(['ai.providers.fake-instant.text' => 'Another provider answer [1].']);
+    $events = ckAsk($this);
+
+    expect(ckTypes($events))->not->toContain('cache_hit')
+        ->and(AiRun::where('provider', 'fake-instant')->count())->toBe(1);
+});
+
 it('AC-2 serves a close paraphrase from the semantic cache with one embedding', function (): void {
     ckEmbeddings();
     ckAnswer('Limiters cap requests [1].');

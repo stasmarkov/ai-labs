@@ -16,16 +16,16 @@ final readonly class EloquentDocsAnswerCacheRepository implements DocsAnswerCach
 {
     private const COLUMNS = 'id, question, answer, sources, cited_chunk_ids, retrieved_chunk_ids, provider, prompt_version, answer_model, embedding_model, index_version, source_invocation_id, source_latency_ms, hit_count, created_at';
 
-    public function findCurrent(int $id, DocsCacheVersions $versions, CarbonImmutable $notBefore): ?DocsCacheEntry
+    public function findCurrent(int $id, DocsCacheVersions $versions, CarbonImmutable $notBefore, ?string $provider = null): ?DocsCacheEntry
     {
-        $row = $this->current($versions, $notBefore)->where('id', $id)->selectRaw(self::COLUMNS)->first();
+        $row = $this->current($versions, $notBefore, $provider)->where('id', $id)->selectRaw(self::COLUMNS)->first();
 
         return $row === null ? null : $this->entry($row);
     }
 
-    public function nearestCurrent(array $vector, DocsCacheVersions $versions, CarbonImmutable $notBefore, int $efSearch): ?array
+    public function nearestCurrent(array $vector, DocsCacheVersions $versions, CarbonImmutable $notBefore, int $efSearch, ?string $provider = null): ?array
     {
-        return DB::transaction(function () use ($vector, $versions, $notBefore, $efSearch): ?array {
+        return DB::transaction(function () use ($vector, $versions, $notBefore, $efSearch, $provider): ?array {
             // The version filters run after the index scan, so the iterative scan keeps reading until a current row passes.
             // The order is the distance alone: a second sort key (such as id) makes the planner drop the HNSW index.
             DB::statement('SET LOCAL hnsw.ef_search = '.max(1, $efSearch));
@@ -33,7 +33,7 @@ final readonly class EloquentDocsAnswerCacheRepository implements DocsAnswerCach
 
             $literal = json_encode($vector, JSON_THROW_ON_ERROR);
 
-            $row = $this->current($versions, $notBefore)
+            $row = $this->current($versions, $notBefore, $provider)
                 ->selectRaw(self::COLUMNS.', 1 - (embedding <=> CAST(? AS vector)) AS similarity', [$literal])
                 ->orderByRaw('embedding <=> CAST(? AS vector)', [$literal])
                 ->limit(1)
@@ -122,9 +122,10 @@ final readonly class EloquentDocsAnswerCacheRepository implements DocsAnswerCach
         });
     }
 
-    private function current(DocsCacheVersions $versions, CarbonImmutable $notBefore): Builder
+    private function current(DocsCacheVersions $versions, CarbonImmutable $notBefore, ?string $provider = null): Builder
     {
         return DB::table('docs_answer_cache')
+            ->when($provider !== null, fn (Builder $query): Builder => $query->where('provider', $provider))
             ->where('prompt_version', $versions->promptVersion)
             ->where('answer_model', $versions->answerModel)
             ->where('embedding_model', $versions->embeddingModel)

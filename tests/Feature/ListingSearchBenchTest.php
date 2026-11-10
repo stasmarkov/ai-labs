@@ -140,7 +140,7 @@ it('AC-8 the endpoint and bench approximate queries use the HNSW index and the e
     benchEmbeddedListings(12);
     $vector = benchVector(0.0);
 
-    $endpoint = benchCapturedNearestQuery(fn () => app(SemanticSearchRepositoryInterface::class)->nearest($vector, 10, 400));
+    $endpoint = benchCapturedNearestQuery(fn () => app(SemanticSearchRepositoryInterface::class)->nearest($vector, 10, 400, 'ollama/bge-m3'));
     $approximate = benchCapturedNearestQuery(fn () => app(SemanticBenchRepositoryInterface::class)->approximateIds($vector, 10, 40));
     $exact = benchCapturedNearestQuery(fn () => app(SemanticBenchRepositoryInterface::class)->exactIds($vector, 10));
 
@@ -193,7 +193,7 @@ it('AC-6 the endpoint query uses the HNSW index at the configured ef_search', fu
         }
     });
 
-    app(SemanticSearchRepositoryInterface::class)->nearest(benchVector(0.0), 10, (int) config('ai.embeddings.ef_search'));
+    app(SemanticSearchRepositoryInterface::class)->nearest(benchVector(0.0), 10, (int) config('ai.embeddings.ef_search'), 'ollama/bge-m3');
 
     expect(config('ai.embeddings.ef_search'))->toBe(400)
         ->and($plans)->not->toBeEmpty()

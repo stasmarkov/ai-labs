@@ -12,9 +12,9 @@ use Carbon\CarbonImmutable;
 interface DocsAnswerCacheRepositoryInterface
 {
     /**
-     * The entry with this id when it carries exactly these versions and was created at or after $notBefore.
+     * The entry with this id when it carries exactly these versions and was created at or after $notBefore, and, when $provider is given, was stored by that provider.
      */
-    public function findCurrent(int $id, DocsCacheVersions $versions, CarbonImmutable $notBefore): ?DocsCacheEntry;
+    public function findCurrent(int $id, DocsCacheVersions $versions, CarbonImmutable $notBefore, ?string $provider = null): ?DocsCacheEntry;
 
     /**
      * The current entry nearest the vector by cosine, with its similarity; null when there is none.
@@ -22,7 +22,7 @@ interface DocsAnswerCacheRepositoryInterface
      * @param  list<float>  $vector
      * @return array{entry: DocsCacheEntry, similarity: float}|null
      */
-    public function nearestCurrent(array $vector, DocsCacheVersions $versions, CarbonImmutable $notBefore, int $efSearch): ?array;
+    public function nearestCurrent(array $vector, DocsCacheVersions $versions, CarbonImmutable $notBefore, int $efSearch, ?string $provider = null): ?array;
 
     /**
      * Insert, or replace the entry with the same question hash and versions (keeping its hit count); returns its id.

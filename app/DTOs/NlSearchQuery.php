@@ -11,5 +11,6 @@ final readonly class NlSearchQuery
         public ?string $model = null,
         public int $perPage = 20,
         public int $page = 1,
+        public ?string $provider = null,
     ) {}
 }

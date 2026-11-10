@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Exceptions\EmbeddingDimensionsException;
+use App\Exceptions\ProviderNotConfiguredException;
 use App\Services\DocsIndexService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -21,6 +23,14 @@ final class IndexDocsCommand extends Command
             $this->error('--source must be one of: '.implode(', ', $service->sources()).'.');
 
             return self::INVALID;
+        }
+
+        try {
+            $service->assertDimensions();
+        } catch (EmbeddingDimensionsException|ProviderNotConfiguredException $e) {
+            $this->error($e->getMessage());
+
+            return self::FAILURE;
         }
 
         $queued = $service->queuedJobs();

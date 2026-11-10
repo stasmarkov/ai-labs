@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Ai\AiRunRecorder;
+use App\Contracts\EmbeddingIndexRepositoryInterface;
 use App\Contracts\SemanticSearchRepositoryInterface;
 use App\DTOs\SemanticMatch;
+use App\Exceptions\IndexNotBuiltException;
 use App\Exceptions\InvalidEmbeddingException;
 use App\Exceptions\SemanticSearchUnavailableException;
 use App\Support\ServerTiming;
@@ -22,6 +24,7 @@ final readonly class SemanticSearchService
     public function __construct(
         private SemanticSearchRepositoryInterface $matches,
         private ListingEmbeddingService $embeddings,
+        private EmbeddingIndexRepositoryInterface $index,
         private ServerTiming $timing,
     ) {}
 
@@ -29,12 +32,17 @@ final readonly class SemanticSearchService
      * @return list<SemanticMatch>
      *
      * @throws SemanticSearchUnavailableException when the query cannot be embedded.
+     * @throws IndexNotBuiltException when the listings were embedded with another model.
      */
     public function search(string $query): array
     {
-        $vector = $this->embedQuery($query);
+        if ($this->index->listingsEmbeddedOnlyByOtherModels($this->embeddings->modelLabel(ListingEmbeddingService::FEATURE))) {
+            throw IndexNotBuiltException::forModel($this->embeddings->modelLabel(ListingEmbeddingService::FEATURE), 'php artisan listings:embed --fresh');
+        }
 
-        return $this->timing->measure('db', fn (): array => $this->matches->nearest($vector, self::LIMIT, (int) config('ai.embeddings.ef_search')));
+        $vector = $this->embedQuery($query, ListingEmbeddingService::FEATURE);
+
+        return $this->timing->measure('db', fn (): array => $this->matches->nearest($vector, self::LIMIT, (int) config('ai.embeddings.ef_search'), $this->embeddings->modelLabel(ListingEmbeddingService::FEATURE)));
     }
 
     /**
@@ -42,9 +50,9 @@ final readonly class SemanticSearchService
      *
      * @throws SemanticSearchUnavailableException when the query cannot be embedded.
      */
-    public function embedQuery(string $query): array
+    public function embedQuery(string $query, string $feature): array
     {
-        $dimensions = $this->embeddings->dimensions();
+        $dimensions = $this->embeddings->dimensions($feature);
         app(AiRunRecorder::class)->nextEmbeddingsAgent(self::QUERY_AGENT);
 
         try {
@@ -53,7 +61,7 @@ final readonly class SemanticSearchService
                 fn (): array => Embeddings::for([$query])
                     ->dimensions($dimensions)
                     ->timeout((int) config('ai.embeddings.timeout'))
-                    ->generate($this->embeddings->provider(), $this->embeddings->model())
+                    ->generate($this->embeddings->provider($feature), $this->embeddings->model($feature))
                     ->embeddings[0] ?? [],
             ));
         } catch (Throwable $e) {

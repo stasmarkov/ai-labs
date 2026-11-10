@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\DTOs\EmbeddingRun;
+use App\Exceptions\EmbeddingDimensionsException;
+use App\Exceptions\ProviderNotConfiguredException;
 use App\Services\EmbeddingSummaryWriter;
 use App\Services\ListingEmbeddingService;
 use Illuminate\Console\Attributes\Description;
@@ -31,6 +33,14 @@ final class EmbedListingsCommand extends Command
             $this->error('--batch and --limit must be positive whole numbers.');
 
             return self::INVALID;
+        }
+
+        try {
+            $service->assertDimensions(ListingEmbeddingService::FEATURE);
+        } catch (EmbeddingDimensionsException|ProviderNotConfiguredException $e) {
+            $this->error($e->getMessage());
+
+            return self::FAILURE;
         }
 
         if ($this->option('summary-only')) {

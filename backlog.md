@@ -675,11 +675,24 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-90, BR-91, BR-27
 - **Depends on:** SL-49
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261110-2141-cloud-providers
 - **Source:** owner decision 2026-11-10 ("Ollama default + Claude, OpenAI, Gemini optional")
 - **Run:** `/sdd "SL-51: optional cloud providers through laravel/ai: Anthropic (Claude), OpenAI and Gemini next to the Ollama default, each enabled only by its API key in .env (never committed), per-feature provider/model selection by config and a lab selector, ai_runs provider/model, embeddings provider per feature, offline tests with fakes, a provider capability table in the in-app providers guide (resources/guides/providers.php, live facts show which providers have a key) and the learning guide AI map. Rules in product-brief.md."`
 
+
+### SL-52 · Switch providers and models from a local settings page
+
+- **Outcome:** A local-only settings page at `/ai/settings` (no login) lets a learner pick, per AI feature, the provider and the model (text and embeddings); the choice is saved in `ai_settings` and used on the next request on classic, worker and Octane alike, overriding configuration; outside local the page is a 404 and saved settings are ignored.
+- **Entry point:** `/ai/settings`
+- **Size:** M
+- **BRs:** BR-27, BR-90, BR-91 (revised)
+- **Depends on:** SL-51
+- **Blocked by:** none
+- **Status:** specced
+- **Spec:** spec-20261110-2155-model-settings-ui
+- **Source:** owner request 2026-11-10 (Stanislav Markov: "be able to switch the llm model or other models via ui. No login needed, it's only for local purposes")
+- **Run:** `/sdd spec-20261110-2155-model-settings-ui`
 ## Intake log
 
 | Date | Source | Item | Class | Went to |
@@ -718,3 +731,4 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 | 2026-11-05 | Stanislav Markov | After SL-13 keep FrankenPHP + Mercure as default; finish everything AI; guide; study-focused UI | New slices + approval | SL-47 (default server), SL-48 (study UI); SL-34, SL-35, SL-42, SL-43 approved; order SL-13 → SL-47 → AI (SL-23, SL-25, SL-26, SL-27, SL-34, SL-35, SL-42, SL-43; SL-28 needs Q-04, SL-36–39 need Q-06) → SL-48 → SL-44 |
 | 2026-11-10 | Stanislav Markov | Rename to ai-lab; study purpose; AI in Laravel with local and cloud providers; keep only FrankenPHP (classic, worker, Octane) | Pivot | product-brief revised; SL-49 rename + homescreen, SL-50 FrankenPHP only, SL-51 cloud providers; SL-14 dropped; order SL-49 → SL-50 → SL-51 → SL-25 … → SL-28 (now models and providers) → SL-48 → SL-44, then SL-15–17 on FrankenPHP |
 | 2026-11-10 | Stanislav Markov | In-app interactive guides instead of md links on the site; no slice ids, `.md` or repo-path references in the UI | Revised slice | SL-48 rewritten and specced (spec-20261110-1149-in-app-guides); moved forward to run right after SL-49 so every later AI slice adds a `resources/guides/` file instead of links; order SL-49 → SL-48 → SL-50 → SL-51 → AI slices → SL-28 → SL-44 |
+| 2026-11-10 | Stanislav Markov | Switch the LLM or other models via the UI, no login, local only | New slice | SL-52 local settings page (spec-20261110-2155-model-settings-ui), after SL-51; BR-91 to be revised in that slice; order SL-51 → SL-52 → SL-25 … |

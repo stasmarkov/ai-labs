@@ -14,6 +14,11 @@ final class CarDescriptionAgent implements Agent, HasProviderOptions, VersionedP
     use Promptable;
     use UsesActiveProvider;
 
+    protected function feature(): string
+    {
+        return 'describe';
+    }
+
     public function instructions(): string
     {
         return trim((string) file_get_contents(resource_path('prompts/'.$this->promptName().'.md')));

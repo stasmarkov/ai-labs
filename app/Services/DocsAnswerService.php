@@ -21,6 +21,7 @@ use App\Enums\DocsAnswerOutcome;
 use App\Enums\DocsCacheMode;
 use App\Exceptions\DocsAnswerUnavailableException;
 use App\Exceptions\DocsSearchUnavailableException;
+use App\Exceptions\ProviderNotConfiguredException;
 use Closure;
 use Illuminate\Contracts\Support\Responsable;
 use Laravel\Ai\Streaming\Events\Error;
@@ -54,21 +55,25 @@ final readonly class DocsAnswerService
      * Server-Timing covers it.
      *
      * @param  bool  $useCache  false skips both lookups; a qualifying answer is still stored
+     * @param  string|null  $provider  an enabled text provider to run on instead of the configured one; the cache is then neither read nor written
      * @param  list<DocsChatTurn>  $history  earlier turns of the conversation; with any, retrieval still runs on the
      *                                       question alone, and the cache is neither read nor written
      *
      * @throws DocsAnswerUnavailableException when the question cannot be embedded.
+     * @throws ProviderNotConfiguredException when the configured cloud provider has no key; checked first, so nothing is guarded, cached or recorded.
      */
-    public function ask(string $question, bool $useCache = true, array $history = []): Responsable
+    public function ask(string $question, bool $useCache = true, array $history = [], ?string $provider = null): Responsable
     {
+        (new DocsAnswerAgent)->usingProvider($provider)->provider();
+
         $startedAt = hrtime(true);
         $mode = match (true) {
-            $history !== [] => DocsCacheMode::Off,
+            $history !== [], filled($provider) => DocsCacheMode::Off,
             ! config('ai.docs.cache.enabled') => DocsCacheMode::Off,
             $useCache => DocsCacheMode::Lookup,
             default => DocsCacheMode::Bypass,
         };
-        $plan = $this->plan($question, null, $mode, $startedAt, self::ORIGIN_API, $history);
+        $plan = $this->plan($question, null, $mode, $startedAt, self::ORIGIN_API, $history, $provider);
 
         if ($plan->hit !== null) {
             return $this->serveHit($plan, $plan->hit, $startedAt);
@@ -172,11 +177,11 @@ final readonly class DocsAnswerService
      *
      * @throws DocsAnswerUnavailableException when the question cannot be embedded.
      */
-    private function plan(string $question, ?string $model = null, DocsCacheMode $mode = DocsCacheMode::Off, ?int $startedAt = null, string $origin = self::ORIGIN_EVAL, array $history = []): DocsAnswerPlan
+    private function plan(string $question, ?string $model = null, DocsCacheMode $mode = DocsCacheMode::Off, ?int $startedAt = null, string $origin = self::ORIGIN_EVAL, array $history = [], ?string $provider = null): DocsAnswerPlan
     {
         $startedAt ??= hrtime(true);
         $recorder = app(AiRunRecorder::class);
-        $agent = new DocsAnswerAgent($this->canaries->generate(), $model, $history);
+        $agent = (new DocsAnswerAgent($this->canaries->generate(), $model, $history))->usingProvider($provider);
 
         $pattern = $this->guard->match($question);
         $turn = $history === [] ? null : 'latest';
@@ -203,7 +208,7 @@ final readonly class DocsAnswerService
 
         try {
             if ($mode === DocsCacheMode::Lookup && $versions !== null) {
-                $hit = $this->lookup(fn (): ?DocsCacheHit => $this->cache->lookupExact($question, $agent->promptVersion(), $agent->modelName(), $versions));
+                $hit = $this->lookup(fn (): ?DocsCacheHit => $this->cache->lookupExact($question, $agent->promptVersion(), $agent->modelName(), $versions, $agent->providerName()));
 
                 if ($hit !== null) {
                     return new DocsAnswerPlan($agent, [], null, hit: $hit);
@@ -213,7 +218,7 @@ final readonly class DocsAnswerService
             $vector = $mode === DocsCacheMode::Off ? null : $this->context->embed($question);
 
             if ($mode === DocsCacheMode::Lookup && $versions !== null) {
-                $hit = $this->lookup(fn (): ?DocsCacheHit => $this->cache->lookupSemantic($vector, $agent->promptVersion(), $agent->modelName(), $versions));
+                $hit = $this->lookup(fn (): ?DocsCacheHit => $this->cache->lookupSemantic($vector, $agent->promptVersion(), $agent->modelName(), $versions, $agent->providerName()));
 
                 if ($hit !== null) {
                     return new DocsAnswerPlan($agent, [], null, hit: $hit);

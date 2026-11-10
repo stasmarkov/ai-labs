@@ -14,6 +14,9 @@ import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabButton from '../../components/LabButton.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabSegmented from '../../components/LabSegmented.vue';
+import LabProviderSelect from '../../components/LabProviderSelect.vue';
+import type { ProviderOption } from '../../components/LabProviderSelect.vue';
+import { useProviderChoice } from '../../composables/useProviderChoice';
 import LabTag from '../../components/LabTag.vue';
 import LabTextInput from '../../components/LabTextInput.vue';
 
@@ -92,10 +95,12 @@ const props = defineProps<{
     idPlaceholder: string;
     maxQueryLength: number;
     models: string[];
+    enabledTextProviders: ProviderOption[];
 }>();
 
 const query = ref(presetQuery());
 const model = ref(props.models[0] ?? '');
+const { provider, override: providerOverride } = useProviderChoice(props.enabledTextProviders);
 const loading = ref(false);
 const answer = ref<Answer | null>(null);
 const panelEvents = ref<string[]>([]);
@@ -133,8 +138,13 @@ async function search(): Promise<void> {
     const text = query.value.trim();
     const params = new URLSearchParams({ q: text });
 
-    if (model.value !== '') {
+    // The model list belongs to the configured provider; with an override the server uses that provider's own model.
+    if (model.value !== '' && providerOverride.value === null) {
         params.set('model', model.value);
+    }
+
+    if (providerOverride.value !== null) {
+        params.set('provider', providerOverride.value);
     }
 
     loading.value = true;
@@ -256,7 +266,8 @@ function outcomeLabel(outcome: Outcome): string {
             </div>
             <LabButton type="submit" :disabled="!canSearch">{{ loading ? 'Searching…' : 'Search' }}</LabButton>
         </div>
-        <div v-if="models.length > 1" class="flex min-w-0 flex-col gap-1">
+        <LabProviderSelect id="nl-provider" v-model="provider" :providers="enabledTextProviders" :disabled="loading" />
+        <div v-if="models.length > 1 && providerOverride === null" class="flex min-w-0 flex-col gap-1">
             <span class="text-[13px] font-medium text-muted">Model</span>
             <LabSegmented v-model="model" label="Model" :options="modelOptions" />
         </div>

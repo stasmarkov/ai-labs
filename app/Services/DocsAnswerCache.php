@@ -54,7 +54,7 @@ final readonly class DocsAnswerCache
         return new DocsCacheVersions($promptVersion, $answerModel, $this->embedding->modelLabel(), $this->indexVersion->current());
     }
 
-    public function lookupExact(string $question, string $promptVersion, string $answerModel, ?DocsCacheVersions $versions = null): ?DocsCacheHit
+    public function lookupExact(string $question, string $promptVersion, string $answerModel, ?DocsCacheVersions $versions = null, ?string $provider = null): ?DocsCacheHit
     {
         $versions ??= $this->versions($promptVersion, $answerModel);
         $key = $this->exactKey($question, $versions);
@@ -64,7 +64,7 @@ final readonly class DocsAnswerCache
             return null;
         }
 
-        $entry = $this->entries->findCurrent((int) $id, $versions, $this->notBefore());
+        $entry = $this->entries->findCurrent((int) $id, $versions, $this->notBefore(), $provider);
 
         if ($entry === null) {
             $this->exactStore()->forget($key);
@@ -78,13 +78,14 @@ final readonly class DocsAnswerCache
     /**
      * @param  list<float>  $vector
      */
-    public function lookupSemantic(array $vector, string $promptVersion, string $answerModel, ?DocsCacheVersions $versions = null): ?DocsCacheHit
+    public function lookupSemantic(array $vector, string $promptVersion, string $answerModel, ?DocsCacheVersions $versions = null, ?string $provider = null): ?DocsCacheHit
     {
         $nearest = $this->entries->nearestCurrent(
             $vector,
             $versions ?? $this->versions($promptVersion, $answerModel),
             $this->notBefore(),
             (int) config('ai.embeddings.ef_search'),
+            $provider,
         );
 
         if ($nearest === null || $nearest['similarity'] < (float) config('ai.docs.cache.min_similarity')) {

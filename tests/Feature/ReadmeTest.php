@@ -53,3 +53,19 @@ test('AC-4 README states requirements, benches, evals, history and the folder hi
     expect($readme)->not->toContain('Auto'.'Pulse');
     expect($readme)->not->toContain('interview'.'.ddev.site');
 });
+
+test('AC-8 README explains how to switch on a cloud provider with a key', function (): void {
+    $readme = file_get_contents(base_path('README.md'));
+
+    foreach (['ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GEMINI_API_KEY', 'AI_CLOUD_PER_MINUTE', '/ai/guides/providers'] as $needle) {
+        expect($readme)->toContain($needle);
+    }
+
+    expect($readme)->not->toContain('are planned as optional extras');
+
+    $example = file_get_contents(base_path('.env.example'));
+
+    foreach (['ANTHROPIC_API_KEY=', 'OPENAI_API_KEY=', 'GEMINI_API_KEY=', 'AI_CLOUD_PER_MINUTE', 'AI_CLOUD_MAX_TOKENS', 'AI_DESCRIBE_PROVIDER'] as $needle) {
+        expect($example)->toContain($needle);
+    }
+});

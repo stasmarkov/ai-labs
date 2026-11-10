@@ -40,7 +40,7 @@ use JsonException;
     {--questions= : Eval set file (default: bench/rag-eval/questions.v1.jsonl)}
     {--answer : Also run the questions through the chatbot and grade the answers}
     {--models= : Comma-separated answer models (default: the configured text model)}
-    {--grader=gemma4:12b : Model that grades the answers}
+    {--grader= : Model that grades the answers (default: the rag-grader feature model)}
     {--repeat=1 : Answer runs per model}
     {--label= : Name of the run (default: the UTC time HHMMSS)}
     {--output-dir= : Directory for the result files, replacing bench/results/rag-eval/<UTC date>/<label>}
@@ -67,7 +67,7 @@ final class RagEvalCommand extends Command
         $ks = $this->integers((string) $this->option('k'));
         $modes = $this->modes((string) $this->option('modes'));
         $repeat = filter_var($this->option('repeat'), FILTER_VALIDATE_INT);
-        $grader = trim((string) $this->option('grader'));
+        $grader = trim((string) $this->option('grader')) ?: (new RagGraderAgent)->modelName();
         $models = $this->models();
 
         if ($ks === null || $modes === null || $repeat === false || $repeat < 1 || $grader === '' || $models === []) {

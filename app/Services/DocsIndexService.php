@@ -8,6 +8,8 @@ use App\Contracts\DocsIndexRepositoryInterface;
 use App\DTOs\CorpusFile;
 use App\DTOs\DocsIndexRun;
 use App\DTOs\IndexedDocument;
+use App\Exceptions\EmbeddingDimensionsException;
+use App\Exceptions\ProviderNotConfiguredException;
 use App\Jobs\EmbedDocsBatchJob;
 use Carbon\CarbonImmutable;
 
@@ -32,6 +34,15 @@ final readonly class DocsIndexService
     public function isAvailable(string $source): bool
     {
         return $this->corpus->isAvailable($source);
+    }
+
+    /**
+     * @throws EmbeddingDimensionsException
+     * @throws ProviderNotConfiguredException
+     */
+    public function assertDimensions(): void
+    {
+        $this->embedding->assertDimensions();
     }
 
     public function queuedJobs(): int

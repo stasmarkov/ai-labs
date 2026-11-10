@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\DTOs\DocsChatTurn;
+use App\Http\Requests\Concerns\NamesProvider;
 use App\Rules\ValidUtf8Text;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -13,6 +14,8 @@ use Symfony\Component\HttpKernel\Exception\UnsupportedMediaTypeHttpException;
 
 final class DocsAskRequest extends FormRequest
 {
+    use NamesProvider;
+
     public const MAX_QUESTION_LENGTH = 500;
 
     public const MAX_TURN_LENGTH = 2000;
@@ -50,6 +53,7 @@ final class DocsAskRequest extends FormRequest
     {
         return [
             'q' => ['required', 'string', 'max:'.self::MAX_QUESTION_LENGTH, new ValidUtf8Text],
+            'provider' => $this->providerRules(),
             'cache' => ['sometimes', 'boolean:strict'],
             'history' => ['bail', 'nullable', 'list', 'max:'.(int) config('ai.docs.chat.max_history_turns'), $this->alternates(...)],
             'history.*' => ['array:role,content'],

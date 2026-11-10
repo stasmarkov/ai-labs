@@ -272,12 +272,12 @@ it('AC-3 storing the same question again replaces the answer, keeps the hit coun
 it('AC-3 a failing upsert is reported, not thrown, and writes no exact key', function (): void {
     $this->app->instance(DocsAnswerCacheRepositoryInterface::class, new class implements DocsAnswerCacheRepositoryInterface
     {
-        public function findCurrent(int $id, DocsCacheVersions $versions, CarbonImmutable $notBefore): ?DocsCacheEntry
+        public function findCurrent(int $id, DocsCacheVersions $versions, CarbonImmutable $notBefore, ?string $provider = null): ?DocsCacheEntry
         {
             return null;
         }
 
-        public function nearestCurrent(array $vector, DocsCacheVersions $versions, CarbonImmutable $notBefore, int $efSearch): ?array
+        public function nearestCurrent(array $vector, DocsCacheVersions $versions, CarbonImmutable $notBefore, int $efSearch, ?string $provider = null): ?array
         {
             return null;
         }

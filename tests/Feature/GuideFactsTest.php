@@ -83,3 +83,24 @@ it('AC-2 fails on a missing number file, a missing path, or a traversal', functi
     'missing path' => ['run/summary.json', 'p99.ms'],
     'traversal' => ['../../resources/guides/providers.php', 'x'],
 ])->throws(InvalidGuideException::class);
+
+it('AC-6 renders the capability table with the key set or not and never a key value', function (): void {
+    config([
+        'ai.providers.anthropic.key' => 'sk-ant-secret-value',
+        'ai.providers.openai.key' => null,
+        'ai.providers.gemini.key' => '',
+    ]);
+    $rendered = ($this->render)('providers');
+    $rows = collect($rendered['table']['rows'])->keyBy('provider');
+
+    expect($rendered['table']['columns'])->toBe(['Provider', 'Where', 'Text', 'Streaming', 'Structured output', 'Embeddings', 'Key'])
+        ->and($rows['anthropic'])->toMatchArray(['where' => 'cloud', 'text' => 'yes', 'embeddings' => 'no', 'key' => 'set (ANTHROPIC_API_KEY)'])
+        ->and($rows['openai'])->toMatchArray(['where' => 'cloud', 'embeddings' => '1024 dimensions', 'key' => 'not set (OPENAI_API_KEY)'])
+        ->and($rows['gemini']['key'])->toBe('not set (GEMINI_API_KEY)')
+        ->and($rows['ollama'])->toMatchArray(['where' => 'local', 'key' => 'none needed'])
+        ->and(json_encode($rendered))->not->toContain('sk-ant-secret-value');
+});
+
+it('AC-6 shows the table on the providers guide only', function (): void {
+    expect(($this->render)('run-log')['table'])->toBeNull();
+});

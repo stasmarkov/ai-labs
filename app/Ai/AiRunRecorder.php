@@ -228,7 +228,7 @@ final class AiRunRecorder
             latencyMs: $latencyMs,
             status: $status,
             errorClass: $exception === null ? null : $exception::class,
-            errorMessage: $exception === null ? null : mb_substr($exception->getMessage(), 0, self::MAX_MESSAGE_LENGTH),
+            errorMessage: $exception === null ? null : self::safeMessage($exception),
             retrievedChunkIds: $retrieved,
             citedChunkIds: $cited,
             refusalReason: $refusalReason === null ? null : mb_substr($refusalReason, 0, self::MAX_REASON_LENGTH),
@@ -267,7 +267,7 @@ final class AiRunRecorder
             $invocationId,
             'failed',
             errorClass: $exception::class,
-            errorMessage: mb_substr($exception->getMessage(), 0, self::MAX_MESSAGE_LENGTH),
+            errorMessage: self::safeMessage($exception),
         );
     }
 
@@ -321,5 +321,26 @@ final class AiRunRecorder
     private function millisecondsSince(int $start, int $end): int
     {
         return intdiv($end - $start, 1_000_000);
+    }
+
+    /**
+     * The exception message as stored and shown on the public run page: configured provider keys, and anything shaped
+     * like an API key or an organisation id that a cloud error echoes back, are replaced before saving.
+     */
+    public static function safeMessage(Throwable $exception): string
+    {
+        $message = $exception->getMessage();
+
+        foreach ((array) config('ai.providers', []) as $entry) {
+            $key = is_array($entry) ? (string) ($entry['key'] ?? '') : '';
+
+            if (strlen($key) >= 8) {
+                $message = str_replace($key, '[redacted]', $message);
+            }
+        }
+
+        $message = (string) preg_replace('/\b(?:sk-[A-Za-z0-9_-]{6,}|AIza[0-9A-Za-z_-]{10,}|org-[A-Za-z0-9]{6,})[A-Za-z0-9_*.-]*/', '[redacted]', $message);
+
+        return mb_substr($message, 0, self::MAX_MESSAGE_LENGTH);
     }
 }

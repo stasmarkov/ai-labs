@@ -604,6 +604,8 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 |---|---|---|
 | [`VersionedPrompt`](../app/Ai/VersionedPrompt.php) | Interface: an agent tells the recorder its prompt name and version (`car-description@v1`) | SL-20 |
 | [`UsesActiveProvider`](../app/Ai/UsesActiveProvider.php) | Trait: provider options, `max_tokens` and timeout from the active config entry, shared by all agents | SL-45 |
+| [`AiProviders`](../app/Ai/AiProviders.php) | Resolver: which providers are enabled (a cloud provider by its key), and the provider and model each feature runs on; never returns a key | SL-51 |
+| [`ProviderChoice`](../app/Ai/ProviderChoice.php) | The provider, driver and model one feature resolved to | SL-51 |
 | [`CarDescriptionAgent`](../app/Ai/CarDescriptionAgent.php) | Writes a listing's ad text from its facts; prompt `car-description.v1.md` | SL-20 |
 | [`DocsAnswerAgent`](../app/Ai/DocsAnswerAgent.php) | Answers a docs question from retrieved chunks; builds the escaped `<context><doc>` message and appends the per-request canary | SL-45 |
 | [`RagGraderAgent`](../app/Ai/RagGraderAgent.php) | Grades an answer's correctness and groundedness (0–2) with structured output; prompt `rag-grader.v2.md` | SL-33 |
@@ -620,6 +622,18 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`CitationParser`](../app/Ai/CitationParser.php) | Finds `[n]`, `[n, m]` and `[2][3]` markers, skipping code, links and indexes | SL-45 |
 | [`OllamaServerInfo`](../app/Ai/OllamaServerInfo.php) | Asks Ollama whether it is reachable and which version runs, for the lab top bar | SL-24 |
 | [`FakeStreamProvider`](../app/Ai/FakeStreamProvider.php), [`FakeStreamGateway`](../app/Ai/FakeStreamGateway.php) | A provider that streams canned text with a delay, can fail after N tokens, or replay `AI_FAKE_TEXT` | SL-20, SL-45 |
+
+**Providers, cloud keys and the lab selector**
+
+| File | Purpose | Slice |
+|---|---|---|
+| [`LimitCloudAi`](../app/Http/Middleware/LimitCloudAi.php) | Applies the `cloud-ai` per-IP limiter (`AI_CLOUD_PER_MINUTE`) when the resolved provider is a cloud one; local providers and key-less providers are never counted | SL-51 |
+| [`ProviderNotConfiguredException`](../app/Exceptions/ProviderNotConfiguredException.php), [`ProviderNotEnabledException`](../app/Exceptions/ProviderNotEnabledException.php) | A configured cloud provider with no key (server misconfiguration), and a request that names a provider that is not enabled (422 `provider_not_enabled`) | SL-51 |
+| [`IndexNotBuiltException`](../app/Exceptions/IndexNotBuiltException.php), [`EmbeddingDimensionsException`](../app/Exceptions/EmbeddingDimensionsException.php) | 409 `index_not_built` when the index holds no vector from the configured model, and the refusal of an embedding provider whose dimensions are not 1024 | SL-51 |
+| [`EmbeddingIndexRepositoryInterface`](../app/Contracts/EmbeddingIndexRepositoryInterface.php), [`EloquentEmbeddingIndexRepository`](../app/Repositories/EloquentEmbeddingIndexRepository.php) | Whether the index holds vectors from the configured embedding model | SL-51 |
+| [`LabProviderService`](../app/Services/LabProviderService.php), [`LabProviderOption`](../app/DTOs/LabProviderOption.php) | The enabled text providers for a page's selector (names and a configured flag, never a key) | SL-51 |
+| [`DescribeListingRequest`](../app/Http/Requests/DescribeListingRequest.php), [`NamesProvider`](../app/Http/Requests/Concerns/NamesProvider.php) | The optional `provider` field shared by describe, NL search and docs ask | SL-51 |
+| [`LabProviderSelect`](../resources/js/ai/components/LabProviderSelect.vue), [`useProviderChoice`](../resources/js/ai/composables/useProviderChoice.ts) | The selector on the lab pages and the composable that keeps the choice | SL-51 |
 
 **Listings: description and semantic search**
 
@@ -752,6 +766,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 
 | Request | What to change | Test to add |
 |---|---|---|
+| "Add a provider" (another cloud service) | One entry in `config/ai.php` (driver, key, URL, `max_tokens`, models), its name and key variable in `AiProviders`, its SDK driver in `capabilities()`, the key and model variables in `.env.example`. The key alone switches it on (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`); embeddings must be 1024 dimensions or the indexing commands refuse it. | a `CloudProvidersTest` case with the SDK fake under `Http::preventStrayRequests()`; the key never in a response |
 | "Use another model" / "use OpenAI-compatible server X" | `.env` only: `AI_PROVIDER`, `AI_MODEL`, the provider entry in `config/ai.php` (BR-91). No code. | none; run `rag:eval --answer --models=…` to compare |
 | "Make the bot answer differently" | Copy the prompt to a new version (`docs-answer.v2.md`), point `config('ai.prompts.*')` at it. The old file stays for old runs' provenance. | a test on the built message; a `rag:eval` run before and after |
 | "A new AI feature" (summarise, classify, extract) | A new agent in `app/Ai/` using `UsesActiveProvider` and `VersionedPrompt`, a prompt file, a service that calls it, a controller and route with a throttle. Structured output → implement `HasStructuredOutput` like `RagGraderAgent`. Streaming → reuse `SseProtocol`. | feature test with the fake provider (`AI_FAKE_TEXT`) or the SDK fake; assert the `ai_runs` row |

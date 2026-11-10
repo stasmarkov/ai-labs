@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Ai\AiProviders;
 use App\Ai\OllamaServerInfo;
 use App\Contracts\EmbeddingStatsRepositoryInterface;
 use App\Contracts\ListingDocumentRepositoryInterface;
 use App\DTOs\EmbeddingRun;
 use App\DTOs\EmbeddingRunSummary;
 use App\DTOs\ListingEmbedding;
+use App\Exceptions\EmbeddingDimensionsException;
 use App\Exceptions\InvalidEmbeddingException;
+use App\Exceptions\ProviderNotConfiguredException;
 use App\Jobs\EmbedListingBatchJob;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
@@ -18,6 +21,12 @@ use Laravel\Ai\Embeddings;
 
 final readonly class ListingEmbeddingService
 {
+    public const FEATURE = 'embeddings-listings';
+
+    public const DOCS_FEATURE = 'embeddings-docs';
+
+    public const VECTOR_DIMENSIONS = 1024;
+
     private const LAST_RUN_KEY = 'listings:embed:last-run';
 
     public function __construct(
@@ -36,27 +45,40 @@ final readonly class ListingEmbeddingService
         return (string) (config('ai.embeddings.queue') ?: 'embeddings');
     }
 
-    public function provider(): string
+    public function provider(string $feature): string
     {
-        return (string) config('ai.default_for_embeddings');
+        return app(AiProviders::class)->forFeature($feature)->provider;
     }
 
-    public function model(): string
+    public function model(string $feature): string
     {
-        return (string) config('ai.providers.'.$this->provider().'.models.embeddings.default');
+        return app(AiProviders::class)->forFeature($feature)->model;
     }
 
-    public function dimensions(): int
+    /**
+     * @throws EmbeddingDimensionsException when the provider's configured size is not the size of the vector columns.
+     * @throws ProviderNotConfiguredException when the feature's cloud provider has no key.
+     */
+    public function assertDimensions(string $feature): void
     {
-        return (int) config('ai.providers.'.$this->provider().'.models.embeddings.dimensions');
+        $dimensions = $this->dimensions($feature);
+
+        if ($dimensions !== self::VECTOR_DIMENSIONS) {
+            throw EmbeddingDimensionsException::forProvider($this->provider($feature), $dimensions, self::VECTOR_DIMENSIONS);
+        }
+    }
+
+    public function dimensions(string $feature): int
+    {
+        return (int) config('ai.providers.'.$this->provider($feature).'.models.embeddings.dimensions');
     }
 
     /**
      * The value stored in embedding_model, so a change of provider or model re-embeds.
      */
-    public function modelLabel(): string
+    public function modelLabel(string $feature): string
     {
-        return $this->provider().'/'.$this->model();
+        return $this->provider($feature).'/'.$this->model($feature);
     }
 
     public function queuedJobs(): int
@@ -80,7 +102,7 @@ final readonly class ListingEmbeddingService
             $this->documents->clearEmbeddings($limit);
         }
 
-        $ids = $this->documents->staleListingIds($this->modelLabel(), $limit);
+        $ids = $this->documents->staleListingIds($this->modelLabel(self::FEATURE), $limit);
         $batches = array_chunk($ids, $batch);
 
         $run = new EmbeddingRun($startedAt, $batch, $limit, count($ids), count($batches));
@@ -110,13 +132,13 @@ final readonly class ListingEmbeddingService
      */
     public function embedBatch(array $listingIds): int
     {
-        $documents = $this->documents->staleDocuments($listingIds, $this->modelLabel());
+        $documents = $this->documents->staleDocuments($listingIds, $this->modelLabel(self::FEATURE));
 
         if ($documents === []) {
             return 0;
         }
 
-        $vectors = $this->embedTexts(array_map(fn ($document): string => $document->description, $documents));
+        $vectors = $this->embedTexts(self::FEATURE, array_map(fn ($document): string => $document->description, $documents));
 
         $embeddings = [];
 
@@ -124,24 +146,27 @@ final readonly class ListingEmbeddingService
             $embeddings[] = new ListingEmbedding($document->listingId, hash('sha256', $document->description), $vectors[$index]);
         }
 
-        return $this->documents->storeEmbeddings($embeddings, $this->modelLabel(), CarbonImmutable::now());
+        return $this->documents->storeEmbeddings($embeddings, $this->modelLabel(self::FEATURE), CarbonImmutable::now());
     }
 
     /**
      * One model call for all texts, checked for the number and length of the vectors.
+     *
+     * The feature is required, never defaulted: listings and docs may run on different embedding providers, and a
+     * vector must be made by the model whose label it is stored under.
      *
      * @param  list<string>  $texts
      * @return list<list<float>> one vector per text, in order
      *
      * @throws InvalidEmbeddingException when the model answers with the wrong number or size of vectors.
      */
-    public function embedTexts(array $texts): array
+    public function embedTexts(string $feature, array $texts): array
     {
-        $dimensions = $this->dimensions();
+        $dimensions = $this->dimensions($feature);
         $vectors = Embeddings::for($texts)
             ->dimensions($dimensions)
             ->timeout((int) config('ai.embeddings.timeout'))
-            ->generate($this->provider(), $this->model())
+            ->generate($this->provider($feature), $this->model($feature))
             ->embeddings;
 
         if (count($vectors) !== count($texts)) {
@@ -172,10 +197,10 @@ final readonly class ListingEmbeddingService
         $startedAt = $firstCall !== null && $firstCall->isAfter($from) ? $firstCall : $from;
 
         return new EmbeddingRunSummary(
-            model: $this->model(),
-            provider: $this->provider(),
-            ollamaVersion: $this->ollama->version($this->provider()),
-            ollamaNumParallel: $this->ollama->numParallel($this->provider()),
+            model: $this->model(self::FEATURE),
+            provider: $this->provider(self::FEATURE),
+            ollamaVersion: $this->ollama->version($this->provider(self::FEATURE)),
+            ollamaNumParallel: $this->ollama->numParallel($this->provider(self::FEATURE)),
             batch: $run->batch,
             limit: $run->limit,
             listingsEmbedded: $this->documents->countEmbeddedSince($from),

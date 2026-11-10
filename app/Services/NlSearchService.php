@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Ai\AiProviders;
 use App\Ai\AiRunRecorder;
 use App\Ai\ListingFilterAgent;
 use App\DTOs\ListingFilter;
@@ -12,6 +13,7 @@ use App\DTOs\NlSearchResult;
 use App\Exceptions\NlSearchInvalidException;
 use App\Exceptions\NlSearchRefusedException;
 use App\Exceptions\NlSearchUnavailableException;
+use App\Exceptions\ProviderNotConfiguredException;
 use App\Rules\ListingFilterRules;
 use App\Support\ServerTiming;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
@@ -43,9 +45,12 @@ final readonly class NlSearchService
             return array_values(array_map('strval', $configured));
         }
 
+        $configured = app(AiProviders::class)->configured('nl-search');
+
+        // The second model is an Ollama id; offer it only when the feature runs on Ollama, never to a cloud API.
         return array_values(array_unique(array_filter([
-            (string) config('ai.providers.'.config('ai.default').'.models.text.default'),
-            'gemma4:12b',
+            $configured->model,
+            $configured->driver === 'ollama' ? 'gemma4:12b' : '',
         ], fn (string $model): bool => $model !== '')));
     }
 
@@ -53,11 +58,12 @@ final readonly class NlSearchService
      * @throws NlSearchRefusedException when the query matches the input guard; no model is called.
      * @throws NlSearchInvalidException when the model's output fails the listing filter rules; no listing query runs.
      * @throws NlSearchUnavailableException when the model call fails.
+     * @throws ProviderNotConfiguredException when the feature's cloud provider has no key; no run is recorded.
      */
     public function search(NlSearchQuery $query): NlSearchResult
     {
         $recorder = app(AiRunRecorder::class);
-        $agent = new ListingFilterAgent($query->model);
+        $agent = (new ListingFilterAgent($query->model))->usingProvider($query->provider);
         $startedAt = hrtime(true);
 
         $pattern = $this->guard->match($query->text);
@@ -77,12 +83,14 @@ final readonly class NlSearchService
         }
 
         try {
-            $response = $this->timing->measure('model', fn () => $agent->prompt($query->text, model: $query->model));
+            $response = $this->timing->measure('model', fn () => $agent->prompt($query->text, model: $agent->hasProviderOverride() ? null : $query->model));
             $structured = $response->structured;
 
             if ($structured === []) {
                 throw new \UnexpectedValueException('The model returned no structured output.');
             }
+        } catch (ProviderNotConfiguredException $e) {
+            throw $e;
         } catch (Throwable $e) {
             $recorder->recordRun('failed', class_basename($agent), $agent->providerName(), $agent->modelName(), $agent->promptVersion(), $this->elapsedMs($startedAt), null, exception: $e);
 

@@ -34,6 +34,7 @@ const props = defineProps<{
     guideHref: string;
     searchUrl: string;
     maxQueryLength: number;
+    embeddingsProvider: { provider: string; model: string };
 }>();
 
 const query = ref(presetQuery());
@@ -84,6 +85,10 @@ async function search(): Promise<void> {
     <h1 class="m-0 text-[28px] font-semibold">Semantic search</h1>
     <p class="mt-2 text-[15px] text-muted">
         Embeds your words and returns the ten listings whose descriptions are closest in meaning.
+    </p>
+
+    <p class="mt-1 text-[13px] text-muted">
+        Embeddings: <span class="font-mono">{{ embeddingsProvider.provider }}</span> / <span class="font-mono">{{ embeddingsProvider.model }}</span>
     </p>
 
     <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />

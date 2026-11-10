@@ -41,14 +41,18 @@ final class DocsAnswerAgent implements Agent, HasProviderOptions, VersionedPromp
         return trim((string) file_get_contents(resource_path('prompts/'.$this->promptName().'.md')));
     }
 
-    public function providerName(): string
+    protected function feature(): string
     {
-        return (string) config('ai.default');
+        return 'docs-answer';
     }
 
     public function modelName(): string
     {
-        return $this->model ?? (string) ($this->activeProviderEntry()['models']['text']['default'] ?? '');
+        if (! $this->hasProviderOverride() && $this->model !== null) {
+            return $this->model;
+        }
+
+        return app(AiProviders::class)->configured($this->feature(), $this->providerOverride)->model;
     }
 
     /**

@@ -7,7 +7,9 @@ namespace App\Services;
 use App\Ai\AiRunRecorder;
 use App\Contracts\DocsIndexRepositoryInterface;
 use App\DTOs\ChunkEmbedding;
+use App\Exceptions\EmbeddingDimensionsException;
 use App\Exceptions\InvalidEmbeddingException;
+use App\Exceptions\ProviderNotConfiguredException;
 use Carbon\CarbonImmutable;
 use Laravel\Ai\Embeddings;
 
@@ -38,7 +40,16 @@ final readonly class DocsEmbeddingService
 
     public function modelLabel(): string
     {
-        return $this->embeddings->modelLabel();
+        return $this->embeddings->modelLabel(ListingEmbeddingService::DOCS_FEATURE);
+    }
+
+    /**
+     * @throws EmbeddingDimensionsException
+     * @throws ProviderNotConfiguredException
+     */
+    public function assertDimensions(): void
+    {
+        $this->embeddings->assertDimensions(ListingEmbeddingService::DOCS_FEATURE);
     }
 
     public function queuedJobs(): int
@@ -56,9 +67,9 @@ final readonly class DocsEmbeddingService
 
         try {
             return Embeddings::for([$content])
-                ->dimensions($this->embeddings->dimensions())
+                ->dimensions($this->embeddings->dimensions(ListingEmbeddingService::DOCS_FEATURE))
                 ->timeout((int) config('ai.embeddings.timeout'))
-                ->generate($this->embeddings->provider(), $this->embeddings->model())
+                ->generate($this->embeddings->provider(ListingEmbeddingService::DOCS_FEATURE), $this->embeddings->model(ListingEmbeddingService::DOCS_FEATURE))
                 ->usage
                 ->inputTokens;
         } finally {
@@ -86,7 +97,7 @@ final readonly class DocsEmbeddingService
         $recorder->nextEmbeddingsAgent(self::AGENT);
 
         try {
-            $vectors = $this->embeddings->embedTexts(array_map(fn ($chunk): string => $chunk->content, $chunks));
+            $vectors = $this->embeddings->embedTexts(ListingEmbeddingService::DOCS_FEATURE, array_map(fn ($chunk): string => $chunk->content, $chunks));
         } finally {
             $recorder->nextEmbeddingsAgent(null);
         }

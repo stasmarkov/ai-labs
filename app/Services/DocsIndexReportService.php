@@ -46,9 +46,9 @@ final readonly class DocsIndexReportService
         );
 
         return new DocsIndexReport(
-            model: $this->embeddings->model(),
-            provider: $this->embeddings->provider(),
-            ollamaVersion: $this->ollama->version($this->embeddings->provider()),
+            model: $this->embeddings->model(ListingEmbeddingService::DOCS_FEATURE),
+            provider: $this->embeddings->provider(ListingEmbeddingService::DOCS_FEATURE),
+            ollamaVersion: $this->ollama->version($this->embeddings->provider(ListingEmbeddingService::DOCS_FEATURE)),
             pgvector: $this->bench->pgvectorVersion(),
             repo: $this->versions->repo(),
             laravel: $this->versions->laravel(),

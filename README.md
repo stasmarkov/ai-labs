@@ -28,7 +28,7 @@ ollama pull bge-m3              # embedding model (OLLAMA_EMBED_MODEL)
 ollama pull gemma4:12b          # second text model for comparisons
 ```
 
-Then set `AI_PROVIDER=ollama` in `.env`. The container reaches Ollama at `http://host.docker.internal:11434` (`OLLAMA_URL`). Cloud providers (Claude, OpenAI, Gemini) are planned as optional extras switched on by an API key in `.env`.
+Then set `AI_PROVIDER=ollama` in `.env`. The container reaches Ollama at `http://host.docker.internal:11434` (`OLLAMA_URL`). Cloud providers are optional: set `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` or `GEMINI_API_KEY` in `.env` and the provider appears in the lab's selector (or set `AI_PROVIDER` to use it for every text feature). With no key nothing changes and nothing leaves the machine. Cloud calls are billed and limited per IP (`AI_CLOUD_PER_MINUTE`); embeddings stay on Ollama bge-m3 unless you re-index. Details: the providers guide at `/ai/guides/providers`.
 
 Seed the demo data and run the tests:
 

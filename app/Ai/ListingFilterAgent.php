@@ -53,14 +53,18 @@ final class ListingFilterAgent implements Agent, HasProviderOptions, HasStructur
         return max(1, (int) config('ai.nl_search.timeout', 20));
     }
 
-    public function providerName(): string
+    protected function feature(): string
     {
-        return (string) config('ai.default');
+        return 'nl-search';
     }
 
     public function modelName(): string
     {
-        return $this->model ?? (string) ($this->activeProviderEntry()['models']['text']['default'] ?? '');
+        if (! $this->hasProviderOverride() && $this->model !== null) {
+            return $this->model;
+        }
+
+        return app(AiProviders::class)->configured($this->feature(), $this->providerOverride)->model;
     }
 
     /**

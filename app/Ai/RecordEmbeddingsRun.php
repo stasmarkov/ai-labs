@@ -33,7 +33,7 @@ final readonly class RecordEmbeddingsRun
     public function onGenerated(EmbeddingsGenerated $event): void
     {
         // A vector of the wrong length is unusable, so the call counts as failed although the model answered.
-        $expected = (int) config('ai.providers.'.config('ai.default_for_embeddings').'.models.embeddings.dimensions');
+        $expected = (int) config('ai.providers.'.$event->provider->name().'.models.embeddings.dimensions');
 
         foreach ($event->response->embeddings as $vector) {
             if ($expected > 0 && count($vector) !== $expected) {

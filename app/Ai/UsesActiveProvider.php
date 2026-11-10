@@ -8,6 +8,29 @@ use Laravel\Ai\Enums\Lab;
 
 trait UsesActiveProvider
 {
+    private ?string $providerOverride = null;
+
+    /**
+     * Runs this agent on another enabled text provider, at that provider's default text model. The caller has already
+     * validated the name.
+     */
+    public function usingProvider(?string $provider): static
+    {
+        $this->providerOverride = filled($provider) ? $provider : null;
+
+        return $this;
+    }
+
+    /**
+     * True when the override names a different provider than the feature is configured with, so a model chosen for the
+     * configured provider no longer applies.
+     */
+    public function hasProviderOverride(): bool
+    {
+        return $this->providerOverride !== null
+            && $this->providerOverride !== app(AiProviders::class)->configured($this->feature())->provider;
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -37,10 +60,41 @@ trait UsesActiveProvider
     }
 
     /**
+     * The feature key in config("ai.features"): which provider and model this agent runs on.
+     */
+    abstract protected function feature(): string;
+
+    /**
+     * The SDK reads this to pick the provider. A cloud provider without a key throws before any call.
+     */
+    public function provider(): string
+    {
+        return app(AiProviders::class)->forFeature($this->feature(), $this->providerOverride)->provider;
+    }
+
+    public function model(): string
+    {
+        return app(AiProviders::class)->forFeature($this->feature(), $this->providerOverride)->model;
+    }
+
+    /**
+     * The provider name recorded with a run; it never throws, so a refused or failed run can still be logged.
+     */
+    public function providerName(): string
+    {
+        return app(AiProviders::class)->configured($this->feature(), $this->providerOverride)->provider;
+    }
+
+    public function modelName(): string
+    {
+        return app(AiProviders::class)->configured($this->feature(), $this->providerOverride)->model;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     protected function activeProviderEntry(): array
     {
-        return (array) config('ai.providers.'.config('ai.default'), []);
+        return (array) config('ai.providers.'.$this->providerName(), []);
     }
 }

@@ -44,7 +44,7 @@ final readonly class SemanticBenchService
     {
         $indexSeconds = $rebuildIndex ? $this->bench->rebuildIndex() : null;
 
-        $this->search->embedQuery($queries[0]);
+        $this->search->embedQuery($queries[0], ListingEmbeddingService::FEATURE);
 
         $efSearch = (int) config('ai.embeddings.ef_search');
         $embedMs = [];
@@ -56,11 +56,11 @@ final readonly class SemanticBenchService
         for ($round = 0; $round < $repeat; $round++) {
             foreach ($queries as $query) {
                 $started = hrtime(true);
-                $vector = $this->search->embedQuery($query);
+                $vector = $this->search->embedQuery($query, ListingEmbeddingService::FEATURE);
                 $embedMs[] = (hrtime(true) - $started) / 1e6;
 
                 $started = hrtime(true);
-                $this->matches->nearest($vector, self::TOP, $efSearch);
+                $this->matches->nearest($vector, self::TOP, $efSearch, $this->embeddings->modelLabel(ListingEmbeddingService::FEATURE));
                 $dbMs[] = (hrtime(true) - $started) / 1e6;
 
                 if ($round === 0) {
@@ -88,11 +88,11 @@ final readonly class SemanticBenchService
         }
 
         return new SemanticBenchReport(
-            model: $this->embeddings->model(),
-            provider: $this->embeddings->provider(),
+            model: $this->embeddings->model(ListingEmbeddingService::FEATURE),
+            provider: $this->embeddings->provider(ListingEmbeddingService::FEATURE),
             pgvector: $this->bench->pgvectorVersion(),
-            ollamaVersion: $this->ollama->version($this->embeddings->provider()),
-            ollamaNumParallel: $this->ollama->numParallel($this->embeddings->provider()),
+            ollamaVersion: $this->ollama->version($this->embeddings->provider(ListingEmbeddingService::FEATURE)),
+            ollamaNumParallel: $this->ollama->numParallel($this->embeddings->provider(ListingEmbeddingService::FEATURE)),
             queries: count($queries),
             repeat: $repeat,
             embedMs: $embedMs,

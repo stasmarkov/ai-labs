@@ -169,3 +169,15 @@ it('AC-6 every experiment offers 2 to 4 predictions and its answer id is one of 
             ->and($ids)->toContain($experiment->answer['id']);
     }
 })->with(CAPABILITY_GUIDES);
+
+it('AC-6 the providers guide covers the capability table, key setup, the add-a-provider recipe and a failure per cause', function (): void {
+    $guide = app(GuideRepository::class)->find('providers');
+    $rendered = app(GuideRenderer::class)->render('providers');
+    $text = mb_strtolower(implode("\n", guideTexts($guide)));
+
+    expect($rendered['table']['rows'])->not->toBeEmpty();
+
+    foreach (['anthropic_api_key', 'openai_api_key', 'gemini_api_key', 'add a provider', '1024', 'index_not_built', 'provider_not_enabled', 'cloud-ai'] as $needle) {
+        expect($text)->toContain($needle);
+    }
+});

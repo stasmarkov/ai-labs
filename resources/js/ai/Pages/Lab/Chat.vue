@@ -10,6 +10,9 @@ import LabButton from '../../components/LabButton.vue';
 import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabEventRow from '../../components/LabEventRow.vue';
 import LabMetric from '../../components/LabMetric.vue';
+import LabProviderSelect from '../../components/LabProviderSelect.vue';
+import type { ProviderOption } from '../../components/LabProviderSelect.vue';
+import { useProviderChoice } from '../../composables/useProviderChoice';
 import LabTag from '../../components/LabTag.vue';
 import { useEventStream } from '../../composables/useEventStream';
 import { presetQuery } from '../../composables/usePresetQuery';
@@ -87,6 +90,7 @@ const props = defineProps<{
     maxQuestionLength: number;
     maxHistoryTurns: number;
     maxTurnLength: number;
+    enabledTextProviders: ProviderOption[];
 }>();
 
 const RUN_LOOKUP_ATTEMPTS = 5;
@@ -97,6 +101,7 @@ const turns = ref<Turn[]>([]);
 const timings = ref<ServerTimings | null>(null);
 const sourcesAtMs = ref<number | null>(null);
 const useCache = ref(true);
+const { provider, override: providerOverride } = useProviderChoice(props.enabledTextProviders);
 let nextTurnId = 1;
 
 function current(): Turn | undefined {
@@ -308,7 +313,7 @@ function ask(): void {
     }
 
     const sent = question.value.trim();
-    const body = { q: sent, cache: useCache.value, history: history() };
+    const body = { q: sent, cache: useCache.value, history: history(), ...(providerOverride.value === null ? {} : { provider: providerOverride.value }) };
 
     timings.value = null;
     sourcesAtMs.value = null;
@@ -482,6 +487,7 @@ onBeforeUnmount(() => {
                 {{ length }} / {{ maxQuestionLength }} characters
             </p>
         </div>
+        <LabProviderSelect id="chat-provider" v-model="provider" :providers="enabledTextProviders" :disabled="isStreaming" />
         <div class="flex items-center gap-2">
             <input id="chat-use-cache" v-model="useCache" type="checkbox" class="size-4 accent-signal" />
             <label for="chat-use-cache" class="text-[13px] font-medium text-muted">Use cache (first question only)</label>

@@ -11,6 +11,7 @@ use App\Http\Controllers\ShowListingController;
 use App\Http\Controllers\ShowSlowListingController;
 use App\Http\Middleware\AddServerTimingHeader;
 use App\Http\Middleware\EnsureDebugRoutes;
+use App\Http\Middleware\LimitCloudAi;
 use App\Http\Middleware\SendEarlyHints;
 use App\Services\ExportFileService;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
@@ -27,19 +28,19 @@ Route::get('/listings/{id}/slow', ShowSlowListingController::class)
     ->name('listings.slow');
 Route::get('/listings/{id}/describe', DescribeListingController::class)
     ->where('id', '[1-9][0-9]{0,17}')
-    ->middleware('throttle:describe')
+    ->middleware(['throttle:describe', LimitCloudAi::class.':describe'])
     ->name('listings.describe');
 Route::get('/api/listings/semantic', SemanticSearchController::class)
-    ->middleware(['throttle:semantic-search', AddServerTimingHeader::class])
+    ->middleware(['throttle:semantic-search', LimitCloudAi::class.':embeddings-listings', AddServerTimingHeader::class])
     ->name('listings.semantic');
 Route::get('/api/listings/nl', NlSearchController::class)
-    ->middleware(['throttle:nl-search', AddServerTimingHeader::class])
+    ->middleware(['throttle:nl-search', LimitCloudAi::class.':nl-search', AddServerTimingHeader::class])
     ->name('listings.nl');
 Route::get('/api/docs/search', SearchDocsController::class)
-    ->middleware(['throttle:docs-search', AddServerTimingHeader::class])
+    ->middleware(['throttle:docs-search', LimitCloudAi::class.':embeddings-docs', AddServerTimingHeader::class])
     ->name('docs.search');
 Route::post('/api/docs/ask', AskDocsController::class)
-    ->middleware(['throttle:docs-ask', AddServerTimingHeader::class])
+    ->middleware(['throttle:docs-ask', LimitCloudAi::class.':docs-answer,embeddings-docs', AddServerTimingHeader::class])
     ->name('docs.ask');
 Route::get('/exports/{id}', ServeExportController::class)
     ->where('id', ExportFileService::ID_PATTERN)
