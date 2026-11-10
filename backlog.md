@@ -665,7 +665,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Status:** approved
 - **Spec:** —
 - **Source:** owner decision 2026-11-10 ("Keep only frankenphp, and drop not needed … interested how to use frankenphp and octane in laravel")
-- **Run:** `/sdd "SL-50: narrow the servers to the FrankenPHP family (classic default with Mercure, native worker, Octane): remove nginx-fpm, apache-fpm and openlitespeed overlays, configs, bench cells, parity baselines, tests and docs references; keep their past results as history; parity across the three FrankenPHP modes; .ddev/config.yaml base only if needed (ask first). Rules in product-brief.md."`
+- **Run:** `/sdd "SL-50: narrow the servers to the FrankenPHP family (classic default with Mercure, native worker, Octane): remove nginx-fpm, apache-fpm and openlitespeed overlays, configs, bench cells, parity baselines, tests and docs references; keep their past results as history; parity across the three FrankenPHP modes; update the in-app guides (resources/guides) and the home page server modes to the three modes; .ddev/config.yaml base only if needed (ask first). Rules in product-brief.md."`
 
 ### SL-51 · Optional cloud providers: Claude, OpenAI, Gemini
 
