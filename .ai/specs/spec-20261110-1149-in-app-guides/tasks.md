@@ -200,3 +200,4 @@ Checks:
   - During a stream, `✓✓▶○○○` shows with one `aria-current="step"`.
   - After Stop, it shows `✓✓■○○○`.
 - Not covered: nothing is highlighted in the roughly 1.7 s before the first event, because the guard step maps to `refused`. Accepted.
+- Clean-tree bench: after commit 6223b4d, `bench/run.sh ping --quick` exited 0 on frankenphp (`bench/results/raw/2026-11-10/frankenphp/ping-fair-130811-s1r1.json`).
