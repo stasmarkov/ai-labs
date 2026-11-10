@@ -675,8 +675,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-90, BR-91, BR-27
 - **Depends on:** SL-49
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261110-2141-cloud-providers
 - **Source:** owner decision 2026-11-10 ("Ollama default + Claude, OpenAI, Gemini optional")
 - **Run:** `/sdd "SL-51: optional cloud providers through laravel/ai: Anthropic (Claude), OpenAI and Gemini next to the Ollama default, each enabled only by its API key in .env (never committed), per-feature provider/model selection by config and a lab selector, ai_runs provider/model, embeddings provider per feature, offline tests with fakes, a provider capability table in the in-app providers guide (resources/guides/providers.php, live facts show which providers have a key) and the learning guide AI map. Rules in product-brief.md."`
 
