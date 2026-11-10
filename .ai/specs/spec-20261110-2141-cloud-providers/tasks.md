@@ -203,3 +203,4 @@ Cloud model ids (`claude-haiku-5-5`, `gpt-6-luna`, `gemini-3.1-flash-lite`, `tex
 Checks:
 - Full suite: 1635 passed. Pint and PHPStan clean, typecheck and build pass.
 - Fingerprint: `app-DNob7CFE.css` / `app-PTzu1QaN.js`, unchanged.
+- Clean-tree bench: after commit d4e8bc1, `bench/run.sh ping --quick` exited 0 on frankenphp (`bench/results/raw/2026-11-10/frankenphp/ping-fair-214020-s1r1.json`).
