@@ -165,3 +165,4 @@ Checks:
 
 Still open:
 - **Task 8 (real pipeline) and gap 16 (guide Numbers from the eval).** These need the owner to accept the Stanford Cars terms (`bench/datasets/stanford-cars.sh --accept-terms`). Then: `photos:import`, `photos:extract --limit=50` with an `ai-vision` worker, `photos:eval`, and commit `run.json`, the `BENCHMARKS.md` section and the guide numbers.
+- Clean-tree bench: after commit ad1cd28, `bench/run.sh ping --quick` exited 0 on frankenphp.
