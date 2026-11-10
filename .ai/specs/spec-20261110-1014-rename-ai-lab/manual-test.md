@@ -33,7 +33,7 @@ Expected:
 Checks (AC-5, MNC-2, MNC-4).
 
 ```sh
-git diff HEAD~1 -- .ddev/config.yaml
+git diff <pre-rename commit from tasks.md> -- .ddev/config.yaml
 git grep -n "interview.ddev.site" -- ':!bench/results' ':!.ai/reports' ':!.ai/session' | head
 bench/asset-fingerprint.sh
 ```
@@ -44,3 +44,13 @@ Expected:
 - The fingerprint is unchanged.
 - Parity is identical on all current servers against the re-captured baseline.
 - `bench/run.sh ping --quick` exits 0 after the commit.
+
+## Step 4
+
+Fresh clone (AC-4, optional).
+
+1. Clone into a new folder.
+2. Change `name:` temporarily, or stop the main project first, to avoid a name clash.
+3. Run `ddev setup` and follow the README.
+
+Expected: the site comes up on frankenphp.

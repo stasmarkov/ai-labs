@@ -4,11 +4,11 @@ title: Rename the project to ai-lab and make the homescreen a study-lab landing 
 type: improvement
 size: M
 priority: P1
-status: draft
+status: approved
 ticket:
 stakeholders: [Stanislav Markov]
-approved_by:
-approved_at:
+approved_by: Stas Markov (owner request 2026-11-10; standing approval)
+approved_at: 2026-11-10T08:16:44Z
 created: 2026-11-10
 stacks: [laravel]
 slice: SL-49
@@ -140,9 +140,65 @@ Historical result files and past reports keep the URLs they were recorded with.
 4. **One generated capability map.** The capabilities, their guide anchors and code paths come from one place, the lab service plus a small map, so the landing page, `/ai` and the guide's section 16 cannot disagree.
 5. **History stays as recorded.** Past measurements cite the URL they ran against. Rewriting them would make them look like new results.
 
+## Clarifications (binding; resolve the clarity gate)
+
+**URL rename scope (Q1).** `RenameTest` bans `interview.ddev.site` in every tracked file except these paths:
+- `bench/results/**`, `.ai/reports/**` and `.ai/session/**`;
+- this spec folder;
+- `tests/Feature/RenameTest.php` itself.
+
+`BENCHMARKS.md` prose and its reproduce commands are updated to the new URL, and only the result files keep the old one. The bare word "interview" is not banned, because it legitimately appears in:
+- `ddev delete interview`;
+- the `~/work/interview` folder;
+- the OpenLiteSpeed vhost folder `conf/vhosts/interview`, which stays as it is until SL-50 removes that server.
+
+**AutoPulse (Q2).** `AutoPulse` is banned in `app/`, `resources/`, `routes/`, `config/`, `bench/*.sh`, README, `CLAUDE.md` and `tests/` (except `RenameTest`). In `docs/learning-guide.md` it is allowed only in the one rename-note line. It stays allowed in `product-brief.md` (the rename note and history items), `backlog.md` history, older `.ai/specs/*` prose (history), `BENCHMARKS.md` (the history note), `.ai/reports/**` and `.ai/session/**`.
+
+**The data check (Q3).** Before the rename, the script saves the row counts plus the JSON of `/api/listings?per_page=5&page=1` and of `/api/listings/1`, written to `.ai/tmp/pre-rename/` (gitignored, added to `.gitignore`). After the import it fetches the same URLs and compares them after replacing the old host with the new one. Counts must be equal and the JSON identical modulo host.
+
+**Parity and host-dependent bodies (Q4).** The baselines store body hashes, and bodies can hold absolute URLs, so parity is re-captured once for all routes on all six servers that exist now. The reason ("host renamed; and `/` is the new landing page") is recorded in `BENCHMARKS.md` "Response parity". The re-capture runs right after the rename, before any other code change in this slice, so the host change is isolated, and again after the landing page, so only `/` changes. Both steps are recorded. The OpenLiteSpeed stash is not renamed; SL-50 removes it.
+
+**The capability map (Q5).**
+- **Where:** `LabOverviewService` is the PHP service (`app/Services/LabOverviewService.php`). It gains, per capability, a `guide` anchor and a `code` path. That is the single source, used by `/ai`, by `/`, and checked against the guide by a test.
+- **Anchors:** GitHub-style slugs of the guide's `## N. Title` headings.
+- **"Shipped":** capabilities with status `ready`. The landing page lists those, plus a "coming" list for the rest.
+
+**Link targets (Q6).** Lab and site links are real hrefs to named routes. Guide sections, `BENCHMARKS.md` and code paths are repo-relative paths shown as code text with a "view in your editor" hint, because no route serves them and there is no remote. The test checks that each path exists and each anchor matches a guide heading.
+
+**Rename script safety (Q7).**
+- **Preflight:** the project must be running, the export must succeed and be non-empty, and the tree must be clean except `.ai/session`.
+- **Idempotent:** if the name is already `ai-lab` and `.ai/tmp/pre-rename/counts.json` exists, it only verifies.
+- **On failure after the `name:` edit:** it prints the rollback (restore `name: interview`, `ddev start`; the old volumes are intact) and exits non-zero.
+- **Committing:** the orchestrator commits after verification. The manual test diffs against the commit before the rename, which is recorded in `tasks.md`.
+
+**`.env` (Q8).** `ddev setup` sets `APP_NAME=ai-lab` when it is `Laravel` or empty, and `APP_URL=https://ai-lab.ddev.site` when it is empty, `http://localhost…` or the old URL. Other values are never touched. DDEV's laravel project type may also rewrite `APP_URL` on start; the build checks `ddev describe` and the effective `config('app.url')` and records the result.
+
+**The landing page (Q9).**
+- **Accessibility bar:** no horizontal scroll at 390 px, visible focus on every control, landmarks (`main`, `nav`), and no `aria-live` except where content updates.
+- **Root view:** the lab's root view is `resources/views/ai/app.blade.php`.
+- **The old view:** `welcome.blade.php` is deleted (unused after this). It is a view, not a built asset, so the fingerprint is unaffected.
+- **"Coming in SL-51":** removed by SL-51.
+- **Disk estimate:** based on the models: qwen3.5:9b 7.6 GB + gemma4:12b 7.7 GB + bge-m3 1.2 GB, plus the images. The README says "about 20 GB, mostly the models" and lists them.
+
+**Traceability and evidence (Q10).**
+- **AC-4:** traced to a new `tests/Feature/ReadmeTest.php`, a content check. A real fresh-clone run is optional (manual step 4).
+- **Evidence:** "Outputs recorded here" means in this `tasks.md`.
+- **Clean tree:** `bench/run.sh`'s own rule (changes only in `bench/results/` and `.ai/session/`).
+
 ## Open questions
 
-<!-- Filled by the clarity gate. -->
+Clarity gate 2026-11-10: 10 items, all answered under standing approval above.
+
+- [x] Q1: URL allowlist paths; the bare word is allowed.
+- [x] Q2: AutoPulse banned and allowed paths.
+- [x] Q3: The data check with host-normalized JSON.
+- [x] Q4: Parity re-captured twice; the OpenLiteSpeed stash untouched.
+- [x] Q5: The capability map source and anchors.
+- [x] Q6: Link targets.
+- [x] Q7: Rename script safety.
+- [x] Q8: `.env` updates.
+- [x] Q9: The landing page details.
+- [x] Q10: Traceability and evidence.
 
 ## Dependencies
 

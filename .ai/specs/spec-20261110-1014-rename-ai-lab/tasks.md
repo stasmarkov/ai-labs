@@ -47,7 +47,7 @@
 | AC-1 | project renamed, data intact | `manual-test.md#step-1` | manual | 1 |
 | AC-2 | no stale names outside history | `tests/Feature/RenameTest.php` | test | 2 |
 | AC-3 | landing page and links | `tests/Feature/HomeLandingTest.php` | test | 3 |
-| AC-4 | README for learners | `tests/Feature/RenameTest.php` | test | 4 |
+| AC-4 | README for learners | `tests/Feature/ReadmeTest.php` | test | 4 |
 | AC-5 | checks | `manual-test.md#step-3` | manual | 5, 6 |
 | MNC-1 | DB identical | `manual-test.md#step-1` | manual | 1 |
 | MNC-2 | other routes and fingerprint | `manual-test.md#step-3` | manual | 5 |
