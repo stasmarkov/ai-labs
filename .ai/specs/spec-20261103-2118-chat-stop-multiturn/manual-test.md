@@ -5,14 +5,14 @@ Covers what the automated tests cannot: a real browser, a real Ollama, and six r
 ## Preconditions
 
 - Work from `/Users/stasmarkov/work/interview`. Run `ddev start`, then `ddev server nginx-fpm`.
-- The app answers at https://interview.ddev.site. Check: `curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/up` prints `200`.
+- The app answers at https://ai-lab.ddev.site. Check: `curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/up` prints `200`.
 - Ollama runs on the host and the model is loaded (warm). Check: `curl -s http://localhost:11434/api/tags` lists your model. Send one question first so the first real test is not slow.
 - The docs are indexed, so answers have sources. If they come back with no sources, run the docs index command used in earlier slices first.
 - No login is needed.
 - Paste these two helpers into your shell once:
 
 ```sh
-ask() { curl -sN -H 'Content-Type: application/json' -d "$1" https://interview.ddev.site/api/docs/ask; }
+ask() { curl -sN -H 'Content-Type: application/json' -d "$1" https://ai-lab.ddev.site/api/docs/ask; }
 last() { ddev artisan tinker --execute 'echo json_encode(App\Models\AiRun::where("agent","DocsAnswerAgent")->latest("id")->first()->only(["id","status","tokens_out","ttft_ms","latency_ms","stopped_after_ms","history_turns","prompt_version","cache_kind"]));'; echo; }
 ```
 
@@ -28,7 +28,7 @@ Stop on nginx-fpm: the reported failure (AC-1).
 2. Run the command below. It closes the connection after 2 seconds, in the middle of the answer.
 
 ```sh
-curl -sN --max-time 2 -H 'Content-Type: application/json' -d '{"q":"explain in detail how queues, workers and batching fit together","cache":false}' https://interview.ddev.site/api/docs/ask >/dev/null; sleep 3; last
+curl -sN --max-time 2 -H 'Content-Type: application/json' -d '{"q":"explain in detail how queues, workers and batching fit together","cache":false}' https://ai-lab.ddev.site/api/docs/ask >/dev/null; sleep 3; last
 ```
 
 Expected: `curl` ends with exit code 28 (timeout), which is the client going away. `last` prints a row with `"status":"stopped"`, a small `tokens_out` (a few to about a dozen), `ttft_ms` and `latency_ms` set, and `stopped_after_ms` set (a few hundred ms or less). Before this change nginx-fpm wrote no row at all, so the newest row was an older request.
@@ -59,7 +59,7 @@ Expected:
 - One table per mode: median tokens after Stop, probe latency against the idle baseline, and stopped rows `5/5`.
 - On every mode the median tokens after Stop is at most 10 and the median probe is at most 1.5 x the idle median + 1000 ms (the JSON fields `probe_within_budget` and `lag_within_budget` are `true`). A mode that cannot detect the abort is printed with its numbers, not left out.
 - Six files appear in `bench/results/chat-stop/<today UTC>/` (`nginx-fpm.json`, `apache-fpm.json`, `openlitespeed.json`, `frankenphp.json`, `frankenphp-octane.json`, `frankenphp-worker.json`), each with 5 runs.
-- The script ends on the default server. Confirm with `ddev server --url` or by opening https://interview.ddev.site/up (`200`).
+- The script ends on the default server. Confirm with `ddev server --url` or by opening https://ai-lab.ddev.site/up (`200`).
 
 ## Step 4
 
@@ -90,7 +90,7 @@ Expected: one `refused` event with `"stage":"input"`, a `pattern` naming the mat
 6. Invalid history is rejected with HTTP 422. Run each and expect `422`:
 
 ```sh
-code() { curl -s -o /dev/null -w '%{http_code}\n' -H 'Content-Type: application/json' -d "$1" https://interview.ddev.site/api/docs/ask; }
+code() { curl -s -o /dev/null -w '%{http_code}\n' -H 'Content-Type: application/json' -d "$1" https://ai-lab.ddev.site/api/docs/ask; }
 code '{"q":"x","history":"x"}'
 code '{"q":"x","history":[{"role":"assistant","content":"hi"}]}'
 code '{"q":"x","history":[{"role":"user","content":"hi"}]}'
@@ -105,7 +105,7 @@ Expected: eight lines, all `422` (not an array, starts with assistant, ends with
 
 ## Step 5
 
-The lab page (AC-7, NFR-3). Open https://interview.ddev.site/ai/chat in a desktop browser with dev tools open on the Network tab.
+The lab page (AC-7, NFR-3). Open https://ai-lab.ddev.site/ai/chat in a desktop browser with dev tools open on the Network tab.
 
 1. Type `how do I run a migration?` in the Question box and press Ask. Expected: the answer streams in a first turn with a sources list, citation marks, and a "Logged run" link.
 2. Click a citation link in the answer. Expected: the page jumps to that turn's own source (anchor `#chat-source-1-N`); no dead link.
@@ -127,7 +127,7 @@ Fingerprint, parity and the suite (MNC-1 to MNC-4).
 3. `ddev npm run build`, then `bench/asset-fingerprint.sh`. Expected: the CSS and JS hashes match the ones recorded at `BENCHMARKS.md` lines 596-597.
 4. Parity on all six servers: run the parity capture used in earlier slices (see `BENCHMARKS.md`) on each of nginx-fpm, apache-fpm, openlitespeed, frankenphp, frankenphp-octane, frankenphp-worker. Expected: `identical` six times. End on the default server.
 5. `ddev artisan rag:eval` (if you have the model running). Expected: runs without history, finishes with the same kind of report as before; committed results under `bench/results/` for SL-33 and SL-40 show no `git diff`.
-6. Describe stream unchanged: open https://interview.ddev.site/ai/describe, generate a description for a listing. Expected: it streams as before, with no new events; a forced error still shows the generic masked message.
+6. Describe stream unchanged: open https://ai-lab.ddev.site/ai/describe, generate a description for a listing. Expected: it streams as before, with no new events; a forced error still shows the generic masked message.
 
 ## Step 7
 

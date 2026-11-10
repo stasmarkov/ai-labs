@@ -176,7 +176,7 @@ A second workload replaces the slow HTTP call with open AI answer streams: the d
 
 **Caching (Q3).** The describe stream has no cache (only docs ask has the SL-40 cache), so every stream holds a worker for the full fake answer. Each request uses a different listing id in rotation (1–50 000, which exist in the bench database), so no layer can serve a repeat.
 
-**Route (Q4).** The load and the probe go through the DDEV router, exactly as `bench/run.sh` does (`--add-host` to the router IP, `https://interview.ddev.site`), because a real health check also comes through a proxy. 502 and 504 can therefore come from the router (Traefik) or the server; the JSON records which server responded when the header shows it. The guide explains the difference.
+**Route (Q4).** The load and the probe go through the DDEV router, exactly as `bench/run.sh` does (`--add-host` to the router IP, `https://ai-lab.ddev.site`), because a real health check also comes through a proxy. 502 and 504 can therefore come from the router (Traefik) or the server; the JSON records which server responded when the header shows it. The guide explains the difference.
 
 **Probe definitions (Q5) (revised in review fix pass).**
 - **Window:** the probe runs only in the 60 s measure window, once per repeat, at 5 requests per second with a 10 s client timeout. It opens 50 connections (5 per second x 10 s) and oha runs with `--latency-correction`, so a stuck request never pauses the schedule (coordinated omission).

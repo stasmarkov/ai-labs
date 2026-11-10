@@ -19,7 +19,7 @@ Route -> final invokable Controller -> Service -> ListingRepositoryInterface -> 
 
 ## layers
 
-- Routes: `routes/api.php` (registered with `withRouting(api:)`, holds `/api/ping`), `routes/catalog.php` (registered with `withRouting(then:)` inside the stateless `api` middleware group, no prefix, holds `/listings` and `/listings/{id}`), `routes/web.php` (`Route::view('/', 'welcome')`). Every route is named; no closures, so `route:cache` works. `/listings/{id}` has `where('id', '[1-9][0-9]{0,17}')`.
+- Routes: `routes/api.php` (registered with `withRouting(api:)`, holds `/api/ping`), `routes/catalog.php` (registered with `withRouting(then:)` inside the stateless `api` middleware group, no prefix, holds `/listings` and `/listings/{id}`), `routes/web.php` (`/` is the Inertia landing page, `ShowLabHomeController`; `welcome.blade.php` stays only so the main Tailwind build keeps its fingerprint). Every route is named; no closures, so `route:cache` works. `/listings/{id}` has `where('id', '[1-9][0-9]{0,17}')`.
 - Controllers: `PingController`, `ListListingsController`, `ShowListingController`. Final, invokable, no models or DB.
 - Validation: `ListListingsRequest` validates the filters and builds a `ListingFilter` through `toFilter()`.
 - Responses: `ApiResponse` builds the success envelope; `JsonErrorRenderer` (called from `withExceptions` in `bootstrap/app.php`) builds the error envelope.

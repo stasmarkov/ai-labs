@@ -1,4 +1,4 @@
-# AutoPulse learning guide
+# ai-lab learning guide
 
 This guide explains how everything in this project works, in the order it was built. Each section says what the mechanism is, walks through what happens for one request, links to the code and specs in this repo, quotes what was measured, and ends with official docs to read next.
 
@@ -16,7 +16,7 @@ It is a living document: every slice adds or updates its section when it ships (
 
 **One request, step by step** (`GET /listings?make=BMW`):
 
-1. The browser connects to `https://interview.ddev.site`. The DDEV router (Traefik) ends TLS and forwards plain HTTP to the `web` container.
+1. The browser connects to `https://ai-lab.ddev.site`. The DDEV router (Traefik) ends TLS and forwards plain HTTP to the `web` container.
 2. nginx sees a path that is not a file and passes it over FastCGI to a free PHP-FPM child process.
 3. That child boots Laravel from scratch: autoloader, service providers, config, routes. With OPcache, the compiled PHP is already in shared memory, so "boot" means running code, not parsing it.
 4. The router matches `ListListingsController`. A form request validates the filters (422 on bad input). `ListingSearchService` asks `EloquentListingRepository` for one page, ordered newest first.
@@ -1031,7 +1031,7 @@ Uncompressed it cost 0.048 s (median of 5 downloads per encoding). `br` saved 19
 
 **What it is.** HTTP/3 is HTTP carried over **QUIC**, a transport built on **UDP** instead of TCP. QUIC does the connection setup, TLS 1.3 encryption, loss recovery and multiplexing of streams itself, in user space. The HTTP semantics (methods, status codes, headers such as `Link` and `Alt-Svc`) are the same as in HTTP/2; what changes is how the bytes are moved.
 
-**Why the router path never used it.** FrankenPHP's Caddy listens on TCP 443 (h1 and h2) and UDP 443 (h3) inside the web container. The DDEV router (Traefik) sits in front: it ends TLS from the browser and talks plain HTTP to the container, and no UDP port is published. So `curl -I https://interview.ddev.site/` shows no `Alt-Svc`, and no browser reaches the h3 listener. The bench therefore puts its clients on the `ddev_default` network and resolves the site host to the web container's address, skipping the router. Nothing in `.ddev/` changes ([`bench/http3.sh`](../bench/http3.sh), [`bench/lcp.mjs`](../bench/lcp.mjs)).
+**Why the router path never used it.** FrankenPHP's Caddy listens on TCP 443 (h1 and h2) and UDP 443 (h3) inside the web container. The DDEV router (Traefik) sits in front: it ends TLS from the browser and talks plain HTTP to the container, and no UDP port is published. So `curl -I https://ai-lab.ddev.site/` shows no `Alt-Svc`, and no browser reaches the h3 listener. The bench therefore puts its clients on the `ddev_default` network and resolves the site host to the web container's address, skipping the router. Nothing in `.ddev/` changes ([`bench/http3.sh`](../bench/http3.sh), [`bench/lcp.mjs`](../bench/lcp.mjs)).
 
 **What `Alt-Svc` advertises, and how a browser upgrades.** A server tells a client that the same origin is also reachable over another protocol with `Alt-Svc: h3=":443"; ma=2592000` (HTTP/3 on UDP 443, valid for 30 days). A browser cannot know in advance whether UDP works, so its first visit uses h2 over TCP; it reads the header and tries QUIC on later requests, falling back to TCP if that fails. A cold run would therefore never see h3, and the bench forces it with Chromium's `--origin-to-force-quic-on` (h2 is forced with `--disable-quic`). Each run then reads `PerformanceNavigationTiming.nextHopProtocol` and counts only if it equals the protocol asked for. `bench/http3.sh` checks the advertisement separately: frankenphp answers the h2 request with `Alt-Svc: h3=":443"; ma=2592000` and the h3 request with status 200 and the same body hash; nginx-fpm has no UDP listener, so `h3_ok` is false there with the reason recorded.
 

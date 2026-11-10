@@ -303,3 +303,55 @@ it('AC-2 setup leaves no temp file behind when the rename fails and never uses T
     $leftover = array_filter(scandir($this->root.'/.ddev'), fn (string $name): bool => str_starts_with($name, '.env.web.'));
     expect($leftover)->toBe([]);
 });
+
+it('AC-1 MNC-3 setup rewrites APP_NAME and APP_URL when they hold the Laravel or old-URL defaults and leaves other lines byte-identical', function (string $name, string $url): void {
+    $others = "APP_KEY=base64:test\nAPP_ENV=local\nMERCURE_PUBLISHER_JWT_KEY=a\nMERCURE_SUBSCRIBER_JWT_KEY=b\nDB_HOST=db\n";
+    file_put_contents($this->root.'/.env', "APP_NAME={$name}\nAPP_URL={$url}\n".$others);
+    file_put_contents($this->root.'/.ddev/.env.web', "MERCURE_PUBLISHER_JWT_KEY=a\nMERCURE_SUBSCRIBER_JWT_KEY=b\n");
+
+    $process = ($this->run)('setup');
+    $env = file_get_contents($this->root.'/.env');
+
+    expect($process->getExitCode())->toBe(0)
+        ->and($env)->toContain("APP_NAME=ai-lab\n")
+        ->and($env)->toContain("APP_URL=https://ai-lab.ddev.site\n")
+        ->and($env)->toContain($others)
+        ->and(substr(sprintf('%o', fileperms($this->root.'/.env')), -4))->toBe('0600');
+})->with([
+    'laravel and old url' => ['Laravel', 'https://interview.ddev.site'],
+    'quoted old url' => ['Laravel', '"https://interview.ddev.site"'],
+    'empty values' => ['', ''],
+    'localhost url' => ['Laravel', 'http://localhost'],
+    'localhost with port' => ['Laravel', 'http://localhost:8000'],
+]);
+
+it('AC-1 MNC-3 setup replaces APP_NAME and APP_URL in place so later ${APP_NAME} references still resolve', function (): void {
+    file_put_contents($this->root.'/.env', "APP_NAME=Laravel\nAPP_URL=https://interview.ddev.site\nAPP_KEY=base64:test\nMERCURE_PUBLISHER_JWT_KEY=a\nMERCURE_SUBSCRIBER_JWT_KEY=b\nMAIL_FROM_NAME=\"\${APP_NAME}\"\nVITE_APP_NAME=\"\${APP_NAME}\"\n");
+    file_put_contents($this->root.'/.ddev/.env.web', "MERCURE_PUBLISHER_JWT_KEY=a\nMERCURE_SUBSCRIBER_JWT_KEY=b\n");
+
+    $process = ($this->run)('setup');
+
+    expect($process->getExitCode())->toBe(0)
+        ->and(file_get_contents($this->root.'/.env'))->toBe("APP_NAME=ai-lab\nAPP_URL=https://ai-lab.ddev.site\nAPP_KEY=base64:test\nMERCURE_PUBLISHER_JWT_KEY=a\nMERCURE_SUBSCRIBER_JWT_KEY=b\nMAIL_FROM_NAME=\"\${APP_NAME}\"\nVITE_APP_NAME=\"\${APP_NAME}\"\n");
+});
+
+it('AC-1 MNC-3 setup keeps a custom APP_NAME and APP_URL untouched', function (): void {
+    $content = "APP_NAME=\"My Lab\"\nAPP_URL=https://custom.example.test\nAPP_KEY=base64:test\nMERCURE_PUBLISHER_JWT_KEY=a\nMERCURE_SUBSCRIBER_JWT_KEY=b\n";
+    file_put_contents($this->root.'/.env', $content);
+    file_put_contents($this->root.'/.ddev/.env.web', "MERCURE_PUBLISHER_JWT_KEY=a\nMERCURE_SUBSCRIBER_JWT_KEY=b\n");
+
+    $process = ($this->run)('setup');
+
+    expect($process->getExitCode())->toBe(0)
+        ->and(file_get_contents($this->root.'/.env'))->toBe($content);
+});
+
+it('AC-1 setup does not add APP_NAME or APP_URL when the .env has no such lines', function (): void {
+    $content = "APP_KEY=base64:test\nMERCURE_PUBLISHER_JWT_KEY=a\nMERCURE_SUBSCRIBER_JWT_KEY=b\n";
+    file_put_contents($this->root.'/.env', $content);
+    file_put_contents($this->root.'/.ddev/.env.web', "MERCURE_PUBLISHER_JWT_KEY=a\nMERCURE_SUBSCRIBER_JWT_KEY=b\n");
+
+    ($this->run)('setup');
+
+    expect(file_get_contents($this->root.'/.env'))->toBe($content);
+});

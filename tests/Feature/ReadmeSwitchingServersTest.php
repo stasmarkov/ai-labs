@@ -60,7 +60,7 @@ test('AC-11 README documents openlitespeed URL and htaccess restart', function (
     $section = switchingServersSection();
 
     expect($section)->toContain('ddev server openlitespeed')
-        ->toContain('https://interview.ddev.site:8091')
+        ->toContain('https://ai-lab.ddev.site:8091')
         ->toContain('builds the image')
         ->toContain('.htaccess')
         ->toContain('start-up')

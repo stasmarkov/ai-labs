@@ -15,7 +15,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 CURL_IMAGE="${CURL_IMAGE:-curlimages/curl:8.11.1}"
-SITE="${DDEV_SITENAME:-interview}"
+SITE="${DDEV_SITENAME:-ai-lab}"
 WEB_CONTAINER="ddev-$SITE-web"
 LISTING=1
 LABEL=""

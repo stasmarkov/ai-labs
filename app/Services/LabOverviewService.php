@@ -62,11 +62,11 @@ final readonly class LabOverviewService
     public function capabilities(): array
     {
         return [
-            new LabCapability('describe', 'Describe', route('ai.describe', absolute: false), 'ready', 'SL-22'),
-            new LabCapability('semantic', 'Semantic search', route('ai.semantic', absolute: false), 'ready', 'SL-24'),
-            new LabCapability('nl-search', 'NL search', route('ai.nl-search', absolute: false), 'ready', 'SL-23'),
-            new LabCapability('docs', 'Docs search', route('ai.docs', absolute: false), 'ready', 'SL-32'),
-            new LabCapability('chat', 'Chat', route('ai.chat', absolute: false), 'ready', 'SL-45'),
+            new LabCapability('describe', 'Describe', route('ai.describe', absolute: false), 'ready', 'SL-22', '9-streaming-an-ai-answer', 'app/Ai/CarDescriptionAgent.php'),
+            new LabCapability('semantic', 'Semantic search', route('ai.semantic', absolute: false), 'ready', 'SL-24', '11-embeddings-and-vector-search', 'app/Services/SemanticSearchService.php'),
+            new LabCapability('nl-search', 'NL search', route('ai.nl-search', absolute: false), 'ready', 'SL-23', '24-from-words-to-filters-structured-output-with-a-validation-boundary', 'app/Services/NlSearchService.php'),
+            new LabCapability('docs', 'Docs search', route('ai.docs', absolute: false), 'ready', 'SL-32', '12-chunking-and-hybrid-retrieval', 'app/Services/DocsSearchService.php'),
+            new LabCapability('chat', 'Chat', route('ai.chat', absolute: false), 'ready', 'SL-45', '14-answering-with-citations-rag-guards-and-the-trace-row', 'app/Services/DocsAnswerService.php'),
             new LabCapability('photos', 'Photos', route('ai.photos', absolute: false), 'coming', 'SL-36'),
         ];
     }

@@ -2,7 +2,7 @@
 ## Usage: bench/versions.sh
 ## Prints one markdown row: | active server | web server version | ddev version | php | sapi | opcache | date |
 ## Needs /debug/runtime enabled: DEBUG_ROUTES=true in .env, then `ddev artisan optimize:clear`.
-## Env: PARITY_BASE_URL (default: `ddev server --url`, e.g. https://interview.ddev.site, :8091 for openlitespeed),
+## Env: PARITY_BASE_URL (default: `ddev server --url`, e.g. https://ai-lab.ddev.site, :8091 for openlitespeed),
 ##      PARITY_INSECURE=1 adds -k.
 
 set -euo pipefail

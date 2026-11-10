@@ -43,7 +43,7 @@ overlay_for() {
 # Prints the URL the active server answers on. Servers that run beside the web container
 # (openlitespeed) have their own router port; the others answer on the project URL.
 base_url_for() {
-  local host="https://${DDEV_HOSTNAME:-interview.ddev.site}"
+  local host="https://${DDEV_HOSTNAME:-ai-lab.ddev.site}"
   case "$1" in
     openlitespeed) echo "$host:8091" ;;
     *) echo "$host" ;;

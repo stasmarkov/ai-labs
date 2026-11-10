@@ -91,6 +91,7 @@ BASH;
                 'BENCH_PARITY_DIR' => $this->root.'/parity',
                 'BASE_URL' => 'http://stub.test',
                 'PARITY_BASE_URL' => 'http://stub.test',
+                'DDEV_HOSTNAME' => false,
                 'DDEV_APPROOT' => $this->root.'/ddev',
                 'PATH' => $this->root.'/bin:'.getenv('PATH'),
             ],
@@ -347,7 +348,7 @@ it('AC-8 capture honours PARITY_BASE_URL and defaults to the DDEV site', functio
     $env = ['PARITY_BASE_URL' => false, 'BASE_URL' => false];
     ($this->runWith)($env, 'parity.sh', 'capture');
 
-    expect(file_get_contents($this->root.'/curl.log'))->toContain('https://interview.ddev.site/up');
+    expect(file_get_contents($this->root.'/curl.log'))->toContain('https://ai-lab.ddev.site/up');
 });
 
 it('AC-8 capture records the lowercased media type without parameters', function (): void {
@@ -419,7 +420,7 @@ it('AC-10 committed snapshots use the spec format and cover the seven requests',
     foreach (['nginx-fpm', 'apache-fpm'] as $server) {
         $lines = file(base_path("bench/parity/{$server}.txt"), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
-        expect($lines[0])->toMatch('/^# server='.$server.' base=https:\/\/interview\.ddev\.site captured=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/');
+        expect($lines[0])->toMatch('/^# server='.$server.' base=https:\/\/ai-lab\.ddev\.site captured=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/');
 
         $rows = array_map(fn (string $line): array => explode("\t", $line), array_slice($lines, 1));
         expect(array_column($rows, 0))->toBe($paths);
@@ -440,7 +441,7 @@ it('AC-8 committed frankenphp snapshot matches both FPM snapshots', function ():
     ));
 
     expect(file_exists(base_path('bench/parity/frankenphp.txt')))->toBeTrue()
-        ->and(file(base_path('bench/parity/frankenphp.txt'))[0])->toStartWith('# server=frankenphp base=https://interview.ddev.site captured=')
+        ->and(file(base_path('bench/parity/frankenphp.txt'))[0])->toStartWith('# server=frankenphp base=https://ai-lab.ddev.site captured=')
         ->and($rows('frankenphp'))->toHaveCount(7)
         ->and($rows('frankenphp'))->toBe($rows('nginx-fpm'))
         ->and($rows('frankenphp'))->toBe($rows('apache-fpm'));
@@ -484,8 +485,8 @@ it('AC-7 openlitespeed capture defaults to port 8091 and expects a LiteSpeed hea
     $accepted = ($this->runWith)($env + ['STUB_SERVER_HEADER' => 'LiteSpeed'], 'parity.sh', 'capture');
 
     expect($accepted->getExitCode())->toBe(0)
-        ->and(file_get_contents($this->root.'/curl.log'))->toContain('https://interview.ddev.site:8091/up')
-        ->and(file_get_contents($this->root.'/parity/openlitespeed.txt'))->toContain('base=https://interview.ddev.site:8091');
+        ->and(file_get_contents($this->root.'/curl.log'))->toContain('https://ai-lab.ddev.site:8091/up')
+        ->and(file_get_contents($this->root.'/parity/openlitespeed.txt'))->toContain('base=https://ai-lab.ddev.site:8091');
 
     unlink($this->root.'/parity/openlitespeed.txt');
     $rejected = ($this->runWith)($env + ['STUB_SERVER_HEADER' => 'nginx/1.26.3'], 'parity.sh', 'capture');
@@ -509,7 +510,7 @@ it('AC-7 other servers keep the plain DDEV default URL', function (): void {
     ($this->setServer)('frankenphp');
     ($this->runWith)(['PARITY_BASE_URL' => false, 'BASE_URL' => false, 'STUB_SERVER_HEADER' => 'Caddy'], 'parity.sh', 'capture');
 
-    expect(file_get_contents($this->root.'/curl.log'))->toContain('https://interview.ddev.site/up')
+    expect(file_get_contents($this->root.'/curl.log'))->toContain('https://ai-lab.ddev.site/up')
         ->and(file_get_contents($this->root.'/curl.log'))->not->toContain(':8091');
 });
 
@@ -520,7 +521,7 @@ it('AC-7 capture rewrites the base URL in the body before hashing', function ():
     $line = collect(file($this->root.'/parity/openlitespeed.txt', FILE_IGNORE_NEW_LINES))
         ->first(fn (string $row): bool => str_starts_with($row, "/api/ping\t"));
 
-    expect(explode("\t", $line)[3])->toBe(hash('sha256', 'body:https://interview.ddev.site/api/ping'));
+    expect(explode("\t", $line)[3])->toBe(hash('sha256', 'body:https://ai-lab.ddev.site/api/ping'));
 });
 
 it('AC-9 versions parses the OpenLiteSpeed version', function (): void {
@@ -539,7 +540,7 @@ it('AC-7 versions requests /debug/runtime on the openlitespeed port by default',
     ($this->setServer)('openlitespeed');
     ($this->runWith)(['PARITY_BASE_URL' => false, 'BASE_URL' => false], 'versions.sh');
 
-    expect(file_get_contents($this->root.'/curl.log'))->toContain('https://interview.ddev.site:8091/debug/runtime');
+    expect(file_get_contents($this->root.'/curl.log'))->toContain('https://ai-lab.ddev.site:8091/debug/runtime');
 });
 
 it('AC-8 committed openlitespeed snapshot matches nginx-fpm', function (): void {
@@ -549,7 +550,7 @@ it('AC-8 committed openlitespeed snapshot matches nginx-fpm', function (): void 
     ));
 
     expect(file_exists(base_path('bench/parity/openlitespeed.txt')))->toBeTrue()
-        ->and(file(base_path('bench/parity/openlitespeed.txt'))[0])->toStartWith('# server=openlitespeed base=https://interview.ddev.site:8091 captured=')
+        ->and(file(base_path('bench/parity/openlitespeed.txt'))[0])->toStartWith('# server=openlitespeed base=https://ai-lab.ddev.site:8091 captured=')
         ->and($rows('openlitespeed'))->toHaveCount(7)
         ->and($rows('openlitespeed'))->toBe($rows('nginx-fpm'));
 });
@@ -599,7 +600,7 @@ it('AC-6 committed worker-mode snapshots match nginx-fpm', function (string $ser
     ));
 
     expect(file_exists(base_path("bench/parity/{$server}.txt")))->toBeTrue()
-        ->and(file(base_path("bench/parity/{$server}.txt"))[0])->toStartWith("# server={$server} base=https://interview.ddev.site captured=")
+        ->and(file(base_path("bench/parity/{$server}.txt"))[0])->toStartWith("# server={$server} base=https://ai-lab.ddev.site captured=")
         ->and($rows($server))->toHaveCount(7)
         ->and($rows($server))->toBe($rows('nginx-fpm'));
 })->with(['frankenphp-octane', 'frankenphp-worker']);

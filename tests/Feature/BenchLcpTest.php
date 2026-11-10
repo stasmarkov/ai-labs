@@ -33,7 +33,7 @@ beforeEach(function (): void {
 echo "ddev $*" >> "$STUB_LOG"
 case "$*" in
   "server --current") echo "${STUB_SERVER-frankenphp}" ;;
-  "server --url") echo "https://interview.ddev.site" ;;
+  "server --url") echo "https://ai-lab.ddev.site" ;;
 esac
 BASH,
         'git' => "#!/usr/bin/env bash\necho abc1234\n",
@@ -65,6 +65,7 @@ BASH,
             $env + [
                 'BENCH_APPROOT' => $this->root.'/app',
                 'BENCH_DATE' => '2026-11-05',
+                'DDEV_SITENAME' => 'ai-lab',
                 'STUB_LOG' => $this->root.'/calls.log',
                 'PATH' => $this->root.'/bin:'.getenv('PATH'),
             ],
@@ -85,7 +86,7 @@ it('AC-4 lcp dry-run prints the plan without calling docker', function (): void 
     $plan = json_decode($process->getOutput(), true);
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
-        ->and($plan)->toMatchArray(['variant' => 'frankenphp-hints', 'path' => 'direct', 'runs' => 5, 'url' => 'https://interview.ddev.site/listings/1'])
+        ->and($plan)->toMatchArray(['variant' => 'frankenphp-hints', 'path' => 'direct', 'runs' => 5, 'url' => 'https://ai-lab.ddev.site/listings/1'])
         ->and($plan['throttle'])->toMatchArray(['rtt_ms' => 150, 'down_kbps' => 1600, 'up_kbps' => 750, 'cpu_slowdown' => 4])
         ->and($plan['throttle']['method'])->toContain('toxiproxy')
         ->and(file_get_contents($this->root.'/calls.log'))->not->toContain('docker');
@@ -325,7 +326,7 @@ it('AC-3 NFR-1 lcp netem mode shapes the browser container, records the profile 
     $result = json_decode(file_get_contents($file), true);
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
-        ->and($calls)->toContain('netem apply lcp-netem-', 'loss=2', 'probe=https://interview.ddev.site', 'netem clear lcp-netem-', 'docker rm -f lcp-netem-')
+        ->and($calls)->toContain('netem apply lcp-netem-', 'loss=2', 'probe=https://ai-lab.ddev.site', 'netem clear lcp-netem-', 'docker rm -f lcp-netem-')
         ->and($calls)->not->toContain('create site')
         ->and($result)->toMatchArray(['protocol' => 'h3', 'valid_runs' => 5, 'invalid_runs' => 0])
         ->and($result['net'])->toMatchArray(['applied' => true, 'loss_pct' => 2, 'rtt_ms' => 153])
@@ -478,7 +479,7 @@ it('AC-3 lcp netem dry-run reads the throttle from the netem.sh defaults', funct
 
 it('AC-3 lcp netem mode counts a thrown navigation as an invalid attempt inside the 8-attempt cap', function (): void {
     lcpNetemStubs($this, []);
-    $failed = ['error' => 'page.goto: net::ERR_QUIC_PROTOCOL_ERROR at https://interview.ddev.site/listings/1'];
+    $failed = ['error' => 'page.goto: net::ERR_QUIC_PROTOCOL_ERROR at https://ai-lab.ddev.site/listings/1'];
     lcpNetemQueue($this, [$failed, $failed, ...array_map(fn (): array => lcpNetemRun('h3'), range(1, 5))]);
     $process = ($this->lcp)($this->netemEnv, '--variant', 'x', '--protocol', 'h3', '--net', 'netem', '--loss', '0');
     $result = json_decode(file_get_contents($this->root.'/app/bench/results/http3/2026-11-05/lcp-x.json'), true);
@@ -510,8 +511,8 @@ it('NFR-1 AC-2 lcp netem mode turns the web offloads off before shaping, restore
     $web = $result['net']['offloads']['web'];
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
-        ->and(strpos($calls, 'netem web-offloads off ddev-interview-web'))->toBeLessThan(strpos($calls, 'netem apply lcp-netem-'))
-        ->and(strpos($calls, 'netem drops lcp-netem-'))->toBeLessThan(strpos($calls, 'netem web-offloads restore ddev-interview-web'))
+        ->and(strpos($calls, 'netem web-offloads off ddev-ai-lab-web'))->toBeLessThan(strpos($calls, 'netem apply lcp-netem-'))
+        ->and(strpos($calls, 'netem drops lcp-netem-'))->toBeLessThan(strpos($calls, 'netem web-offloads restore ddev-ai-lab-web'))
         ->and($web['before']['eth0']['tso'])->toBe('on')
         ->and($web['after']['eth0']['tso'])->toBe('off')
         ->and($web['restored'])->toBe($web['before'])
@@ -525,7 +526,7 @@ it('NFR-1 lcp netem mode stops with no file when the web offloads cannot be turn
 
     expect($process->getExitCode())->toBe(1)
         ->and($process->getErrorOutput())->toContain('cannot turn the segmentation offloads off')
-        ->and($calls)->toContain('netem web-offloads restore ddev-interview-web', 'docker rm -f lcp-netem-')
+        ->and($calls)->toContain('netem web-offloads restore ddev-ai-lab-web', 'docker rm -f lcp-netem-')
         ->and($this->root.'/app/bench/results/http3/2026-11-05/lcp-x.json')->not->toBeFile();
 });
 
@@ -533,7 +534,7 @@ it('NFR-1 lcp netem mode restores the web offloads and removes the client when t
     lcpNetemStubs($this, array_map(fn (): array => lcpNetemRun('h2'), range(1, 5)), dropsOk: false);
     ($this->lcp)($this->netemEnv, '--variant', 'x', '--protocol', 'h2', '--net', 'netem', '--loss', '2');
 
-    expect(file_get_contents($this->root.'/calls.log'))->toContain('netem web-offloads restore ddev-interview-web', 'netem clear lcp-netem-', 'docker rm -f lcp-netem-');
+    expect(file_get_contents($this->root.'/calls.log'))->toContain('netem web-offloads restore ddev-ai-lab-web', 'netem clear lcp-netem-', 'docker rm -f lcp-netem-');
 });
 
 it('NFR-1 lcp netem mode cleans up the client, the sidecar shaping and the web offloads on SIGTERM', function (): void {
@@ -550,7 +551,7 @@ BASH);
     $process = new Process(
         [$this->node, base_path('bench/lcp.mjs'), '--variant', 'x', '--protocol', 'h2', '--net', 'netem', '--loss', '0'],
         $this->root,
-        $this->netemEnv + ['BENCH_APPROOT' => $this->root.'/app', 'BENCH_DATE' => '2026-11-05', 'STUB_LOG' => $this->root.'/calls.log', 'PATH' => $this->root.'/bin:'.getenv('PATH')],
+        $this->netemEnv + ['DDEV_SITENAME' => 'ai-lab', 'BENCH_APPROOT' => $this->root.'/app', 'BENCH_DATE' => '2026-11-05', 'STUB_LOG' => $this->root.'/calls.log', 'PATH' => $this->root.'/bin:'.getenv('PATH')],
     );
     $process->start();
     $deadline = microtime(true) + 20;
@@ -562,6 +563,6 @@ BASH);
     $calls = file_get_contents($this->root.'/calls.log');
 
     expect($process->getExitCode())->toBe(143)
-        ->and($calls)->toContain('netem clear lcp-netem-', 'docker rm -f lcp-netem-', 'netem web-offloads restore ddev-interview-web')
+        ->and($calls)->toContain('netem clear lcp-netem-', 'docker rm -f lcp-netem-', 'netem web-offloads restore ddev-ai-lab-web')
         ->and($this->root.'/app/bench/results/http3/2026-11-05/lcp-x.json')->not->toBeFile();
 });

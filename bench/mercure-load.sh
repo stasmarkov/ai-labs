@@ -27,7 +27,7 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
-OHA_IMAGE="${BENCH_OHA_IMAGE:-autopulse-oha:1.16.0}"   # built locally from bench/oha/Dockerfile
+OHA_IMAGE="${BENCH_OHA_IMAGE:-ai-lab-oha:1.16.0}"   # built locally from bench/oha/Dockerfile
 NODE_IMAGE="${BENCH_NODE_IMAGE:-node:22.12.0-alpine}"
 source "$SCRIPT_DIR/lib/health-probe.sh"
 source "$SCRIPT_DIR/lib/env-switch.sh"

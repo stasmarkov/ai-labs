@@ -5,7 +5,7 @@ The problem this slice addresses: the listing detail page made the browser wait 
 ## Before you start
 
 - DDEV is running: `cd /Users/stasmarkov/work/interview && ddev start`.
-- The site answers at https://interview.ddev.site and listing 1 exists (it does in the seeded database).
+- The site answers at https://ai-lab.ddev.site and listing 1 exists (it does in the seeded database).
 - Start on the default server: `ddev server default`, then `ddev server --current` prints the name `ddev server --default` prints.
 - Tools used: `curl` 8.x with HTTP/2 on the host (`curl --version` lists `HTTP2`), Docker running (the bench scripts use pinned containers), `jq`.
 - Steps 3, 4, 5, 7 and 8 switch servers and edit `.env`. Rollback for all of them is in the last section.
@@ -17,13 +17,13 @@ Preload links on nginx-fpm (AC-1, happy path).
 
 ```sh
 ddev server nginx-fpm
-curl -sI https://interview.ddev.site/listings/1 | grep -iE '^(HTTP|link)'
-curl -s https://interview.ddev.site/listings/1 | grep -oE '/build/assets/app-[A-Za-z0-9_-]+\.(css|js)' | sort -u
+curl -sI https://ai-lab.ddev.site/listings/1 | grep -iE '^(HTTP|link)'
+curl -s https://ai-lab.ddev.site/listings/1 | grep -oE '/build/assets/app-[A-Za-z0-9_-]+\.(css|js)' | sort -u
 ```
 
 Expected:
 - `HTTP/2 200`.
-- A `link:` header with two values: `<https://interview.ddev.site/build/assets/app-CjRfEL-0.css>; rel="preload"; as="style"` and `<https://interview.ddev.site/build/assets/app-BvRk9kiK.js>; rel="modulepreload"; as="script"`.
+- A `link:` header with two values: `<https://ai-lab.ddev.site/build/assets/app-CjRfEL-0.css>; rel="preload"; as="style"` and `<https://ai-lab.ddev.site/build/assets/app-BvRk9kiK.js>; rel="modulepreload"; as="script"`.
 - The third command prints the same two file names (`app-CjRfEL-0.css`, `app-BvRk9kiK.js`).
 
 ## Step 2
@@ -47,7 +47,7 @@ Early Hints on classic FrankenPHP, and the guard when turned off (AC-2, the repo
 
 ```sh
 ddev server frankenphp
-curl -sk -o /dev/null -v --http2 https://interview.ddev.site/listings/1 2>&1 | grep -E '^< (HTTP|link)'
+curl -sk -o /dev/null -v --http2 https://ai-lab.ddev.site/listings/1 2>&1 | grep -E '^< (HTTP|link)'
 ```
 
 Expected:
@@ -60,7 +60,7 @@ Now turn the hints off:
 cp .env /tmp/interview.env.bak
 grep -q '^EARLY_HINTS=' .env && sed -i.bak 's/^EARLY_HINTS=.*/EARLY_HINTS=false/' .env || echo 'EARLY_HINTS=false' >> .env
 ddev artisan config:clear
-curl -sk -o /dev/null -v --http2 https://interview.ddev.site/listings/1 2>&1 | grep -E '^< (HTTP|link)'
+curl -sk -o /dev/null -v --http2 https://ai-lab.ddev.site/listings/1 2>&1 | grep -E '^< (HTTP|link)'
 ```
 
 Expected: no `103` line. Only `< HTTP/2 200` and the `link:` header. Known and accepted difference: with hints on, the final 200 lacks the `Server: FrankenPHP Caddy` header (see `bench/results/early-hints/2026-11-05/frankenphp-final-headers.diff`); apart from that and `Date` the headers are the same.
@@ -75,7 +75,7 @@ No 103 on other servers (AC-2).
 for s in nginx-fpm apache-fpm frankenphp-worker frankenphp-octane; do
   ddev server $s
   echo "== $s"
-  curl -sk -o /dev/null -v --http2 https://interview.ddev.site/listings/1 2>&1 | grep -cE '^< HTTP/2 103'
+  curl -sk -o /dev/null -v --http2 https://ai-lab.ddev.site/listings/1 2>&1 | grep -cE '^< HTTP/2 103'
 done
 ddev server default
 ```
@@ -126,7 +126,7 @@ CSS=/build/assets/app-CjRfEL-0.css
 for s in frankenphp nginx-fpm; do
   ddev server $s; echo "== $s"
   for e in identity gzip br zstd 'zstd, br, gzip'; do
-    curl -sk -o /dev/null -H "Accept-Encoding: $e" -w "$e -> %{size_download} bytes, encoding=%header{content-encoding}\n" https://interview.ddev.site$CSS
+    curl -sk -o /dev/null -H "Accept-Encoding: $e" -w "$e -> %{size_download} bytes, encoding=%header{content-encoding}\n" https://ai-lab.ddev.site$CSS
   done
 done
 ddev server default
@@ -181,7 +181,7 @@ Then, as a live cross-check, on each of nginx-fpm, frankenphp, frankenphp-octane
 
 ```sh
 ddev server frankenphp
-curl -sk https://interview.ddev.site/listings/1 | shasum -a 256
+curl -sk https://ai-lab.ddev.site/listings/1 | shasum -a 256
 ```
 
 Expected:
@@ -206,7 +206,7 @@ Export bytes and offload unchanged (MNC-3).
 
 ```sh
 ddev server nginx-fpm
-curl -sk -o /tmp/listings.csv 'https://interview.ddev.site/exports/listings?mode=offload' -H 'Accept-Encoding: identity' -w '%{http_code} %{size_download}\n'
+curl -sk -o /tmp/listings.csv 'https://ai-lab.ddev.site/exports/listings?mode=offload' -H 'Accept-Encoding: identity' -w '%{http_code} %{size_download}\n'
 shasum -a 256 /tmp/listings.csv
 jq '.php_bytes_sent_by_php_total' bench/results/export-load/2026-11-04/offload-nginx-fpm.json
 ```
@@ -243,7 +243,7 @@ The hint code never breaks a request (NFR-2).
 ```sh
 ddev artisan test --compact tests/Feature/EarlyHintsTest.php tests/Feature/PreloadLinksTest.php
 : > storage/logs/laravel.log
-for s in nginx-fpm frankenphp; do ddev server $s; for i in 1 2 3; do curl -sk -o /dev/null -w "$s %{http_code}\n" https://interview.ddev.site/listings/1; done; done
+for s in nginx-fpm frankenphp; do ddev server $s; for i in 1 2 3; do curl -sk -o /dev/null -w "$s %{http_code}\n" https://ai-lab.ddev.site/listings/1; done; done
 ddev server default
 grep -ci 'early\|headers_send' storage/logs/laravel.log
 ```

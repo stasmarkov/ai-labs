@@ -10,7 +10,7 @@ beforeEach(function (): void {
     mkdir($this->root.'/app');
 
     $trace = <<<'BASH'
-echo "* Connected to interview.ddev.site (172.19.0.2) port 443" >&2
+echo "* Connected to ai-lab.ddev.site (172.19.0.2) port 443" >&2
 echo "*  subject: O=mkcert development certificate; OU=someuser@somehost" >&2
 echo "*  issuer: O=mkcert development CA; OU=someuser@somehost" >&2
 echo "* using HTTP/2" >&2
@@ -29,7 +29,7 @@ BASH;
 echo "ddev $*" >> "$STUB_LOG"
 case "$*" in
   "server --current") echo "${STUB_SERVER-frankenphp}" ;;
-  "server --url") echo "https://interview.ddev.site" ;;
+  "server --url") echo "https://ai-lab.ddev.site" ;;
 esac
 BASH,
         'curl' => "#!/usr/bin/env bash\necho \"curl \$*\" >> \"\$STUB_LOG\"\n{$trace}\n",
@@ -83,7 +83,7 @@ it('AC-3 early-hints records a 103 through the router and straight at the web co
     $result = json_decode(file_get_contents(($this->dir)().'/frankenphp.json'), true);
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
-        ->and($calls)->toContain('--http2', 'https://interview.ddev.site/listings/1', '--network ddev_default', '--resolve interview.ddev.site:443:172.19.0.2')
+        ->and($calls)->toContain('--http2', 'https://ai-lab.ddev.site/listings/1', '--network ddev_default', '--resolve ai-lab.ddev.site:443:172.19.0.2')
         ->and($result)->toMatchArray([
             'server' => 'frankenphp', 'commit' => 'abc1234', 'listing' => 1, 'router_103' => true, 'direct_103' => true,
             'probe_image_digest' => 'stub/curl@sha256:abc',
@@ -121,7 +121,7 @@ it('AC-3 early-hints redacts certificate lines and IP addresses from the saved t
     foreach (['router', 'direct'] as $path) {
         $trace = file_get_contents(($this->dir)().'/frankenphp-'.$path.'.trace');
 
-        expect($trace)->toContain('Connected to interview.ddev.site (<ip>) port 443', '< HTTP/2 103')
+        expect($trace)->toContain('Connected to ai-lab.ddev.site (<ip>) port 443', '< HTTP/2 103')
             ->not->toContain('subject:', 'issuer:', 'mkcert', 'OU=', '172.19.0.2');
     }
 });

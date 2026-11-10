@@ -83,7 +83,7 @@ The developer runs `ddev server frankenphp` and the unchanged app is served by F
 - **Already implemented**: SL-02 switching, parity and versions tooling; `/debug/runtime` (`DEBUG_ROUTES=true` in `.env`, then `ddev artisan optimize:clear`).
 - **Add-on facts (v1.3.0)**: `config.frankenphp.yaml` sets `webserver_type: generic`, a `frankenphp` web extra daemon, port 80/443 exposure, and `webimage_extra_packages` including `frankenphp`, `php-zts-pdo-pgsql`, `php-zts-redis`. `Dockerfile.frankenphp` copies the FPM `php.ini` to `/etc/php-zts/php.ini` and points `/usr/bin/php` at `php-zts`. The Caddyfile serves `{$DDEV_APPROOT}/{$DDEV_DOCROOT}` with `php_server` and `encode zstd br gzip`; requests without `Accept-Encoding` get uncompressed bodies.
 - **Approach**: generalise `ddev server` so each server declares its overlay content and an optional list of stash files to activate; the switch removes the previous server's activated files and copies the next server's.
-- **Repos**: single repo `/Users/stasmarkov/work/interview`, dev URL https://interview.ddev.site.
+- **Repos**: single repo `/Users/stasmarkov/work/interview`, dev URL https://ai-lab.ddev.site.
 
 ## Decisions
 1. Stash + activate instead of a normal add-on install, so FrankenPHP's overlay and ZTS Dockerfiles never affect the FPM servers (user choice, 2026-10-29).

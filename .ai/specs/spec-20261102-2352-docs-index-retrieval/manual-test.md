@@ -1,6 +1,6 @@
 # Manual test plan: docs index and hybrid retrieval (SL-32)
 
-Run everything from the project root, `/Users/stasmarkov/work/interview`, in a terminal on your Mac. The app is at https://interview.ddev.site.
+Run everything from the project root, `/Users/stasmarkov/work/interview`, in a terminal on your Mac. The app is at https://ai-lab.ddev.site.
 
 Handy alias for database checks (used throughout):
 
@@ -133,9 +133,9 @@ Expected: `1`, then `... 1 removed.` on the next run, then `0`. Its chunks are g
 ## Step 6: search endpoint, all three modes (AC-5, AC-6; the reported case)
 
 ```sh
-for m in text vector hybrid; do echo "== $m"; curl -s "https://interview.ddev.site/api/docs/search?q=flushpackets&mode=$m&k=3" | python3 -m json.tool | grep -E '"(path|score|vector_rank|text_rank)"'; done
-curl -s 'https://interview.ddev.site/api/docs/search?q=why%20does%20apache%20hold%20back%20a%20streamed%20response&mode=hybrid&k=3' | python3 -m json.tool | head -40
-curl -s 'https://interview.ddev.site/api/docs/search?q=withoutOverlapping' | python3 -c 'import sys,json; d=json.load(sys.stdin)["data"]; print(len(d), [r["path"] for r in d])'
+for m in text vector hybrid; do echo "== $m"; curl -s "https://ai-lab.ddev.site/api/docs/search?q=flushpackets&mode=$m&k=3" | python3 -m json.tool | grep -E '"(path|score|vector_rank|text_rank)"'; done
+curl -s 'https://ai-lab.ddev.site/api/docs/search?q=why%20does%20apache%20hold%20back%20a%20streamed%20response&mode=hybrid&k=3' | python3 -m json.tool | head -40
+curl -s 'https://ai-lab.ddev.site/api/docs/search?q=withoutOverlapping' | python3 -c 'import sys,json; d=json.load(sys.stdin)["data"]; print(len(d), [r["path"] for r in d])'
 ```
 
 Expected:
@@ -151,13 +151,13 @@ Expected:
 ```sh
 long=$(printf 'a%.0s' {1..201})
 for q in 'q=' 'q=%20%20%20' '' "q=$long" 'q=x&mode=fuzzy' 'q=x&k=0' 'q=x&k=21' 'q=x&k=abc'; do
-  printf '%s -> ' "${q:0:30}"; curl -s -o /dev/null -w '%{http_code}\n' "https://interview.ddev.site/api/docs/search?$q"
+  printf '%s -> ' "${q:0:30}"; curl -s -o /dev/null -w '%{http_code}\n' "https://ai-lab.ddev.site/api/docs/search?$q"
 done
-curl -s -o /dev/null -w '%{http_code}\n' 'https://interview.ddev.site/api/docs/search?q=x&k=20'
-curl -s 'https://interview.ddev.site/api/docs/search?q=queues&k=0' | python3 -m json.tool
-curl -si 'https://interview.ddev.site/api/docs/search?q=queues' | grep -i 'x-ratelimit'
+curl -s -o /dev/null -w '%{http_code}\n' 'https://ai-lab.ddev.site/api/docs/search?q=x&k=20'
+curl -s 'https://ai-lab.ddev.site/api/docs/search?q=queues&k=0' | python3 -m json.tool
+curl -si 'https://ai-lab.ddev.site/api/docs/search?q=queues' | grep -i 'x-ratelimit'
 dbq "select count(*) from ai_runs where agent = 'embeddings:query'"
-curl -s -o /dev/null 'https://interview.ddev.site/api/docs/search?q=scheduling&mode=hybrid'
+curl -s -o /dev/null 'https://ai-lab.ddev.site/api/docs/search?q=scheduling&mode=hybrid'
 dbq "select count(*) from ai_runs where agent = 'embeddings:query'"
 dbq "select provider, model, status, inputs from ai_runs where agent = 'embeddings:query' order by id desc limit 1"
 ```
@@ -226,9 +226,9 @@ Expected: the heading `## 12. Chunking and hybrid retrieval` exists. It explains
 ```sh
 dbq "select md5(string_agg(l::text, ',' order by id)) from listings l"
 dbq "select count(*), count(embedding), max(updated_at) from listing_documents"
-curl -s -o /dev/null -w '%{http_code}\n' 'https://interview.ddev.site/api/listings/semantic?q=family%20car%20with%20a%20big%20boot'
-curl -s -o /dev/null -w '%{http_code}\n' 'https://interview.ddev.site/api/listings/semantic?q='
-curl -s 'https://interview.ddev.site/api/listings/semantic?q=family%20car%20with%20a%20big%20boot' | grep -o '"body_type":"[^"]*"' | sort | uniq -c
+curl -s -o /dev/null -w '%{http_code}\n' 'https://ai-lab.ddev.site/api/listings/semantic?q=family%20car%20with%20a%20big%20boot'
+curl -s -o /dev/null -w '%{http_code}\n' 'https://ai-lab.ddev.site/api/listings/semantic?q='
+curl -s 'https://ai-lab.ddev.site/api/listings/semantic?q=family%20car%20with%20a%20big%20boot' | grep -o '"body_type":"[^"]*"' | sort | uniq -c
 ```
 
 Expected: hash `6a0f96d2c7139919cc215a520072d3f7`; `50000 | 50000` with a `max(updated_at)` from before this slice (2026-11-02 19:26); status `200` then `422`; mostly estate, SUV or MPV bodies.
@@ -236,7 +236,7 @@ Expected: hash `6a0f96d2c7139919cc215a520072d3f7`; `50000 | 50000` with a `max(u
 ## Step 13: other endpoints and parity on all six servers (MNC-2)
 
 ```sh
-for p in /up /api/ping /listings/1 /; do printf '%s -> ' $p; curl -s -o /dev/null -w '%{http_code}\n' "https://interview.ddev.site$p"; done
+for p in /up /api/ping /listings/1 /; do printf '%s -> ' $p; curl -s -o /dev/null -w '%{http_code}\n' "https://ai-lab.ddev.site$p"; done
 mkdir -p /tmp/sl32
 for s in nginx-fpm apache-fpm openlitespeed frankenphp frankenphp-octane frankenphp-worker; do
   ddev server $s >/dev/null

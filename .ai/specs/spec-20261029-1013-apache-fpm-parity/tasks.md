@@ -74,7 +74,7 @@
   - `tests/Feature/BenchScriptsTest.php` AC-8 test does not check the format or the request order.
   - Rewrite capture to match the spec:
     - Use the exact 7-path set in order, with no Accept header and no `-L`.
-    - Use `PARITY_BASE_URL` (default `https://interview.ddev.site`), adding `-k` only when `PARITY_INSECURE=1`.
+    - Use `PARITY_BASE_URL` (default `https://ai-lab.ddev.site`), adding `-k` only when `PARITY_INSECURE=1`.
     - Take the server name from `.ddev/commands/host/server --current` (or the same overlay/config.yaml rule).
     - Write the header line with an ISO-8601 UTC timestamp, then TSV lines `path\tstatus\tcontent-type\tsha256`, where the content type is the lowercased, trimmed full value.
   - If `/up` needs render-time masking to be identical, record it as an approved decision in spec-lite.md (Boundaries: ask first). Otherwise hash the raw body.
@@ -100,7 +100,7 @@
     2. Run `bench/parity.sh capture` on nginx-fpm.
     3. Run `ddev server apache-fpm`, then `bench/parity.sh capture`.
     4. Run `ddev server nginx-fpm`, then `bench/parity.sh compare nginx-fpm apache-fpm`.
-  - [x] 7.1 **Verify**: both files start with `# server=<name> base=https://interview.ddev.site captured=...` and hold 7 TSV lines in spec order, including `/listings?per_page=99\t422` and `/listings/999999\t404`. `bench/parity.sh compare nginx-fpm apache-fpm` prints `identical` and exits 0. `ddev server --current` prints `nginx-fpm`.
+  - [x] 7.1 **Verify**: both files start with `# server=<name> base=https://ai-lab.ddev.site captured=...` and hold 7 TSV lines in spec order, including `/listings?per_page=99\t422` and `/listings/999999\t404`. `bench/parity.sh compare nginx-fpm apache-fpm` prints `identical` and exits 0. `ddev server --current` prints `nginx-fpm`.
 
 - [x] 8. `bench/versions.sh` prints the full AC-11 row (bench)
   Covers: AC-11

@@ -12,10 +12,12 @@ final readonly class LabCapability
         public string $route,
         public string $status,
         public string $slice,
+        public ?string $guide = null,
+        public ?string $code = null,
     ) {}
 
     /**
-     * @return array{key: string, title: string, route: string, status: string, slice: string}
+     * @return array{key: string, title: string, route: string, status: string, slice: string, guide: string|null, code: string|null}
      */
     public function toArray(): array
     {
@@ -25,6 +27,8 @@ final readonly class LabCapability
             'route' => $this->route,
             'status' => $this->status,
             'slice' => $this->slice,
+            'guide' => $this->guide,
+            'code' => $this->code,
         ];
     }
 }

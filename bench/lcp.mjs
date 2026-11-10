@@ -293,7 +293,7 @@ const isValid = (r) => Number.isFinite(r.lcp_ms) && r.lcp_ms > 0 && Number.isFin
   && (!netem || (r.next_hop_protocol === options.protocol && Number.isFinite(r.load_ms) && r.load_ms > 0));
 
 const digest = digestOf(image);
-const webName = `ddev-${process.env.DDEV_SITENAME ?? 'interview'}-web`;
+const webName = `ddev-${process.env.DDEV_SITENAME ?? 'ai-lab'}-web`;
 const toxiproxyDigest = netem ? null : digestOf(toxiproxyImage);
 const upstream = options.path === 'direct' || netem ? webName : 'ddev-router';
 const upstreamIp = containerIp(upstream);

@@ -17,7 +17,7 @@ beforeEach(function (): void {
 echo "ddev $*" >> "$STUB_LOG"
 case "$1 $2" in
   "server --current") echo "$STUB_SERVER" ;;
-  "server --url") echo "https://interview.ddev.site" ;;
+  "server --url") echo "https://ai-lab.ddev.site" ;;
 esac
 if [[ "$1" == "restart" ]]; then
   echo "overlay during restart: $(cat "$BENCH_APPROOT/.ddev/config.zzz-bench-leaks.yaml" 2>/dev/null | tr '\n' ' ')" >> "$STUB_LOG"

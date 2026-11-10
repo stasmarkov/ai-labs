@@ -17,8 +17,8 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
-SITE="${DDEV_SITENAME:-interview}"
-OHA_IMAGE="${BENCH_OHA_IMAGE:-autopulse-oha:1.16.0}"   # built locally from bench/oha/Dockerfile
+SITE="${DDEV_SITENAME:-ai-lab}"
+OHA_IMAGE="${BENCH_OHA_IMAGE:-ai-lab-oha:1.16.0}"   # built locally from bench/oha/Dockerfile
 K6_IMAGE="${BENCH_K6_IMAGE:-grafana/k6:1.0.0}"
 SPREAD_LIMIT=5
 CONNECTIONS=50
@@ -164,7 +164,7 @@ lookup_router() {
 
 image_for() { [[ "$scenario" == "ping" ]] && echo "$OHA_IMAGE" || echo "$K6_IMAGE"; }
 IMAGE="$(image_for)"
-if [[ "$IMAGE" == autopulse-oha:* ]]; then
+if [[ "$IMAGE" == ai-lab-oha:* ]]; then
   # oha has no published image: build it from the pinned, checksum-verified release.
   docker image inspect "$IMAGE" >/dev/null 2>&1 || docker build -q -t "$IMAGE" "$SCRIPT_DIR/oha" >/dev/null
   IMAGE_DIGEST="$(docker image inspect --format '{{.Id}}' "$IMAGE" 2>/dev/null || true)"

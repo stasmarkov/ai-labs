@@ -31,7 +31,7 @@ beforeEach(function (): void {
         $process = new Process(
             ['bash', base_path('.ddev/commands/host/server'), ...$args],
             $this->root,
-            ['DDEV_APPROOT' => $this->root, 'PATH' => $this->root.'/bin:'.getenv('PATH')],
+            ['DDEV_HOSTNAME' => false, 'DDEV_APPROOT' => $this->root, 'PATH' => $this->root.'/bin:'.getenv('PATH')],
         );
         $process->run();
 
@@ -442,7 +442,7 @@ describe('worker servers', function (): void {
             ($this->server)($server);
             unlink($this->root.'/ddev-calls.log');
 
-            expect(trim(($this->server)('--url')->getOutput()))->toBe('https://interview.ddev.site');
+            expect(trim(($this->server)('--url')->getOutput()))->toBe('https://ai-lab.ddev.site');
 
             $again = ($this->server)($server);
 
@@ -655,11 +655,11 @@ describe('openlitespeed', function (): void {
 });
 
 it('AC-7 --url prints the URL the active server answers on', function (): void {
-    expect(trim(($this->server)('--url')->getOutput()))->toBe('https://interview.ddev.site');
+    expect(trim(($this->server)('--url')->getOutput()))->toBe('https://ai-lab.ddev.site');
 
     file_put_contents($this->overlay, "# server: openlitespeed\nwebserver_type: nginx-fpm\n");
 
-    expect(trim(($this->server)('--url')->getOutput()))->toBe('https://interview.ddev.site:8091')
+    expect(trim(($this->server)('--url')->getOutput()))->toBe('https://ai-lab.ddev.site:8091')
         ->and(file_exists($this->root.'/ddev-calls.log'))->toBeFalse();
 });
 

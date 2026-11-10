@@ -1,6 +1,6 @@
 # Manual test plan: AI lab UI (SL-46)
 
-The lab lives at https://interview.ddev.site/ai. Run shell commands from `/Users/stasmarkov/work/interview`. Use a desktop browser with developer tools open (Console and Network tabs).
+The lab lives at https://ai-lab.ddev.site/ai. Run shell commands from `/Users/stasmarkov/work/interview`. Use a desktop browser with developer tools open (Console and Network tabs).
 
 ## Preconditions
 
@@ -20,7 +20,7 @@ Old pages untouched (MNC-1).
 
 ```sh
 bench/asset-fingerprint.sh
-curl -s https://interview.ddev.site/listings/1 | grep -o 'build/assets/[^"]*'
+curl -s https://ai-lab.ddev.site/listings/1 | grep -o 'build/assets/[^"]*'
 ```
 
 Expected: the fingerprint lines equal the ones recorded in `BENCHMARKS.md` (`app-CjRfEL-0.css` and `app-BvRk9kiK.js`, same hashes). The listing page links only those two files and never an `ai-` file.
@@ -29,11 +29,11 @@ Expected: the fingerprint lines equal the ones recorded in `BENCHMARKS.md` (`app
 
 Overview and top bar on every page (AC-1, and the earlier top bar bug).
 
-1. Open https://interview.ddev.site/ai.
+1. Open https://ai-lab.ddev.site/ai.
 2. Expected: the top bar reads "AI lab", text `qwen3.5:9b`, embeddings `bge-m3`, and a green dot with "Ollama reachable". Five capability cards: Describe, Semantic and Docs are ready; Chat shows "coming" with SL-45 and Photos shows "coming" with SL-36. A table lists up to 20 newest runs with agent, provider, model, tokens in and out, TTFT, latency, status and time.
 3. Click the Chat card. Expected: the browser goes to `/ai/chat`.
 4. Visit `/ai/describe`, `/ai/semantic`, `/ai/docs`, `/ai/chat`, `/ai/photos` (use the top navigation). Expected: on every page the top bar still shows both model tags and the Ollama status, never "Ollama not used".
-5. Open https://interview.ddev.site/ai/runs/doesnotexist. Expected: 404.
+5. Open https://ai-lab.ddev.site/ai/runs/doesnotexist. Expected: 404.
 
 ## Step 3
 
@@ -60,8 +60,8 @@ Error messages (AC-4).
 1. Rate limit. Run `AI_DESCRIBE_PER_MINUTE=2` in `.env`, `ddev artisan config:clear`, then:
 
    ```sh
-   for i in 1 2 3; do curl -s -o /dev/null -w "%{http_code}\n" https://interview.ddev.site/listings/1/describe; done
-   curl -si https://interview.ddev.site/listings/1/describe | head -20
+   for i in 1 2 3; do curl -s -o /dev/null -w "%{http_code}\n" https://ai-lab.ddev.site/listings/1/describe; done
+   curl -si https://ai-lab.ddev.site/listings/1/describe | head -20
    ```
 
    Expected: the last responses are 429 with `retry-after: <seconds>` and body `{"success":false,"status":429,"message":"Too Many Attempts.","errors":{}}`. While limited, press Start on `/ai/describe`: the page shows "Too many requests, try again in N s." (N close to the `retry-after`) and state Failed. Restore the setting.
@@ -76,7 +76,7 @@ Semantic search (AC-5).
 2. Expected: 10 listings, each with year, make, model, body type, price, city, a bar and a value like `0.53`. The side rail shows Embedding ms and Database ms, matching `server-timing`:
 
    ```sh
-   curl -si 'https://interview.ddev.site/api/listings/semantic?q=family+car' | grep -i server-timing
+   curl -si 'https://ai-lab.ddev.site/api/listings/semantic?q=family+car' | grep -i server-timing
    ```
 
    Expected header: `server-timing: embed;dur=..., db;dur=...`.
@@ -125,8 +125,8 @@ For `/ai`, `/ai/describe`, `/ai/semantic`, `/ai/docs`, `/ai/chat`, `/ai/photos`,
 Existing endpoints unchanged (MNC-2).
 
 ```sh
-curl -si 'https://interview.ddev.site/api/listings/semantic?q=family+car' | head -20
-curl -si -X POST -H 'Accept: application/json' https://interview.ddev.site/api/listings/semantic | head -12
+curl -si 'https://ai-lab.ddev.site/api/listings/semantic?q=family+car' | head -20
+curl -si -X POST -H 'Accept: application/json' https://ai-lab.ddev.site/api/listings/semantic | head -12
 ```
 
 Expected: the semantic and docs search responses have the same JSON body as before plus a `server-timing` header. Other endpoints (for example `/api/listings`) have no new headers.

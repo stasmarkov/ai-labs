@@ -1,6 +1,6 @@
 # Manual test plan: streamed car description (SL-20)
 
-Run from the project root, `/Users/stasmarkov/work/interview`, in a host terminal. The app is at https://interview.ddev.site.
+Run from the project root, `/Users/stasmarkov/work/interview`, in a host terminal. The app is at https://ai-lab.ddev.site.
 
 ## Preconditions
 
@@ -11,11 +11,11 @@ Run from the project root, `/Users/stasmarkov/work/interview`, in a host termina
 ## Step 1: one stream by hand (AC-1, AC-5)
 
 ```sh
-curl -N https://interview.ddev.site/listings/1/describe
+curl -N https://ai-lab.ddev.site/listings/1/describe
 ddev artisan tinker --execute 'dump(App\Models\AiRun::latest("id")->first()->only(["provider","model","prompt_version","tokens_in","tokens_out","ttft_ms","latency_ms","status"]));'
 ```
 
-Also check the headers: `curl -s -D - -o /dev/null --max-time 2 https://interview.ddev.site/listings/1/describe` shows `HTTP/2 200`, `content-type: text/event-stream; charset=utf-8` and `x-accel-buffering: no`.
+Also check the headers: `curl -s -D - -o /dev/null --max-time 2 https://ai-lab.ddev.site/listings/1/describe` shows `HTTP/2 200`, `content-type: text/event-stream; charset=utf-8` and `x-accel-buffering: no`.
 
 Expected: lines `data: {...}` appear one by one for about 10 seconds (watch them arrive, not all at once; this is the originally reported problem, a stream that arrived in one lump), the first event is `stream_start`, text deltas (`"type":"text_delta"`) carry one word each and start `2019 Ford Fiesta`, there is a `text_end` and a `stream_end`, the last line is `data: [DONE]`. The row shows provider `fake-stream`, prompt version `car-description@v1`, tokens out 200, ttft_ms under 1000, latency_ms about 10 000, status `completed`.
 
@@ -65,7 +65,7 @@ Expected: all tests pass; the quick ping run passes its run conditions and exits
 printf '\nAI_PROVIDER=fake-instant\nAI_MODEL=fake-slow-2\n' >> .env
 for s in nginx-fpm frankenphp-octane frankenphp-worker; do
   ddev server $s >/dev/null && ddev artisan config:clear >/dev/null   # switching restarts the worker
-  echo "== $s"; curl -sN https://interview.ddev.site/listings/1/describe | tail -2
+  echo "== $s"; curl -sN https://ai-lab.ddev.site/listings/1/describe | tail -2
   ddev artisan tinker --execute 'dump(App\Models\AiRun::latest("id")->first()->only(["id","provider","model","tokens_out","status"]));'
 done
 ```
@@ -76,8 +76,8 @@ Expected: on all three servers the newest row shows provider `fake-instant`, mod
 
 ```sh
 ddev artisan tinker --execute 'echo App\Models\AiRun::count();'
-curl -si https://interview.ddev.site/listings/999999/describe
-curl -si -H 'Accept: text/event-stream' https://interview.ddev.site/listings/999999/describe
+curl -si https://ai-lab.ddev.site/listings/999999/describe
+curl -si -H 'Accept: text/event-stream' https://ai-lab.ddev.site/listings/999999/describe
 ddev artisan tinker --execute 'echo App\Models\AiRun::count();'
 ```
 
@@ -94,8 +94,8 @@ for n in 0 5; do
   printf '\nAI_FAKE_FAIL_AFTER=%s\n' $n >> .env
   ddev artisan config:clear >/dev/null
   echo "== fail_after=$n"
-  curl -siN https://interview.ddev.site/listings/1/describe | sed -n '1p'
-  curl -sN https://interview.ddev.site/listings/1/describe | tail -n 2
+  curl -siN https://ai-lab.ddev.site/listings/1/describe | sed -n '1p'
+  curl -sN https://ai-lab.ddev.site/listings/1/describe | tail -n 2
   ddev artisan tinker --execute 'dump(App\Models\AiRun::latest("id")->first()->only(["status","error_class","error_message","ttft_ms","latency_ms","tokens_in","tokens_out"]));'
   sed -i '' '/^AI_FAKE_FAIL_AFTER=/d' .env
 done
@@ -110,7 +110,7 @@ Expected for both runs: `HTTP/2 200` (first line); the last two lines of the bod
 cp resources/prompts/car-description.v1.md resources/prompts/car-description.v2.md
 printf '\nAI_PROMPT_CAR_DESCRIPTION=car-description.v2\n' >> .env
 ddev artisan config:clear >/dev/null
-curl -sN https://interview.ddev.site/listings/1/describe | tail -1
+curl -sN https://ai-lab.ddev.site/listings/1/describe | tail -1
 ddev artisan tinker --execute 'echo App\Models\AiRun::latest("id")->first()->prompt_version;'
 ```
 

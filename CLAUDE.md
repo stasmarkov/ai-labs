@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Fresh Laravel 13 skeleton (PHP 8.4 in container, Tailwind 4 + Vite 8, PHPUnit 12 — not Pest). No domain code yet: only the default `User` model, `/` welcome route, and `/up` health route. Build new features on top of standard Laravel conventions.
+ai-lab: a study lab for implementing AI features in Laravel 13 (PHP 8.4 in container, Tailwind 4 + Vite 8, Inertia + Vue for the lab UI). A 50 000-listing car marketplace is the demo domain. The lab lives at `/ai`, the landing page at `/`; how each feature works is in `docs/learning-guide.md`, measurements are in `BENCHMARKS.md`, the plan is in `backlog.md` and the rules in `product-brief.md`. Build new features on top of standard Laravel conventions.
 
 ## Environment: DDEV
 
-The app runs in DDEV (`.ddev/config.yaml`: PHP 8.4, MariaDB 11.8, Node 24; the web server is frankenphp by default, chosen by `ddev server`, so run `ddev setup` once on a fresh clone: it creates `.env`, installs Composer and npm dependencies, generates `APP_KEY`, switches the server, creates the Mercure keys and migrates; `.ddev/config.yaml` still says `webserver_type: nginx-fpm` on purpose) at https://interview.ddev.site. `.env` points to `DB_HOST=db`, which only resolves inside the container — so run PHP/Artisan/Composer/npm through DDEV, not the host (host PHP is 8.3):
+The app runs in DDEV (`.ddev/config.yaml`: PHP 8.4, PostgreSQL 16 with pgvector, Redis, Node 24; the web server is frankenphp by default, chosen by `ddev server`, so run `ddev setup` once on a fresh clone: it creates `.env`, installs Composer and npm dependencies, generates `APP_KEY`, switches the server, creates the Mercure keys and migrates; `.ddev/config.yaml` still says `webserver_type: nginx-fpm` on purpose) at https://ai-lab.ddev.site. `.env` points to `DB_HOST=db`, which only resolves inside the container — so run PHP/Artisan/Composer/npm through DDEV, not the host (host PHP is 8.3):
 
 ```sh
 ddev start
@@ -23,7 +23,7 @@ Where the Boost guidelines below say `php artisan ...` or `vendor/bin/...`, pref
 ## Tests
 
 - `ddev artisan test --compact` — full suite; single file/test: `ddev artisan test --compact tests/Feature/ExampleTest.php` or `--filter=testName`.
-- `phpunit.xml` overrides env for tests: in-memory SQLite, `array` cache/session/mail, `sync` queue — tests do not touch the MariaDB database.
+- `phpunit.xml` overrides env for tests: the PostgreSQL `testing` database on `db` (separate from the app database), `array` cache/session/mail, `sync` queue.
 
 ## Architecture notes
 

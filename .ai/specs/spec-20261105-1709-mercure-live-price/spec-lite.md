@@ -58,7 +58,7 @@ This shows in numbers that hub subscribers are held by Caddy's Go code, not by P
   - Timeout 2 s. A failure is reported (`report()`), never thrown to the caller.
 - **Price changes.**
   - A `ListingPriceChanged` event fires after commit when `price_cents` changes (model `updated` with `wasChanged`).
-  - A listener publishes to `https://interview.ddev.site/listings/{id}/price` with `{"id", "price_cents", "currency", "formatted", "published_at_ms"}` (`published_at_ms` for the latency bench).
+  - A listener publishes to `https://ai-lab.ddev.site/listings/{id}/price` with `{"id", "price_cents", "currency", "formatted", "published_at_ms"}` (`published_at_ms` for the latency bench).
   - The private variant publishes the same data to `…/listings/{id}/price/private` with `private=on`.
   - `listings:reprice {id} {price} [--private]` (Artisan) changes a price, for the demo and the bench.
 - **The detail page.**
@@ -186,7 +186,7 @@ This shows in numbers that hub subscribers are held by Caddy's Go code, not by P
 
 **Hub placement (Q7).**
 - **Where:** a `(mercure_hub)` snippet imported into both the `:80` block, which the router reaches, and the `:443` block, the direct path. Publishing uses `http://localhost/.well-known/mercure` inside the container (the `:80` block).
-- **CORS:** `cors_origins https://interview.ddev.site`.
+- **CORS:** `cors_origins https://ai-lab.ddev.site`.
 - **Topic base:** `config('mercure.topic_base')`, default `config('app.url')`.
 
 **Give-up and reconnect (Q8).**

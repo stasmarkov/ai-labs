@@ -17,10 +17,10 @@ beforeEach(function (): void {
 echo "ddev $*" >> "$STUB_LOG"
 case "$*" in
   "server --current") echo "${STUB_SERVER-frankenphp}" ;;
-  "server --url") echo "https://interview.ddev.site" ;;
+  "server --url") echo "https://ai-lab.ddev.site" ;;
   "artisan config:show app.env") echo "${STUB_APP_ENV-production}" ;;
   "artisan config:show app.debug") echo "${STUB_APP_DEBUG-false}" ;;
-  "artisan config:show mercure.topic_base") echo "https://interview.ddev.site" ;;
+  "artisan config:show mercure.topic_base") echo "https://ai-lab.ddev.site" ;;
   "artisan mercure:token 1") echo "token-for-listing-1" ;;
   "artisan mercure:token 2") echo "token-for-listing-2" ;;
   "artisan tinker --execute"*) echo "5000000" ;;
@@ -120,7 +120,7 @@ it('AC-6 mercure-load holds the subscribers in a pinned node container beside th
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
         ->and($calls)->toContain('/healthz', '--name mercure-load-subs-', '--name mercure-load-probe-')
-        ->and($calls)->toContain('COUNT=20', 'TOPIC=https://interview.ddev.site/listings/1/price', 'HUB=https://interview.ddev.site/.well-known/mercure')
+        ->and($calls)->toContain('COUNT=20', 'TOPIC=https://ai-lab.ddev.site/listings/1/price', 'HUB=https://ai-lab.ddev.site/.well-known/mercure')
         ->and($calls)->toContain('node:22.12.0-alpine', 'node /bench-lib/mercure-subscribers.mjs')
         ->and(substr_count($calls, '--cpus=2'))->toBe(2)
         ->and($process->getOutput())->toContain('subscribers=20', 'health_p95_ms', 'busy', 'latency', 'private');

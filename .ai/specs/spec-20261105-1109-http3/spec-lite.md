@@ -30,7 +30,7 @@ No host ports, router changes or `.ddev/config.yaml` edits are needed.
 
 - **Facts checked on 2026-11-05, on frankenphp:**
   - **Listening:** the web container listens on TCP 443 (h1/h2) and UDP 443 (h3).
-  - **Through the router:** `curl -I https://interview.ddev.site/` has no `Alt-Svc`, because Traefik proxies to the container's HTTP port.
+  - **Through the router:** `curl -I https://ai-lab.ddev.site/` has no `Alt-Svc`, because Traefik proxies to the container's HTTP port.
 - **The SL-10 lesson:** throttle at the network layer, not with DevTools. Toxiproxy is TCP-only, so it cannot carry QUIC (UDP). `tc netem` shapes both TCP and UDP the same way, which makes h2 vs h3 fair.
 - **What exists:**
   - `bench/lcp.mjs`: Chromium in a pinned Playwright image, cold runs, `--host-resolver-rules`, the certificate trusted by its SPKI hash, and digest pinning.
@@ -44,7 +44,7 @@ No host ports, router changes or `.ddev/config.yaml` edits are needed.
 
 ### In scope
 
-- **`bench/http3.sh`** runs from a pinned container on `ddev_default`, with `interview.ddev.site` resolved to the web container's IP. It records:
+- **`bench/http3.sh`** runs from a pinned container on `ddev_default`, with `ai-lab.ddev.site` resolved to the web container's IP. It records:
   - one `--http3-only` request to `/listings/1`: status, `HTTP/3` in the verbose output, and the body sha256 equal to the h2 body's;
   - the `Alt-Svc` header on an h2 request (`h3=":443"`);
   - which ALPN each request negotiated.
@@ -56,7 +56,7 @@ No host ports, router changes or `.ddev/config.yaml` edits are needed.
   - **Result:** 150 ms RTT, 1.6 Mbit/s down, 750 kbit/s up, the same values as SL-10's profile.
   - **Without `ifb`:** see Clarifications Q2.
 - **`bench/lcp.mjs --protocol h2|h3 --net netem --loss 0|2`**:
-  - **h3:** Chromium with `--enable-quic --origin-to-force-quic-on=interview.ddev.site:443` (no Alt-Svc round trip needed).
+  - **h3:** Chromium with `--enable-quic --origin-to-force-quic-on=ai-lab.ddev.site:443` (no Alt-Svc round trip needed).
   - **h2:** Chromium with `--disable-quic`.
   - **Checked:** each run confirms the protocol from `PerformanceNavigationTiming.nextHopProtocol` (`h3` or `h2`); a mismatched run is invalid (retries in Clarifications Q8).
   - **Runs:** 5 cold runs per variant, toxiproxy not used.

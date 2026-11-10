@@ -1,6 +1,6 @@
 # Manual test plan: FrankenPHP worker mode two ways
 
-Run everything from the project root (`/Users/stasmarkov/work/interview`) in a host terminal. Site: https://interview.ddev.site
+Run everything from the project root (`/Users/stasmarkov/work/interview`) in a host terminal. Site: https://ai-lab.ddev.site
 
 ## Preconditions
 
@@ -29,14 +29,14 @@ head -1 .ddev/config.zz-server.yaml
 ddev server --current
 ddev server --url
 ddev server frankenphp-octane
-curl -sI https://interview.ddev.site/up | grep -iE '^(HTTP|server)'
+curl -sI https://ai-lab.ddev.site/up | grep -iE '^(HTTP|server)'
 ```
 
 Expected:
 - `ddev server` prints `Supported: nginx-fpm apache-fpm frankenphp openlitespeed frankenphp-octane frankenphp-worker`.
 - The switch ends with `Active: frankenphp-octane`.
 - First line of the overlay is `# server: frankenphp-octane`.
-- `--current` prints `frankenphp-octane`, `--url` prints `https://interview.ddev.site`.
+- `--current` prints `frankenphp-octane`, `--url` prints `https://ai-lab.ddev.site`.
 - The second switch prints `frankenphp-octane already active` and does not restart.
 - `/up` answers `200` with `server: FrankenPHP Caddy`.
 
@@ -47,7 +47,7 @@ ddev exec ps -eo pid,args | grep -E 'octane:frankenphp|frankenphp run' | grep -v
 ddev exec curl -s localhost:2019/frankenphp/threads | grep -c 'Worker PHP Thread'
 echo DEBUG_ROUTES=true >> .env
 ddev artisan octane:reload --server=frankenphp
-curl -s -H 'Accept: application/json' https://interview.ddev.site/debug/runtime
+curl -s -H 'Accept: application/json' https://ai-lab.ddev.site/debug/runtime
 ```
 
 Expected:
@@ -75,9 +75,9 @@ ddev server frankenphp-worker
 head -1 .ddev/config.zz-server.yaml
 ddev exec ps -eo pid,args | grep -E 'octane|frankenphp run' | grep -v grep
 ddev exec curl -s localhost:2019/frankenphp/threads | grep -c 'Worker PHP Thread'
-curl -s -H 'Accept: application/json' https://interview.ddev.site/debug/runtime
-for u in $(curl -s https://interview.ddev.site/listings/1 | grep -oE '/build/assets/[^"]+' | sort -u); do
-  curl -s -o /dev/null -w "%{http_code} %{content_type} $u\n" "https://interview.ddev.site$u"
+curl -s -H 'Accept: application/json' https://ai-lab.ddev.site/debug/runtime
+for u in $(curl -s https://ai-lab.ddev.site/listings/1 | grep -oE '/build/assets/[^"]+' | sort -u); do
+  curl -s -o /dev/null -w "%{http_code} %{content_type} $u\n" "https://ai-lab.ddev.site$u"
 done
 BENCH_PARITY_DIR=/tmp/wm-check bench/parity.sh capture
 bench/parity.sh compare nginx-fpm /tmp/wm-check/frankenphp-worker.txt
@@ -127,12 +127,12 @@ Expected: `ls: frankenphp: No such file or directory`; `none-ignored`. In `git s
 ```sh
 sed -i '' '/^DEBUG_ROUTES=/d' .env && ddev artisan optimize:clear
 ddev server frankenphp-octane
-curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/runtime
+curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/debug/runtime
 echo DEBUG_ROUTES=true >> .env
-curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/runtime
+curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/debug/runtime
 bench/versions.sh; echo "exit $?"
 ddev artisan octane:reload --server=frankenphp
-curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/runtime
+curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/debug/runtime
 ddev logs | tail -20
 ```
 
@@ -144,9 +144,9 @@ Repeat on frankenphp-worker:
 sed -i '' '/^DEBUG_ROUTES=/d' .env
 ddev server frankenphp-worker
 echo DEBUG_ROUTES=true >> .env
-curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/runtime
+curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/debug/runtime
 ddev restart >/dev/null
-curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/runtime
+curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/debug/runtime
 ddev logs | tail -10
 ```
 
@@ -206,7 +206,7 @@ Expected: all tests pass (165 at last run), phpstan reports no errors, and the t
 sed -i '' '/^DEBUG_ROUTES=/d' .env && ddev artisan optimize:clear
 ddev server default
 rm -rf /tmp/wm-check
-curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/runtime
+curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/debug/runtime
 ```
 
 Expected: `Active: nginx-fpm` and `404`.

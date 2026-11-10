@@ -79,6 +79,6 @@
 
 - [x] 7. Run manual-test.md step 3 live through DDEV and record the result (devenv)
   Covers: AC-5
-  - [x] 7.1 `ddev server openlitespeed`; `/listings/1` → 200, `/no-such-page` → 404 from Laravel, `/api/ping` → ping JSON on `https://interview.ddev.site:8091`
+  - [x] 7.1 `ddev server openlitespeed`; `/listings/1` → 200, `/no-such-page` → 404 from Laravel, `/api/ping` → ping JSON on `https://ai-lab.ddev.site:8091`
   - [x] 7.2 `ddev logs -s openlitespeed` and `storage/logs` show no permission-denied errors; after `ddev artisan view:clear`, a request to `:8091/listings/1` writes compiled views under `storage/framework/views`
   - [x] 7.3 **Verify**: manual-test.md steps 1–3 run end-to-end with the expected output; project switched back to nginx-fpm with `DEBUG_ROUTES` off

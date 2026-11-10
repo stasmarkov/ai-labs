@@ -1,4 +1,4 @@
-# 0001. Local model server, open-weight models and PHP LLM client for AutoPulse
+# 0001. Local model server, open-weight models and PHP LLM client for ai-lab
 
 ## Status
 
@@ -10,7 +10,7 @@ Accepted (Stanislav Markov, 2026-11-02). Models, sizes and licences re-checked o
 
 ## Context
 
-Question Q-01 (which also answers Q-03): which local model server, which open-weight models and which PHP LLM client should each AutoPulse slice use on a MacBook Pro M3 Max with 36 GB of unified memory?
+Question Q-01 (which also answers Q-03): which local model server, which open-weight models and which PHP LLM client should each ai-lab slice use on a MacBook Pro M3 Max with 36 GB of unified memory?
 
 Constraints:
 

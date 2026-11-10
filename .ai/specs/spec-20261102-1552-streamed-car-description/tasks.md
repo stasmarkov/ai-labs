@@ -14,7 +14,7 @@
   Covers: AC-1, AC-2, AC-7
   - [x] 2.1 Failing tests: existing listing → 200, `text/event-stream`, `data:` lines with text deltas whose joined text starts with the listing's make, model and year, last line `data: [DONE]`; unknown id → 404 JSON error, no stream; the agent's prompt version is `car-description@v1` from `resources/prompts/car-description.v1.md`
   - [x] 2.2 Implement the agent (instructions from the prompt file, prompt built from the listing's attributes), the invokable controller and the route
-  - [x] 2.3 **Verify**: `curl -N https://interview.ddev.site/listings/1/describe` on nginx-fpm shows deltas arriving over ~10 s
+  - [x] 2.3 **Verify**: `curl -N https://ai-lab.ddev.site/listings/1/describe` on nginx-fpm shows deltas arriving over ~10 s
 
 - [x] 3. `ai_runs` log (backend)
   Covers: AC-5, AC-6, AC-7, AC-4

@@ -1,9 +1,9 @@
 ---
-product: AutoPulse
+product: ai-lab
 brief: product-brief.md
 ---
 
-# AutoPulse backlog
+# ai-lab backlog
 
 Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → SL-08 → SL-20 → SL-22 → SL-24 → SL-32 → SL-46 → SL-45 → {SL-33, SL-40, SL-41} → SL-09 → {SL-10, SL-11, SL-12} → SL-13 → SL-14 → SL-15 → {SL-16, SL-17} → {SL-23, SL-26, SL-27} → SL-25 → SL-28 → SL-42 → SL-34 → SL-35 → SL-36 → {SL-37, SL-38, SL-39} → SL-43 → SL-44
 
@@ -628,18 +628,18 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Source:** owner request 2026-11-05 (Stanislav Markov: "after implementing fully frankenphp and mercure - keep it as default")
 - **Run:** `/sdd "SL-47: make classic FrankenPHP with the Mercure hub the default server: the committed server overlay, every bench script's end-of-run restore target, parity and fingerprint baselines, and the docs that say nginx-fpm is the default; .ddev/config.yaml only if unavoidable (ask first). Rules in product-brief.md."`
 
-### SL-48 · Study-focused AI lab UI
+### SL-48 · In-app interactive guides (study-focused AI lab UI)
 
-- **Outcome:** The developer can learn from the lab, not only use it: each capability page explains what happens step by step next to the live run, links to the guide section and the code, shows the measured numbers from BENCHMARKS.md, and offers guided experiments (change a setting, predict, run, compare).
-- **Entry point:** `/ai` pages
-- **Size:** M
-- **BRs:** BR-27
-- **Depends on:** SL-46, the AI slices it presents
+- **Outcome:** The site teaches by itself: every AI capability has an in-app guide (How it works, Implementation with snippets read from the real source, Modify recipes, Support runbook, measured numbers, guided experiments), a live "How it works" panel synced with the event log, and no slice ids, `.md` links or bare repo paths anywhere in the rendered UI.
+- **Entry point:** `/ai/guides`, `/ai/*` pages, `/`
+- **Size:** L
+- **BRs:** BR-27, BR-90, BR-91
+- **Depends on:** SL-49, SL-46, the AI slices it presents
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
-- **Source:** owner request 2026-11-05 (Stanislav Markov: "update the UI to make it better in terms of studying")
-- **Run:** `/sdd "SL-48: make the AI lab UI a study tool: per page a 'how it works' panel synced with the live event log, links to the guide section and code files, the measured numbers from BENCHMARKS.md, and guided experiments (predict, run, compare) for describe, semantic search, docs search, chat with cache and stop, and every AI capability shipped since; keep the lab's design system. Rules in product-brief.md."`
+- **Status:** specced
+- **Spec:** spec-20261110-1149-in-app-guides
+- **Source:** owner request 2026-11-05 (Stanislav Markov: "update the UI to make it better in terms of studying"); revised 2026-11-10 ("instead of referencing md files on the website - let's show this info there and add interactive guides about each AI feature")
+- **Run:** `/sdd spec-20261110-1149-in-app-guides`
 
 ### SL-49 · Rename to ai-lab and a study-lab homescreen
 
@@ -717,3 +717,4 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 | 2026-11-03 | Stanislav Markov | UI for AI capabilities (chat streaming, similar photos), Inertia or similar, design by Claude | New slice | SL-46 AI lab UI, before SL-45; SL-41 builds inside it |
 | 2026-11-05 | Stanislav Markov | After SL-13 keep FrankenPHP + Mercure as default; finish everything AI; guide; study-focused UI | New slices + approval | SL-47 (default server), SL-48 (study UI); SL-34, SL-35, SL-42, SL-43 approved; order SL-13 → SL-47 → AI (SL-23, SL-25, SL-26, SL-27, SL-34, SL-35, SL-42, SL-43; SL-28 needs Q-04, SL-36–39 need Q-06) → SL-48 → SL-44 |
 | 2026-11-10 | Stanislav Markov | Rename to ai-lab; study purpose; AI in Laravel with local and cloud providers; keep only FrankenPHP (classic, worker, Octane) | Pivot | product-brief revised; SL-49 rename + homescreen, SL-50 FrankenPHP only, SL-51 cloud providers; SL-14 dropped; order SL-49 → SL-50 → SL-51 → SL-25 … → SL-28 (now models and providers) → SL-48 → SL-44, then SL-15–17 on FrankenPHP |
+| 2026-11-10 | Stanislav Markov | In-app interactive guides instead of md links on the site; no slice ids, `.md` or repo-path references in the UI | Revised slice | SL-48 rewritten and specced (spec-20261110-1149-in-app-guides); moved forward to run right after SL-49 so every later AI slice adds a `resources/guides/` file instead of links; order SL-49 → SL-48 → SL-50 → SL-51 → AI slices → SL-28 → SL-44 |

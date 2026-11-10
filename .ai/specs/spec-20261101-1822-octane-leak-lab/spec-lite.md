@@ -78,7 +78,7 @@ All routes below sit behind `DEBUG_ROUTES` like `/debug/runtime`. The lab needs 
 - **Related code**: `routes/debug.php`, `DebugRuntimeController`/`DebugSleepController` (guard pattern), `config/octane.php`, `vendor/laravel/octane/src/Worker.php`, `vendor/laravel/octane/src/Testing/Fakes/FakeClient.php` and `FakeWorker.php`, `vendor/laravel/octane/src/Listeners/*`, `bench/run.sh` (`.env` switch and restore pattern), `.ddev/servers/frankenphp-octane/config.frankenphp-octane.yaml` (daemon `--max-requests=500`), `bench/concurrency.sh` (gitignored overlay pattern).
 - **Data**: SL-01 seed; dealer 1 and 2 and listing 1 exist.
 - **Approach**: lab services and bindings registered by a dedicated service provider; one invokable controller per scenario or one controller with a scenario switch; the in-process worker test helper wraps Octane's `Worker` with its `FakeClient`.
-- **Repos**: single repo `/Users/stasmarkov/work/interview`, dev URL https://interview.ddev.site.
+- **Repos**: single repo `/Users/stasmarkov/work/interview`, dev URL https://ai-lab.ddev.site.
 
 ## Decisions
 1. Identity and mode by query parameters, both modes side by side (user choice, 2026-11-01).

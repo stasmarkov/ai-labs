@@ -9,12 +9,12 @@
 ## --paraphrases <file> (default cache-hitmiss-paraphrases.v1.jsonl) and --questions <n> (default 10) select the paraphrase set
 ## and how many questions to ask. The NFR-1 run uses cache-latency-paraphrases.v1.jsonl with --questions 18, so that at least
 ## 10 stored, cited entries give 10 exact and 10 semantic hits (an answer without citations is not stored).
-## Env: DOCS_CACHE_BASE_URL (default: `ddev describe` project URL https://interview.ddev.site)
+## Env: DOCS_CACHE_BASE_URL (default: `ddev describe` project URL https://ai-lab.ddev.site)
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BASE="${DOCS_CACHE_BASE_URL:-https://interview.ddev.site}"
+BASE="${DOCS_CACHE_BASE_URL:-https://ai-lab.ddev.site}"
 LABEL="hit-miss"
 FORCE=0
 LIMIT=10

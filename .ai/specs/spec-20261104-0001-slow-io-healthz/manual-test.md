@@ -1,12 +1,12 @@
 # Manual test plan: slow I/O and healthz (SL-09)
 
-Run everything from `/Users/stasmarkov/work/interview` on your Mac, with DDEV installed and Docker running. The app is at https://interview.ddev.site.
+Run everything from `/Users/stasmarkov/work/interview` on your Mac, with DDEV installed and Docker running. The app is at https://ai-lab.ddev.site.
 
 ## Before you start
 
 - `ddev start`, then `ddev server nginx-fpm` (this plan starts on nginx-fpm on purpose, because step 4 expects it at its first command; steps 4 and 5 end with `ddev server default`, and the later steps run on any server).
 - `ddev server --current` prints `nginx-fpm`.
-- Listing 1 exists in the database (the slow endpoint looks up `/listings/1`). Quick check: `curl -s https://interview.ddev.site/listings/1 -H 'Accept: application/json' | head -c 200` returns JSON, not a 404.
+- Listing 1 exists in the database (the slow endpoint looks up `/listings/1`). Quick check: `curl -s https://ai-lab.ddev.site/listings/1 -H 'Accept: application/json' | head -c 200` returns JSON, not a 404.
 - For the bench steps (2, 3, 6): the `autopulse-oha:1.16.0` image exists locally (`docker image inspect autopulse-oha:1.16.0 >/dev/null && echo ok`), `jq` is installed, and for the sse workload the `grafana/k6:1.0.0` image can be pulled.
 - Commit or stash your changes before a full (non-`--quick`) bench run. `--quick` skips the clean-tree check.
 
@@ -29,7 +29,7 @@ The slow endpoint, the health check and the stub (AC-1, AC-2, AC-3). Covers the 
 2. Happy path:
 
    ```sh
-   curl -s -w '\nHTTP %{http_code} in %{time_total}s\n' -H 'Accept: application/json' https://interview.ddev.site/listings/1/slow
+   curl -s -w '\nHTTP %{http_code} in %{time_total}s\n' -H 'Accept: application/json' https://ai-lab.ddev.site/listings/1/slow
    ```
 
    Expected: HTTP 200 in under 2 s, JSON with `"listing_id":1`, a `vin` string, `"vin_report":{"vin":"...","make_check":"ok","recalls":0,"source":"vinstub"}` and `"waited_ms"` of 300 or more (for example 319).
@@ -37,7 +37,7 @@ The slow endpoint, the health check and the stub (AC-1, AC-2, AC-3). Covers the 
 3. Unknown id is a 404 with no wait:
 
    ```sh
-   curl -s -w '\nHTTP %{http_code} in %{time_total}s\n' -H 'Accept: application/json' https://interview.ddev.site/listings/99999999/slow
+   curl -s -w '\nHTTP %{http_code} in %{time_total}s\n' -H 'Accept: application/json' https://ai-lab.ddev.site/listings/99999999/slow
    ```
 
    Expected: `{"success":false,"status":404,"message":"Not found","errors":{}}`, HTTP 404, well under 0.3 s.
@@ -46,10 +46,10 @@ The slow endpoint, the health check and the stub (AC-1, AC-2, AC-3). Covers the 
 
    ```sh
    docker stop ddev-interview-vinstub
-   curl -s -w '\nHTTP %{http_code} in %{time_total}s\n' -H 'Accept: application/json' https://interview.ddev.site/listings/1/slow
+   curl -s -w '\nHTTP %{http_code} in %{time_total}s\n' -H 'Accept: application/json' https://ai-lab.ddev.site/listings/1/slow
    docker start ddev-interview-vinstub
    sleep 3
-   curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/listings/1/slow
+   curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/listings/1/slow
    ```
 
    Expected: `{"success":false,"status":503,"message":"VIN service unavailable.","errors":{}}` with HTTP 503 in under 2 s (no hang), then `200` after the restart.
@@ -57,7 +57,7 @@ The slow endpoint, the health check and the stub (AC-1, AC-2, AC-3). Covers the 
 5. Health check:
 
    ```sh
-   curl -si https://interview.ddev.site/healthz
+   curl -si https://ai-lab.ddev.site/healthz
    ```
 
    Expected: `HTTP/2 200`, a JSON content type, body `{"status":"ok"}`, and no `set-cookie` line anywhere in the headers.
@@ -66,7 +66,7 @@ The slow endpoint, the health check and the stub (AC-1, AC-2, AC-3). Covers the 
 
    ```sh
    docker pause ddev-interview-db
-   curl -s -m 5 -w '\nHTTP %{http_code}\n' https://interview.ddev.site/healthz
+   curl -s -m 5 -w '\nHTTP %{http_code}\n' https://ai-lab.ddev.site/healthz
    docker unpause ddev-interview-db
    ```
 
@@ -125,7 +125,7 @@ Expected on nginx-fpm: non-zero exit and a message that autoscale is for franken
 ddev server frankenphp
 bench/concurrency.sh autoscale --threads 14 --max-threads 64 --max-wait 5
 bench/concurrency.sh --show
-curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/healthz
+curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/healthz
 bench/concurrency.sh default
 bench/concurrency.sh --show
 ddev server default
@@ -149,7 +149,7 @@ done
 ddev server default
 ddev artisan test --compact
 bench/run.sh ping --quick; echo "exit $?"
-curl -s -o /dev/null -w '/up %{http_code}\n' https://interview.ddev.site/up
+curl -s -o /dev/null -w '/up %{http_code}\n' https://ai-lab.ddev.site/up
 ```
 
 Expected: the fingerprint output matches the baseline from before this slice (`app-CjRfEL-0.css` is the CSS name recorded at spec time). Parity prints `identical` six times (the new `/healthz` and `/listings/{id}/slow` are not in the captured request set). The suite passes with no network (turn Wi-Fi off first if you want to be sure; the stub is faked). `bench/run.sh ping --quick` exits 0, and `/up` returns 200. `git diff HEAD --stat -- bench/run.sh` prints nothing.

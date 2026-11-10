@@ -1,6 +1,6 @@
 # Manual test plan: HTTP/3 (SL-12)
 
-Run everything from `/Users/stasmarkov/work/interview` on the host, with DDEV running (`ddev start`) and Docker up. The app is at https://interview.ddev.site. Needs `jq`, `node` and `docker` on the host. Nothing here needs a login or seeded data beyond the default seeders (listing 1 must exist).
+Run everything from `/Users/stasmarkov/work/interview` on the host, with DDEV running (`ddev start`) and Docker up. The app is at https://ai-lab.ddev.site. Needs `jq`, `node` and `docker` on the host. Nothing here needs a login or seeded data beyond the default seeders (listing 1 must exist).
 
 Rollback: the steps switch the web server and, in step 2 and 3, the segmentation offloads of the web container's eth0. Always finish with `ddev server default`; if a netem run was interrupted hard (kill -9), also run `bench/lib/netem.sh web-offloads restore ddev-interview-web` and `docker rm -f netem-client`. The scripts do this themselves on exit, Ctrl-C and SIGTERM. No step changes tracked files except result files under `bench/results/http3/<date>/`; use a throwaway date (`BENCH_DATE=manual-check`) to keep the committed results untouched, and delete that folder afterwards.
 
@@ -32,10 +32,10 @@ Network conditions (AC-2). Start an idle client, turn the web container's offloa
 ```sh
 ddev server frankenphp
 docker run -d --name netem-client --network ddev_default nicolaka/netshoot@sha256:b09d9b21381f47a79b3cbcb30da25266dc17186ea00ae65e99fdc51396f48e70 sleep infinity
-export NETEM_PROBE_URL=$(ddev server --url) NETEM_PROBE_RESOLVE=interview.ddev.site:443:$(docker inspect -f '{{.NetworkSettings.Networks.ddev_default.IPAddress}}' ddev-interview-web)
+export NETEM_PROBE_URL=$(ddev server --url) NETEM_PROBE_RESOLVE=ai-lab.ddev.site:443:$(docker inspect -f '{{.NetworkSettings.Networks.ddev_default.IPAddress}}' ddev-interview-web)
 bench/lib/netem.sh web-offloads off ddev-interview-web
 for l in 0 2; do NETEM_LOSS=$l bench/lib/netem.sh apply netem-client | jq '{applied, rtt_ms, mode, offloads}'; NETEM_LOSS=$l bench/lib/netem.sh verify netem-client | jq '{applied, rtt_ms}'; done
-docker exec netem-client sh -c "for r in 1 2 3; do for i in \$(seq 1 25); do curl -sk --http2 -o /dev/null --resolve $NETEM_PROBE_RESOLVE https://interview.ddev.site/listings/1 & done; wait; done"
+docker exec netem-client sh -c "for r in 1 2 3; do for i in \$(seq 1 25); do curl -sk --http2 -o /dev/null --resolve $NETEM_PROBE_RESOLVE https://ai-lab.ddev.site/listings/1 & done; wait; done"
 NETEM_LOSS=2 bench/lib/netem.sh drops netem-client | jq .qdisc
 bench/lib/netem.sh clear netem-client
 docker rm -f netem-client

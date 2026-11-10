@@ -7,14 +7,14 @@
 ## The snapshot is written only when every request succeeds and the Server header
 ## matches the active server's token (read from any response of the exchange, since a 103 can carry it alone) (nginx-fpm: nginx, apache-fpm: apache, frankenphp, frankenphp-octane, frankenphp-worker: caddy,
 ## openlitespeed: litespeed).
-## Env: PARITY_BASE_URL (default: `ddev server --url`, e.g. https://interview.ddev.site, :8091 for openlitespeed),
+## Env: PARITY_BASE_URL (default: `ddev server --url`, e.g. https://ai-lab.ddev.site, :8091 for openlitespeed),
 ##      PARITY_INSECURE=1 adds -k.
 ## The detail page's data-price-rendered-ms attribute (server time at render, SL-13) is masked to N before hashing for the same reason.
-## Absolute URLs of the base URL in response bodies are rewritten to https://interview.ddev.site before hashing.
+## Absolute URLs of the base URL in response bodies are rewritten to https://ai-lab.ddev.site before hashing.
 
 set -euo pipefail
 
-DEFAULT_URL="https://interview.ddev.site"
+DEFAULT_URL="https://ai-lab.ddev.site"
 SERVER_COMMAND="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.ddev/commands/host/server"
 DIR="${BENCH_PARITY_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/parity}"
 REQUESTS=(/up /api/ping /listings "/listings?make=BMW&fuel=diesel&per_page=5" "/listings?per_page=99" /listings/1 /listings/999999)

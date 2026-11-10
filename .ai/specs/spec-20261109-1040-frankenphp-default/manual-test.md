@@ -5,7 +5,7 @@ What changed: the project's resting web server is now frankenphp instead of ngin
 ## Preconditions
 
 - Run everything from `/Users/stasmarkov/work/interview` in a terminal on the host (not inside `ddev ssh`).
-- DDEV is running (`ddev start`) and the site answers at https://interview.ddev.site.
+- DDEV is running (`ddev start`) and the site answers at https://ai-lab.ddev.site.
 - The machine is currently on frankenphp (`ddev server --current` prints `frankenphp`).
 - The Mercure keys already exist in `.env` and `.ddev/.env.web` (the plan checks that `ddev setup` keeps them).
 - Steps 1 and 2 temporarily remove files under `.ddev/`. Step 1 makes a backup first, so do not skip its first command.
@@ -61,7 +61,7 @@ Run the setup:
 
 ```sh
 ddev setup
-curl -sN -m 3 -o /dev/null -w '%{http_code} %{content_type}\n' 'https://interview.ddev.site/.well-known/mercure?topic=x'
+curl -sN -m 3 -o /dev/null -w '%{http_code} %{content_type}\n' 'https://ai-lab.ddev.site/.well-known/mercure?topic=x'
 ddev server
 md5 -q .env .ddev/.env.web
 ```
@@ -89,10 +89,10 @@ Other servers still work (MNC-3).
 
 ```sh
 ddev server nginx-fpm
-curl -sI https://interview.ddev.site/up | grep -iE '^(HTTP|server)'
+curl -sI https://ai-lab.ddev.site/up | grep -iE '^(HTTP|server)'
 ddev server default
-curl -sI https://interview.ddev.site/up | grep -iE '^(HTTP|server)'
-curl -sN -m 3 -o /dev/null -w '%{http_code} %{content_type}\n' 'https://interview.ddev.site/.well-known/mercure?topic=x'
+curl -sI https://ai-lab.ddev.site/up | grep -iE '^(HTTP|server)'
+curl -sN -m 3 -o /dev/null -w '%{http_code} %{content_type}\n' 'https://ai-lab.ddev.site/.well-known/mercure?topic=x'
 ddev server --current
 ```
 
@@ -102,7 +102,7 @@ Expected:
 - The Mercure curl prints `200 text/event-stream`.
 - `ddev server --current` prints `frankenphp`.
 
-Optionally repeat `ddev server <name>` and a `/up` check for `apache-fpm`, `openlitespeed` (URL `https://interview.ddev.site:8091/up`), `frankenphp-octane` and `frankenphp-worker`; each should answer 200. Finish with `ddev server default`.
+Optionally repeat `ddev server <name>` and a `/up` check for `apache-fpm`, `openlitespeed` (URL `https://ai-lab.ddev.site:8091/up`), `frankenphp-octane` and `frankenphp-worker`; each should answer 200. Finish with `ddev server default`.
 
 ## Step 3
 

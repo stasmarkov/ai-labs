@@ -1,6 +1,6 @@
 # Manual test plan: local model wiring (SL-22)
 
-Run from the project root, `/Users/stasmarkov/work/interview`, in a host terminal. The app is at https://interview.ddev.site.
+Run from the project root, `/Users/stasmarkov/work/interview`, in a host terminal. The app is at https://ai-lab.ddev.site.
 
 ## Preconditions
 
@@ -15,7 +15,7 @@ Before this change the describe request on a real model failed because the web c
 
 ```sh
 ollama stop qwen3.5:9b
-curl -N https://interview.ddev.site/listings/1/describe
+curl -N https://ai-lab.ddev.site/listings/1/describe
 ollama ps
 ddev artisan tinker --execute 'dump(App\Models\AiRun::latest("id")->first()->only(["provider","model","tokens_in","tokens_out","ttft_ms","latency_ms","status"]));'
 ```
@@ -43,7 +43,7 @@ Expected per server: an address line for `host.docker.internal`, a JSON version,
 ## Step 3: real streams on all six servers (AC-1, AC-6, AC-7)
 
 ```sh
-curl -s -o /dev/null https://interview.ddev.site/listings/1/describe   # warm the model
+curl -s -o /dev/null https://ai-lab.ddev.site/listings/1/describe   # warm the model
 for s in nginx-fpm apache-fpm openlitespeed frankenphp frankenphp-octane frankenphp-worker; do
   ddev server $s >/dev/null && echo "== $s" && bench/sse.sh --real; echo "exit=$?"
 done
@@ -82,9 +82,9 @@ Expected: all tests pass with Ollama not running (the suite needs no network); t
 
 ```sh
 # Quit Ollama from its menu bar icon, then:
-curl -sN https://interview.ddev.site/listings/1/describe
+curl -sN https://ai-lab.ddev.site/listings/1/describe
 ddev artisan tinker --execute 'dump(App\Models\AiRun::latest("id")->first()->only(["provider","status","error_class"]));'
-curl -s -i https://interview.ddev.site/listings/999999/describe
+curl -s -i https://ai-lab.ddev.site/listings/999999/describe
 open -a Ollama
 ```
 

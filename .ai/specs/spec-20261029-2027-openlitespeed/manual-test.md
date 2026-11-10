@@ -1,6 +1,6 @@
 # Manual test plan: OpenLiteSpeed + LSAPI (SL-05)
 
-Goal: confirm that `ddev server openlitespeed` runs the unchanged Laravel app on OpenLiteSpeed (OLS) with LSAPI at `https://interview.ddev.site:8091`, while the main URL `https://interview.ddev.site` stays up, and that switching away leaves nothing behind.
+Goal: confirm that `ddev server openlitespeed` runs the unchanged Laravel app on OpenLiteSpeed (OLS) with LSAPI at `https://ai-lab.ddev.site:8091`, while the main URL `https://ai-lab.ddev.site` stays up, and that switching away leaves nothing behind.
 
 Run every command from the project root in a host terminal:
 
@@ -67,8 +67,8 @@ the compose file exists in `.ddev/`; and the last line prints `copy is ignored b
 ## Step 2: OLS answers on 8091 and the main URL stays up
 
 ```sh
-curl -sI https://interview.ddev.site:8091/up | grep -iE '^(HTTP|server)'
-curl -sI https://interview.ddev.site/up | grep -iE '^(HTTP|server)'
+curl -sI https://ai-lab.ddev.site:8091/up | grep -iE '^(HTTP|server)'
+curl -sI https://ai-lab.ddev.site/up | grep -iE '^(HTTP|server)'
 ```
 
 Expected: first command shows a 200 status line and `server: LiteSpeed` (any case); second shows 200 and `server: nginx`. (Add `-k` to curl if your certificate is not trusted.)
@@ -77,11 +77,11 @@ Expected: first command shows a 200 status line and `server: LiteSpeed` (any cas
 
 ```sh
 for p in /up /listings /listings/1 /api/ping /no-such-page /favicon.ico; do
-  printf '%s ' "$p"; curl -s -o /dev/null -w '%{http_code}\n' "https://interview.ddev.site:8091$p"
+  printf '%s ' "$p"; curl -s -o /dev/null -w '%{http_code}\n' "https://ai-lab.ddev.site:8091$p"
 done
-curl -s https://interview.ddev.site:8091/api/ping
+curl -s https://ai-lab.ddev.site:8091/api/ping
 ddev artisan view:clear
-curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site:8091/listings/1
+curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site:8091/listings/1
 ls storage/framework/views | head -3
 ddev logs -s openlitespeed | tail -20
 grep -ci 'permission denied' storage/logs/*.log 2>/dev/null || true
@@ -97,7 +97,7 @@ Expected:
 
 ```sh
 echo DEBUG_ROUTES=true >> .env && ddev artisan optimize:clear
-curl -s -H 'Accept: application/json' https://interview.ddev.site:8091/debug/runtime
+curl -s -H 'Accept: application/json' https://ai-lab.ddev.site:8091/debug/runtime
 ddev exec -s openlitespeed php -m | grep -E '^(pdo_pgsql|redis)$'
 bench/parity.sh capture
 bench/parity.sh compare nginx-fpm openlitespeed
@@ -118,7 +118,7 @@ grep -n 'openlitespeed' BENCHMARKS.md
 grep -n '8091\|htaccess' README.md
 ```
 
-Expected: `BENCHMARKS.md` has an openlitespeed row, the `1.9.4-lsphp84` pinning note naming the unversioned `lsphp84-pgsql` package, `bench/parity/openlitespeed.txt` with its `identical` result, and the note that OLS has its own port while `web` stays idle. `README.md` lists `ddev server openlitespeed`, the URL `https://interview.ddev.site:8091`, says the first switch builds the image, and says `.htaccess` changes need a `ddev restart`.
+Expected: `BENCHMARKS.md` has an openlitespeed row, the `1.9.4-lsphp84` pinning note naming the unversioned `lsphp84-pgsql` package, `bench/parity/openlitespeed.txt` with its `identical` result, and the note that OLS has its own port while `web` stays idle. `README.md` lists `ddev server openlitespeed`, the URL `https://ai-lab.ddev.site:8091`, says the first switch builds the image, and says `.htaccess` changes need a `ddev restart`.
 
 ## Step 5: switching away leaves nothing behind
 
@@ -154,7 +154,7 @@ Restore:
 ```sh
 ddev server default
 sed -i '' '/^DEBUG_ROUTES=/d' .env && ddev artisan optimize:clear
-curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/runtime
+curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/debug/runtime
 git diff --exit-code .ddev/config.yaml && echo untouched
 ddev artisan test --compact
 ```

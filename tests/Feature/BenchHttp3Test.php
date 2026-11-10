@@ -17,7 +17,7 @@ beforeEach(function (): void {
 echo "ddev $*" >> "$STUB_LOG"
 case "$*" in
   "server --current") cat "$STUB_STATE" ;;
-  "server --url") echo "https://interview.ddev.site" ;;
+  "server --url") echo "https://ai-lab.ddev.site" ;;
   "server --default") echo "${STUB_DEFAULT-frankenphp}" ;;
   "server "*) echo "${2}" > "$STUB_STATE" ;;
 esac
@@ -41,7 +41,7 @@ case "$1" in
       if [[ -n "${STUB_H3_EXIT-}" ]]; then
         exit "$STUB_H3_EXIT"
       fi
-      echo "* Connected to interview.ddev.site (172.19.0.2) port 443" >&2
+      echo "* Connected to ai-lab.ddev.site (172.19.0.2) port 443" >&2
       echo "*  subject: O=mkcert development certificate; OU=someuser@somehost" >&2
       echo "*  issuer: O=mkcert development CA; OU=someuser@somehost" >&2
       echo "* ALPN: server accepted h3" >&2
@@ -49,7 +49,7 @@ case "$1" in
       echo "< content-type: text/html" >&2
       printf '%s' "${STUB_H3_BODY-<html>listings</html>}"
     else
-      echo "* Connected to interview.ddev.site (172.19.0.2) port 443" >&2
+      echo "* Connected to ai-lab.ddev.site (172.19.0.2) port 443" >&2
       echo "*  subject: O=mkcert development certificate; OU=someuser@somehost" >&2
       echo "* ALPN: server accepted h2" >&2
       echo "< HTTP/2 ${STUB_H2_STATUS-200} " >&2
@@ -99,7 +99,7 @@ it('AC-1 http3 records one h3 request with status 200, the same body hash as h2,
     $hash = hash('sha256', '<html>listings</html>');
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
-        ->and($calls)->toContain('--http3-only', '--http2', '--network ddev_default', '--resolve interview.ddev.site:443:172.19.0.2', 'https://interview.ddev.site/listings/1')
+        ->and($calls)->toContain('--http3-only', '--http2', '--network ddev_default', '--resolve ai-lab.ddev.site:443:172.19.0.2', 'https://ai-lab.ddev.site/listings/1')
         ->and($result)->toMatchArray([
             'server' => 'frankenphp', 'commit' => 'abc1234', 'path' => '/listings/1', 'h3_ok' => true, 'h3_status' => 200, 'h3_alpn' => 'h3',
             'h2_status' => 200, 'alpn_h2' => 'h2', 'alt_svc' => 'h3=":443"; ma=2592000',
@@ -190,7 +190,7 @@ it('NFR-2 http3 redacts certificate lines, IP addresses and cookies from the sav
     $trace = file_get_contents(($this->dir)().'/frankenphp.trace');
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
-        ->and($trace)->toContain('Connected to interview.ddev.site (<ip>) port 443', '< HTTP/3 200', '< HTTP/2 200', 'alt-svc')
+        ->and($trace)->toContain('Connected to ai-lab.ddev.site (<ip>) port 443', '< HTTP/3 200', '< HTTP/2 200', 'alt-svc')
         ->not->toContain('subject:', 'issuer:', 'mkcert', 'OU=', '172.19.0.2', 'laravel_session');
 });
 

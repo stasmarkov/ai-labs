@@ -3,6 +3,7 @@
 use App\Http\Controllers\ShowLabChatController;
 use App\Http\Controllers\ShowLabDescribeController;
 use App\Http\Controllers\ShowLabDocsController;
+use App\Http\Controllers\ShowLabHomeController;
 use App\Http\Controllers\ShowLabNlSearchController;
 use App\Http\Controllers\ShowLabOverviewController;
 use App\Http\Controllers\ShowLabPhotosController;
@@ -11,7 +12,9 @@ use App\Http\Controllers\ShowLabSemanticController;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+Route::middleware(HandleInertiaRequests::class)->group(function (): void {
+    Route::get('/', ShowLabHomeController::class)->name('home');
+});
 
 Route::middleware(HandleInertiaRequests::class)->prefix('ai')->group(function (): void {
     Route::get('/', ShowLabOverviewController::class)->name('ai.overview');

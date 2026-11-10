@@ -1,6 +1,6 @@
 # Manual test plan: switching between nginx-fpm and Apache (apache-fpm)
 
-Run everything from the project root (`/Users/stasmarkov/work/interview`) in a host terminal. The app is at https://interview.ddev.site.
+Run everything from the project root (`/Users/stasmarkov/work/interview`) in a host terminal. The app is at https://ai-lab.ddev.site.
 
 ## Preconditions
 
@@ -75,10 +75,10 @@ Precondition: `DEBUG_ROUTES` is not `true` in `.env`.
 Action:
 
 ```sh
-curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/runtime
-curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/not-a-route
-curl -s -H 'Accept: application/json' https://interview.ddev.site/debug/runtime | shasum -a 256
-curl -s -H 'Accept: application/json' https://interview.ddev.site/debug/not-a-route | shasum -a 256
+curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/debug/runtime
+curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/debug/not-a-route
+curl -s -H 'Accept: application/json' https://ai-lab.ddev.site/debug/runtime | shasum -a 256
+curl -s -H 'Accept: application/json' https://ai-lab.ddev.site/debug/not-a-route | shasum -a 256
 ```
 
 Expected: both status codes are `404`, and the two JSON bodies produce the same hash.
@@ -96,7 +96,7 @@ cat /tmp/parity-nginx/nginx-fpm.txt
 Expected:
 
 - The script prints `Wrote /tmp/parity-nginx/nginx-fpm.txt`.
-- Line 1 looks like `# server=nginx-fpm base=https://interview.ddev.site captured=2026-10-29T12:00:00Z` (any current UTC time).
+- Line 1 looks like `# server=nginx-fpm base=https://ai-lab.ddev.site captured=2026-10-29T12:00:00Z` (any current UTC time).
 - Then exactly 7 tab-separated lines, in this order: `/up`, `/api/ping`, `/listings`, `/listings?make=BMW&fuel=diesel&per_page=5`, `/listings?per_page=99`, `/listings/1`, `/listings/999999`. Each has path, status, content type, 64-character hash.
 - `/listings?per_page=99` has status `422` and `/listings/999999` has status `404`. The others are `200`.
 - Content types are lowercase, for example `application/json; charset=utf-8`.
@@ -117,7 +117,7 @@ Action:
 ```sh
 ddev server apache-fpm
 cat .ddev/config.zz-server.yaml
-curl -sI https://interview.ddev.site/api/ping | grep -i -E '^(HTTP|server|content-type)'
+curl -sI https://ai-lab.ddev.site/api/ping | grep -i -E '^(HTTP|server|content-type)'
 ddev server foo; echo "exit=$?"
 cat .ddev/config.zz-server.yaml
 git diff --exit-code .ddev/config.yaml; echo "diff=$?"
@@ -144,7 +144,7 @@ bench/parity.sh compare nginx-fpm apache-fpm; echo "exit=$?"
 
 Expected:
 
-- The first line starts with `# server=apache-fpm base=https://interview.ddev.site captured=`.
+- The first line starts with `# server=apache-fpm base=https://ai-lab.ddev.site captured=`.
 - Both comparisons print `identical` and `exit=0`. The `# captured=` timestamps differ but are ignored.
 - `git ls-files bench/parity` lists both `bench/parity/nginx-fpm.txt` and `bench/parity/apache-fpm.txt` (they must be committed; if they show as untracked, AC-10 is not met).
 
@@ -184,7 +184,7 @@ Action, with the flag:
 ```sh
 echo 'DEBUG_ROUTES=true' >> .env
 ddev artisan optimize:clear
-curl -s -H 'Accept: application/json' https://interview.ddev.site/debug/runtime
+curl -s -H 'Accept: application/json' https://ai-lab.ddev.site/debug/runtime
 bench/versions.sh; echo "exit=$?"
 ```
 
@@ -199,7 +199,7 @@ Then undo the flag:
 ```sh
 sed -i '' '/^DEBUG_ROUTES=/d' .env
 ddev artisan optimize:clear
-curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/runtime
+curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/debug/runtime
 ```
 
 Expected: `404`.
@@ -211,7 +211,7 @@ Action:
 ```sh
 ddev server nginx-fpm
 cat .ddev/config.zz-server.yaml
-curl -sI https://interview.ddev.site/api/ping | grep -i -E '^(HTTP|server)'
+curl -sI https://ai-lab.ddev.site/api/ping | grep -i -E '^(HTTP|server)'
 git diff --exit-code .ddev/config.yaml; echo "diff=$?"
 grep '^webserver_type' .ddev/config.yaml
 bench/parity.sh compare /tmp/parity-nginx/nginx-fpm.txt bench/parity/nginx-fpm.txt

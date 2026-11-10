@@ -99,8 +99,8 @@ Expected:
 ## Step 7: the endpoint and search still work (MNC-1, MNC-3)
 
 ```sh
-curl -sN -i -H 'Content-Type: application/json' -d '{"q":"how does rate limiting work"}' https://interview.ddev.site/api/docs/ask | head -20
-curl -s -o /dev/null -w '%{http_code}\n' 'https://interview.ddev.site/api/docs/search?q=flushpackets'
+curl -sN -i -H 'Content-Type: application/json' -d '{"q":"how does rate limiting work"}' https://ai-lab.ddev.site/api/docs/ask | head -20
+curl -s -o /dev/null -w '%{http_code}\n' 'https://ai-lab.ddev.site/api/docs/search?q=flushpackets'
 ddev artisan docs:search flushpackets --k=1
 git diff HEAD -- tests/Feature/DocsAskTest.php | wc -l
 ```
@@ -109,7 +109,7 @@ Expected:
 - Ask: `HTTP/2 200`, `content-type: text/event-stream`, `x-ratelimit-limit: 10`, and the first event is `event: sources`, followed by token events and a final done event.
 - Search: `200`. The CLI search prints one row.
 - The diff line count is `0` (the ask test is unedited).
-- Open https://interview.ddev.site/ai/docs in a browser, ask "how does rate limiting work": sources appear, then an answer with citations streams in. Click the run link; https://interview.ddev.site/ai/runs/<id> loads with agent `DocsAnswerAgent`.
+- Open https://ai-lab.ddev.site/ai/docs in a browser, ask "how does rate limiting work": sources appear, then an answer with citations streams in. Click the run link; https://ai-lab.ddev.site/ai/runs/<id> loads with agent `DocsAnswerAgent`.
 
 ## Step 8: invocation ids lead to real run rows (AC-8)
 
@@ -117,7 +117,7 @@ Take an id from step 3 and check both the page and the row:
 
 ```sh
 ID=$(jq -r '.rows[0].invocation_id' bench/results/rag-eval/$(date -u +%F)/check-answers/answers.json)
-curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/ai/runs/$ID
+curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/ai/runs/$ID
 ddev mysql -e "select agent, model, status, ttft_ms, prompt_version from ai_runs where invocation_id='$ID'"
 ```
 

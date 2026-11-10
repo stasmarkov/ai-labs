@@ -22,7 +22,7 @@ beforeEach(function (): void {
     $stub($this->dir.'/bin/ddev', <<<'SH'
 echo "ddev $*" >> "$BENCH_STUB_DIR/log"
 if [[ "$*" == "server --current" ]]; then echo "$STUB_SERVER"; fi
-if [[ "$*" == "server --url" ]]; then echo "https://interview.ddev.site"; fi
+if [[ "$*" == "server --url" ]]; then echo "https://ai-lab.ddev.site"; fi
 if [[ -n "${STUB_NO_VIEWS-}" && "$*" == *storage/framework/views* ]]; then exit 1; fi
 if [[ "$*" == "artisan config:show app.env" ]]; then echo "  app.env ... production"; fi
 if [[ "$*" == "artisan config:show app.debug" ]]; then echo "  app.debug ... false"; fi

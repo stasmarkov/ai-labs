@@ -18,7 +18,7 @@ beforeEach(function (): void {
 echo "ddev $*" >> "$STUB_LOG"
 case "$*" in
   "server --current") echo "${STUB_SERVER-frankenphp}" ;;
-  "server --url") echo "https://interview.ddev.site" ;;
+  "server --url") echo "https://ai-lab.ddev.site" ;;
   "exec stat -c %s storage/app/exports/listings.csv") echo 11 ;;
   "artisan tinker --execute"*) echo "11 ${STUB_RECORD_SHA-$STUB_SHA}" ;;
   "exec cat /sys/fs/cgroup/cpu.stat")
@@ -184,7 +184,7 @@ it('MNC-3 compression reads the export size and sha256 from the file without cha
 
     expect($calls)->toContain('ddev exec stat -c %s storage/app/exports/listings.csv')
         ->and($calls)->not->toContain('exports:generate')
-        ->and($calls)->toContain('docker run --rm --network ddev_default --add-host interview.ddev.site:172.19.0.2', '--compressed');
+        ->and($calls)->toContain('docker run --rm --network ddev_default --add-host ai-lab.ddev.site:172.19.0.2', '--compressed');
 });
 
 it('AC-5 compression records nginx-fpm answering gzip or nothing', function (): void {

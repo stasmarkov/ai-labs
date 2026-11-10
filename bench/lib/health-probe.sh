@@ -17,7 +17,7 @@ lookup_router() {
 
 image_digest() {
   local image="$1"
-  if [[ "$image" == autopulse-oha:* ]]; then
+  if [[ "$image" == ai-lab-oha:* ]]; then
     docker image inspect "$image" >/dev/null 2>&1 || docker build -q -t "$image" "$SCRIPT_DIR/oha" >/dev/null
     docker image inspect --format '{{.Id}}' "$image" 2>/dev/null || true
   else

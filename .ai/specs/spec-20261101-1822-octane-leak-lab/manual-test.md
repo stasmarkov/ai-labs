@@ -1,6 +1,6 @@
 # Manual test plan: Octane state-leak lab (SL-07)
 
-App: https://interview.ddev.site. Everything below runs from the project root. No login and no seeded data are needed; the lab does not touch the database.
+App: https://ai-lab.ddev.site. Everything below runs from the project root. No login and no seeded data are needed; the lab does not touch the database.
 
 ## Preconditions
 
@@ -44,7 +44,7 @@ Expected: all tests pass (last run: 260 passed, 0 failed).
 Action:
 
 ```sh
-curl -sk -i https://interview.ddev.site/no-such-path
+curl -sk -i https://ai-lab.ddev.site/no-such-path
 ```
 
 Expected: `HTTP/2 404` and the body `{"success":false,"status":404,"message":"Not found","errors":{}}`. Keep this in mind for the next step.
@@ -55,9 +55,9 @@ Action (flag still off):
 
 ```sh
 for p in /debug/worker "/debug/leaks/dealer-scope?dealer=1" /debug/leaks/dealer-scope /debug/runtime; do
-  echo "== $p"; curl -sk -i "https://interview.ddev.site$p" | sed -n '1p;$p'
+  echo "== $p"; curl -sk -i "https://ai-lab.ddev.site$p" | sed -n '1p;$p'
 done
-curl -sk -o /dev/null -w "up: %{http_code}\n" https://interview.ddev.site/up
+curl -sk -o /dev/null -w "up: %{http_code}\n" https://ai-lab.ddev.site/up
 git status --short bench/parity
 ```
 
@@ -76,7 +76,7 @@ Action:
 grep -q '^DEBUG_ROUTES=' .env && sed -i.bak 's/^DEBUG_ROUTES=.*/DEBUG_ROUTES=true/' .env || echo 'DEBUG_ROUTES=true' >> .env
 rm -f .env.bak
 ddev artisan config:clear
-curl -sk -i https://interview.ddev.site/debug/worker | sed -n '1p'
+curl -sk -i https://ai-lab.ddev.site/debug/worker | sed -n '1p'
 ```
 
 Expected: `HTTP/2 200`.
@@ -88,7 +88,7 @@ On nginx-fpm every request boots the app from scratch, so nothing may leak. Each
 Action (run A, then B, for each scenario; leak mode is the default):
 
 ```sh
-B=https://interview.ddev.site/debug/leaks
+B=https://ai-lab.ddev.site/debug/leaks
 # AC-1 dealer-scope
 curl -sk "$B/dealer-scope?dealer=1&locale=uk&mode=leak"; echo
 curl -sk "$B/dealer-scope?dealer=2&locale=de&mode=leak"; echo
@@ -121,7 +121,7 @@ Defaults check: `curl -sk "$B/dealer-scope?dealer=3"` returns 200 with `requeste
 Action:
 
 ```sh
-B=https://interview.ddev.site/debug/leaks
+B=https://ai-lab.ddev.site/debug/leaks
 curl -sk -i "$B/dealer-scope?dealer=0" | sed -n '1p;$p'
 curl -sk -i "$B/dealer-scope?dealer=1&locale=fr" | sed -n '1p;$p'
 curl -sk -i "$B/dealer-scope?dealer=1&mode=sideways" | sed -n '1p;$p'
@@ -139,8 +139,8 @@ Expected:
 Action:
 
 ```sh
-curl -sk https://interview.ddev.site/debug/worker; echo
-curl -sk https://interview.ddev.site/debug/worker; echo
+curl -sk https://ai-lab.ddev.site/debug/worker; echo
+curl -sk https://ai-lab.ddev.site/debug/worker; echo
 ```
 
 Expected: 200, and `data` holds `pid`, `app_id`, `memory_bytes`, `peak_memory_bytes`, `worker_hits`, `first_seen_at`, `octane` (plus an informational `worker_id`). On nginx-fpm `octane` is `false` and `worker_hits` is `1` both times, because each request is a fresh process.
@@ -157,7 +157,7 @@ Expected: eight rows (4 scenarios x leak/fixed), every one ending `leaked 0/20`,
 
 ```sh
 grep -c '^DEBUG_ROUTES=' .env; ls .env.bench-backup 2>&1 | tail -1
-curl -sk -o /dev/null -w "%{http_code}\n" https://interview.ddev.site/debug/worker
+curl -sk -o /dev/null -w "%{http_code}\n" https://ai-lab.ddev.site/debug/worker
 ```
 
 `.env` is back to its pre-script state (the flag line from step 5 is gone if it was not there before the script ran, otherwise restored), `.env.bench-backup` does not exist, and `/debug/worker` answers `404` again. Re-do step 5 before continuing.
@@ -173,7 +173,7 @@ ddev server frankenphp-octane
 # (step 5 again so the flag is on)
 grep -q '^DEBUG_ROUTES=' .env && sed -i.bak 's/^DEBUG_ROUTES=.*/DEBUG_ROUTES=true/' .env || echo 'DEBUG_ROUTES=true' >> .env; rm -f .env.bak
 ddev artisan octane:reload --server=frankenphp
-B=https://interview.ddev.site/debug/leaks
+B=https://ai-lab.ddev.site/debug/leaks
 run() { # scenario mode
   for i in $(seq 20); do curl -sk "$B/$1?dealer=1&locale=uk&mode=$2" >/dev/null; done
   for i in $(seq 20); do
@@ -202,7 +202,7 @@ Expected: `requested` 2, `observed` 1, `leaked` true. For the other scenarios in
 Action:
 
 ```sh
-for i in 1 2 3; do curl -sk https://interview.ddev.site/debug/worker; echo; done
+for i in 1 2 3; do curl -sk https://ai-lab.ddev.site/debug/worker; echo; done
 ```
 
 Expected: `octane` is `true`; the same `pid` and `first_seen_at` show up again, and `worker_hits` goes up on the worker that answers (it can vary between workers if the pool has more than one, but never goes down for a given `pid`).
@@ -226,7 +226,7 @@ sed -i.bak '/^DEBUG_ROUTES=/d' .env && rm -f .env.bak
 ddev server nginx-fpm
 ddev artisan config:clear
 bench/leaks.sh --max-requests 5; echo "exit $?"
-curl -sk -o /dev/null -w "%{http_code}\n" https://interview.ddev.site/debug/worker
+curl -sk -o /dev/null -w "%{http_code}\n" https://ai-lab.ddev.site/debug/worker
 ```
 
 Expected: the server is nginx-fpm; `leaks.sh --max-requests 5` prints a message that it only works with frankenphp-octane and `exit 2` (and does not change `.env`); `/debug/worker` is `404`.

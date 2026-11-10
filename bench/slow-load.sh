@@ -31,8 +31,8 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPROOT="${BENCH_APPROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
-SITE="${DDEV_SITENAME:-interview}"
-OHA_IMAGE="${BENCH_OHA_IMAGE:-autopulse-oha:1.16.0}"   # built locally from bench/oha/Dockerfile
+SITE="${DDEV_SITENAME:-ai-lab}"
+OHA_IMAGE="${BENCH_OHA_IMAGE:-ai-lab-oha:1.16.0}"   # built locally from bench/oha/Dockerfile
 K6_IMAGE="${BENCH_K6_IMAGE:-grafana/k6:1.0.0}"
 source "$SCRIPT_DIR/lib/health-probe.sh"
 SPREAD_LIMIT=20

@@ -91,7 +91,7 @@ test('AC-3 the stash Caddyfile enables the hub on the router block with env keys
         ->and($caddy)->toContain('subscriber_jwt {env.MERCURE_SUBSCRIBER_JWT_KEY}')
         ->and($caddy)->toContain('anonymous')
         ->and($caddy)->toContain('transport bolt')
-        ->and($caddy)->toContain('cors_origins https://interview.ddev.site')
+        ->and($caddy)->toContain('cors_origins https://ai-lab.ddev.site')
         ->and(substr_count($caddy, 'import mercure_hub'))->toBe(1)
         ->and($caddy)->toContain('reverse_proxy /.well-known/mercure* localhost:80');
 });

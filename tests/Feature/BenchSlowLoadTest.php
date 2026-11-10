@@ -17,7 +17,7 @@ beforeEach(function (): void {
 echo "ddev $*" >> "$STUB_LOG"
 case "$*" in
   "server --current") echo "${STUB_SERVER-nginx-fpm}" ;;
-  "server --url") echo "https://interview.ddev.site" ;;
+  "server --url") echo "https://ai-lab.ddev.site" ;;
   "artisan config:show app.env") echo "${STUB_APP_ENV-production}" ;;
   "artisan config:show app.debug") echo "${STUB_APP_DEBUG-false}" ;;
 esac
@@ -221,7 +221,7 @@ it('AC-4 slow-load sets the benchmark env, and for sse the fake stream, then res
 echo "ddev \$*" >> "\$STUB_LOG"
 case "\$*" in
   "server --current") echo nginx-fpm ;;
-  "server --url") echo "https://interview.ddev.site" ;;
+  "server --url") echo "https://ai-lab.ddev.site" ;;
   "artisan optimize") cat "$this->root/app/.env" > "$before" ;;
   "artisan config:show app.env") echo production ;;
   "artisan config:show app.debug") echo false ;;
@@ -244,7 +244,7 @@ it('AC-1 slow-load http enables the slow route (DEBUG_ROUTES) and raises its lim
 echo "ddev \$*" >> "\$STUB_LOG"
 case "\$*" in
   "server --current") echo nginx-fpm ;;
-  "server --url") echo "https://interview.ddev.site" ;;
+  "server --url") echo "https://ai-lab.ddev.site" ;;
   "artisan optimize") cat "$this->root/app/.env" > "$during" ;;
   "artisan config:show app.env") echo production ;;
   "artisan config:show app.debug") echo false ;;
@@ -442,7 +442,7 @@ it('NFR-1 slow-load counts timeouts as the 10 s timeout in the all-sent p95 and 
 it('NFR-1 slow-load rotates the listing ids: offset 0 in a warm-up and repeat x 10007 mod 50000 in a measure window', function (): void {
     $http = ($this->slowLoad)(['BENCH_REPEATS' => '3', 'BENCH_WARMUP' => '1'], '--workload', 'http', '--users', '10', '--quick', '--label', 'ids');
     $urls = [];
-    preg_match_all('#urls_first=https://interview\.ddev\.site/listings/(\d+)/slow count=(\d+)#', ($this->calls)(), $urls);
+    preg_match_all('#urls_first=https://ai-lab\.ddev\.site/listings/(\d+)/slow count=(\d+)#', ($this->calls)(), $urls);
 
     expect($http->getExitCode())->toBe(0, $http->getErrorOutput())
         ->and($urls[1])->toBe(['1', '10008', '1', '20015', '1', '30022'])
@@ -462,7 +462,7 @@ it('NFR-1 slow-load rotates the listing ids: offset 0 in a warm-up and repeat x 
 it('NFR-1 slow-load wraps the id list around the end of the 50000 listings', function (): void {
     ($this->slowLoad)(['BENCH_REPEATS' => '5', 'BENCH_WARMUP' => '0'], '--workload', 'http', '--quick', '--label', 'wrap');
     $urls = [];
-    preg_match_all('#urls_first=https://interview\.ddev\.site/listings/(\d+)/slow#', ($this->calls)(), $urls);
+    preg_match_all('#urls_first=https://ai-lab\.ddev\.site/listings/(\d+)/slow#', ($this->calls)(), $urls);
 
     expect($urls[1])->toBe(['10008', '20015', '30022', '40029', '36']);
 });

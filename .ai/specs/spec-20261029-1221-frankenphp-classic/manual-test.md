@@ -1,6 +1,6 @@
 # Manual test plan: FrankenPHP classic mode
 
-Run from the project root (`/Users/stasmarkov/work/interview`) in a host terminal. App: https://interview.ddev.site.
+Run from the project root (`/Users/stasmarkov/work/interview`) in a host terminal. App: https://ai-lab.ddev.site.
 
 ## Preconditions
 
@@ -23,7 +23,7 @@ git checkout -- bench/parity
 ddev server nginx-fpm
 ddev server frankenphp
 ddev server --current
-curl -sI https://interview.ddev.site/up | grep -i '^server'
+curl -sI https://ai-lab.ddev.site/up | grep -i '^server'
 ```
 
 Expected: `Active: frankenphp`, `frankenphp`, and a `Server` header containing `Caddy`.
@@ -42,7 +42,7 @@ Expected: the four activated files exist and do not appear in `git status`; `unt
 
 ```sh
 echo DEBUG_ROUTES=true >> .env && ddev artisan optimize:clear
-curl -s -H 'Accept: application/json' https://interview.ddev.site/debug/runtime
+curl -s -H 'Accept: application/json' https://ai-lab.ddev.site/debug/runtime
 ddev exec php -m | grep -E '^(pdo_pgsql|redis)$'
 ```
 
@@ -123,7 +123,7 @@ Start on nginx-fpm. Expected: recovery messages are printed, `exit=1`, `overlay-
 
 ```sh
 sed -i '' '/^DEBUG_ROUTES=/d' .env && ddev artisan optimize:clear
-curl -s -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/runtime
+curl -s -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/debug/runtime
 ddev server default
 ddev server --current
 git diff --exit-code .ddev/config.yaml && echo untouched

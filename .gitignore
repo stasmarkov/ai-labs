@@ -51,3 +51,4 @@ Thumbs.db
 .ddev/bench-timeouts/
 .ddev/nginx_full/nginx-site.conf.bench-orig
 .ddev/config.zzz-bench-leaks.yaml
+/.ai/tmp/

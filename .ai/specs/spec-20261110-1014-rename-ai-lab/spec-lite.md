@@ -4,7 +4,7 @@ title: Rename the project to ai-lab and make the homescreen a study-lab landing 
 type: improvement
 size: M
 priority: P1
-status: approved
+status: in-progress
 ticket:
 stakeholders: [Stanislav Markov]
 approved_by: Stas Markov (owner request 2026-11-10; standing approval)

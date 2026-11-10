@@ -1,6 +1,6 @@
 # Manual test plan: listing embeddings and semantic search (SL-24)
 
-Run everything from the project root, `/Users/stasmarkov/work/interview`, in a host terminal. The app is at https://interview.ddev.site. The database is Postgres in the `db` container; the `psql` shortcut used below is:
+Run everything from the project root, `/Users/stasmarkov/work/interview`, in a host terminal. The app is at https://ai-lab.ddev.site. The database is Postgres in the `db` container; the `psql` shortcut used below is:
 
 ```sh
 alias dbq='ddev exec -s db psql -U db -d db -tAc'
@@ -71,9 +71,9 @@ Wrong dimension (AC-3) has no safe manual route against the real model; it is co
 ## Step 3: semantic search, the big-boot query (AC-6, AC-7)
 
 ```sh
-curl -s 'https://interview.ddev.site/api/listings/semantic?q=family%20car%20with%20a%20big%20boot' | python3 -m json.tool | head -40
-curl -s 'https://interview.ddev.site/api/listings/semantic?q=family%20car%20with%20a%20big%20boot' | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d['data']) if 'data' in d else len(d)); print(sorted(x['similarity'] for x in (d['data'] if 'data' in d else d))[::-1] == [x['similarity'] for x in (d['data'] if 'data' in d else d)])"
-curl -s 'https://interview.ddev.site/api/listings/semantic?q=family%20car%20with%20a%20big%20boot' | grep -o '"body_type":"[^"]*"' | sort | uniq -c
+curl -s 'https://ai-lab.ddev.site/api/listings/semantic?q=family%20car%20with%20a%20big%20boot' | python3 -m json.tool | head -40
+curl -s 'https://ai-lab.ddev.site/api/listings/semantic?q=family%20car%20with%20a%20big%20boot' | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d['data']) if 'data' in d else len(d)); print(sorted(x['similarity'] for x in (d['data'] if 'data' in d else d))[::-1] == [x['similarity'] for x in (d['data'] if 'data' in d else d)])"
+curl -s 'https://ai-lab.ddev.site/api/listings/semantic?q=family%20car%20with%20a%20big%20boot' | grep -o '"body_type":"[^"]*"' | sort | uniq -c
 ```
 
 Expected:
@@ -107,8 +107,8 @@ To refresh the numbers, start one worker in a second terminal (`ddev exec php ar
 ```sh
 ddev artisan migrate:fresh --seed
 dbq "select md5(string_agg(l::text, ',' order by id)) from listings l"
-for p in /up /api/ping /listings /listings/1; do curl -s -o /dev/null -w "$p %{http_code}\n" https://interview.ddev.site$p; done
-curl -s -N --max-time 30 -D - -o /dev/null https://interview.ddev.site/listings/1/describe | head -5
+for p in /up /api/ping /listings /listings/1; do curl -s -o /dev/null -w "$p %{http_code}\n" https://ai-lab.ddev.site$p; done
+curl -s -N --max-time 30 -D - -o /dev/null https://ai-lab.ddev.site/listings/1/describe | head -5
 
 mkdir -p /tmp/sl24
 for s in nginx-fpm apache-fpm openlitespeed frankenphp frankenphp-octane frankenphp-worker; do
@@ -131,12 +131,12 @@ Expected:
 ## Step 6: validation, rate limit and logging (AC-5, AC-6)
 
 ```sh
-for q in '' 'x'; do curl -s -w ' -> %{http_code}\n' "https://interview.ddev.site/api/listings/semantic?q=$q"; done
-curl -s -w ' -> %{http_code}\n' 'https://interview.ddev.site/api/listings/semantic' | head -c 300; echo
-curl -s -o /dev/null -w '%{http_code}\n' "https://interview.ddev.site/api/listings/semantic?q=$(printf 'a%.0s' {1..201})"
-curl -s -o /dev/null -w '%{http_code}\n' "https://interview.ddev.site/api/listings/semantic?q=$(printf 'a%.0s' {1..200})"
+for q in '' 'x'; do curl -s -w ' -> %{http_code}\n' "https://ai-lab.ddev.site/api/listings/semantic?q=$q"; done
+curl -s -w ' -> %{http_code}\n' 'https://ai-lab.ddev.site/api/listings/semantic' | head -c 300; echo
+curl -s -o /dev/null -w '%{http_code}\n' "https://ai-lab.ddev.site/api/listings/semantic?q=$(printf 'a%.0s' {1..201})"
+curl -s -o /dev/null -w '%{http_code}\n' "https://ai-lab.ddev.site/api/listings/semantic?q=$(printf 'a%.0s' {1..200})"
 dbq "select agent, provider, model, status, inputs, tokens_in, tokens_out from ai_runs where agent like 'embeddings%' order by id desc limit 3"
-for i in $(seq 1 25); do curl -s -o /dev/null -w '%{http_code} ' 'https://interview.ddev.site/api/listings/semantic?q=small%20cheap%20city%20car'; done; echo
+for i in $(seq 1 25); do curl -s -o /dev/null -w '%{http_code} ' 'https://ai-lab.ddev.site/api/listings/semantic?q=small%20cheap%20city%20car'; done; echo
 ```
 
 Expected:
@@ -159,7 +159,7 @@ Expected: the test passes and asserts a 503 JSON answer plus one `embeddings:que
 By hand, you can see the 503 path with Ollama stopped (`osascript -e 'quit app "Ollama"'` or `pkill ollama`), then:
 
 ```sh
-curl -s -w ' -> %{http_code}\n' 'https://interview.ddev.site/api/listings/semantic?q=family%20car'
+curl -s -w ' -> %{http_code}\n' 'https://ai-lab.ddev.site/api/listings/semantic?q=family%20car'
 dbq "select status, error_class from ai_runs where agent = 'embeddings:query' order by id desc limit 1"
 ```
 

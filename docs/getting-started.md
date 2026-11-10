@@ -10,7 +10,7 @@ Single repository (Laravel backend at the repo root). Everything runs inside DDE
 ## first-time install
 
 ```sh
-cd /path/to/interview
+cd /path/to/ai-lab
 ddev start                      # builds the custom db image (PostgreSQL 16 + pgvector), starts redis
 ddev composer install
 cp -n .env.example .env
@@ -22,7 +22,7 @@ ddev artisan migrate:fresh --seed   # 500 dealers, 50 000 listings (takes a shor
 
 The post-start hook in `.ddev/config.hooks.yaml` creates a `testing` database on every start (idempotent). The `vector` extension is created by a migration.
 
-App URL: https://interview.ddev.site
+App URL: https://ai-lab.ddev.site
 
 ### switching from the old MariaDB setup
 

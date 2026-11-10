@@ -99,7 +99,7 @@
 
 - [x] 11. Live-check `/build/*` assets of the detail page on frankenphp-worker (devenv)
   Covers: AC-5
-  - AC-5 requires `/build/*` assets of the detail page to return 200 on frankenphp-worker (proves `try_files {path} frankenphp-worker.php` lets Caddy serve existing files), but manual-test.md Step 4 has no asset check and the parity set (`bench/parity/frankenphp-worker.txt`) contains no `/build/*` request. Add to Step 4: extract the `/build/assets/*` URLs from `curl -s https://interview.ddev.site/listings/1` and `curl -s -o /dev/null -w '%{http_code}'` each; run it on frankenphp-worker; leave the project on nginx-fpm with `DEBUG_ROUTES` off
+  - AC-5 requires `/build/*` assets of the detail page to return 200 on frankenphp-worker (proves `try_files {path} frankenphp-worker.php` lets Caddy serve existing files), but manual-test.md Step 4 has no asset check and the parity set (`bench/parity/frankenphp-worker.txt`) contains no `/build/*` request. Add to Step 4: extract the `/build/assets/*` URLs from `curl -s https://ai-lab.ddev.site/listings/1` and `curl -s -o /dev/null -w '%{http_code}'` each; run it on frankenphp-worker; leave the project on nginx-fpm with `DEBUG_ROUTES` off
   - **Verify**: manual-test.md Step 4 has the asset check with expected `200` for every asset, and it was run with that result; `git diff --exit-code .ddev/config.yaml`
 
 - [x] 12. Guard the committed worker Caddyfile and Octane overlay details in the stash test (devenv)

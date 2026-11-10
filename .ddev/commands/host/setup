@@ -47,10 +47,41 @@ set_key() {
   local file="$1" name="$2" value="$3"
   TEMP="$(mktemp "$(dirname "$file")/.$(basename "$file").XXXXXX")"
   chmod 600 "$TEMP"
-  { grep -v "^${name}=" "$file" 2>/dev/null || true; } > "$TEMP"
-  printf '%s=%s\n' "$name" "$value" >> "$TEMP"
+  if grep -q "^${name}=" "$file" 2>/dev/null; then
+    # Replace in place: later lines such as MAIL_FROM_NAME="${APP_NAME}" only resolve against keys defined above them.
+    NAME="$name" VALUE="$value" awk 'index($0, ENVIRON["NAME"] "=") == 1 { print ENVIRON["NAME"] "=" ENVIRON["VALUE"]; next } { print }' "$file" > "$TEMP"
+  else
+    { cat "$file" 2>/dev/null || true; } > "$TEMP"
+    printf '%s=%s\n' "$name" "$value" >> "$TEMP"
+  fi
   mv "$TEMP" "$file"
   TEMP=""
+}
+
+# Prints the value of a key with one pair of surrounding quotes removed, empty when the key is absent.
+plain_value() {
+  local value
+  value="$(grep -E "^$2=" "$1" 2>/dev/null | tail -n 1 | cut -d= -f2- || true)"
+  value="${value%\"}"
+  echo "${value#\"}"
+}
+
+# Moves an existing .env from the old project defaults to ai-lab; every value that is not a default stays as it is.
+ensure_app_identity() {
+  local file="$APPROOT/.env" current
+  current="$(plain_value "$file" APP_NAME)"
+  if grep -q '^APP_NAME=' "$file" && [[ -z "$current" || "$current" == "Laravel" ]]; then
+    set_key "$file" APP_NAME "ai-lab"
+    CHANGED=1
+  fi
+  current="$(plain_value "$file" APP_URL)"
+  grep -q '^APP_URL=' "$file" || return 0
+  case "$current" in
+    "" | http://localhost* | https://interview.ddev.site)
+      set_key "$file" APP_URL "https://ai-lab.ddev.site"
+      CHANGED=1
+      ;;
+  esac
 }
 
 # Copies a complete key pair from the source file into the target file.
@@ -92,6 +123,8 @@ if [[ ! -f "$APPROOT/.env" ]]; then
   cp "$APPROOT/.env.example" "$APPROOT/.env"
   CHANGED=1
 fi
+
+ensure_app_identity
 
 ddev start
 

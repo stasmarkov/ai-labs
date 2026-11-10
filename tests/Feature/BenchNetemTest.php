@@ -60,7 +60,7 @@ BASH);
             $this->root,
             $env + [
                 'STUB_LOG' => $this->root.'/calls.log',
-                'NETEM_PROBE_URL' => 'https://interview.ddev.site/up',
+                'NETEM_PROBE_URL' => 'https://ai-lab.ddev.site/up',
                 'NETEM_STATE_DIR' => $this->root,
                 'PATH' => $this->root.'/bin:'.getenv('PATH'),
             ],
@@ -284,13 +284,13 @@ it('AC-2 netem probes the RTT with HEAD requests and resets the qdisc counters a
 });
 
 it('AC-2 netem web-offloads off records the web container before and after, restore puts the old values back and clears the state', function (): void {
-    $off = ($this->netem)([], 'web-offloads', 'off', 'ddev-interview-web');
+    $off = ($this->netem)([], 'web-offloads', 'off', 'ddev-ai-lab-web');
     $offJson = json_decode($off->getOutput(), true);
-    $state = $this->root.'/netem-offloads-ddev-interview-web.state';
+    $state = $this->root.'/netem-offloads-ddev-ai-lab-web.state';
     $stateExistsAfterOff = file_exists($state);
-    $restore = ($this->netem)([], 'web-offloads', 'restore', 'ddev-interview-web');
+    $restore = ($this->netem)([], 'web-offloads', 'restore', 'ddev-ai-lab-web');
     $restoreJson = json_decode($restore->getOutput(), true);
-    $again = ($this->netem)([], 'web-offloads', 'restore', 'ddev-interview-web');
+    $again = ($this->netem)([], 'web-offloads', 'restore', 'ddev-ai-lab-web');
 
     expect($off->getExitCode())->toBe(0, $off->getErrorOutput())
         ->and($offJson['before']['eth0'])->toBe(['tso' => 'on', 'gso' => 'on', 'gro' => 'off', 'udp_gso' => 'on'])
@@ -299,32 +299,32 @@ it('AC-2 netem web-offloads off records the web container before and after, rest
         ->and($restore->getExitCode())->toBe(0, $restore->getErrorOutput())
         ->and($restoreJson)->toBe(['restored' => $offJson['before'], 'matches_before' => true])
         ->and(file_exists($state))->toBeFalse()
-        ->and(file_get_contents($this->root.'/calls.log'))->toContain('--network container:ddev-interview-web', 'tso=on gso=on gro=off udp_gso=on')
+        ->and(file_get_contents($this->root.'/calls.log'))->toContain('--network container:ddev-ai-lab-web', 'tso=on gso=on gro=off udp_gso=on')
         ->and(json_decode($again->getOutput(), true))->toBe(['restored' => null, 'matches_before' => null]);
 });
 
 it('AC-2 netem web-offloads off keeps the original values of an interrupted run as the ones to restore', function (): void {
-    $state = $this->root.'/netem-offloads-ddev-interview-web.state';
+    $state = $this->root.'/netem-offloads-ddev-ai-lab-web.state';
     file_put_contents($state, json_encode(['eth0' => ['tso' => 'on', 'gso' => 'on', 'gro' => 'off', 'udp_gso' => 'on']])."\n");
     touch($this->root.'/calls.log.off');
 
-    $off = ($this->netem)([], 'web-offloads', 'off', 'ddev-interview-web');
+    $off = ($this->netem)([], 'web-offloads', 'off', 'ddev-ai-lab-web');
 
     expect(json_decode($off->getOutput(), true)['before']['eth0']['tso'])->toBe('on')
         ->and(file_exists($state))->toBeTrue();
 });
 
 it('AC-2 netem web-offloads off fails when the offloads cannot be turned off and keeps the state for the restore', function (): void {
-    $off = ($this->netem)(['STUB_OFFLOADS_STUCK' => '1'], 'web-offloads', 'off', 'ddev-interview-web');
+    $off = ($this->netem)(['STUB_OFFLOADS_STUCK' => '1'], 'web-offloads', 'off', 'ddev-ai-lab-web');
 
     expect($off->getExitCode())->toBe(1)
         ->and($off->getErrorOutput())->toContain('cannot turn tso, gso and gro off')
-        ->and(file_exists($this->root.'/netem-offloads-ddev-interview-web.state'))->toBeTrue();
+        ->and(file_exists($this->root.'/netem-offloads-ddev-ai-lab-web.state'))->toBeTrue();
 });
 
 it('AC-2 netem defaults prints the default profile without calling docker and web-offloads needs an action', function (): void {
     $defaults = ($this->netem)([], 'defaults');
-    $bad = ($this->netem)([], 'web-offloads', 'sideways', 'ddev-interview-web');
+    $bad = ($this->netem)([], 'web-offloads', 'sideways', 'ddev-ai-lab-web');
 
     expect($defaults->getExitCode())->toBe(0, $defaults->getErrorOutput())
         ->and(json_decode($defaults->getOutput(), true))->toMatchArray(['delay_ms' => 75, 'rate_up' => '750kbit', 'rate_down' => '1600kbit', 'mode' => 'bidirectional'])

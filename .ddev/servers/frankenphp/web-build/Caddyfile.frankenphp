@@ -79,7 +79,7 @@
 			path /tmp/mercure.db
 			size 100
 		}
-		cors_origins https://interview.ddev.site
+		cors_origins https://ai-lab.ddev.site
 	}
 }
 

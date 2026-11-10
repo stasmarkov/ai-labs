@@ -55,7 +55,7 @@ The app runs in FrankenPHP worker mode, booted once per worker instead of once p
 
 - **AC-1**: WHEN the developer runs `ddev server frankenphp-octane` THE SYSTEM SHALL activate its files, write its overlay (`# server: frankenphp-octane` first), restart, and print `Active: frankenphp-octane`; the same holds for `frankenphp-worker`.
 - **AC-2**: WHEN the developer switches from either worker server to any other server THE SYSTEM SHALL remove every activated file that server does not use and leave the other server's files exactly as its stash defines (the frankenphp classic Caddyfile comes back unedited).
-- **AC-3**: `ddev server` SHALL print `Supported: nginx-fpm apache-fpm frankenphp openlitespeed frankenphp-octane frankenphp-worker`; `--current`, `--url` (`https://interview.ddev.site` for both), the already-active check, the stash completeness check and rollback SHALL behave for both as for frankenphp.
+- **AC-3**: `ddev server` SHALL print `Supported: nginx-fpm apache-fpm frankenphp openlitespeed frankenphp-octane frankenphp-worker`; `--current`, `--url` (`https://ai-lab.ddev.site` for both), the already-active check, the stash completeness check and rollback SHALL behave for both as for frankenphp.
 - **AC-4**: WHILE frankenphp-octane is active, requests SHALL be served by Octane's worker: `/debug/runtime` reports `sapi` = `frankenphp` and `opcache_enabled` = `true`, the Octane server process is visible in `ddev exec ps` (the `octane:frankenphp` command and its `frankenphp run` child), and 4 worker threads run (FrankenPHP admin API `GET /frankenphp/threads` on `localhost:2019` inside the container, or the startup log; regular non-worker threads may also exist).
 - **AC-5**: WHILE frankenphp-worker is active, requests SHALL be served by the worker script with no Octane daemon running: `/debug/runtime` reports `sapi` = `frankenphp` and `opcache_enabled` = `true`, `/build/*` assets of the detail page return 200, `ps` shows only `frankenphp run --config /etc/frankenphp/Caddyfile`, and 4 worker threads run.
 - **AC-6 (BR-02)**: `bench/parity.sh capture` SHALL accept both servers with the Server header token `caddy` and write `bench/parity/frankenphp-octane.txt` and `bench/parity/frankenphp-worker.txt`; both SHALL be committed and compare `identical` with `nginx-fpm`.
@@ -91,7 +91,7 @@ The app runs in FrankenPHP worker mode, booted once per worker instead of once p
   - The worker script requires `FRANKENPHP_WORKER` to be set.
 - **FrankenPHP facts**: `php_server { worker { file …; num …; match …; env … } }`; `match` is only valid inside `php_server` and routes matching paths to the worker. The global `frankenphp { worker … }` block has no `match`, so it cannot route every request to the worker in the add-on's Caddyfile.
 - **Approach**: generalise `activated_files` so a server can reuse another stash's files and override one; add two servers; extend the token map, the versions case and the docs.
-- **Repos**: single repo `/Users/stasmarkov/work/interview`, dev URL https://interview.ddev.site.
+- **Repos**: single repo `/Users/stasmarkov/work/interview`, dev URL https://ai-lab.ddev.site.
 
 ## Decisions
 1. Add `laravel/octane` (user approval, 2026-10-30).

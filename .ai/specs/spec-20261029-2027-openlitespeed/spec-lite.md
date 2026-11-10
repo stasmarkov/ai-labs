@@ -18,7 +18,7 @@ brs: [BR-02, BR-25]
 # OpenLiteSpeed + LSAPI as a switchable DDEV service with parity and versions
 
 ## Summary
-The developer runs `ddev server openlitespeed` and an OpenLiteSpeed (OLS) container serves the unchanged app through LSAPI with lsphp 8.4, the `pgsql` and `redis` extensions and OPcache, at `https://interview.ddev.site:8091`. Its responses match the other three servers in the parity check, and its versions are in BENCHMARKS.md. Switching to any other server removes the OLS container.
+The developer runs `ddev server openlitespeed` and an OpenLiteSpeed (OLS) container serves the unchanged app through LSAPI with lsphp 8.4, the `pgsql` and `redis` extensions and OPcache, at `https://ai-lab.ddev.site:8091`. Its responses match the other three servers in the parity check, and its versions are in BENCHMARKS.md. Switching to any other server removes the OLS container.
 
 ## Context
 - **Problem**: OLS is not a DDEV `webserver_type`, so it cannot replace the `web` container. It has to run as an extra Docker Compose service next to `web`, with its own port, and reach the same code, PostgreSQL and Redis.
@@ -38,7 +38,7 @@ The developer runs `ddev server openlitespeed` and an OpenLiteSpeed (OLS) contai
 - WebAdmin (port 7080) — not exposed; configuration lives only in committed files.
 - LSAPI tuning (`PHP_LSAPI_CHILDREN`, instances, max connections) beyond what is needed to serve; tuning is SL-06.
 - LSCache, HTTP/3, compression settings.
-- Making OLS answer on the main `https://interview.ddev.site` URL.
+- Making OLS answer on the main `https://ai-lab.ddev.site` URL.
 
 ## Must NOT change
 - **MNC-1**: `.ddev/config.yaml` is never modified.
@@ -52,14 +52,14 @@ The developer runs `ddev server openlitespeed` and an OpenLiteSpeed (OLS) contai
 - **AC-1**: WHEN the developer runs `ddev server openlitespeed` THE SYSTEM SHALL copy the stash compose file into `.ddev/`, write `.ddev/config.zz-server.yaml` as `# server: openlitespeed` followed by `webserver_type: nginx-fpm`, run `ddev restart`, and print `Active: openlitespeed`.
 - **AC-2**: WHEN the developer switches from openlitespeed to any other server THE SYSTEM SHALL delete `.ddev/docker-compose.openlitespeed.yaml`, write that server's overlay and restart, so no OLS container is left running.
 - **AC-3**: `ddev server` with no argument SHALL print `Supported: nginx-fpm apache-fpm frankenphp openlitespeed`; `--current`, the already-active check, stash completeness check and rollback SHALL behave for openlitespeed as they do for frankenphp.
-- **AC-4**: WHILE openlitespeed is active, `https://interview.ddev.site:8091/up` SHALL return 200 with a `Server` header containing `litespeed` (case-insensitive), and `https://interview.ddev.site/up` (the idle nginx-fpm `web` container) SHALL still return 200.
+- **AC-4**: WHILE openlitespeed is active, `https://ai-lab.ddev.site:8091/up` SHALL return 200 with a `Server` header containing `litespeed` (case-insensitive), and `https://ai-lab.ddev.site/up` (the idle nginx-fpm `web` container) SHALL still return 200.
 - **AC-5**: The OLS vhost SHALL use `/var/www/html/public` as document root, load `public/.htaccess` rewrite rules, and pass every non-file request to `index.php` through LSAPI, so `/listings`, `/listings/1`, `/api/ping` and unknown paths are answered by Laravel. Laravel SHALL be able to write `storage/` and `bootstrap/cache/` from the lsphp process (no permission errors in `storage/logs` and compiled views written).
-- **AC-6 (BR-25)**: WHILE openlitespeed is active and `/debug/runtime` is enabled, `https://interview.ddev.site:8091/debug/runtime` SHALL report `sapi` = `litespeed`, `opcache_enabled` = `true`, and a `php_version` with major.minor 8.4; `ddev exec -s openlitespeed php -m` SHALL list `pdo_pgsql` and `redis`.
-- **AC-7 (BR-02)**: `bench/parity.sh capture` and `bench/versions.sh` SHALL read the active server from `ddev server --current` (as today) and default their base URL per active server: `https://interview.ddev.site:8091` for openlitespeed, `https://interview.ddev.site` for the others; `PARITY_BASE_URL` still overrides. The header token map gains `openlitespeed → litespeed`. Before hashing, `capture` replaces every occurrence of its base URL in the body with `https://interview.ddev.site`, so absolute links built from the request host (asset and image URLs on the detail page) compare equal; for the default servers this is a no-op.
+- **AC-6 (BR-25)**: WHILE openlitespeed is active and `/debug/runtime` is enabled, `https://ai-lab.ddev.site:8091/debug/runtime` SHALL report `sapi` = `litespeed`, `opcache_enabled` = `true`, and a `php_version` with major.minor 8.4; `ddev exec -s openlitespeed php -m` SHALL list `pdo_pgsql` and `redis`.
+- **AC-7 (BR-02)**: `bench/parity.sh capture` and `bench/versions.sh` SHALL read the active server from `ddev server --current` (as today) and default their base URL per active server: `https://ai-lab.ddev.site:8091` for openlitespeed, `https://ai-lab.ddev.site` for the others; `PARITY_BASE_URL` still overrides. The header token map gains `openlitespeed → litespeed`. Before hashing, `capture` replaces every occurrence of its base URL in the body with `https://ai-lab.ddev.site`, so absolute links built from the request host (asset and image URLs on the detail page) compare equal; for the default servers this is a no-op.
 - **AC-8 (BR-02)**: `bench/parity/openlitespeed.txt` SHALL be committed, captured from the same seeded database, and `bench/parity.sh compare nginx-fpm openlitespeed` SHALL print `identical` (and therefore matches apache-fpm and frankenphp, which are identical to nginx-fpm).
 - **AC-9 (BR-25)**: WHEN `bench/versions.sh` runs while openlitespeed is active THE SYSTEM SHALL print a row whose web-server column is the OLS version number from `ddev exec -s openlitespeed /usr/local/lsws/bin/lshttpd -v` (e.g. `1.9.4`); PHP version, SAPI and OPcache come from `/debug/runtime` on the openlitespeed base URL (so `DEBUG_ROUTES=true` is needed, as for the other servers).
 - **AC-10 (BR-25)**: BENCHMARKS.md SHALL have an openlitespeed row pasted from `bench/versions.sh` (SAPI `litespeed`, OPcache `true`), state that the row is pinned by the image tag `1.9.4-lsphp84` except for the `lsphp84-pgsql` package installed at build time (unversioned, so a point-in-time record), name `bench/parity/openlitespeed.txt` in Response parity with its compare result, and note that OLS listens on its own port while `web` stays idle on nginx-fpm.
-- **AC-11**: README's "Switching servers" section SHALL list `openlitespeed`, give its URL `https://interview.ddev.site:8091`, say the first switch builds the image, and note that OLS reads `.htaccess` rewrite rules at start-up, so changes to them need a `ddev restart` (unlike Apache).
+- **AC-11**: README's "Switching servers" section SHALL list `openlitespeed`, give its URL `https://ai-lab.ddev.site:8091`, say the first switch builds the image, and note that OLS reads `.htaccess` rewrite rules at start-up, so changes to them need a `ddev restart` (unlike Apache).
 
 **Clarifications from the clarity gate**
 - **HTTPS seen by Laravel.** The vhost sets `HTTPS=on` for requests the router forwards with `X-Forwarded-Proto: https` (the FrankenPHP add-on's Caddyfile does the same), so generated URLs use `https://`. No app or `.env` change.
@@ -91,7 +91,7 @@ The developer runs `ddev server openlitespeed` and an OpenLiteSpeed (OLS) contai
 1. Activated by `ddev server openlitespeed`, not always on, so the OLS container never competes with the other servers for CPU and memory (user choice, 2026-10-29).
 2. Configuration only in committed files; WebAdmin not exposed (user choice).
 3. Pin image `litespeedtech/openlitespeed:1.9.4-lsphp84` (latest, 2026-10-29) (user choice).
-4. Own port (8090/8091) on the project hostname instead of a sub-subdomain, because DDEV's certificate covers `interview.ddev.site` but `*.ddev.site` does not cover `ols.interview.ddev.site`.
+4. Own port (8090/8091) on the project hostname instead of a sub-subdomain, because DDEV's certificate covers `ai-lab.ddev.site` but `*.ddev.site` does not cover `ols.ai-lab.ddev.site`.
 5. Mount at `/var/www/html` so paths in Laravel's cached config and compiled views are valid in both containers.
 6. Routing is left entirely to `public/.htaccess`; the vhost only sets `HTTPS=on` from `X-Forwarded-Proto`. A vhost-level index.php rule ran before `.htaccess` and suppressed its trailing-slash redirect (review fix, 2026-10-30).
 7. WebAdmin is disabled (`disableWebAdmin 1`), not only unpublished, so the config lives only in the committed files (review fix, 2026-10-30).

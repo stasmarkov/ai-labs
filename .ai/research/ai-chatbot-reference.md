@@ -1,12 +1,12 @@
 # AI chatbot reference design (input for SL-22, SL-32…SL-35, SL-40, SL-41)
 
-Source: "Laravel LLM-чатбот: структура, MCP, чанки та ембединги", a design doc Stanislav Markov shared on 2026-11-02 (dated 2026-11-01). It describes a local, multi-tenant RAG chatbot on Laravel 12, Ollama, Prism, pgvector, Horizon, Reverb and laravel/mcp. This note keeps what fits AutoPulse, says where each idea lands in the backlog, and records what is wrong or does not fit. Specs cite this file; they still verify every library API against the installed version before use.
+Source: "Laravel LLM-чатбот: структура, MCP, чанки та ембединги", a design doc Stanislav Markov shared on 2026-11-02 (dated 2026-11-01). It describes a local, multi-tenant RAG chatbot on Laravel 12, Ollama, Prism, pgvector, Horizon, Reverb and laravel/mcp. This note keeps what fits ai-lab, says where each idea lands in the backlog, and records what is wrong or does not fit. Specs cite this file; they still verify every library API against the installed version before use.
 
 ## One request, layer by layer
 
 The design's main lesson: a chatbot is a pipeline of small steps, each one closing one hole that a bare model plus a prompt leaves open. Each step is its own class, so it can be tested and switched on alone.
 
-| Step | Hole it closes | Where it lands in AutoPulse |
+| Step | Hole it closes | Where it lands in ai-lab |
 |---|---|---|
 | Local model behind one client | data leaves the machine, token cost, model locked into code | SL-22 (BR-91); client library chosen in the Q-01 ADR |
 | System prompt in a versioned file | behaviour cannot be diffed or rolled back | SL-20 / SL-32: prompt files in git, `prompt_version` in every log row (BR-90) |
@@ -57,11 +57,11 @@ Start with a retrieval metric that needs no model: for each labelled question, d
 
 Candidate data, all usable locally: `laravel/docs` (13.x branch, ~90 markdown files, a corpus whose answers the developer knows), `rag-datasets/rag-mini-wikipedia` (~3 200 passages, ~900 Q/A pairs, CC BY 3.0) for a larger recall test, and a few Ukrainian Wikipedia articles to test chunking and embeddings on Cyrillic. Downloaded data stays gitignored.
 
-## What does not fit AutoPulse, or is wrong in the design
+## What does not fit ai-lab, or is wrong in the design
 
 1. **Tenants, users, per-tool policies, Sanctum and private channels** do not exist here: user accounts are a non-goal and every endpoint is public on the local network. The access lesson is kept as a single rule in SL-34: authorization runs in PHP before a tool executes, never in the prompt.
 2. **Queued job + Reverb token streaming** is the queued streaming variant that was dropped on 2026-11-01 (SL-21, non-goal). SL-20 and SL-41 stream directly over SSE (BR-95). Reverb arrives in SL-14 for price updates; reusing it for chat would mean reopening that non-goal, which is the owner's call.
-3. **Laravel 12 / PHP 8.3** in the design; AutoPulse is Laravel 13 / PHP 8.4. Package versions and APIs are checked at spec time.
+3. **Laravel 12 / PHP 8.3** in the design; ai-lab is Laravel 13 / PHP 8.4. Package versions and APIs are checked at spec time.
 4. **Prism is not needed.** The repo already has `laravel/ai` 1.3.0 (the Laravel AI SDK, which SL-20 is written for) and `laravel/mcp` 1.1.2 installed; Prism would be a second client for the same job. SL-34's hand-written loop over the OpenAI-compatible API stays as the "see what the SDK hides" lesson. Q-01 now records which client each slice uses.
 5. **Ollama + qwen2.5:7b + nomic-embed-text** are sized for a 16 GB machine. They are candidates for the Q-01 ADR, not a decision; the M3 Max with 36 GB can run larger models.
 6. **Embedding prefixes are wrong for nomic-embed-text.** The design embeds documents with no prefix and questions as `query: …` (the E5 convention). nomic-embed-text expects `search_document: ` for documents and `search_query: ` for questions; with a mismatch, retrieval quietly gets worse. Prefixes are per model and belong next to the model name in config.

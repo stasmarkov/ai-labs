@@ -52,7 +52,7 @@ LCP is measured with a pinned, throttled Chromium (Playwright) running in a cont
   - On every other SAPI it does nothing.
   - The switch is `config('performance.early_hints')` (env `EARLY_HINTS`, default true), so the bench can turn it off.
   - The links come from Vite's manifest for the page's entries.
-- **Verifying the 103 path.** `bench/early-hints.sh` records whether a 103 arrives with `curl -v --http2`, both through the router (`https://interview.ddev.site`) and straight at the web container (`https://web:443`, from a container on `ddev_default`).
+- **Verifying the 103 path.** `bench/early-hints.sh` records whether a 103 arrives with `curl -v --http2`, both through the router (`https://ai-lab.ddev.site`) and straight at the web container (`https://web:443`, from a container on `ddev_default`).
 - **LCP.** `bench/lcp.mjs` with a pinned Playwright Chromium image, run as a container on `ddev_default`.
   - It throttles with Chrome DevTools Protocol network emulation: 150 ms RTT, 1.6 Mbit/s down, 750 kbit/s up (Lighthouse "Slow 4G"), and 4× CPU slowdown.
   - It runs 5 cold runs per variant (cache disabled, a new browser context each time).
@@ -174,7 +174,7 @@ LCP is measured with a pinned, throttled Chromium (Playwright) running in a cont
 
 **Toggling the hint for the bench (Q6).** `config/performance.php` is new. The bench sets `EARLY_HINTS=false` in `.env` and runs `config:clear`, using the shared bench `.env` backup and restore that SL-09 and SL-11 use, then restores both.
 
-**The direct path (Q7).** Both nginx-fpm and frankenphp listen on 443 with TLS inside the web container (checked: 0.0.0.0:443). The direct client runs in a container on `ddev_default` and maps `interview.ddev.site` to the web container's IP (`--resolve` for curl, `--host-resolver-rules` for Chromium), so SNI and Host are the real ones. Certificates are accepted with `-k` / `ignoreHTTPSErrors`; the bench is local.
+**The direct path (Q7).** Both nginx-fpm and frankenphp listen on 443 with TLS inside the web container (checked: 0.0.0.0:443). The direct client runs in a container on `ddev_default` and maps `ai-lab.ddev.site` to the web container's IP (`--resolve` for curl, `--host-resolver-rules` for Chromium), so SNI and Host are the real ones. Certificates are accepted with `-k` / `ignoreHTTPSErrors`; the bench is local.
 
 **Choosing the LCP path (Q8).** `bench/lcp.mjs --path router|direct`. The matrix uses one path for all three variants:
 - `router` if `early-hints.sh` shows the router forwards a 103;

@@ -20,7 +20,7 @@ beforeEach(function (): void {
 echo "ddev $*" >> "$STUB_LOG"
 case "$*" in
   "server --current") echo "${STUB_SERVER-nginx-fpm}" ;;
-  "server --url") echo "https://interview.ddev.site" ;;
+  "server --url") echo "https://ai-lab.ddev.site" ;;
   "artisan config:show app.env") echo "${STUB_APP_ENV-production}" ;;
   "artisan config:show app.debug") echo "${STUB_APP_DEBUG-false}" ;;
   "exec test -f "*) if [[ "${STUB_NO_EXPORT-}" == 1 ]]; then exit 1; fi ;;
@@ -116,7 +116,7 @@ it('AC-6 export-load runs rate-limited clients and the shared probe as two cappe
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
         ->and($calls)->toContain('/healthz', '--name export-load-clients-', '--name export-load-probe-')
-        ->and($calls)->toContain('URL=https://interview.ddev.site/exports/listings?mode=offload', 'CLIENTS=20', 'RATE=10M')
+        ->and($calls)->toContain('URL=https://ai-lab.ddev.site/exports/listings?mode=offload', 'CLIENTS=20', 'RATE=10M')
         ->and($calls)->toContain('EXPECT_BYTES='.strlen($this->body), 'EXPECT_SHA256='.$this->sha)
         ->and(substr_count($calls, '--cpus=2'))->toBe(2)
         ->and($process->getOutput())->toContain('mode=offload', 'downloads', 'integrity', 'health_p95_ms', 'median', 'health p95 spread');

@@ -1,6 +1,6 @@
 # Manual test plan: benchmark harness (spec-20261030-1806-bench-harness)
 
-All commands run from the project root (`/Users/stasmarkov/work/interview`) on the Mac host unless a step says otherwise. The app is at https://interview.ddev.site.
+All commands run from the project root (`/Users/stasmarkov/work/interview`) on the Mac host unless a step says otherwise. The app is at https://ai-lab.ddev.site.
 
 ## Preconditions
 
@@ -64,7 +64,7 @@ The harness refuses to start while a stale `.env.bench-backup` exists, so the `m
 1. Run `bench/concurrency.sh default && bench/timeouts.sh apply defaults && ddev server default`.
 2. State check: `ddev server --current` prints the name `ddev server --default` prints (`frankenphp`); `diff .env /tmp/env.before` prints nothing; `ls .env.bench-backup` says no such file; `grep DEBUG_ROUTES .env` is empty or `false`; `ls .ddev/config.zz-bench-* .ddev/docker-compose.bench-* .ddev/web-entrypoint.d/zz-bench-* 2>&1` shows no such files.
 3. MNC-1: `git diff --exit-code .ddev/config.yaml; echo $?` prints `0`.
-4. MNC-4 route check: `curl -sk -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/sleep/1` prints `404`.
+4. MNC-4 route check: `curl -sk -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/debug/sleep/1` prints `404`.
 5. MNC-2 parity on nginx-fpm: `ddev server nginx-fpm && bench/parity.sh capture`, then `bench/parity.sh compare nginx-fpm bench/parity/nginx-fpm.txt` is trivially the same file, so instead check `git diff --stat bench/parity/` after capture. Expected: no change to the committed snapshots.
 6. Repeat on FrankenPHP: `ddev server frankenphp && bench/parity.sh capture && git diff --stat bench/parity/ && ddev server default`. Expected: no diff. Also `bench/parity.sh compare nginx-fpm frankenphp` prints `identical`.
 7. Expected: `git status --short` matches `/tmp/status.before` plus only new files under `bench/results/` and the docs.
@@ -76,7 +76,7 @@ Each case must exit with code 2, print `Run condition failed: <check>`, and send
 1. Dirty tree: `touch scratch.txt; bench/run.sh ping --quick; echo $?`. Expected: `Run condition failed: git working tree has changes outside bench/results/` and `2`. Then `rm scratch.txt`.
 2. Wrong environment: not directly reachable because the harness writes .env itself; to check the behaviour read `.env` during a run in a second terminal: `grep -E '^(APP_ENV|APP_DEBUG|DEBUG_ROUTES)=' .env`. Expected during a run: `APP_ENV=production`, `APP_DEBUG=false`, `DEBUG_ROUTES=true`.
 3. Caches: in a second terminal during the settle period run `ddev exec ls bootstrap/cache`. Expected: `config.php` and a routes file present. To force a refusal, run `ddev artisan optimize:clear` in the second terminal right after `bench/run.sh ping --quick` prints its first line; Expected refusal `config cache is not built` (timing dependent; repeat if it slips through).
-4. OPcache and Xdebug: `ddev xdebug on`, then `bench/run.sh ping --quick; echo $?`. Expected: `Run condition failed: Xdebug is not off for the serving SAPI` and `2`. Then `ddev xdebug off`. For OPcache, check `curl -sk https://interview.ddev.site/debug/runtime` while a run is active (DEBUG_ROUTES is on then); expected `opcache_enabled: true`, `xdebug_loaded: false`.
+4. OPcache and Xdebug: `ddev xdebug on`, then `bench/run.sh ping --quick; echo $?`. Expected: `Run condition failed: Xdebug is not off for the serving SAPI` and `2`. Then `ddev xdebug off`. For OPcache, check `curl -sk https://ai-lab.ddev.site/debug/runtime` while a run is active (DEBUG_ROUTES is on then); expected `opcache_enabled: true`, `xdebug_loaded: false`.
 5. Restore on failure: after each refusal run `diff .env /tmp/env.before` (nothing) and `ls .env.bench-backup` (not found).
 6. Restore on Ctrl-C: start `bench/run.sh ping`, wait for the first load, press Ctrl-C. Expected: exit code 130, `.env` identical to `/tmp/env.before`, no `.env.bench-backup`, caches cleared (`ddev exec ls bootstrap/cache/config.php` fails).
 
@@ -85,12 +85,12 @@ Each case must exit with code 2, print `Run condition failed: <check>`, and send
 1. Start `bench/run.sh ping --quick` and, in a second terminal, run `docker ps --format '{{.Image}} {{.Command}}'` while it loads. Expected: a `ghcr.io/hatoo/oha:<tag>` container whose command includes `-c 50`, `-t 30s` and `-k`.
 2. Same for `bench/run.sh search --quick`. Expected: a `grafana/k6:<tag>` container.
 3. `grep -nE "vus|timeout|insecureSkipTLSVerify|p\(99\)" bench/k6-search.js`. Expected: `vus: 50`, `timeout: '30s'`, `insecureSkipTLSVerify: true`, and `p(99)` in `summaryTrendStats`.
-4. Search page rotation: `grep -n "page" bench/k6-search.js`. Expected: `make=BMW` and `(iteration mod 100) + 1` logic. Check data: `curl -sk 'https://interview.ddev.site/listings?make=BMW&page=100' -o /dev/null -w '%{http_code}\n'` prints `200`.
+4. Search page rotation: `grep -n "page" bench/k6-search.js`. Expected: `make=BMW` and `(iteration mod 100) + 1` logic. Check data: `curl -sk 'https://ai-lab.ddev.site/listings?make=BMW&page=100' -o /dev/null -w '%{http_code}\n'` prints `200`.
 5. Error %: a result file from a run with a stopped server should show a high `error_percent`; skip unless you want to prove it.
 
 ## Step 8: Traffic path (BR-22)
 
-1. During a run: `docker inspect $(docker ps -q --filter ancestor=ghcr.io/hatoo/oha:1.12.1) --format '{{.HostConfig.NetworkMode}} {{.HostConfig.NanoCpus}} {{.HostConfig.ExtraHosts}}'`. Expected: `ddev_default`, `2000000000`, and `[interview.ddev.site:<ip>]`.
+1. During a run: `docker inspect $(docker ps -q --filter ancestor=ghcr.io/hatoo/oha:1.12.1) --format '{{.HostConfig.NetworkMode}} {{.HostConfig.NanoCpus}} {{.HostConfig.ExtraHosts}}'`. Expected: `ddev_default`, `2000000000`, and `[ai-lab.ddev.site:<ip>]`.
 2. Compare with the router: `docker inspect ddev-router --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}'`. Expected: the ip in step 1 appears in the list.
 3. Result file: `jq '.images' bench/results/raw/*/nginx-fpm/* | head`. Expected: image tag plus `sha256:` digest.
 4. `BENCHMARKS.md` "How the numbers work" mentions 7 CPUs shared and the 2-CPU cap.
@@ -100,14 +100,14 @@ Each case must exit with code 2, print `Run condition failed: <check>`, and send
 Happy path, with DEBUG_ROUTES on:
 
 1. `printf '\nDEBUG_ROUTES=true\n' >> .env; ddev artisan config:clear`
-2. `curl -sk -w '\n%{http_code}\n' https://interview.ddev.site/debug/sleep/2`. Expected: after about 2 s, `200` and JSON containing `"slept_seconds":2`.
-3. `curl -sk -w '\n%{http_code}\n' https://interview.ddev.site/debug/sleep/0` and `/debug/sleep/121`. Expected: `422` with the error envelope ("Seconds must be between 1 and 120.").
-4. `curl -sk -o /dev/null -w '%{http_code}\n' https://interview.ddev.site/debug/sleep/abc`. Expected: `404`.
+2. `curl -sk -w '\n%{http_code}\n' https://ai-lab.ddev.site/debug/sleep/2`. Expected: after about 2 s, `200` and JSON containing `"slept_seconds":2`.
+3. `curl -sk -w '\n%{http_code}\n' https://ai-lab.ddev.site/debug/sleep/0` and `/debug/sleep/121`. Expected: `422` with the error envelope ("Seconds must be between 1 and 120.").
+4. `curl -sk -o /dev/null -w '%{http_code}\n' https://ai-lab.ddev.site/debug/sleep/abc`. Expected: `404`.
 
 Original case, switched off (must be indistinguishable from an unknown path):
 
 5. `cp /tmp/env.before .env; ddev artisan config:clear`
-6. `curl -sk -w '%{http_code}\n' https://interview.ddev.site/debug/sleep/1` and `/debug/no-such-path`. Expected: both `404`, same body.
+6. `curl -sk -w '%{http_code}\n' https://ai-lab.ddev.site/debug/sleep/1` and `/debug/no-such-path`. Expected: both `404`, same body.
 
 ## Step 10: Concurrency script (AC-4)
 

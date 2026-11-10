@@ -19,7 +19,7 @@ if [[ -n "${STUB_DDEV_FAIL-}" && "$*" == *"$STUB_DDEV_FAIL"* ]]; then
 fi
 case "$*" in
   "server --current") echo "${STUB_SERVER-nginx-fpm}" ;;
-  "server --url") echo "https://interview.ddev.site" ;;
+  "server --url") echo "https://ai-lab.ddev.site" ;;
   "artisan config:show app.env") echo "${STUB_APP_ENV-production}" ;;
   "artisan config:show app.debug") echo "${STUB_APP_DEBUG-false}" ;;
 esac
@@ -64,7 +64,7 @@ BASH,
 echo "docker $*" >> "$STUB_LOG"
 case "$1" in
   inspect) echo 172.19.0.2 ;;
-  stats) printf 'ddev-interview-web\t120.5MiB / 15GiB\t42.0%%\nddev-interview-db\t300MiB / 15GiB\t10.0%%\n' ;;
+  stats) printf 'ddev-ai-lab-web\t120.5MiB / 15GiB\t42.0%%\nddev-ai-lab-db\t300MiB / 15GiB\t10.0%%\n' ;;
   pull) ;;
   image) [[ -n "${STUB_NO_DIGEST-}" ]] && exit 1; echo "stub/image@sha256:abc" ;;
   run)
@@ -90,6 +90,7 @@ BASH,
             $this->root,
             $env + [
                 'BENCH_APPROOT' => $this->root.'/app',
+                'DDEV_SITENAME' => 'ai-lab',
                 'BENCH_SETTLE' => '0',
                 'BENCH_WARMUP' => '0',
                 'BENCH_MEASURE' => '1',
@@ -142,7 +143,7 @@ it('AC-1 run writes one result file per run and restores the env', function (): 
         ->and($result['error_percent'])->toEqual(10)
         ->and($result['peak_memory_mib'])->toHaveKeys(['web', 'db'])
         ->and($result['avg_cpu_percent'])->toHaveKeys(['web', 'db'])
-        ->and(file_get_contents($this->root.'/calls.log'))->toContain('--add-host interview.ddev.site:172.19.0.2', '--cpus=2')
+        ->and(file_get_contents($this->root.'/calls.log'))->toContain('--add-host ai-lab.ddev.site:172.19.0.2', '--cpus=2')
         ->and(file_get_contents($this->root.'/app/.env'))->toBe("APP_ENV=local\nAPP_DEBUG=true\nDEBUG_ROUTES=false\nSECRET=keep\n")
         ->and(file_exists($this->root.'/app/.env.bench-backup'))->toBeFalse();
 });

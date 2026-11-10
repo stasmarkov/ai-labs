@@ -4,7 +4,7 @@ What this checks: a 50 MiB CSV download no longer ties up a PHP worker for the w
 
 ## Preconditions
 
-- DDEV is running and you are in `/Users/stasmarkov/work/interview`. App URL: https://interview.ddev.site (the other servers get their own URL; `ddev server --url` prints the current one).
+- DDEV is running and you are in `/Users/stasmarkov/work/interview`. App URL: https://ai-lab.ddev.site (the other servers get their own URL; `ddev server --url` prints the current one).
 - The route is a lab endpoint behind the debug gate. In `.env` set `DEBUG_ROUTES=true`, then run `ddev artisan config:clear`.
 - Start on the default server: `ddev server default`.
 - Use a clean working tree for step 5 (the fingerprint and parity checks compare against committed snapshots).

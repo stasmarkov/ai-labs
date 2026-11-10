@@ -1,6 +1,6 @@
 # Manual test plan: classic vs worker mode (SL-08)
 
-Everything runs from the project root, `/Users/stasmarkov/work/interview`, in a host terminal. The app is at https://interview.ddev.site.
+Everything runs from the project root, `/Users/stasmarkov/work/interview`, in a host terminal. The app is at https://ai-lab.ddev.site.
 
 ## Preconditions
 
@@ -100,7 +100,7 @@ Expected: three files `memory-frankenphp-octane.json`, `memory-frankenphp-worker
 php -r '$d=json_decode(file_get_contents("bench/results/$BENCH_DATE/memory-frankenphp-worker.json"),true); foreach($d["cases"] as $c){printf("%s %s restarts=%d growth=%.1f samples=%d\n",$c["case"],$c["mode"],$c["restarts"],$c["growth_kib_per_1000"],count($c["samples"]));}'
 ```
 
-Expected shape: case A restarts 0 and clearly positive growth; B restarts 0 and growth within 5; C restarts about 20 (10 000 / 500). `.env` is back to the values you noted, `ls .env.bench-backup` says "No such file", and you can browse https://interview.ddev.site/up afterwards without a debug page.
+Expected shape: case A restarts 0 and clearly positive growth; B restarts 0 and growth within 5; C restarts about 20 (10 000 / 500). `.env` is back to the values you noted, `ls .env.bench-backup` says "No such file", and you can browse https://ai-lab.ddev.site/up afterwards without a debug page.
 
 ## Step 7: ping and search tables (AC-5)
 

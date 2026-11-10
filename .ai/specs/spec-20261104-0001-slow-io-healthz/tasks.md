@@ -92,7 +92,7 @@
 - [x] 9. Stub reply matches the Q7 contract (devops)
   Covers: AC-3, AC-1
   - `.ddev/vinstub/server.mjs` answers `{vin, status: 'clean', waited_ms}`; Clarification Q7 fixes the reply as `{"vin":"…","make_check":"ok","recalls":0,"source":"vinstub"}`. `SlowListingTest` fakes the Q7 shape, so the live `vin_report` differs from what the tests prove. Change the stub body and make `VinStubTest` assert the exact JSON.
-  - **Verify**: `VinStubTest` asserts the exact Q7 body for `/vin/TEST`; `curl -s https://interview.ddev.site/listings/1/slow` shows `vin_report.source` = `vinstub` and `make_check` = `ok`.
+  - **Verify**: `VinStubTest` asserts the exact Q7 body for `/vin/TEST`; `curl -s https://ai-lab.ddev.site/listings/1/slow` shows `vin_report.source` = `vinstub` and `make_check` = `ok`.
 
 - [x] 10. Stub checked from all 6 servers (devops)
   Covers: AC-3

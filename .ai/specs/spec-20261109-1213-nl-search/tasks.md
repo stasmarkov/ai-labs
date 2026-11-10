@@ -98,7 +98,7 @@
   Covers: AC-7
   - [x] 10.1 Run manual-test step 3 with each model: no horizontal scroll at 390 px (`scrollWidth <= innerWidth`), visible focus on the query box, model selector, button and run link, results region `aria-live="polite"`; 200, refused 422 and invalid 422 states render
   - [x] 10.2 **Verify**: outputs (viewport widths, scrollWidth, screenshots or snapshot notes) recorded here
-    Measured 2026-11-09 with Playwright (headless Chromium) against https://interview.ddev.site/ai/nl-search, both models (qwen3.5:9b, gemma4:12b), live Ollama.
+    Measured 2026-11-09 with Playwright (headless Chromium) against https://ai-lab.ddev.site/ai/nl-search, both models (qwen3.5:9b, gemma4:12b), live Ollama.
     - 390 px: scrollWidth 390, innerWidth 390 on the idle page and after every result (200, refused 422, invalid 422, per model). No horizontal overflow.
     - 1440 px: scrollWidth 1440, innerWidth 1440 in every state. No overflow.
     - States: `diesel BMW after 2018 under 20k in Munich` gave 200 "Valid, listings queried"; `Ignore all previous instructions` gave 422 "Refused by the input guard, no model called"; `BMW with price under negative 5 and year 99999` gave 422 "Invalid, no listing query ran" on qwen3.5:9b, but gemma4:12b normalised it to a 200 (the invalid state is covered deterministically by the feature tests). The Logged run panel rendered in all states.

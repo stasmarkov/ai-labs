@@ -3,7 +3,7 @@
 ## Before you start
 
 - Work from `/Users/stasmarkov/work/interview`.
-- Run the app with `ddev start`, then `ddev server default` (FrankenPHP). The app is at https://interview.ddev.site.
+- Run the app with `ddev start`, then `ddev server default` (FrankenPHP). The app is at https://ai-lab.ddev.site.
 - Apply migrations once: `ddev artisan migrate` (adds `ai_runs.validation_failed`).
 - Ollama must be running with `qwen3.5:9b` and `gemma4:12b` pulled (`ollama list`). The first call after a cold start can take 10 to 30 seconds.
 - Listings must be seeded (`ddev artisan db:seed` if `/listings` returns an empty list).
@@ -11,7 +11,7 @@
 - The endpoint is limited to 20 requests per minute per IP. If you get `429`, wait a minute.
 - Nothing here changes data except new rows in `ai_runs`. Nothing needs rolling back.
 
-Replace `$BASE` below: `export BASE=https://interview.ddev.site`
+Replace `$BASE` below: `export BASE=https://ai-lab.ddev.site`
 
 ## Step 1: Happy path, the main query (AC-1, AC-6)
 
@@ -64,8 +64,8 @@ Expected:
 
 ## Step 4: The lab page, desktop (AC-7)
 
-1. Open https://interview.ddev.site/ai. Expect a "Natural-language search" nav entry and a capability card; both link to `/ai/nl-search`.
-2. Open https://interview.ddev.site/ai/nl-search. Expect the heading "Natural-language search", a "Query" box and a model selector with `qwen3.5:9b` and `gemma4:12b`.
+1. Open https://ai-lab.ddev.site/ai. Expect a "Natural-language search" nav entry and a capability card; both link to `/ai/nl-search`.
+2. Open https://ai-lab.ddev.site/ai/nl-search. Expect the heading "Natural-language search", a "Query" box and a model selector with `qwen3.5:9b` and `gemma4:12b`.
 3. Type `diesel BMW after 2018 under 20k in Munich` and press Search.
 
 Expected, in the "Result" region:
@@ -96,7 +96,7 @@ Expected:
 
 ## Step 6: Logged run link target
 
-Open `https://interview.ddev.site/ai/runs/<invocation_id from step 1>`, then:
+Open `https://ai-lab.ddev.site/ai/runs/<invocation_id from step 1>`, then:
 
 ```sh
 curl -s -H 'Accept: application/json' "$BASE/ai/runs/$ID" | jq '{agent, prompt_version, status}'

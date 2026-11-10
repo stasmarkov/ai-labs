@@ -1,10 +1,10 @@
 # Manual test plan: Mercure live price (SL-13)
 
-Run everything from `/Users/stasmarkov/work/interview`. The app is at https://interview.ddev.site.
+Run everything from `/Users/stasmarkov/work/interview`. The app is at https://ai-lab.ddev.site.
 
 ## Before you start
 
-- DDEV is running (`ddev start`) and you can open https://interview.ddev.site in a browser.
+- DDEV is running (`ddev start`) and you can open https://ai-lab.ddev.site in a browser.
 - The listings are seeded: listing 1 and listing 2 exist (`/listings/1`, `/listings/2` return 200).
 - `.env` has `MERCURE_PUBLISHER_JWT_KEY` and `MERCURE_SUBSCRIBER_JWT_KEY` set. If they are empty, run `ddev artisan mercure:keys` first (it writes `.env` and `.ddev/.env.web`).
 - Note the starting prices of listing 1 and listing 2 (open both pages). Prices are in cents in the commands: `19990` shows as `199.90 EUR`.
@@ -15,7 +15,7 @@ Run everything from `/Users/stasmarkov/work/interview`. The app is at https://in
 ```sh
 git status --short .env .ddev/.env.web
 ddev server frankenphp
-curl -sN -m 3 'https://interview.ddev.site/.well-known/mercure?topic=https://interview.ddev.site/listings/1/price' -o /dev/null -w '%{http_code} %{content_type}\n'
+curl -sN -m 3 'https://ai-lab.ddev.site/.well-known/mercure?topic=https://ai-lab.ddev.site/listings/1/price' -o /dev/null -w '%{http_code} %{content_type}\n'
 ```
 
 Expected:
@@ -25,7 +25,7 @@ Expected:
 
 ## Step 2: A live public update (AC-1, NFR-2)
 
-1. On frankenphp, open https://interview.ddev.site/listings/1 in tab 1 and https://interview.ddev.site/listings/2 in tab 2.
+1. On frankenphp, open https://ai-lab.ddev.site/listings/1 in tab 1 and https://ai-lab.ddev.site/listings/2 in tab 2.
 2. In DevTools, open the Network tab of tab 1: there is one request to `/.well-known/mercure?topic=…/listings/1/price`, status 200, type `eventsource`.
 3. In a terminal run `ddev artisan listings:reprice 1 19990`.
 4. Watch tab 1 without touching it. Then inspect the status element: in the Elements tab find `<p id="listing-price-status" class="sr-only" aria-live="polite">`.
@@ -41,7 +41,7 @@ Restore: `ddev artisan listings:reprice 1 --restore=<original cents>`.
 ## Step 3: A private update through the cookie (AC-2, NFR-1)
 
 1. Add `DEBUG_ROUTES=true` to `.env`, then `ddev artisan config:clear`.
-2. Open https://interview.ddev.site/listings/1?watch=private in tab 1 (DevTools Network open) and https://interview.ddev.site/listings/2 in tab 2.
+2. Open https://ai-lab.ddev.site/listings/1?watch=private in tab 1 (DevTools Network open) and https://ai-lab.ddev.site/listings/2 in tab 2.
 3. Check the document response headers and Application > Cookies for tab 1.
 4. Run `ddev artisan listings:reprice 1 18990 --private`.
 5. Run `ddev artisan listings:reprice 2 17990 --private`.
@@ -58,7 +58,7 @@ Restore: `ddev artisan listings:reprice 1 --restore=<original cents>`, `ddev art
 ## Step 4: No hub, no retry storm (AC-5, AC-4 live)
 
 1. Run `ddev server nginx-fpm`.
-2. Open https://interview.ddev.site/listings/1 with the Console and Network tabs open. Wait 11 seconds.
+2. Open https://ai-lab.ddev.site/listings/1 with the Console and Network tabs open. Wait 11 seconds.
 3. Run `ddev artisan listings:reprice 1 19990 --private`.
 
 Expected:

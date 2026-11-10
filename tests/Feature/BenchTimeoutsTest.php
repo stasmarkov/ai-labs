@@ -35,7 +35,7 @@ BASH);
 echo "ddev $*" >> "$STUB_LOG"
 case "$1 $2" in
   "server --current") echo "$STUB_SERVER" ;;
-  "server --url") echo "https://interview.ddev.site" ;;
+  "server --url") echo "https://ai-lab.ddev.site" ;;
 esac
 if [[ "$1" == "logs" ]]; then
   echo "upstream timed out (110: Connection timed out)"

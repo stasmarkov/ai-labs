@@ -86,7 +86,7 @@ test('AC-5 the openlitespeed allow rule lets through only the request line of an
     'dot segment' => ['GET /exports/../_protected_exports/listings.csv HTTP/1.1', false],
     'encoded dot segment' => ['GET /exports/%2e%2e/_protected_exports/listings.csv HTTP/1.1', false],
     'encoded slash' => ['GET /exports/a%2f..%2f_protected_exports/x HTTP/1.1', false],
-    'absolute form' => ['GET http://interview.ddev.site/_protected_exports/listings.csv HTTP/1.1', false],
+    'absolute form' => ['GET http://ai-lab.ddev.site/_protected_exports/listings.csv HTTP/1.1', false],
     'other method' => ['POST /exports/listings HTTP/1.1', false],
 ]);
 
