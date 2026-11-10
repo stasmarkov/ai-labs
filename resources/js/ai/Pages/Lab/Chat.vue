@@ -7,11 +7,14 @@ export default { layout: LabLayout };
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import LabButton from '../../components/LabButton.vue';
+import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabEventRow from '../../components/LabEventRow.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabTag from '../../components/LabTag.vue';
 import { useEventStream } from '../../composables/useEventStream';
+import { presetQuery } from '../../composables/usePresetQuery';
 import type { StreamEvent } from '../../composables/useEventStream';
+import type { GuideStep } from '../../composables/useGuideSteps';
 import { parseServerTiming } from '../../composables/useSearchRequest';
 import type { ServerTimings } from '../../composables/useSearchRequest';
 
@@ -76,6 +79,8 @@ interface Turn {
 }
 
 const props = defineProps<{
+    howItWorks: GuideStep[];
+    guideHref: string;
     askUrl: string;
     runUrl: string;
     idPlaceholder: string;
@@ -87,7 +92,7 @@ const props = defineProps<{
 const RUN_LOOKUP_ATTEMPTS = 5;
 const RUN_LOOKUP_DELAY_MS = 300;
 
-const question = ref('');
+const question = ref(presetQuery());
 const turns = ref<Turn[]>([]);
 const timings = ref<ServerTimings | null>(null);
 const sourcesAtMs = ref<number | null>(null);
@@ -141,6 +146,7 @@ const length = computed(() => [...question.value].length);
 const tooLong = computed(() => length.value > props.maxQuestionLength);
 const canAsk = computed(() => !isStreaming.value && question.value.trim() !== '' && !tooLong.value);
 const cacheHit = computed(() => current()?.cacheHit ?? null);
+const eventTypes = computed(() => stream.events.value.map((event) => event.type));
 const hiddenEvents = computed(() => stream.totalEvents.value - stream.events.value.length);
 
 const statusLabel = computed(() => ({
@@ -381,6 +387,8 @@ onBeforeUnmount(() => {
     <p class="mt-2 text-[15px] text-muted">
         A conversation answered from the indexed docs with citations. Each follow-up carries the last few answers as history; sources are looked up for the newest question only.
     </p>
+
+    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="eventTypes" :state="stream.status.value" />
 
     <ol v-if="turns.length > 0" aria-label="Conversation" class="m-0 mt-6 flex list-none flex-col gap-8 p-0">
         <li v-for="turn in turns" :key="turn.id" class="min-w-0 border-t border-rule pt-6" :data-turn="turn.id">

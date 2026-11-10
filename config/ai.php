@@ -36,14 +36,16 @@ return [
     |
     */
 
+    // guide:start embeddings
     'embeddings' => [
         'batch' => max(1, min(1024, (int) (env('AI_EMBED_BATCH') ?: 256))),
         'queue' => 'embeddings',
         // HTTP timeout of one embedding call; below the batch job's 300 s.
         'timeout' => max(1, (int) (env('AI_EMBED_TIMEOUT') ?: 120)),
-        // HNSW candidates searched per query: more = better recall, slower (see BENCHMARKS.md).
+        // HNSW candidates searched per query: more = better recall, slower.
         'ef_search' => max(1, min(1000, (int) (env('AI_EF_SEARCH') ?: 400))),
     ],
+    // guide:end embeddings
 
     /*
     |--------------------------------------------------------------------------
@@ -67,11 +69,13 @@ return [
             'path' => storage_path('app/docs/laravel'),
             'meta_path' => storage_path('app/docs/laravel.json'),
         ],
+        // guide:start docs-chunk
         'chunk' => [
             // Largest chunk in tokens (~4 characters each) and the size below which a section is merged into the next one.
             'max_tokens' => max(1, (int) (env('AI_DOCS_CHUNK_MAX_TOKENS') ?: 500)),
             'merge_below_tokens' => max(1, (int) (env('AI_DOCS_CHUNK_MERGE_BELOW_TOKENS') ?: 300)),
         ],
+        // guide:end docs-chunk
         // rag:eval writes its result directories only inside this directory.
         'eval_results_root' => base_path('bench/results'),
         'embed_batch' => max(1, min(256, (int) (env('AI_DOCS_EMBED_BATCH') ?: 32))),
@@ -79,6 +83,7 @@ return [
         'k_max' => max(1, (int) (env('AI_DOCS_K_MAX') ?: 20)),
         'rrf_depth' => max(1, (int) (env('AI_DOCS_RRF_DEPTH') ?: 20)),
         'search_per_minute' => filled(env('AI_DOCS_SEARCH_PER_MINUTE')) ? (int) env('AI_DOCS_SEARCH_PER_MINUTE') : 60,
+        // guide:start docs-answer
         'answer' => [
             // Chunks retrieved per question, the cosine similarity a vector-only chunk needs, the context size in tokens (~4 characters each).
             // 0.5 is kept after rag:eval (500/300, 30 questions): the best cut, 0.58, has TPR 1 and FPR 0.17, the same as 0.5, so it is no improvement.
@@ -88,10 +93,12 @@ return [
             'per_minute' => filled(env('AI_DOCS_ANSWER_PER_MINUTE')) ? (int) env('AI_DOCS_ANSWER_PER_MINUTE') : 10,
             'guard' => env('AI_DOCS_ANSWER_GUARD') ?: resource_path('guards/prompt-injection.v1.php'),
         ],
+        // guide:end docs-answer
         'chat' => [
             // Most earlier turns (user and assistant messages) a follow-up question may carry; 6 is three exchanges.
             'max_history_turns' => max(2, (int) (env('AI_DOCS_CHAT_MAX_HISTORY_TURNS') ?: 6)),
         ],
+        // guide:start docs-cache
         'cache' => [
             // Whole-answer cache for POST /api/docs/ask: exact keys in "store", nearest question by cosine in docs_answer_cache.
             // min_similarity 0.94: the highest near-miss of the committed pair set (0.930409) rounded up to 2 decimals. The ranges overlap, so 0 of 24 paraphrases reach it (TPR 0, FPR 0); source: bench/results/docs-cache/2026-11-03/run/calibration.json.
@@ -100,8 +107,10 @@ return [
             'ttl_hours' => max(1, (int) (env('AI_DOCS_CACHE_TTL_HOURS') ?: 168)),
             'min_similarity' => filled(env('AI_DOCS_CACHE_MIN_SIMILARITY')) ? (float) env('AI_DOCS_CACHE_MIN_SIMILARITY') : 0.94,
         ],
+        // guide:end docs-cache
     ],
 
+    // guide:start nl-search
     'nl_search' => [
         // Requests allowed per minute per IP (each one runs the model), and the models a caller may name; null means
         // the active provider's text model plus gemma4:12b.
@@ -110,6 +119,7 @@ return [
         // HTTP timeout in seconds of the model call; shorter than the provider's 120 s, which is sized for streamed chat.
         'timeout' => filled(env('AI_NL_SEARCH_TIMEOUT')) ? max(1, (int) env('AI_NL_SEARCH_TIMEOUT')) : 20,
     ],
+    // guide:end nl-search
 
     'semantic_per_minute' => filled(env('AI_SEMANTIC_PER_MINUTE')) ? (int) env('AI_SEMANTIC_PER_MINUTE') : 60,
 
@@ -129,6 +139,7 @@ return [
 
     'describe_per_minute' => filled(env('AI_DESCRIBE_PER_MINUTE')) ? (int) env('AI_DESCRIBE_PER_MINUTE') : 20,
 
+    // guide:start prompts
     'prompts' => [
         'car_description' => env('AI_PROMPT_CAR_DESCRIPTION') ?: 'car-description.v1',
         'docs_answer' => env('AI_PROMPT_DOCS_ANSWER') ?: 'docs-answer.v1',
@@ -136,6 +147,7 @@ return [
         'listing_filters' => env('AI_PROMPT_LISTING_FILTERS') ?: 'listing-filters.v1',
         'rag_grader' => env('AI_PROMPT_RAG_GRADER') ?: 'rag-grader.v2',
     ],
+    // guide:end prompts
 
     /*
     |--------------------------------------------------------------------------
@@ -172,6 +184,7 @@ return [
             ],
         ],
 
+        // guide:start provider-ollama
         'ollama' => [
             'driver' => 'ollama',
             'key' => env('OLLAMA_API_KEY', ''),
@@ -190,6 +203,7 @@ return [
                 'embeddings' => ['default' => env('OLLAMA_EMBED_MODEL') ?: 'bge-m3', 'dimensions' => 1024],
             ],
         ],
+        // guide:end provider-ollama
 
     ],
 

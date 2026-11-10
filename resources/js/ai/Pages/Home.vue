@@ -7,18 +7,13 @@ export default { layout: LabLayout };
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 
-interface GuideLink {
-    path: string;
-    anchor: string | null;
-}
-
 interface Capability {
     key: string;
     title: string;
     route: string;
-    slice: string;
-    guide: GuideLink;
-    code: string | null;
+    summary: string;
+    guideKey: string;
+    guideHref: string;
 }
 
 defineProps<{
@@ -26,16 +21,11 @@ defineProps<{
     about: string;
     runSteps: Array<{ label: string; command: string; note: string | null }>;
     labHref: string;
+    guidesHref: string;
     capabilities: Capability[];
-    coming: Array<{ key: string; title: string; slice: string }>;
-    serverModes: Array<{ key: string; title: string; summary: string; guide: GuideLink }>;
-    numbers: GuideLink & { note: string };
-    guide: GuideLink;
+    coming: Capability[];
+    serverModes: Array<{ key: string; title: string; summary: string }>;
 }>();
-
-function location(link: GuideLink): string {
-    return link.anchor === null ? link.path : `${link.path}#${link.anchor}`;
-}
 </script>
 
 <template>
@@ -58,19 +48,21 @@ function location(link: GuideLink): string {
 
     <section aria-labelledby="home-map" class="mt-8 border-t border-rule pt-6">
         <h2 id="home-map" class="m-0 text-[18px]">What you can try</h2>
-        <p class="mt-2 text-[13px] text-muted">Guide sections and code paths are files in this repository; open them in your editor.</p>
         <ul class="m-0 mt-3 grid list-none grid-cols-1 gap-x-8 gap-y-5 p-0 sm:grid-cols-2">
             <li v-for="capability in capabilities" :key="capability.key" class="flex min-w-0 flex-col gap-1">
                 <Link :href="capability.route" class="text-[15px] font-semibold text-ink underline">{{ capability.title }}</Link>
-                <span class="font-mono text-[13px] text-muted">{{ capability.slice }}</span>
-                <code class="break-words font-mono text-[13px]">{{ location(capability.guide) }}</code>
-                <code v-if="capability.code" class="break-words font-mono text-[13px]">{{ capability.code }}</code>
+                <span class="text-[15px]">{{ capability.summary }}</span>
+                <Link :href="capability.guideHref" class="text-[13px] text-ink underline">How it works</Link>
             </li>
         </ul>
         <template v-if="coming.length > 0">
             <h3 class="m-0 mt-5 text-[15px]">Coming</h3>
             <ul class="m-0 mt-2 list-none p-0 text-[15px] text-muted">
-                <li v-for="item in coming" :key="item.key">{{ item.title }} · {{ item.slice }}</li>
+                <li v-for="item in coming" :key="item.key" class="flex flex-wrap items-baseline gap-x-2">
+                    <Link :href="item.route" class="font-semibold text-ink underline">{{ item.title }}</Link>
+                    <span>{{ item.summary }}</span>
+                    <Link :href="item.guideHref" class="text-[13px] text-ink underline">How it works</Link>
+                </li>
             </ul>
         </template>
     </section>
@@ -82,16 +74,15 @@ function location(link: GuideLink): string {
                 <span class="text-[15px] font-semibold">{{ mode.title }}</span>
                 <code class="font-mono text-[13px] text-muted">ddev server {{ mode.key }}</code>
                 <span class="text-[15px]">{{ mode.summary }}</span>
-                <code class="break-words font-mono text-[13px]">{{ location(mode.guide) }}</code>
             </li>
         </ul>
     </section>
 
-    <section aria-labelledby="home-numbers" class="mt-8 border-t border-rule pt-6">
-        <h2 id="home-numbers" class="m-0 text-[18px]">Where the numbers are</h2>
-        <p class="mt-3 text-[15px]">{{ numbers.note }}</p>
-        <code class="mt-1 block break-words font-mono text-[13px]">{{ location(numbers) }}</code>
-        <p class="mt-4 text-[15px]">The full walk-through, in the order it was built:</p>
-        <code class="mt-1 block break-words font-mono text-[13px]">{{ location(guide) }}</code>
+    <section aria-labelledby="home-guides" class="mt-8 border-t border-rule pt-6">
+        <h2 id="home-guides" class="m-0 text-[18px]">Guides</h2>
+        <p class="mt-3 text-[15px]">
+            Each feature has a guide: how it works, what can go wrong, what to change and what to measure.
+            <Link :href="guidesHref" class="font-semibold text-ink underline">Read the guides</Link>
+        </p>
     </section>
 </template>

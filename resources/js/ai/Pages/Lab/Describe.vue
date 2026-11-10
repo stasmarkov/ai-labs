@@ -6,11 +6,13 @@ export default { layout: LabLayout };
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabButton from '../../components/LabButton.vue';
 import LabEventRow from '../../components/LabEventRow.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabTextInput from '../../components/LabTextInput.vue';
 import { useEventStream } from '../../composables/useEventStream';
+import type { GuideStep } from '../../composables/useGuideSteps';
 
 interface ListingOption {
     id: number;
@@ -33,6 +35,8 @@ interface RunRow {
 }
 
 const props = defineProps<{
+    howItWorks: GuideStep[];
+    guideHref: string;
     listings: ListingOption[];
     describeUrl: string;
     runUrl: string;
@@ -73,6 +77,7 @@ const statusLabel = computed(() => ({
     error: 'Failed',
 })[stream.status.value]);
 
+const eventTypes = computed(() => stream.events.value.map((event) => event.type));
 const hiddenEvents = computed(() => stream.totalEvents.value - stream.events.value.length);
 
 function wait(ms: number): Promise<void> {
@@ -149,6 +154,8 @@ onBeforeUnmount(() => {
     <p class="mt-2 text-[15px] text-muted">
         Streams the description as server-sent events and shows what arrives, when.
     </p>
+
+    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="eventTypes" :state="stream.status.value" />
 
     <form class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end" @submit.prevent="start">
         <div class="flex min-w-0 flex-1 flex-col gap-1">

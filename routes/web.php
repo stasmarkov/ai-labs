@@ -3,6 +3,8 @@
 use App\Http\Controllers\ShowLabChatController;
 use App\Http\Controllers\ShowLabDescribeController;
 use App\Http\Controllers\ShowLabDocsController;
+use App\Http\Controllers\ShowLabGuideController;
+use App\Http\Controllers\ShowLabGuidesController;
 use App\Http\Controllers\ShowLabHomeController;
 use App\Http\Controllers\ShowLabNlSearchController;
 use App\Http\Controllers\ShowLabOverviewController;
@@ -24,5 +26,7 @@ Route::middleware(HandleInertiaRequests::class)->prefix('ai')->group(function ()
     Route::get('/chat', ShowLabChatController::class)->name('ai.chat');
     Route::get('/nl-search', ShowLabNlSearchController::class)->name('ai.nl-search');
     Route::get('/photos', ShowLabPhotosController::class)->name('ai.photos');
+    Route::get('/guides', ShowLabGuidesController::class)->name('ai.guides.index');
+    Route::get('/guides/{key}', ShowLabGuideController::class)->name('ai.guides.show');
     Route::get('/runs/{invocationId}', ShowLabRunController::class)->name('ai.runs.show');
 });

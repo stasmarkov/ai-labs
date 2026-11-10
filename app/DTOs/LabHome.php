@@ -8,22 +8,19 @@ final readonly class LabHome
 {
     /**
      * @param  list<array{label: string, command: string, note: string|null}>  $runSteps
-     * @param  list<array{key: string, title: string, route: string, slice: string, guide: array{path: string, anchor: string|null}, code: string|null}>  $capabilities
-     * @param  list<array{key: string, title: string, slice: string}>  $coming
-     * @param  list<array{key: string, title: string, summary: string, guide: array{path: string, anchor: string|null}}>  $serverModes
-     * @param  array{path: string, anchor: string|null, note: string}  $numbers
-     * @param  array{path: string, anchor: string|null}  $guide
+     * @param  list<array{key: string, title: string, route: string, summary: string, guideKey: string, guideHref: string}>  $capabilities
+     * @param  list<array{key: string, title: string, route: string, summary: string, guideKey: string, guideHref: string}>  $coming
+     * @param  list<array{key: string, title: string, summary: string}>  $serverModes
      */
     public function __construct(
         public string $title,
         public string $about,
         public array $runSteps,
         public string $labHref,
+        public string $guidesHref,
         public array $capabilities,
         public array $coming,
         public array $serverModes,
-        public array $numbers,
-        public array $guide,
     ) {}
 
     /**
@@ -36,11 +33,10 @@ final readonly class LabHome
             'about' => $this->about,
             'runSteps' => $this->runSteps,
             'labHref' => $this->labHref,
+            'guidesHref' => $this->guidesHref,
             'capabilities' => $this->capabilities,
             'coming' => $this->coming,
             'serverModes' => $this->serverModes,
-            'numbers' => $this->numbers,
-            'guide' => $this->guide,
         ];
     }
 }

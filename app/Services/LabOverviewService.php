@@ -8,14 +8,26 @@ use App\Ai\OllamaServerInfo;
 use App\Contracts\AiRunRepositoryInterface;
 use App\DTOs\LabCapability;
 use App\DTOs\LabOverview;
+use App\Guides\GuideRepository;
 
 final readonly class LabOverviewService
 {
     private const RECENT_RUNS = 20;
 
+    /** The lab pages in order: key (also the guide key), title, route name and status. */
+    private const PAGES = [
+        ['describe', 'Describe', 'ai.describe', 'ready'],
+        ['semantic', 'Semantic search', 'ai.semantic', 'ready'],
+        ['nl-search', 'NL search', 'ai.nl-search', 'ready'],
+        ['docs', 'Docs search', 'ai.docs', 'ready'],
+        ['chat', 'Chat', 'ai.chat', 'ready'],
+        ['photos', 'Photos', 'ai.photos', 'coming'],
+    ];
+
     public function __construct(
         private AiRunRepositoryInterface $runs,
         private OllamaServerInfo $ollama,
+        private GuideRepository $guides,
     ) {}
 
     public function overview(): LabOverview
@@ -55,20 +67,21 @@ final readonly class LabOverviewService
     }
 
     /**
-     * The lab's pages, the one list behind the overview cards, the navigation and the placeholders.
+     * The lab's pages, the one list behind the overview cards, the home page and the placeholders. Each summary is
+     * read from the page's guide file, so the cards and the guide index say the same thing.
      *
      * @return list<LabCapability>
      */
     public function capabilities(): array
     {
-        return [
-            new LabCapability('describe', 'Describe', route('ai.describe', absolute: false), 'ready', 'SL-22', '9-streaming-an-ai-answer', 'app/Ai/CarDescriptionAgent.php'),
-            new LabCapability('semantic', 'Semantic search', route('ai.semantic', absolute: false), 'ready', 'SL-24', '11-embeddings-and-vector-search', 'app/Services/SemanticSearchService.php'),
-            new LabCapability('nl-search', 'NL search', route('ai.nl-search', absolute: false), 'ready', 'SL-23', '24-from-words-to-filters-structured-output-with-a-validation-boundary', 'app/Services/NlSearchService.php'),
-            new LabCapability('docs', 'Docs search', route('ai.docs', absolute: false), 'ready', 'SL-32', '12-chunking-and-hybrid-retrieval', 'app/Services/DocsSearchService.php'),
-            new LabCapability('chat', 'Chat', route('ai.chat', absolute: false), 'ready', 'SL-45', '14-answering-with-citations-rag-guards-and-the-trace-row', 'app/Services/DocsAnswerService.php'),
-            new LabCapability('photos', 'Photos', route('ai.photos', absolute: false), 'coming', 'SL-36'),
-        ];
+        return array_map(fn (array $page): LabCapability => new LabCapability(
+            $page[0],
+            $page[1],
+            route($page[2], absolute: false),
+            $page[3],
+            $this->guides->find($page[0])->summary,
+            $page[0],
+        ), self::PAGES);
     }
 
     public function capability(string $key): LabCapability
@@ -89,7 +102,8 @@ final readonly class LabOverviewService
     {
         return [
             ['href' => route('ai.overview', absolute: false), 'label' => 'Overview'],
-            ...array_map(fn (LabCapability $capability): array => ['href' => $capability->route, 'label' => $capability->title], $this->capabilities()),
+            ['href' => route('ai.guides.index', absolute: false), 'label' => 'Guides'],
+            ...array_map(fn (array $page): array => ['href' => route($page[2], absolute: false), 'label' => $page[1]], self::PAGES),
         ];
     }
 

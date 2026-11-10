@@ -4,7 +4,7 @@ title: In-app interactive guides for every AI capability
 type: feature
 size: L
 priority: P1
-status: approved
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-10; standing approval)

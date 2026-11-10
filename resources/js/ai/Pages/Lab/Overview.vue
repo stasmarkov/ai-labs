@@ -14,7 +14,9 @@ interface Capability {
     title: string;
     route: string;
     status: 'ready' | 'coming';
-    slice: string;
+    summary: string;
+    guideKey: string;
+    guideHref: string;
 }
 
 interface Run {
@@ -107,8 +109,10 @@ function show(value: number | null): string {
                     {{ capability.title }}
                 </Link>
                 <span class="font-mono text-[13px] text-muted">
-                    {{ capability.status === 'ready' ? 'ready' : 'coming' }} · {{ capability.slice }}
+                    {{ capability.status === 'ready' ? 'ready' : 'coming' }}
                 </span>
+                <span class="text-[15px]">{{ capability.summary }}</span>
+                <Link :href="capability.guideHref" class="text-[13px] text-ink underline">How it works</Link>
             </li>
         </ul>
     </section>

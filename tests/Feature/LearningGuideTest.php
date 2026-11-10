@@ -649,3 +649,18 @@ test('AC-9 guide section 24 describes recall per term and section 16 has the fre
         ->toContain('NlSearchService')
         ->toContain('section 24');
 });
+
+test('AC-8 learning guide section 16 lists every in-app guide file', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+    preg_match('/^## 16\. .*?(?=^## 17\. )/ms', $guide, $map);
+    $section = $map[0] ?? '';
+
+    expect($section)->toContain('### In-app guides');
+
+    $files = glob(base_path('resources/guides/*.php')) ?: [];
+    expect($files)->not->toBeEmpty();
+
+    foreach ($files as $file) {
+        expect($section)->toContain('](../resources/guides/'.basename($file).')');
+    }
+});

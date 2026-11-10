@@ -87,3 +87,37 @@ input[type='search']::-webkit-search-cancel-button {
         transition-duration: 0.01ms !important;
     }
 }
+
+.lab-prose {
+    font-size: 15px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.lab-prose p {
+    margin: 0 0 0.75rem;
+}
+
+/* Preflight removes list markers; runbooks are ordered steps, so the numbers must show. */
+.lab-prose ol,
+.lab-prose ul {
+    margin: 0 0 0.75rem;
+    padding-left: 1.25rem;
+}
+
+.lab-prose ol {
+    list-style: decimal;
+}
+
+.lab-prose ul {
+    list-style: disc;
+}
+
+.lab-prose > :last-child {
+    margin-bottom: 0;
+}
+
+.lab-prose code {
+    font-family: var(--font-mono);
+    font-size: 13px;
+}

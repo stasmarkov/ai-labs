@@ -7,11 +7,14 @@ export default { layout: LabLayout };
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import LabButton from '../../components/LabButton.vue';
+import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabSimilarityBar from '../../components/LabSimilarityBar.vue';
 import LabTextInput from '../../components/LabTextInput.vue';
 import { searchJson } from '../../composables/useSearchRequest';
+import { presetQuery } from '../../composables/usePresetQuery';
 import type { ServerTimings } from '../../composables/useSearchRequest';
+import type { GuideRunState, GuideStep } from '../../composables/useGuideSteps';
 
 interface ListingMatch {
     id: number;
@@ -27,17 +30,21 @@ interface ListingMatch {
 }
 
 const props = defineProps<{
+    howItWorks: GuideStep[];
+    guideHref: string;
     searchUrl: string;
     maxQueryLength: number;
 }>();
 
-const query = ref('');
+const query = ref(presetQuery());
 const loading = ref(false);
 const searched = ref(false);
 const matches = ref<ListingMatch[]>([]);
 const timings = ref<ServerTimings | null>(null);
 const elapsedMs = ref<number | null>(null);
 const failure = ref<string | null>(null);
+const panelEvents = ref<string[]>([]);
+const panelState = ref<GuideRunState>('idle');
 
 const canSearch = computed(() => !loading.value && query.value.trim() !== '' && [...query.value.trim()].length <= props.maxQueryLength);
 
@@ -48,11 +55,15 @@ function formatPrice(match: ListingMatch): string {
 async function search(): Promise<void> {
     loading.value = true;
     failure.value = null;
+    panelEvents.value = ['request_sent'];
+    panelState.value = 'streaming';
 
     const outcome = await searchJson<ListingMatch>(props.searchUrl, { q: query.value.trim() });
 
     loading.value = false;
     searched.value = true;
+    panelEvents.value = [...panelEvents.value, outcome.ok ? 'response_received' : 'request_failed'];
+    panelState.value = outcome.ok ? 'done' : 'error';
 
     if (outcome.ok) {
         matches.value = outcome.data;
@@ -74,6 +85,8 @@ async function search(): Promise<void> {
     <p class="mt-2 text-[15px] text-muted">
         Embeds your words and returns the ten listings whose descriptions are closest in meaning.
     </p>
+
+    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
 
     <form class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end" @submit.prevent="search">
         <div class="min-w-0 flex-1">

@@ -7,7 +7,10 @@ export default { layout: LabLayout };
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { parseServerTiming } from '../../composables/useSearchRequest';
+import { presetQuery } from '../../composables/usePresetQuery';
 import type { ServerTimings } from '../../composables/useSearchRequest';
+import type { GuideRunState, GuideStep } from '../../composables/useGuideSteps';
+import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabButton from '../../components/LabButton.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabSegmented from '../../components/LabSegmented.vue';
@@ -82,6 +85,8 @@ interface Body {
 }
 
 const props = defineProps<{
+    howItWorks: GuideStep[];
+    guideHref: string;
     searchUrl: string;
     runUrl: string;
     idPlaceholder: string;
@@ -89,10 +94,12 @@ const props = defineProps<{
     models: string[];
 }>();
 
-const query = ref('');
+const query = ref(presetQuery());
 const model = ref(props.models[0] ?? '');
 const loading = ref(false);
 const answer = ref<Answer | null>(null);
+const panelEvents = ref<string[]>([]);
+const panelState = ref<GuideRunState>('idle');
 
 const modelOptions = computed(() => props.models.map((name) => ({ value: name, label: name })));
 const queryLength = computed(() => [...query.value.trim()].length);
@@ -110,6 +117,18 @@ function describeFailure(status: number, body: Body | null): string {
     return body?.message ?? `The server answered ${status}.`;
 }
 
+function panelEventFor(kind: Outcome['kind']): string {
+    if (kind === 'ok') {
+        return 'response_received';
+    }
+
+    if (kind === 'refused') {
+        return 'refused';
+    }
+
+    return kind === 'failed' ? 'request_failed' : 'validation_failed';
+}
+
 async function search(): Promise<void> {
     const text = query.value.trim();
     const params = new URLSearchParams({ q: text });
@@ -119,6 +138,8 @@ async function search(): Promise<void> {
     }
 
     loading.value = true;
+    panelEvents.value = ['request_sent'];
+    panelState.value = 'streaming';
     const started = performance.now();
     const next: Answer = { query: text, model: model.value || null, extracted: null, unsupported: [], invocationId: null, elapsedMs: 0, timings: null, run: null, runMessage: null, outcome: { kind: 'failed', message: 'Connection lost.' } };
 
@@ -151,6 +172,9 @@ async function search(): Promise<void> {
     next.elapsedMs = performance.now() - started;
     answer.value = next;
     loading.value = false;
+    panelEvents.value = [...panelEvents.value, panelEventFor(next.outcome.kind)];
+    // A refusal is an answer (the guard did its job); a validation failure or a failed request marks its step failed.
+    panelState.value = next.outcome.kind === 'ok' || next.outcome.kind === 'refused' ? 'done' : 'error';
 
     // Work through the reactive proxy: `next` is the raw object, and writes to it would not re-render.
     const shown = answer.value;
@@ -222,6 +246,8 @@ function outcomeLabel(outcome: Outcome): string {
     <p class="mt-2 text-[15px] text-muted">
         A model turns your sentence into six listing filters. The filters are validated like a normal listings request before any query runs.
     </p>
+
+    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
 
     <form class="mt-6 flex flex-col gap-4" @submit.prevent="search">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-end">

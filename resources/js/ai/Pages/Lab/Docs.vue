@@ -7,12 +7,15 @@ export default { layout: LabLayout };
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import LabButton from '../../components/LabButton.vue';
+import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabSimilarityBar from '../../components/LabSimilarityBar.vue';
 import LabTag from '../../components/LabTag.vue';
 import LabTextInput from '../../components/LabTextInput.vue';
 import { searchJson } from '../../composables/useSearchRequest';
+import { presetQuery } from '../../composables/usePresetQuery';
 import type { ServerTimings } from '../../composables/useSearchRequest';
+import type { GuideRunState, GuideStep } from '../../composables/useGuideSteps';
 
 type Mode = 'vector' | 'text' | 'hybrid';
 
@@ -41,6 +44,8 @@ interface Column {
 }
 
 const props = defineProps<{
+    howItWorks: GuideStep[];
+    guideHref: string;
     searchUrl: string;
     maxQueryLength: number;
     k: number;
@@ -57,9 +62,11 @@ function emptyColumns(): Column[] {
     return MODES.map((mode) => ({ ...mode, matches: [], timings: null, elapsedMs: null, failure: null, done: false }));
 }
 
-const query = ref('');
+const query = ref(presetQuery());
 const limit = ref(String(props.k));
 const loading = ref(false);
+const panelEvents = ref<string[]>([]);
+const panelState = ref<GuideRunState>('idle');
 const columns = ref<Column[]>(emptyColumns());
 let searchToken = 0;
 
@@ -117,11 +124,16 @@ async function search(): Promise<void> {
     const token = ++searchToken;
     loading.value = true;
     columns.value = emptyColumns();
+    panelEvents.value = ['request_sent'];
+    panelState.value = 'streaming';
 
     await Promise.all(columns.value.map((column) => runMode(column, token)));
 
     if (token === searchToken) {
         loading.value = false;
+        const failed = columns.value.some((column) => column.failure !== null);
+        panelEvents.value = [...panelEvents.value, failed ? 'request_failed' : 'response_received'];
+        panelState.value = failed ? 'error' : 'done';
     }
 }
 </script>
@@ -131,6 +143,8 @@ async function search(): Promise<void> {
     <p class="mt-2 text-[15px] text-muted">
         Runs one query in three modes at once. A chunk found by more than one mode is marked.
     </p>
+
+    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
 
     <form class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end" @submit.prevent="search">
         <div class="min-w-0 flex-1">

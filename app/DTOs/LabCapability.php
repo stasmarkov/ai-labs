@@ -11,13 +11,12 @@ final readonly class LabCapability
         public string $title,
         public string $route,
         public string $status,
-        public string $slice,
-        public ?string $guide = null,
-        public ?string $code = null,
+        public string $summary,
+        public string $guideKey,
     ) {}
 
     /**
-     * @return array{key: string, title: string, route: string, status: string, slice: string, guide: string|null, code: string|null}
+     * @return array{key: string, title: string, route: string, status: string, summary: string, guideKey: string, guideHref: string}
      */
     public function toArray(): array
     {
@@ -26,9 +25,9 @@ final readonly class LabCapability
             'title' => $this->title,
             'route' => $this->route,
             'status' => $this->status,
-            'slice' => $this->slice,
-            'guide' => $this->guide,
-            'code' => $this->code,
+            'summary' => $this->summary,
+            'guideKey' => $this->guideKey,
+            'guideHref' => route('ai.guides.show', ['key' => $this->guideKey], false),
         ];
     }
 }

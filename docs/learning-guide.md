@@ -762,6 +762,29 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 
 **Load note (SL-09).** Every streamed answer holds one PHP worker until `[DONE]`. [`bench/slow-load.sh --workload sse`](../bench/slow-load.sh) measures what that does to the rest of the server: 30 open answers on 8 FPM children starved the health check (section 19). Before adding an AI feature that streams to many users at once, size the pool for it or use a queued variant.
 
+### In-app guides
+
+Every lab page has a guide at `/ai/guides/{key}`, and the live pages show its steps in a collapsible "How it works" panel. A guide is one PHP file in [`resources/guides/`](../resources/guides/) that returns an array; the key is the file name.
+
+- **Format.** `title`, `summary`, then lists: `works` (steps, each with `title`, `body` in Markdown, an optional `event` to highlight while a run streams and an optional `snippet`), `failures`, `recipes` (same shape without `event`), `support` (`name`, `status` of `logged`, `guarded` or `runbook`, `note`), `numbers` (`label` plus a `file` and `path` read from the measurement results, or `pending`), `experiments` (`title`, `predictions` as 2 to 4 `{id, text}` choices, an `answer` of `{id, body}` whose id is one of the predictions and whose body is Markdown, an optional `numbers` label, `page`, `params` with only `q`) and `plan` (a list of Markdown bullets, required when `planned: true`) and `related` (other guide keys). `planned: true` marks a guide for a feature that is not built.
+- **Reference forms.** A `snippet` is `App\Class`, `App\Class::method`, a whole file of 80 lines or fewer (`app/File.php`), or a range between `guide:start name` and `guide:end name` comments (`config/ai.php#name`). Only `app/`, `config/`, `resources/`, `routes/` and `database/` can be read ([`SnippetResolver`](../app/Guides/SnippetResolver.php)).
+- **Adding a guide.** Create `resources/guides/{key}.php`, add the key to the capability in [`LabOverviewService`](../app/Services/LabOverviewService.php) as `guideKey`, and run `GuideContentTest`: it checks that every snippet resolves, every number renders, every related key exists and no prose names a slice, a Markdown file or a repository path (`NoReferencesInUiTest` checks the pages).
+- **Engine.** [`GuideRepository`](../app/Guides/GuideRepository.php) loads and validates, [`GuideRenderer`](../app/Guides/GuideRenderer.php) renders and caches, [`GuideFacts`](../app/Guides/GuideFacts.php) fills numbers and live facts.
+
+The guide files:
+
+- [`chat.php`](../resources/guides/chat.php): answering with citations
+- [`describe.php`](../resources/guides/describe.php): streaming a description
+- [`docs.php`](../resources/guides/docs.php): docs search
+- [`guards.php`](../resources/guides/guards.php): the guards around a model call
+- [`nl-search.php`](../resources/guides/nl-search.php): words to filters
+- [`photos.php`](../resources/guides/photos.php): the planned photo feature
+- [`prompts.php`](../resources/guides/prompts.php): versioned prompts
+- [`providers.php`](../resources/guides/providers.php): providers and models
+- [`run-log.php`](../resources/guides/run-log.php): the `ai_runs` log
+- [`semantic.php`](../resources/guides/semantic.php): semantic search
+- [`streaming.php`](../resources/guides/streaming.php): streaming events
+
 ### Testing patterns used everywhere
 
 - **No network in the suite.** `Embeddings::fake(...)` returns fixed vectors, so tests can pick exact similarities. The `fake-stream` provider streams canned text (`AI_FAKE_TEXT`, `fail_after`). `Http::fake` is used for Ollama's own endpoints.

@@ -636,7 +636,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-27, BR-90, BR-91
 - **Depends on:** SL-49, SL-46, the AI slices it presents
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261110-1149-in-app-guides
 - **Source:** owner request 2026-11-05 (Stanislav Markov: "update the UI to make it better in terms of studying"); revised 2026-11-10 ("instead of referencing md files on the website - let's show this info there and add interactive guides about each AI feature")
 - **Run:** `/sdd spec-20261110-1149-in-app-guides`

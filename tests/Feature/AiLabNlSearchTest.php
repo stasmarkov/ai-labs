@@ -32,6 +32,6 @@ it('AC-7 the overview lists the NL search page as a ready capability right after
             ->where('capabilities.2.route', '/ai/nl-search')
             ->where('capabilities.2.title', 'NL search')
             ->where('capabilities.2.status', 'ready')
-            ->where('capabilities.2.slice', 'SL-23')
+            ->where('capabilities.2.guideKey', 'nl-search')
             ->where('capabilities.5.key', 'photos'));
 });

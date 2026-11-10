@@ -12,13 +12,11 @@ final class ShowLabPhotosController extends Controller
 {
     public function __invoke(LabOverviewService $lab): Response
     {
-        $slice = $lab->capability('photos')->slice;
+        $capability = $lab->capability('photos');
 
         return Inertia::render('Lab/Photos', [
-            'slices' => [$slice],
-            'blockedBy' => 'Q-06',
-            'backlog' => "backlog.md › {$slice}",
-            'guide' => 'docs/learning-guide.md',
+            'summary' => $capability->summary,
+            'guideHref' => route('ai.guides.show', ['key' => $capability->guideKey], absolute: false).'#plan',
         ]);
     }
 }
