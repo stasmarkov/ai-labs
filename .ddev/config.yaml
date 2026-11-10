@@ -1,4 +1,4 @@
-name: interview
+name: ai-lab
 type: laravel
 docroot: public
 php_version: "8.4"

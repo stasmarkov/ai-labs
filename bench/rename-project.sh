@@ -74,8 +74,9 @@ compare_samples() {
   for name in list detail; do
     path="$LIST_PATH"
     [ "$name" = "detail" ] && path="$DETAIL_PATH"
-    curl -sk "https://$new_host$path" > "$PRE/$name.after.json"
-    sed "s/$old_host/$new_host/g" "$PRE/$name.before.json" > "$PRE/$name.before.normalized.json"
+    # data-price-rendered-ms is the render time of the detail page (SL-13 live price), different on every request.
+    curl -sk "https://$new_host$path" | sed 's/data-price-rendered-ms="[0-9]*"/data-price-rendered-ms=""/' > "$PRE/$name.after.json"
+    sed -e "s/$old_host/$new_host/g" -e 's/data-price-rendered-ms="[0-9]*"/data-price-rendered-ms=""/' "$PRE/$name.before.json" > "$PRE/$name.before.normalized.json"
     cmp -s "$PRE/$name.before.normalized.json" "$PRE/$name.after.json" || fail "sample $name differs after the rename ($path)"
   done
   echo "samples equal: $LIST_PATH and $DETAIL_PATH"
@@ -87,8 +88,9 @@ compare_keys() {
 }
 
 print_delete() {
-  echo "The old project is untouched. When you are sure, delete it yourself:"
-  echo "  ddev delete $FROM --omit-snapshot"
+  echo "The old project's volumes are untouched (the name is only unlisted). When you are sure, delete them yourself:"
+  echo "  docker volume ls --format '{{.Name}}' | grep -E '(^|ddev-)${FROM}[-_]'"
+  echo "  docker volume rm ${FROM}-postgres ddev-${FROM}_redis ${FROM}_project_mutagen"
 }
 
 if [ "$(current_name)" = "$TO" ] && [ -f "$PRE/counts.json" ]; then
@@ -125,7 +127,8 @@ rollback() {
 }
 trap 'status=$?; [ $status -ne 0 ] && rollback; exit $status' EXIT
 
-ddev stop
+# --unlist frees the folder from the old name; DDEV refuses to start a renamed project otherwise. Volumes stay.
+ddev stop --unlist "$FROM"
 sed -i.bak "s/^name: *$FROM\$/name: $TO/" "$CONFIG" && rm -f "$CONFIG.bak"
 ddev start
 ddev import-db --file="$DUMP"

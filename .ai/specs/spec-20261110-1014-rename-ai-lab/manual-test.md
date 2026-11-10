@@ -12,7 +12,7 @@ Run everything from the repo root (`~/work/interview`).
 - Docker has room for a second copy of the project volumes. The old project stays until you delete it yourself.
 - `jq` and `curl` are installed on the host.
 
-Rollback for the whole plan: set `name: interview` back in `.ddev/config.yaml`, run `ddev start`, then `ddev import-db --file=.ai/tmp/pre-rename.sql.gz`. The old project's volumes are never touched by the script, so the old site keeps working until `ddev delete interview --omit-snapshot` is run.
+Rollback for the whole plan: set `name: interview` back in `.ddev/config.yaml`, run `ddev start`, then `ddev import-db --file=.ai/tmp/pre-rename.sql.gz`. The old project's volumes are never touched by the script, so the old site keeps working until its volumes are removed (the script prints the `docker volume rm` line); DDEV needs `ddev stop --unlist interview` before the folder can start under the new name, and the script does it.
 
 ## Step 1
 
@@ -31,7 +31,7 @@ bench/rename-project.sh
 Expected:
 - `/tmp/listings-before.json` holds 5 listings (the `jq` line prints `5`; if the response has no `data` key, use the top-level array length).
 - The script prints `exported the database to .ai/tmp/pre-rename.sql.gz`, `counts equal: listings listing_documents docs_documents docs_chunks ai_runs docs_answer_cache exports`, `samples equal`, `keys unchanged`, then runs `ddev server default` and `ddev setup`.
-- It ends with `ddev delete interview --omit-snapshot` printed, not run. Do not run it yet.
+- It ends with the `docker volume rm interview-postgres ...` line printed, not run. Do not run it yet.
 - If anything fails, the script prints a `Rollback:` line; follow it.
 
 Then check the result:
@@ -133,4 +133,4 @@ curl -sk -o /dev/null -w "%{http_code}\n" https://ai-lab.ddev.site/up
 for p in /ai /ai/describe /ai/semantic /ai/nl-search /ai/docs /ai/chat /listings /listings/1; do curl -sk -o /dev/null -w "$p %{http_code}\n" "https://ai-lab.ddev.site$p"; done
 ```
 
-Expected: every line prints 200. Only after this, and only if you are sure, delete the old project with `ddev delete interview --omit-snapshot`.
+Expected: every line prints 200. Only after this, and only if you are sure, remove the old volumes with the printed `docker volume rm` line.

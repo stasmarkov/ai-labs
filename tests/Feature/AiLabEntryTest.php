@@ -42,7 +42,7 @@ it('MNC-1 the lab uses its own entry and the old pages do not load it', function
     $this->get('/listings/'.$listing->id)
         ->assertOk()
         ->assertSee('/build/assets/app-old.css', false)
-        ->assertDontSee('ai-lab', false);
+        ->assertDontSee('/build/assets/ai-', false);
 });
 
 it('MNC-1 the Inertia middleware is not in the global web group', function (): void {

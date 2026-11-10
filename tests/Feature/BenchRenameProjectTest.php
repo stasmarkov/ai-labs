@@ -75,7 +75,8 @@ it('AC-1 and MNC-1 exports, renames, imports, compares counts and samples, and p
         ->and(json_decode((string) file_get_contents($this->root.'/.ai/tmp/pre-rename/counts.json'), true)['listings'])->toBe(50000)
         ->and($out)->toContain('counts equal')
         ->and($out)->toContain('samples equal')
-        ->and($out)->toContain('ddev delete interview --omit-snapshot')
+        ->and($out)->toContain('docker volume rm interview-postgres ddev-interview_redis interview_project_mutagen')
+        ->and($log)->toContain('ddev stop --unlist interview')
         ->and($log)->not->toContain('ddev delete')
         ->and($log)->toContain('curl https://interview.ddev.site/listings?per_page=5&page=1')
         ->and($log)->toContain('curl https://ai-lab.ddev.site/listings?per_page=5&page=1');
