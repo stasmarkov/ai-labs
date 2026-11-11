@@ -355,7 +355,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-90, BR-27
 - **Depends on:** SL-22
 - **Blocked by:** none
-- **Status:** built (awaiting the dataset run: terms acceptance by the owner, then import, extract, eval)
+- **Status:** shipped
 - **Spec:** spec-20261111-0000-photo-vision
 - **Source:** brief (Phase 11), user 2026-10-28 (images), widened by intake 2026-10-30 (auto-tagging pipeline)
 - **Run:** `/sdd "SL-27: queued batch sends each stored car photo to the local vision model and stores a schema-validated {caption, tags, dominant colours, body type, visible damage, people count}, retrying on invalid JSON (BR-90, BR-27). Rules in product-brief.md."`

@@ -982,6 +982,36 @@ Per-field accuracy:
 
 I wanted to let a user type "diesel BMW after 2018 under 20k in Munich" and get the same results as the filter form, without letting a model near the database. The model only fills a small JSON object; the app validates it with the exact rules `/listings` uses and passes it to the same search service, so a wrong or hostile value is a 422, never SQL. I added an `unsupported` list so the model says what it could not express, such as "estate" or "cheap", instead of bending it into a filter. Then I measured two local models on 40 labelled queries. Both caught most of the unsupported parts and neither failed validation, but at first both invented a petrol fuel filter for queries that did not mention fuel (exact match 0.400), and validation could not see that because petrol is a legal value. The eval pointed at my own schema: its fuel enum had no `null`, so the decoder had to pick a fuel. Adding `null` took fuel accuracy from 0.400 to 0.975 and exact match to 0.950 and 0.975 with the same prompt. The lesson I would repeat: validation makes the output safe, an eval makes it correct, and you need both.
 
+## Car photos and a local vision model (2026-11-11)
+
+`photos:eval` (SL-27) sends the same 50 car photos to two local vision models through Ollama and checks every answer against the extraction rules: a caption, up to 8 lowercase tags, 1 to 3 colours from a fixed list, a body type, visible damage and a people count. The photos are a subset of the Stanford Cars dataset (16,185 images, research and non-commercial use; terms in `docs/datasets/stanford-cars.md`). `photos:import` kept the classes whose make and model are in the demo catalogue: 16 of 196 classes, 156 photos at 12 per catalogue model. The sample is the imported photos ordered by sha256, first 50. Run on frankenphp, prompt `photo-vision@v1`, each photo resized to at most 1024 px. Raw file: [`bench/results/photo-vision/2026-11-11/run.json`](bench/results/photo-vision/2026-11-11/run.json). Reproduce with `ddev artisan photos:eval --photos=50`.
+
+Method:
+- **Valid** means the answer passed the rules. Up to 3 attempts are made per photo, and "valid after retries" counts a photo that passed on any attempt.
+- **Latency** is per photo, retries included.
+- **Body agreement** compares the model's body type with the body word of the photo's own Stanford class, mapped to the catalogue types (`Sedan` to saloon, `SUV` to SUV, `Convertible` to convertible and so on). An invalid answer counts as a miss.
+
+| Model | Valid 1st attempt | Valid after retries | Mean attempts | Latency p50 | Latency p95 | Body agreement | At least one colour |
+|-------|-------------------|---------------------|---------------|-------------|-------------|----------------|---------------------|
+| gemma4:12b | 1.000 (50/50) | 1.000 (50/50) | 1.00 | 3697 ms | 5879 ms | 37/50 (0.74) | 1.000 |
+| qwen3.5:9b | 0.860 (43/50) | 0.860 (43/50) | 1.28 | 2572 ms | 6523 ms | 41/50 (0.82) | 0.860 |
+
+### What the numbers say
+
+- **gemma4:12b never broke the format.** All 50 answers passed on the first attempt. qwen3.5:9b failed the rules on 7 photos, and 3 attempts never fixed any of them: a retry with the same prompt and the same photo repeated the same mistake. Retries help with random slips, not with a habit.
+- **qwen3.5:9b reads the body type better when it answers.** It agreed on 41 of its 43 valid answers; gemma4:12b agreed on 37 of 50. 12 of gemma's 13 misses are photos of a `Sedan` class: 7 times it said hatchback, 4 times SUV, once convertible; the 13th was a convertible it called an SUV. Several of those classes are small saloons that look much like hatchbacks in a photo, so part of this is the label, not the model.
+- **qwen3.5:9b is faster at the median** (2572 ms against 3697 ms). Its p95 is slower (6523 ms) because a failed photo pays for 3 attempts.
+- **The extraction run on the lab queue agrees with the eval.** Earlier the same day, `photos:extract` ran gemma4:12b on 51 photos through the `ai-vision` worker. 50 completed on the first attempt at a mean of 3.8 s; one failed after 3 attempts with `tags.3 must be lowercase`.
+
+### Surprises
+
+- **The photos did not show at first.** The lab page loaded but every image answered 403: `public/storage` had never been linked, so the public disk was not served. `ddev setup` now runs `storage:link`, and `photos:import` warns when the link is missing.
+- **The catalogue, not the dataset, limited the import.** Only 16 of 196 Stanford classes match a make and model the demo sells. 1,199 matching photos were skipped by the 12-per-model cap, so a bigger cap fills listings faster than adding classes would.
+
+### Interview story
+
+I wanted the lab to read car photos with a local model and to know how reliable that is, not only that it runs. Each photo goes to the model with a JSON schema, and the answer is checked again in PHP with fixed lists for colours, body types and damage. A bad answer gets up to two more attempts, and every attempt is a logged run. On 50 photos gemma4:12b passed the rules every time, while qwen3.5:9b failed 7 photos and never recovered on retry: the same input produced the same mistake. qwen read the body type better when it did answer (41 of 43 against 37 of 50) and was faster at the median. So the model I would pick depends on what breaks first: if a broken record is worse than a wrong guess, gemma; if the body type matters most, qwen with a fallback. The retry budget did not change either result, which told me to spend effort on the prompt or the schema rather than on more attempts.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

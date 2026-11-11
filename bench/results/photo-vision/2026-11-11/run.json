@@ -1,0 +1,1285 @@
+{
+    "metadata": {
+        "generated_at": "2026-11-11T09:33:25+00:00",
+        "photos": 50,
+        "sample": "imported photos ordered by sha256, first 50",
+        "models": [
+            "gemma4:12b",
+            "qwen3.5:9b"
+        ],
+        "provider": "ollama",
+        "prompt_version": "photo-vision@v1"
+    },
+    "models": [
+        {
+            "model": "gemma4:12b",
+            "photos": 50,
+            "valid_first_attempt": {
+                "count": 50,
+                "rate": 1
+            },
+            "valid_after_retries": {
+                "count": 50,
+                "rate": 1
+            },
+            "mean_attempts": 1,
+            "latency_ms": {
+                "p50": 3697,
+                "p95": 5879,
+                "mean_per_attempt": 3896
+            },
+            "body_type_agreement": {
+                "agreed": 37,
+                "compared": 50,
+                "rate": 0.74
+            },
+            "colour_presence": {
+                "count": 50,
+                "rate": 1
+            }
+        },
+        {
+            "model": "qwen3.5:9b",
+            "photos": 50,
+            "valid_first_attempt": {
+                "count": 43,
+                "rate": 0.86
+            },
+            "valid_after_retries": {
+                "count": 43,
+                "rate": 0.86
+            },
+            "mean_attempts": 1.28,
+            "latency_ms": {
+                "p50": 2572,
+                "p95": 6523,
+                "mean_per_attempt": 2603
+            },
+            "body_type_agreement": {
+                "agreed": 41,
+                "compared": 50,
+                "rate": 0.82
+            },
+            "colour_presence": {
+                "count": 43,
+                "rate": 0.86
+            }
+        }
+    ],
+    "results": [
+        {
+            "photo_id": 22,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4891,
+            "expected_body_type": "saloon",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f4-7d3e-717a-8cc6-e6fc4988d732"
+            ]
+        },
+        {
+            "photo_id": 146,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4193,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f4-9048-726c-a97c-980cf702c335"
+            ]
+        },
+        {
+            "photo_id": 118,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3223,
+            "expected_body_type": "saloon",
+            "body_type": "convertible",
+            "invocation_ids": [
+                "01a1c9f4-a0ac-73e3-98d5-dc6699a8e15a"
+            ]
+        },
+        {
+            "photo_id": 20,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3237,
+            "expected_body_type": "saloon",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f4-ad45-73a3-bc5c-629adfea681e"
+            ]
+        },
+        {
+            "photo_id": 99,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4458,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f4-b9ec-7010-a374-8b65e7b6c3d2"
+            ]
+        },
+        {
+            "photo_id": 140,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3809,
+            "expected_body_type": "hatchback",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f4-cb5e-7242-9be9-3d675cd068dc"
+            ]
+        },
+        {
+            "photo_id": 68,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3207,
+            "expected_body_type": "convertible",
+            "body_type": "convertible",
+            "invocation_ids": [
+                "01a1c9f4-da41-737e-aa1d-f6102224c2da"
+            ]
+        },
+        {
+            "photo_id": 78,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4500,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f4-e6ca-73d0-aa3c-25ad8936e7e2"
+            ]
+        },
+        {
+            "photo_id": 144,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 5050,
+            "expected_body_type": "hatchback",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f4-f897-7165-97c0-a0d0e9a40734"
+            ]
+        },
+        {
+            "photo_id": 141,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4518,
+            "expected_body_type": "hatchback",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f5-0c57-735b-b4ab-498f19b8e0b9"
+            ]
+        },
+        {
+            "photo_id": 151,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3498,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f5-1e09-73e4-811f-ba5bb2398fa4"
+            ]
+        },
+        {
+            "photo_id": 54,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3681,
+            "expected_body_type": "saloon",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f5-2bb4-73fd-9ae2-5f317a8852b6"
+            ]
+        },
+        {
+            "photo_id": 103,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4980,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f5-3a70-725e-a252-3a0be526c388"
+            ]
+        },
+        {
+            "photo_id": 27,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3553,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f5-4df3-7280-aeee-6eb45d9ce001"
+            ]
+        },
+        {
+            "photo_id": 16,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4618,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f5-5bd4-721f-86b6-cf0155476f57"
+            ]
+        },
+        {
+            "photo_id": 47,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3336,
+            "expected_body_type": "saloon",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f5-6dfa-72f6-9c6a-9d9a5409a2c6"
+            ]
+        },
+        {
+            "photo_id": 130,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3771,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f5-7b04-7221-b4c9-903faee132bb"
+            ]
+        },
+        {
+            "photo_id": 111,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4473,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f5-89c2-725b-97f8-662c0d2d7d7f"
+            ]
+        },
+        {
+            "photo_id": 100,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3603,
+            "expected_body_type": "saloon",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f5-9bba-71ef-985b-a0c0bdb0d56a"
+            ]
+        },
+        {
+            "photo_id": 38,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3611,
+            "expected_body_type": "saloon",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f5-a9d0-7149-a370-7f496b92b49f"
+            ]
+        },
+        {
+            "photo_id": 153,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4593,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f5-b7ec-73d2-ba5b-0ed37916db4b"
+            ]
+        },
+        {
+            "photo_id": 107,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 5721,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f5-c9de-736b-9b4c-15978e3fa5b6"
+            ]
+        },
+        {
+            "photo_id": 55,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 5223,
+            "expected_body_type": "saloon",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f5-e038-71de-80db-8c49d6e978b9"
+            ]
+        },
+        {
+            "photo_id": 131,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4124,
+            "expected_body_type": "saloon",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f5-f4a3-70a8-9e83-ff3b25dc2f64"
+            ]
+        },
+        {
+            "photo_id": 121,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3922,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f6-04d5-7318-9161-ae9592ea2bc6"
+            ]
+        },
+        {
+            "photo_id": 128,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3439,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f6-1432-7078-a278-3aa49a037630"
+            ]
+        },
+        {
+            "photo_id": 124,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 5879,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f6-21a3-72d9-a85b-97612c16491a"
+            ]
+        },
+        {
+            "photo_id": 143,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 5879,
+            "expected_body_type": "hatchback",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f6-38a0-73d0-b0d3-e2f025839dcd"
+            ]
+        },
+        {
+            "photo_id": 30,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3697,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f6-4fbd-73e3-9eb6-e1c054d3a729"
+            ]
+        },
+        {
+            "photo_id": 28,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3584,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f6-5e30-72a7-96ab-c209625cda28"
+            ]
+        },
+        {
+            "photo_id": 139,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 11036,
+            "expected_body_type": "hatchback",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f6-6c33-7309-a49b-6e9f8ecb7202"
+            ]
+        },
+        {
+            "photo_id": 70,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4661,
+            "expected_body_type": "convertible",
+            "body_type": "convertible",
+            "invocation_ids": [
+                "01a1c9f6-97b7-71ba-a7ff-1e2968e502b7"
+            ]
+        },
+        {
+            "photo_id": 59,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3205,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f6-a9df-7214-a0a7-ff3f1a3f2dc7"
+            ]
+        },
+        {
+            "photo_id": 77,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4276,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f6-b665-72f7-9350-48845ada0534"
+            ]
+        },
+        {
+            "photo_id": 36,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3051,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f6-c71a-715c-9cc2-18c1e4025d84"
+            ]
+        },
+        {
+            "photo_id": 65,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2599,
+            "expected_body_type": "convertible",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f6-d307-739b-b8ef-1da1f0d16fc6"
+            ]
+        },
+        {
+            "photo_id": 148,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3725,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f6-dd2f-7371-b428-d0d8a386caba"
+            ]
+        },
+        {
+            "photo_id": 76,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3291,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f6-ebc1-7348-84e0-bb9fb0111181"
+            ]
+        },
+        {
+            "photo_id": 53,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2944,
+            "expected_body_type": "saloon",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f6-f89d-7111-b7ef-6c4f0edc120f"
+            ]
+        },
+        {
+            "photo_id": 34,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3100,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f7-047b-71a4-9264-a8547246b340"
+            ]
+        },
+        {
+            "photo_id": 85,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3688,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f7-1098-73ca-9c32-7d8de97d5103"
+            ]
+        },
+        {
+            "photo_id": 56,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2697,
+            "expected_body_type": "saloon",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f7-1f01-72aa-b623-d313bf77e018"
+            ]
+        },
+        {
+            "photo_id": 98,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4053,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f7-298c-7011-81d9-e000b88842ca"
+            ]
+        },
+        {
+            "photo_id": 2,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2914,
+            "expected_body_type": "convertible",
+            "body_type": "convertible",
+            "invocation_ids": [
+                "01a1c9f7-3963-701c-9717-2deb2184f652"
+            ]
+        },
+        {
+            "photo_id": 18,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4046,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f7-44c6-71d4-9162-9a0a93b40607"
+            ]
+        },
+        {
+            "photo_id": 119,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2641,
+            "expected_body_type": "saloon",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f7-5496-70cd-883a-ff09af495cc3"
+            ]
+        },
+        {
+            "photo_id": 31,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 5008,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f7-5ee8-702a-892e-a3e23c796276"
+            ]
+        },
+        {
+            "photo_id": 123,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3146,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f7-727a-72dd-ab27-7d2ef82036dc"
+            ]
+        },
+        {
+            "photo_id": 95,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3616,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f7-7ec5-7153-8e05-27177e1f3404"
+            ]
+        },
+        {
+            "photo_id": 94,
+            "model": "gemma4:12b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3323,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f7-8ce6-7126-b145-54bf359f9eff"
+            ]
+        },
+        {
+            "photo_id": 22,
+            "model": "qwen3.5:9b",
+            "valid": false,
+            "attempts": 3,
+            "latency_ms": 18355,
+            "expected_body_type": "saloon",
+            "body_type": null,
+            "invocation_ids": [
+                "01a1c9f7-9e13-7242-9544-333bed707f0a",
+                "01a1c9f7-d1a9-7184-82e4-1dc5ca253445",
+                "01a1c9f7-db78-73d4-99f2-76fd66fa55f0"
+            ]
+        },
+        {
+            "photo_id": 146,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 5163,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f7-e5d6-704d-8d4e-4abdc9bf10be"
+            ]
+        },
+        {
+            "photo_id": 118,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2339,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f7-fa03-7196-ae9c-f5a970db0b7f"
+            ]
+        },
+        {
+            "photo_id": 20,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 1816,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f8-0326-72a1-9a9e-0239d7d425e1"
+            ]
+        },
+        {
+            "photo_id": 99,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3068,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f8-0a3f-7288-9c9c-a732b9a00d49"
+            ]
+        },
+        {
+            "photo_id": 140,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2636,
+            "expected_body_type": "hatchback",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f8-163e-71c5-baee-d6cc7b3b1fb8"
+            ]
+        },
+        {
+            "photo_id": 68,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 1671,
+            "expected_body_type": "convertible",
+            "body_type": "convertible",
+            "invocation_ids": [
+                "01a1c9f8-208b-73c0-b0a6-204ea2b7b9c7"
+            ]
+        },
+        {
+            "photo_id": 78,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2713,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f8-2713-7034-baad-6de916dc661e"
+            ]
+        },
+        {
+            "photo_id": 144,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2547,
+            "expected_body_type": "hatchback",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f8-31ae-7183-8290-27314792c0bc"
+            ]
+        },
+        {
+            "photo_id": 141,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2572,
+            "expected_body_type": "hatchback",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f8-3ba2-70b4-961a-203022f225d5"
+            ]
+        },
+        {
+            "photo_id": 151,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 1969,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f8-45af-7101-aaa6-a700ef183e79"
+            ]
+        },
+        {
+            "photo_id": 54,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2321,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f8-4d61-7319-8836-85f9dc5e6101"
+            ]
+        },
+        {
+            "photo_id": 103,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3705,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f8-5672-7142-b55d-d5beac911e6d"
+            ]
+        },
+        {
+            "photo_id": 27,
+            "model": "qwen3.5:9b",
+            "valid": false,
+            "attempts": 3,
+            "latency_ms": 5174,
+            "expected_body_type": "SUV",
+            "body_type": null,
+            "invocation_ids": [
+                "01a1c9f8-6540-72e3-8455-1a567d56e787",
+                "01a1c9f8-6cc6-72e6-baa5-98efe412247d",
+                "01a1c9f8-7346-722b-a79e-d16c3e7e0d10"
+            ]
+        },
+        {
+            "photo_id": 16,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3529,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f8-7976-7360-98eb-150c85132c81"
+            ]
+        },
+        {
+            "photo_id": 47,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2264,
+            "expected_body_type": "saloon",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f8-8740-73eb-a0a6-9b8f0ecddadb"
+            ]
+        },
+        {
+            "photo_id": 130,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2061,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f8-9019-7357-97c4-688aa26bab70"
+            ]
+        },
+        {
+            "photo_id": 111,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3485,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f8-9827-7040-aa74-17872b450a45"
+            ]
+        },
+        {
+            "photo_id": 100,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3351,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f8-a5c6-70bc-8970-29fefb9d8bc0"
+            ]
+        },
+        {
+            "photo_id": 38,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2129,
+            "expected_body_type": "saloon",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f8-b2de-7051-a8bf-97dc5e40e36d"
+            ]
+        },
+        {
+            "photo_id": 153,
+            "model": "qwen3.5:9b",
+            "valid": false,
+            "attempts": 3,
+            "latency_ms": 5364,
+            "expected_body_type": "SUV",
+            "body_type": null,
+            "invocation_ids": [
+                "01a1c9f8-bb32-73b3-90cf-863bbdf2aa0d",
+                "01a1c9f8-c296-7012-bb0e-26926a9afea0",
+                "01a1c9f8-c92f-7232-848c-a05ab88675db"
+            ]
+        },
+        {
+            "photo_id": 107,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3652,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f8-d027-738b-b0a1-81bd85e852a1"
+            ]
+        },
+        {
+            "photo_id": 55,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 1763,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f8-de6c-725e-8ee6-bb42cb775c31"
+            ]
+        },
+        {
+            "photo_id": 131,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2270,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f8-e550-7169-8120-7d4730f41d63"
+            ]
+        },
+        {
+            "photo_id": 121,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2427,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f8-ee2f-7274-ab2f-d521c43b2aeb"
+            ]
+        },
+        {
+            "photo_id": 128,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 1845,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f8-f7ac-73bd-aa56-bd317bf86c47"
+            ]
+        },
+        {
+            "photo_id": 124,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3130,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f8-fee2-72dd-ba98-a4ae7c27a9a0"
+            ]
+        },
+        {
+            "photo_id": 143,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2792,
+            "expected_body_type": "hatchback",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f9-0b1d-70db-8dd5-6358b5f936e3"
+            ]
+        },
+        {
+            "photo_id": 30,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 1575,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f9-1607-7112-947f-3a4f63e69dfa"
+            ]
+        },
+        {
+            "photo_id": 28,
+            "model": "qwen3.5:9b",
+            "valid": false,
+            "attempts": 3,
+            "latency_ms": 8119,
+            "expected_body_type": "SUV",
+            "body_type": null,
+            "invocation_ids": [
+                "01a1c9f9-1c2e-723e-a0ff-029e99ba89c5",
+                "01a1c9f9-2a08-71ed-8448-32c5cfca5bc8",
+                "01a1c9f9-329a-730e-956e-6e5250d367d1"
+            ]
+        },
+        {
+            "photo_id": 139,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2820,
+            "expected_body_type": "hatchback",
+            "body_type": "hatchback",
+            "invocation_ids": [
+                "01a1c9f9-3be8-72d5-ab1b-248b5b6a00e8"
+            ]
+        },
+        {
+            "photo_id": 70,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2615,
+            "expected_body_type": "convertible",
+            "body_type": "convertible",
+            "invocation_ids": [
+                "01a1c9f9-46ee-715e-b26b-429677c6429b"
+            ]
+        },
+        {
+            "photo_id": 59,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2025,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f9-5127-7267-acaf-80fc9e7cafcd"
+            ]
+        },
+        {
+            "photo_id": 77,
+            "model": "qwen3.5:9b",
+            "valid": false,
+            "attempts": 3,
+            "latency_ms": 6523,
+            "expected_body_type": "SUV",
+            "body_type": null,
+            "invocation_ids": [
+                "01a1c9f9-5912-70e0-81e2-7464e2904759",
+                "01a1c9f9-6644-72e5-ae20-ddf8ed4dcb74",
+                "01a1c9f9-6c9c-7041-9236-15cc10fccc8b"
+            ]
+        },
+        {
+            "photo_id": 36,
+            "model": "qwen3.5:9b",
+            "valid": false,
+            "attempts": 3,
+            "latency_ms": 6183,
+            "expected_body_type": "SUV",
+            "body_type": null,
+            "invocation_ids": [
+                "01a1c9f9-728e-71d1-839e-d12e11116926",
+                "01a1c9f9-7c01-7243-b902-ccdf2660ea36",
+                "01a1c9f9-82e9-73f3-a1d1-80f009589822"
+            ]
+        },
+        {
+            "photo_id": 65,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 1633,
+            "expected_body_type": "convertible",
+            "body_type": "convertible",
+            "invocation_ids": [
+                "01a1c9f9-8ab7-724a-81eb-d02bd1bb752e"
+            ]
+        },
+        {
+            "photo_id": 148,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2765,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f9-9118-720a-b6dd-92f1201d75f3"
+            ]
+        },
+        {
+            "photo_id": 76,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 3284,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f9-9be6-712c-a8bf-8a3f1d871094"
+            ]
+        },
+        {
+            "photo_id": 53,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2181,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f9-a8bb-725d-97c7-c033b185c89a"
+            ]
+        },
+        {
+            "photo_id": 34,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 1852,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9f9-b142-73da-ba0e-2d1c292d572d"
+            ]
+        },
+        {
+            "photo_id": 85,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2216,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f9-b87e-73f9-b8cd-9d85a1fffc4e"
+            ]
+        },
+        {
+            "photo_id": 56,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2455,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f9-c128-73be-86d3-474ef2f35d65"
+            ]
+        },
+        {
+            "photo_id": 98,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4998,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f9-cac5-723f-b5ad-5f3e5dcfd478"
+            ]
+        },
+        {
+            "photo_id": 2,
+            "model": "qwen3.5:9b",
+            "valid": false,
+            "attempts": 3,
+            "latency_ms": 6480,
+            "expected_body_type": "convertible",
+            "body_type": null,
+            "invocation_ids": [
+                "01a1c9f9-de4b-7301-927c-b64d9bfb778f",
+                "01a1c9f9-e8e1-73f6-a196-7ee483e10f43",
+                "01a1c9f9-f075-71d2-8662-bca69b019161"
+            ]
+        },
+        {
+            "photo_id": 18,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 4685,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9f9-f79e-72fa-88e0-a431e7cdcc36"
+            ]
+        },
+        {
+            "photo_id": 119,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2332,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9fa-09ec-7361-b7e0-e474444e5bdb"
+            ]
+        },
+        {
+            "photo_id": 31,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2223,
+            "expected_body_type": "SUV",
+            "body_type": "SUV",
+            "invocation_ids": [
+                "01a1c9fa-130a-7059-b2ab-a7d115b74fae"
+            ]
+        },
+        {
+            "photo_id": 123,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2555,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9fa-1bbc-71cd-bb3b-850a7e3536aa"
+            ]
+        },
+        {
+            "photo_id": 95,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 2646,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9fa-25b9-70b6-835d-a09cc1140287"
+            ]
+        },
+        {
+            "photo_id": 94,
+            "model": "qwen3.5:9b",
+            "valid": true,
+            "attempts": 1,
+            "latency_ms": 1633,
+            "expected_body_type": "saloon",
+            "body_type": "saloon",
+            "invocation_ids": [
+                "01a1c9fa-3010-7107-b640-d166f0f7687a"
+            ]
+        }
+    ]
+}

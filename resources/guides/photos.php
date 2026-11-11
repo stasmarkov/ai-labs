@@ -96,10 +96,12 @@ return [
         ],
     ],
     'numbers' => [
-        [
-            'label' => 'Valid on the first attempt',
-            'pending' => true,
-        ],
+        ['label' => 'gemma4:12b, valid on the first attempt', 'file' => 'photo-vision/2026-11-11/run.json', 'path' => 'models.0.valid_first_attempt.rate'],
+        ['label' => 'qwen3.5:9b, valid on the first attempt', 'file' => 'photo-vision/2026-11-11/run.json', 'path' => 'models.1.valid_first_attempt.rate'],
+        ['label' => 'gemma4:12b, latency per photo, median', 'unit' => 'ms', 'file' => 'photo-vision/2026-11-11/run.json', 'path' => 'models.0.latency_ms.p50'],
+        ['label' => 'qwen3.5:9b, latency per photo, median', 'unit' => 'ms', 'file' => 'photo-vision/2026-11-11/run.json', 'path' => 'models.1.latency_ms.p50'],
+        ['label' => 'gemma4:12b, body type agreement', 'file' => 'photo-vision/2026-11-11/run.json', 'path' => 'models.0.body_type_agreement.rate'],
+        ['label' => 'qwen3.5:9b, body type agreement', 'file' => 'photo-vision/2026-11-11/run.json', 'path' => 'models.1.body_type_agreement.rate'],
     ],
     'experiments' => [
         [

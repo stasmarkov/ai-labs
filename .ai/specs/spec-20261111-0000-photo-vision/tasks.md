@@ -43,10 +43,10 @@
   - [x] 7.1 `photos.php` as a capability guide; §16 files; README "Photos" paragraph (download, import, extract, eval commands).
   - [x] 7.2 **Verify**: `GuideContentTest` (photos counted as a capability), the `LearningGuideTest` map.
 
-- [ ] 8. Run the real pipeline once (checks)
+- [x] 8. Run the real pipeline once (checks)
   Covers: AC-1, AC-2, AC-3, AC-6
-  - [ ] 8.1 The owner or orchestrator runs: download (with terms accepted), `photos:import`, `photos:extract --limit=50`, `photos:eval`; commit `run.json` and the `BENCHMARKS.md` section.
-  - [ ] 8.2 **Verify**: `manual-test.md` steps 1–4 recorded here.
+  - [x] 8.1 The owner or orchestrator runs: download (with terms accepted), `photos:import`, `photos:extract --limit=50`, `photos:eval`; commit `run.json` and the `BENCHMARKS.md` section.
+  - [x] 8.2 **Verify**: `manual-test.md` steps 1–4 recorded here.
 
 - [x] 9. Checks (checks)
   Covers: MNC-1, MNC-3, MNC-4
@@ -87,9 +87,9 @@
 
 ## Done when
 
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
 
 ## Phase: Gaps (converge round 1)
 
@@ -125,7 +125,7 @@
   - The scope says §16 lists the new files, and the smaller points say the README and the guide name `ddev artisan queue:work --queue=ai-vision`. `docs/learning-guide.md` §16 has no `ExtractLabPhotoController`, `ShowLabPhotoStatusController`, `PhotoLabRepositoryInterface`/`EloquentPhotoLabRepository`, `PhotoExtraction` model, `PhotoExtractionInFlightException`, the two migrations, `bench/datasets/stanford-cars-convert.py`, or `PhotoLabPageTest`/`PhotoVisionAgentTest`/`PhotoDatasetScriptTest`. `README.md` says only "a worker for the `ai-vision` queue", `resources/guides/photos.php` never names the command, and line 1218 of the learning guide still calls `/ai/photos` a placeholder.
   - **Verify**: `tests/Feature/LearningGuideTest.php` asserts that §16 links each file above and that every link exists. `GuideContentTest` asserts that the photos guide text contains `queue:work --queue=ai-vision`. `README.md` contains `ddev artisan queue:work --queue=ai-vision`. `NoReferencesInUiTest` still passes on `/ai/guides/photos`.
 
-- [ ] 16. Replace the pending photos number with the measured eval result (docs)
+- [x] 16. Replace the pending photos number with the measured eval result (docs)
   Covers: AC-6, AC-7
   - Task 7 left `resources/guides/photos.php` `numbers` as one row with `'pending' => true`, waiting for the real run. Task 8 commits `run.json` and the `BENCHMARKS.md` section, but nothing points the guide's Numbers tab at the run. The scope says the Numbers tab comes from the eval.
   - **Verify**: after task 8, the photos guide's `numbers` rows use `file` `photo-vision/<date>/run.json` with paths into each model's first-attempt validity and body type agreement, and none is `pending`. `GuideContentTest` asserts the photos numbers have no pending row and render a value. The `BENCHMARKS.md` "Interview story" quotes one of these measured numbers.
@@ -166,3 +166,18 @@ Checks:
 Still open:
 - **Task 8 (real pipeline) and gap 16 (guide Numbers from the eval).** These need the owner to accept the Stanford Cars terms (`bench/datasets/stanford-cars.sh --accept-terms`). Then: `photos:import`, `photos:extract --limit=50` with an `ai-vision` worker, `photos:eval`, and commit `run.json`, the `BENCHMARKS.md` section and the guide numbers.
 - Clean-tree bench: after commit ad1cd28, `bench/run.sh ping --quick` exited 0 on frankenphp.
+
+## Real pipeline run (2026-11-11)
+
+- **Download (owner, terms accepted).** Four parquet shards were verified and converted: 16,185 images.
+- **`photos:import`.** 16 classes matched and 180 skipped. 156 photos were stored, 1,199 were skipped by the 12-per-model cap, and 156 listings have a photo.
+- **Photos returned 403.** The cause: `public/storage` had never been linked. `ddev setup` now runs `storage:link`, and `photos:import` warns when the link is missing (commit e2c8313). After the link, all images on `/ai/photos?page=2&photo=30` load with no console errors.
+- **`photos:extract --limit=50` with gemma4:12b plus an `ai-vision` worker.** 3.5 minutes in total; 50 completed on the first attempt (mean 3770 ms); 1 photo failed after 3 attempts with `tags.3 must be lowercase` (the rules working).
+- **`photos:eval --photos=50`.** 6.3 minutes. Results in `bench/results/photo-vision/2026-11-11/run.json`:
+
+  | Model | Valid 1st | Mean attempts | p50 | Body agreement |
+  |-------|-----------|---------------|-----|----------------|
+  | gemma4:12b | 1.000 | 1.00 | 3697 ms | 37/50 |
+  | qwen3.5:9b | 0.860 | 1.28 | 2572 ms | 41/50 |
+
+  `BENCHMARKS.md` has the "Car photos and a local vision model" section, and the guide's Numbers tab reads `run.json` (gap 16).
