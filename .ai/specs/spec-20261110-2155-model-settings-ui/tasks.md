@@ -167,3 +167,4 @@ Live checks (Redis cache, real Ollama):
   The server is back on `frankenphp`.
 - **Browser, `/ai/settings`.** 7 rows; `bge-m3` is not flagged "not installed"; `photo-vision` reads `gemma4:12b (provider default)`; "Settings" is in the navigation; no horizontal scroll and no console warnings.
 - **Gates.** Full suite: 1819 passed. Pint and PHPStan clean, typecheck and build pass. Fingerprint `app-DNob7CFE.css` / `app-PTzu1QaN.js`, unchanged.
+- Clean-tree bench: after commit 05ce6b3, `bench/run.sh ping --quick` exited 0 on frankenphp.
