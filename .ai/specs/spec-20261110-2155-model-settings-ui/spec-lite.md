@@ -4,7 +4,7 @@ title: Switch providers and models from the UI (local settings page)
 type: feature
 size: M
 priority: P1
-status: approved
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-10; standing approval)

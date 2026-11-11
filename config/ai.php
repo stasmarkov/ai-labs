@@ -16,6 +16,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Settings UI
+    |--------------------------------------------------------------------------
+    |
+    | Whether saved model settings (the "ai_settings" table) apply. They are
+    | read only in the local environment, whatever this switch says.
+    |
+    */
+
+    'settings_ui' => filter_var(env('AI_SETTINGS_UI', true), FILTER_VALIDATE_BOOLEAN),
+
+    /*
+    |--------------------------------------------------------------------------
     | Default Embeddings Provider
     |--------------------------------------------------------------------------
     |
@@ -268,7 +280,7 @@ return [
             'max_tokens' => filled(env('AI_CLOUD_MAX_TOKENS')) ? (int) env('AI_CLOUD_MAX_TOKENS') : 400,
             'timeout' => filled(env('AI_CLOUD_TIMEOUT')) ? (int) env('AI_CLOUD_TIMEOUT') : 60,
             'models' => [
-                'text' => ['default' => env('ANTHROPIC_MODEL') ?: 'claude-haiku-5-5'],
+                'text' => ['default' => env('ANTHROPIC_MODEL') ?: 'claude-haiku-5-5', 'available' => filled(env('ANTHROPIC_MODELS_AVAILABLE')) ? array_map('trim', explode(',', (string) env('ANTHROPIC_MODELS_AVAILABLE'))) : ['claude-haiku-5-5', 'claude-sonnet-5-5']],
             ],
         ],
 
@@ -279,8 +291,8 @@ return [
             'max_tokens' => filled(env('AI_CLOUD_MAX_TOKENS')) ? (int) env('AI_CLOUD_MAX_TOKENS') : 400,
             'timeout' => filled(env('AI_CLOUD_TIMEOUT')) ? (int) env('AI_CLOUD_TIMEOUT') : 60,
             'models' => [
-                'text' => ['default' => env('OPENAI_MODEL') ?: 'gpt-6-luna'],
-                'embeddings' => ['default' => env('OPENAI_EMBED_MODEL') ?: 'text-embedding-3-small', 'dimensions' => 1024],
+                'text' => ['default' => env('OPENAI_MODEL') ?: 'gpt-6-luna', 'available' => filled(env('OPENAI_MODELS_AVAILABLE')) ? array_map('trim', explode(',', (string) env('OPENAI_MODELS_AVAILABLE'))) : ['gpt-6-luna']],
+                'embeddings' => ['default' => env('OPENAI_EMBED_MODEL') ?: 'text-embedding-3-small', 'dimensions' => 1024, 'available' => filled(env('OPENAI_EMBED_MODELS_AVAILABLE')) ? array_map('trim', explode(',', (string) env('OPENAI_EMBED_MODELS_AVAILABLE'))) : ['text-embedding-3-small']],
             ],
         ],
 
@@ -291,8 +303,8 @@ return [
             'max_tokens' => filled(env('AI_CLOUD_MAX_TOKENS')) ? (int) env('AI_CLOUD_MAX_TOKENS') : 400,
             'timeout' => filled(env('AI_CLOUD_TIMEOUT')) ? (int) env('AI_CLOUD_TIMEOUT') : 60,
             'models' => [
-                'text' => ['default' => env('GEMINI_MODEL') ?: 'gemini-3.1-flash-lite'],
-                'embeddings' => ['default' => env('GEMINI_EMBED_MODEL') ?: 'gemini-embedding-2', 'dimensions' => 1024],
+                'text' => ['default' => env('GEMINI_MODEL') ?: 'gemini-3.1-flash-lite', 'available' => filled(env('GEMINI_MODELS_AVAILABLE')) ? array_map('trim', explode(',', (string) env('GEMINI_MODELS_AVAILABLE'))) : ['gemini-3.1-flash-lite']],
+                'embeddings' => ['default' => env('GEMINI_EMBED_MODEL') ?: 'gemini-embedding-2', 'dimensions' => 1024, 'available' => filled(env('GEMINI_EMBED_MODELS_AVAILABLE')) ? array_map('trim', explode(',', (string) env('GEMINI_EMBED_MODELS_AVAILABLE'))) : ['gemini-embedding-2']],
             ],
         ],
         // guide:end provider-cloud

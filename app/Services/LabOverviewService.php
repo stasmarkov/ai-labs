@@ -106,6 +106,7 @@ final readonly class LabOverviewService
             ['href' => route('ai.overview', absolute: false), 'label' => 'Overview'],
             ['href' => route('ai.guides.index', absolute: false), 'label' => 'Guides'],
             ...array_map(fn (array $page): array => ['href' => route($page[2], absolute: false), 'label' => $page[1]], self::PAGES),
+            ...($this->providers->settingsAvailable() ? [['href' => route('ai.settings', absolute: false), 'label' => 'Settings']] : []),
         ];
     }
 

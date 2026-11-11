@@ -1,6 +1,9 @@
 <?php
 
+use App\Ai\AiProviders;
 use App\Http\Controllers\ExtractLabPhotoController;
+use App\Http\Controllers\ResetLabSettingController;
+use App\Http\Controllers\SaveLabSettingController;
 use App\Http\Controllers\ShowLabChatController;
 use App\Http\Controllers\ShowLabDescribeController;
 use App\Http\Controllers\ShowLabDocsController;
@@ -13,6 +16,8 @@ use App\Http\Controllers\ShowLabPhotosController;
 use App\Http\Controllers\ShowLabPhotoStatusController;
 use App\Http\Controllers\ShowLabRunController;
 use App\Http\Controllers\ShowLabSemanticController;
+use App\Http\Controllers\ShowLabSettingsController;
+use App\Http\Middleware\EnsureLocalSettings;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\LimitCloudAi;
 use Illuminate\Support\Facades\Route;
@@ -34,4 +39,10 @@ Route::middleware(HandleInertiaRequests::class)->prefix('ai')->group(function ()
     Route::get('/guides', ShowLabGuidesController::class)->name('ai.guides.index');
     Route::get('/guides/{key}', ShowLabGuideController::class)->name('ai.guides.show');
     Route::get('/runs/{invocationId}', ShowLabRunController::class)->name('ai.runs.show');
+
+    Route::middleware(EnsureLocalSettings::class)->prefix('settings')->where(['feature' => implode('|', array_keys(AiProviders::features()))])->group(function (): void {
+        Route::get('/', ShowLabSettingsController::class)->name('ai.settings');
+        Route::put('/{feature}', SaveLabSettingController::class)->name('ai.settings.save');
+        Route::delete('/{feature}', ResetLabSettingController::class)->name('ai.settings.reset');
+    });
 });

@@ -28,6 +28,11 @@ return [
             'snippet' => 'App\Http\Middleware\LimitCloudAi::handle',
         ],
         [
+            'title' => 'A saved choice sits between the request and the configuration',
+            'body' => "On a local machine the Settings page can save a provider and a model per feature. The resolver then reads, in order: the lab selector for that one request, the saved choice, the configuration, and the provider's default model. The live facts above name which level decided for each feature. Outside the local environment, or with `AI_SETTINGS_UI=false`, saved choices are ignored and the page answers 404.",
+            'snippet' => 'App\Ai\AiProviders::resolve',
+        ],
+        [
             'title' => 'Embeddings stay on one model until you re-index',
             'body' => 'Vectors from two models cannot be compared. The index keeps 1024 dimensions, so a provider with other dimensions is refused by the indexing commands, and a search against an index built with another model answers `index_not_built` (409) and names the command that rebuilds it.',
             'snippet' => 'App\Services\ListingEmbeddingService::assertDimensions',
@@ -101,6 +106,11 @@ return [
             'title' => 'Switch the embeddings to a cloud provider',
             'body' => "Set the key, then `AI_EMBEDDINGS_LISTINGS_PROVIDER` or `AI_EMBEDDINGS_DOCS_PROVIDER` (for example `openai`), restart, and re-index: `listings:embed --fresh` for listings, `docs:index` for docs. Until then search answers `index_not_built` instead of comparing vectors of two models.\n\n**Check:** search answers again, and every stored vector carries the new model label.",
             'snippet' => 'App\Services\ListingEmbeddingService::embedTexts',
+        ],
+        [
+            'title' => 'Switch a feature from the Settings page',
+            'body' => "Open `/ai/settings` on a local machine, pick a provider and a model for the feature, and save. The next request uses it: no restart, no cache clearing. Reset returns the feature to the configuration. Only enabled providers are offered, and for Ollama only installed models of the right kind. Switching an embeddings feature warns first and shows the re-index command after saving. The page exists only in the local environment and while `AI_SETTINGS_UI` is not false.\n\n**Worker mode:** the saved choice is read through a cache key that save and reset forget, and nothing writes to the configuration, so a long-lived worker (FrankenPHP worker or Octane) sees the change on its next request. To check, save a model, run the feature on the worker server and read the model on the new run row.\n\n**Check:** the live facts above show the saved model with the source `settings`, and the next run row carries it.",
+            'snippet' => 'App\Ai\AiProviders::resolve',
         ],
         [
             'title' => 'Add a provider',

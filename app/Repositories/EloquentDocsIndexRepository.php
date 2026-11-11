@@ -6,6 +6,7 @@ namespace App\Repositories;
 
 use App\Contracts\DocsIndexRepositoryInterface;
 use App\DTOs\ChunkText;
+use App\DTOs\EmbeddingIndexCount;
 use App\DTOs\IndexedDocument;
 use App\Models\DocsChunk;
 use App\Models\DocsDocument;
@@ -113,6 +114,15 @@ final readonly class EloquentDocsIndexRepository implements DocsIndexRepositoryI
     public function pendingEmbeddingCount(string $model): int
     {
         return DocsChunk::query()->whereRaw(self::STALE, [$model])->count();
+    }
+
+    public function embeddingCount(string $model): EmbeddingIndexCount
+    {
+        $row = DB::table('docs_chunks')
+            ->selectRaw('count(*) as total, count(embedding) as embedded, count(*) filter (where embedding is not null and embedding_model = ?) as current', [$model])
+            ->first();
+
+        return new EmbeddingIndexCount((int) $row->total, (int) $row->embedded, (int) $row->current);
     }
 
     public function staleChunks(array $chunkIds, string $model): array

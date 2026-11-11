@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Contracts;
 
+use App\DTOs\EmbeddingIndexCount;
 use App\DTOs\ListingDocumentText;
 use App\DTOs\ListingEmbedding;
 use App\DTOs\ListingFacts;
@@ -25,6 +26,11 @@ interface ListingDocumentRepositoryInterface
     public function upsertTexts(array $documents): int;
 
     public function countListingsWithoutDocument(): int;
+
+    /**
+     * Documents, documents with a vector, and documents whose vector was made with the given model label.
+     */
+    public function embeddingCount(string $model): EmbeddingIndexCount;
 
     /**
      * Clear the vectors of the first $limit documents by listing id (all when null).

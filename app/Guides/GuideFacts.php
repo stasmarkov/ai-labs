@@ -91,12 +91,22 @@ final readonly class GuideFacts
         $text = $providers->configured('describe');
         $embeddings = $providers->configured('embeddings-listings');
 
-        return [
+        $facts = [
             ['label' => 'Provider', 'value' => $text->provider],
             ['label' => 'Model', 'value' => $text->model],
             ['label' => 'Embeddings provider', 'value' => $embeddings->provider],
             ['label' => 'Embeddings model', 'value' => $embeddings->model],
         ];
+
+        foreach (array_keys(AiProviders::features()) as $feature) {
+            $resolved = $providers->effective($feature);
+            $facts[] = [
+                'label' => $feature,
+                'value' => $resolved->choice->provider.', '.$resolved->choice->model.' ('.$resolved->source.')',
+            ];
+        }
+
+        return $facts;
     }
 
     /**

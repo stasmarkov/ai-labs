@@ -6,6 +6,7 @@ namespace App\Contracts;
 
 use App\DTOs\ChunkEmbedding;
 use App\DTOs\ChunkText;
+use App\DTOs\EmbeddingIndexCount;
 use App\DTOs\IndexedDocument;
 use Carbon\CarbonImmutable;
 
@@ -52,6 +53,11 @@ interface DocsIndexRepositoryInterface
      * How many chunks still have no vector for this model.
      */
     public function pendingEmbeddingCount(string $model): int;
+
+    /**
+     * Chunks, chunks with a vector, and chunks whose vector was made with the given model label.
+     */
+    public function embeddingCount(string $model): EmbeddingIndexCount;
 
     /**
      * The given chunks that still have no vector for this model.

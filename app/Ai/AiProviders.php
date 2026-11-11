@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Ai;
 
+use App\Contracts\AiSettingsRepositoryInterface;
+use App\DTOs\AiSettingChoice;
+use App\DTOs\ResolvedChoice;
 use App\Exceptions\ProviderNotConfiguredException;
 use App\Exceptions\ProviderNotEnabledException;
 use InvalidArgumentException;
@@ -20,6 +23,14 @@ use Laravel\Ai\Providers\OpenAiProvider;
  */
 final readonly class AiProviders
 {
+    public const SOURCE_REQUEST = 'request';
+
+    public const SOURCE_SETTINGS = 'settings';
+
+    public const SOURCE_CONFIGURATION = 'configuration';
+
+    public const SOURCE_DEFAULT = 'default';
+
     private const TEXT_FEATURES = ['describe', 'nl-search', 'docs-answer', 'rag-grader', 'photo-vision'];
 
     /** Text features whose default model is the provider's vision model, when its entry names one. */
@@ -39,6 +50,8 @@ final readonly class AiProviders
         'openai' => 'OPENAI_API_KEY',
         'gemini' => 'GEMINI_API_KEY',
     ];
+
+    public function __construct(private ?AiSettingsRepositoryInterface $settings = null) {}
 
     /**
      * Every provider that can run here: the fakes (local and testing environments only), Ollama, and each cloud
@@ -114,19 +127,58 @@ final readonly class AiProviders
      */
     public function configured(string $feature, ?string $override = null): ProviderChoice
     {
-        $embeddings = $this->kindOf($feature) === 'embeddings';
-        $provider = (string) (config("ai.features.{$feature}.provider")
-            ?: config($embeddings ? 'ai.default_for_embeddings' : 'ai.default'));
+        return $this->resolveConfigured($feature, $override)->choice;
+    }
 
-        if (filled($override) && ! $embeddings && $override !== $provider) {
-            return $this->choice($override, $this->defaultModel($override, false));
-        }
+    /**
+     * Every feature key with its kind, text or embeddings.
+     *
+     * @return array<string, string>
+     */
+    public static function features(): array
+    {
+        return [
+            ...array_fill_keys(self::TEXT_FEATURES, 'text'),
+            ...array_fill_keys(self::EMBEDDING_FEATURES, 'embeddings'),
+        ];
+    }
 
-        $model = (string) (config("ai.features.{$feature}.model")
-            ?: (in_array($feature, self::VISION_FEATURES, true) ? config("ai.providers.{$provider}.models.vision.default") : null)
-            ?: $this->defaultModel($provider, $embeddings));
+    /**
+     * Whether saved settings apply: the local environment with the settings switch on.
+     */
+    public function settingsAvailable(): bool
+    {
+        return app()->environment('local') && (bool) config('ai.settings_ui', true);
+    }
 
-        return $this->choice($provider, $model);
+    /**
+     * Enabled providers that name an embeddings model.
+     *
+     * @return list<string>
+     */
+    public function enabledEmbeddingProviders(): array
+    {
+        return array_values(array_filter(
+            $this->enabled(),
+            fn (string $name): bool => config("ai.providers.{$name}.models.embeddings.default") !== null,
+        ));
+    }
+
+    /**
+     * What the feature resolves to with no request override: a saved setting that counts, else configuration or default.
+     * No enabled check, so a page can show a misconfiguration.
+     */
+    public function effective(string $feature): ResolvedChoice
+    {
+        return $this->resolveConfigured($feature);
+    }
+
+    /**
+     * What the feature resolves to when no setting is saved: configuration, then the default.
+     */
+    public function withoutSettings(string $feature): ResolvedChoice
+    {
+        return $this->configurationChoice($feature, $this->kindOf($feature) === 'embeddings');
     }
 
     /**
@@ -139,21 +191,94 @@ final readonly class AiProviders
      */
     public function forFeature(string $feature, ?string $override = null): ProviderChoice
     {
-        $configured = $this->configured($feature);
+        return $this->resolve($feature, $override)->choice;
+    }
 
-        if (filled($override) && $override !== $configured->provider) {
+    /**
+     * Like forFeature(), with the level that decided: request, settings, configuration or default.
+     *
+     * @throws ProviderNotEnabledException
+     * @throws ProviderNotConfiguredException
+     */
+    public function resolve(string $feature, ?string $override = null): ResolvedChoice
+    {
+        $baseline = $this->resolveConfigured($feature);
+
+        if (filled($override) && $override !== $baseline->choice->provider) {
             if (! $this->isEnabledTextProvider($override) || $this->kindOf($feature) === 'embeddings') {
                 throw ProviderNotEnabledException::named($override);
             }
 
-            return $this->configured($feature, $override);
+            return $this->resolveConfigured($feature, $override, $baseline);
         }
 
-        if (! $this->isRunnable($configured->provider)) {
-            throw ProviderNotConfiguredException::forFeature($feature, $configured->provider);
+        if (! $this->isRunnable($baseline->choice->provider)) {
+            throw ProviderNotConfiguredException::forFeature($feature, $baseline->choice->provider);
         }
 
-        return $configured;
+        return $baseline;
+    }
+
+    private function resolveConfigured(string $feature, ?string $override = null, ?ResolvedChoice $baseline = null): ResolvedChoice
+    {
+        $embeddings = $this->kindOf($feature) === 'embeddings';
+        $baseline ??= $this->baseline($feature, $embeddings);
+
+        if (filled($override) && ! $embeddings && $override !== $baseline->choice->provider) {
+            $configuration = $this->configurationChoice($feature, false)->choice;
+            $fromConfiguration = $configuration->provider === $override;
+            $model = $fromConfiguration ? $configuration->model : $this->defaultModel($override, false);
+            $modelSource = $fromConfiguration && filled(config("ai.features.{$feature}.model")) ? self::SOURCE_CONFIGURATION : self::SOURCE_DEFAULT;
+
+            return new ResolvedChoice($this->choice($override, $model), self::SOURCE_REQUEST, $modelSource);
+        }
+
+        return $baseline;
+    }
+
+    /**
+     * The level below the request: a saved setting, then configuration, then the provider's default model.
+     */
+    private function baseline(string $feature, bool $embeddings): ResolvedChoice
+    {
+        $saved = $this->savedChoice($feature);
+
+        if ($saved !== null) {
+            return new ResolvedChoice($this->choice($saved->provider, $saved->model), self::SOURCE_SETTINGS);
+        }
+
+        return $this->configurationChoice($feature, $embeddings);
+    }
+
+    private function configurationChoice(string $feature, bool $embeddings): ResolvedChoice
+    {
+        $configuredProvider = config("ai.features.{$feature}.provider");
+        $configuredModel = config("ai.features.{$feature}.model");
+        $provider = (string) ($configuredProvider ?: config($embeddings ? 'ai.default_for_embeddings' : 'ai.default'));
+
+        $model = (string) ($configuredModel
+            ?: (in_array($feature, self::VISION_FEATURES, true) ? config("ai.providers.{$provider}.models.vision.default") : null)
+            ?: $this->defaultModel($provider, $embeddings));
+
+        // The row's source is the level that supplied the provider; the model carries its own source label.
+        $source = filled($configuredProvider) ? self::SOURCE_CONFIGURATION : self::SOURCE_DEFAULT;
+
+        return new ResolvedChoice($this->choice($provider, $model), $source, filled($configuredModel) ? self::SOURCE_CONFIGURATION : self::SOURCE_DEFAULT);
+    }
+
+    /**
+     * A saved setting counts only in the local environment, with the settings switch on, and for an enabled provider,
+     * so a copied database cannot change a production model.
+     */
+    private function savedChoice(string $feature): ?AiSettingChoice
+    {
+        if (! $this->settingsAvailable()) {
+            return null;
+        }
+
+        $saved = ($this->settings ?? app(AiSettingsRepositoryInterface::class))->all()[$feature] ?? null;
+
+        return $saved !== null && $this->isEnabled($saved->provider) ? $saved : null;
     }
 
     /**

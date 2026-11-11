@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Contracts\AiSettingsRepositoryInterface;
 use App\Contracts\DocsAnswerCacheRepositoryInterface;
 use App\Contracts\DocsBenchRepositoryInterface;
 use App\Contracts\DocsIndexRepositoryInterface;
@@ -23,6 +24,7 @@ use App\Contracts\ShutdownScheduler;
 use App\Guides\GuideFacts;
 use App\Guides\GuideRepository;
 use App\Guides\SnippetResolver;
+use App\Repositories\EloquentAiSettingsRepository;
 use App\Repositories\EloquentDocsAnswerCacheRepository;
 use App\Repositories\EloquentDocsBenchRepository;
 use App\Repositories\EloquentDocsIndexRepository;
@@ -61,6 +63,7 @@ class AppServiceProvider extends ServiceProvider
             (int) config('ai.docs.chunk.max_tokens'),
             (int) config('ai.docs.chunk.merge_below_tokens'),
         ));
+        $this->app->scoped(AiSettingsRepositoryInterface::class, EloquentAiSettingsRepository::class);
         $this->app->bind(ListingRepositoryInterface::class, EloquentListingRepository::class);
         $this->app->bind(ListingDocumentRepositoryInterface::class, EloquentListingDocumentRepository::class);
         $this->app->bind(ListingPhotoRepositoryInterface::class, EloquentListingPhotoRepository::class);

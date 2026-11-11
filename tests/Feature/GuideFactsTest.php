@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Ai\AiProviders;
+use App\Contracts\AiSettingsRepositoryInterface;
+use App\DTOs\AiSettingChoice;
 use App\Guides\GuideFacts;
 use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
 use App\Guides\InvalidGuideException;
 use App\Guides\SnippetResolver;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 function factsGuide(array $numbers): string
@@ -46,7 +50,7 @@ it('AC-7 renders the configured provider and model after the render cache', func
         'ai.default_for_embeddings' => 'ollama',
         'ai.providers.ollama.models.embeddings.default' => 'embed-a',
     ]);
-    expect(($this->render)('providers')['facts'])->toBe([
+    expect(array_slice(($this->render)('providers')['facts'], 0, 4))->toBe([
         ['label' => 'Provider', 'value' => 'ollama'],
         ['label' => 'Model', 'value' => 'model-a'],
         ['label' => 'Embeddings provider', 'value' => 'ollama'],
@@ -55,6 +59,43 @@ it('AC-7 renders the configured provider and model after the render cache', func
 
     config(['ai.providers.ollama.models.text.default' => 'model-b']);
     expect(($this->render)('providers')['facts'][1]['value'])->toBe('model-b');
+});
+
+it('AC-8 lists per feature the effective provider, model and source on the providers guide', function (): void {
+    app()->detectEnvironment(fn (): string => 'local');
+    config([
+        'ai.settings_ui' => true,
+        'ai.default' => 'fake-stream',
+        'ai.features.describe.provider' => 'ollama',
+        'ai.features.describe.model' => 'model-a',
+        'ai.features.nl-search.provider' => null,
+        'ai.features.nl-search.model' => null,
+    ]);
+    Cache::flush();
+    app(AiSettingsRepositoryInterface::class)->save(new AiSettingChoice('docs-answer', 'ollama', 'saved-model'));
+
+    $facts = collect(($this->render)('providers')['facts'])->keyBy('label');
+
+    foreach (array_keys(AiProviders::features()) as $feature) {
+        expect($facts)->toHaveKey($feature);
+    }
+
+    expect($facts['describe']['value'])->toBe('ollama, model-a (configuration)')
+        ->and($facts['docs-answer']['value'])->toBe('ollama, saved-model (settings)')
+        ->and($facts['nl-search']['value'])->toEndWith('(default)')
+        ->and(($this->render)('run-log')['facts'])->not->toContain(['label' => 'describe', 'value' => $facts['describe']['value']]);
+});
+
+it('AC-8 the providers guide carries a recipe for switching from the Settings page', function (): void {
+    $guide = require base_path('resources/guides/providers.php');
+    $titles = array_column($guide['recipes'], 'title');
+
+    expect($titles)->toContain('Switch a feature from the Settings page');
+
+    $recipe = $guide['recipes'][array_search('Switch a feature from the Settings page', $titles, true)];
+
+    expect($recipe['body'])->toContain('/ai/settings')->toContain('AI_SETTINGS_UI')->toContain('worker');
+    expect(file_get_contents(base_path('.env.example')))->toContain('AI_SETTINGS_UI');
 });
 
 it('AC-7 lists the real ai_runs columns on the run-log guide', function (): void {

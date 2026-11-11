@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Contracts\ListingDocumentRepositoryInterface;
+use App\DTOs\EmbeddingIndexCount;
 use App\DTOs\ListingDocumentText;
 use App\DTOs\ListingFacts;
 use Carbon\CarbonImmutable;
@@ -14,6 +15,15 @@ final readonly class EloquentListingDocumentRepository implements ListingDocumen
 {
     private const STALE = "(embedding IS NULL OR embedding_model IS DISTINCT FROM ?
         OR embedded_text_hash IS DISTINCT FROM encode(sha256(convert_to(description, 'UTF8')), 'hex'))";
+
+    public function embeddingCount(string $model): EmbeddingIndexCount
+    {
+        $row = DB::table('listing_documents')
+            ->selectRaw('count(*) as total, count(embedding) as embedded, count(*) filter (where embedding is not null and embedding_model = ?) as current', [$model])
+            ->first();
+
+        return new EmbeddingIndexCount((int) $row->total, (int) $row->embedded, (int) $row->current);
+    }
 
     public function listingsAfter(int $afterId, int $limit): array
     {

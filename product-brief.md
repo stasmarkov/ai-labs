@@ -129,7 +129,7 @@ moves to `docs/context/business-rules.md` with the same ids.
 ### AI
 
 - **BR-90** Every AI call is logged with provider, model, prompt version, tokens in and out, and latency.
-- **BR-91** Provider and model are chosen by configuration only; switching models needs no code change.
+- **BR-91** Provider and model are chosen per feature without a code change: by configuration, or, in the local environment only, from the settings page (a saved choice wins over configuration; a lab request's `provider` wins over both). Outside local, or with `AI_SETTINGS_UI=false`, saved choices are ignored and the page answers 404.
 - **BR-92** Natural-language search output is turned into the BR-03 filters and validated by the same rules; the model never produces queries. Output that fails validation returns 422.
 - **BR-93** The moderation classifier returns a risk between 0 and 1 and a list of reasons; output not matching that shape is rejected and logged.
 - **BR-94** The buyer assistant takes at most 4 tool steps per question.
