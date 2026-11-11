@@ -200,3 +200,4 @@ Checks:
 - Pint and PHPStan clean, typecheck and build pass.
 - Fingerprint `app-DNob7CFE.css` / `app-PTzu1QaN.js`, unchanged.
 - Parity on frankenphp identical.
+- Clean-tree bench: after commit 1487150, `bench/run.sh ping --quick` exited 0 on frankenphp.
