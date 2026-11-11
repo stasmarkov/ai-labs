@@ -517,8 +517,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-90, BR-27
 - **Depends on:** SL-36
 - **Blocked by:** none (Q-06 answered 2026-11-05: Stanford Cars dataset)
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261111-2206-photo-text-search
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-37: text-to-photo search using the CLIP/SigLIP text encoder against the SL-36 photo vectors (BR-90, BR-27). Rules in product-brief.md."`
 
