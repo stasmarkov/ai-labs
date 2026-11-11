@@ -111,6 +111,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Photo Text Search
+    |--------------------------------------------------------------------------
+    |
+    | A text query is wrapped by the versioned "prompt" template, encoded by the
+    | photo encoder's text side and matched against the photo vectors: at most
+    | "limit" photos with a cosine similarity of at least "min_score", read from
+    | the "candidates" nearest vectors; results are cached for "ttl_seconds".
+    |
+    */
+
+    'photo_search' => [
+        'prompt' => env('AI_PROMPT_PHOTO_SEARCH') ?: 'photo-search.v1',
+        'min_score' => filled(env('AI_PHOTO_SEARCH_MIN_SCORE')) ? (float) env('AI_PHOTO_SEARCH_MIN_SCORE') : 0.2, // calibrated 2026-11-11: metrics flat from 0.15 to 0.225, cliff from 0.25; the middle of the plateau keeps a margin
+        'limit' => 12,
+        'candidates' => 40,
+        'ttl_seconds' => 3600,
+        'per_minute' => filled(env('AI_PHOTO_SEARCH_PER_MINUTE')) ? (int) env('AI_PHOTO_SEARCH_PER_MINUTE') : 30,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Embedding Batches
     |--------------------------------------------------------------------------
     |
@@ -340,6 +361,7 @@ return [
             'driver' => 'image-encoder',
             'url' => env('PHOTO_ENCODER_URL') ?: 'http://photo-encoder:7997',
             'timeout' => filled(env('PHOTO_ENCODER_TIMEOUT')) ? max(1, (int) env('PHOTO_ENCODER_TIMEOUT')) : 120,
+            'text_timeout' => 10,
             'batch' => 16,
             'models' => [
                 'image_embeddings' => [

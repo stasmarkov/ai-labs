@@ -4,6 +4,7 @@ use App\Http\Controllers\AskDocsController;
 use App\Http\Controllers\DescribeListingController;
 use App\Http\Controllers\ListListingsController;
 use App\Http\Controllers\NlSearchController;
+use App\Http\Controllers\PhotoTextSearchController;
 use App\Http\Controllers\SearchDocsController;
 use App\Http\Controllers\SemanticSearchController;
 use App\Http\Controllers\ServeExportController;
@@ -36,6 +37,9 @@ Route::get('/api/listings/semantic', SemanticSearchController::class)
 Route::get('/api/listings/nl', NlSearchController::class)
     ->middleware(['throttle:nl-search', LimitCloudAi::class.':nl-search', AddServerTimingHeader::class])
     ->name('listings.nl');
+Route::get('/api/photos/search', PhotoTextSearchController::class)
+    ->middleware(['throttle:photo-search', LimitCloudAi::class.':embeddings-photos', AddServerTimingHeader::class])
+    ->name('photos.search');
 Route::get('/api/docs/search', SearchDocsController::class)
     ->middleware(['throttle:docs-search', LimitCloudAi::class.':embeddings-docs', AddServerTimingHeader::class])
     ->name('docs.search');

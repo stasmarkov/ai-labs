@@ -1050,6 +1050,71 @@ At the chosen 0.75: 1,173 results for 154 answered queries, uncached latency p50
 
 I wanted similar photos without a hosted service, so the lab runs a local CLIP encoder, stores 512-dimension vectors in pgvector and searches them with an HNSW cosine index. The part I would not skip is calibrating the cutoff: CLIP scores any two car photos high, so I measured precision and coverage for every threshold from 0.60 to 0.95 against the make and model of each photo instead of guessing. At 0.75, 78% of results share the make and 68% the make and model, and 99% of photos get at least one match; 0.80 would raise precision by about 6 points and drop 9 points of coverage, so which one is right depends on whether an empty strip is worse than a weak match.
 
+## Search car photos by text (2026-11-11)
+
+`photos:search-eval` runs 30 labelled queries ([`bench/photo-search/queries.v1.jsonl`](bench/photo-search/queries.v1.jsonl)) against the 156 embedded photos through `PhotoTextSearchService`. The query text goes to the same CLIP encoder as the photos (`openai/clip-vit-base-patch32`, 512 dimensions, label `photo-encoder/openai/clip-vit-base-patch32`) and the 40 nearest vectors are filtered to one photo per listing. Run on frankenphp, `k` 8. Raw file: [`bench/results/photo-search/2026-11-11/run.json`](bench/results/photo-search/2026-11-11/run.json). Reproduce with `ddev artisan photos:search-eval`.
+
+Method:
+- **Relevant** means the result's listing matches the query's rule: make, make and model, or body type from the catalogue. Colour queries are graded only over the 50 photos with a completed `gemma4:12b` / `photo-vision@v1` extraction (grey and silver count as one colour), so the colour labels are model output, not ground truth.
+- **Precision** is the mean over all queries of the share of returned results that are relevant (at most 8 per query); a query with no results counts as 0. **MRR** is the mean reciprocal rank of the first relevant result. **Coverage** is the share of queries that returned at least one photo.
+- **Latency** is the in-process `PhotoTextSearchService::search` call: uncached runs skip the cache, so each call is one text encode plus the HNSW read; cached reads the stored result.
+- **Variants:** `photo-search.v1` wraps the query as `a photo of {query}`; `photo-search.v0` sends the bare query.
+
+#### Threshold curve: `photo-search.v1`
+
+| min_score | Coverage | P@8 | MRR |
+|-----------|----------|-----|-----|
+| 0.150 | 0.967 | 0.506 | 0.569 |
+| 0.175 | 0.967 | 0.506 | 0.569 |
+| **0.200** | 0.967 | 0.506 | 0.569 |
+| 0.225 | 0.967 | 0.506 | 0.569 |
+| 0.250 | 0.867 | 0.455 | 0.503 |
+| 0.275 | 0.733 | 0.413 | 0.408 |
+| 0.300 | 0.267 | 0.189 | 0.183 |
+| 0.325 | 0.067 | 0.033 | 0.033 |
+| 0.350 | 0.000 | 0.000 | 0.000 |
+
+#### Threshold curve: `photo-search.v0`
+
+| min_score | Coverage | P@8 | MRR |
+|-----------|----------|-----|-----|
+| 0.150 | 0.933 | 0.511 | 0.576 |
+| 0.175 | 0.933 | 0.511 | 0.576 |
+| **0.200** | 0.933 | 0.511 | 0.576 |
+| 0.225 | 0.933 | 0.511 | 0.576 |
+| 0.250 | 0.867 | 0.465 | 0.501 |
+| 0.275 | 0.600 | 0.355 | 0.376 |
+| 0.300 | 0.200 | 0.150 | 0.150 |
+| 0.325 | 0.000 | 0.000 | 0.000 |
+| 0.350 | 0.000 | 0.000 | 0.000 |
+
+Both curves come from the same `run.json`; a threshold with no answered queries scores 0.000.
+
+Template against bare query at 0.15:
+
+| Variant | Coverage | P@8 | MRR | Hit rate |
+|---------|----------|-----|-----|----------|
+| `photo-search.v1` (template) | 0.967 | 0.506 | 0.569 | 0.667 |
+| `photo-search.v0` (bare) | 0.933 | 0.511 | 0.576 | 0.733 |
+
+Latency over 30 queries: uncached p50 60.4 ms and p95 136.1 ms (budget 400 ms), cached p50 0.42 ms and p95 0.97 ms (budget 10 ms).
+
+### What the numbers say
+
+- **The curve is a plateau and then a cliff.** Every metric is identical from 0.15 to 0.225 and falls from 0.25. The eval picks the first maximum, 0.15; the shipped default stays 0.2, the middle of the plateau, which gives the same answers with a margin before the cliff.
+- **The template does not beat the bare query here.** Precision and MRR are within 0.01 and the bare query has the higher hit rate; the template only covers one more query. With 30 queries one query moves coverage by 3 points, so this is a tie, not a ranking.
+- **Text scores sit low.** CLIP text-to-image cosines are 0.15 to 0.30, far below the 0.75 used for photo-to-photo, so a cutoff copied from SL-36 would return nothing.
+- **Latency is the encoder.** The uncached p95 is one text encode on the emulated sidecar; the HNSW read over 156 vectors is about 1 ms.
+
+### Surprises
+
+- **Two thirds of the queries find something relevant in the top 8, and precision is about 0.5.** It is uneven: Mercedes-Benz, Volkswagen, Tesla, Mustang, Golf, SUV and rear-hatchback queries return 8 of 8, while Audi, Audi A4, saloon, estate and people carrier return 0 of 8. Combined colour and body-type queries return only 0 to 4 photos because few photos pass both the cutoff and the extracted colour.
+- **The sidecar runs emulated.** The Infinity image is `linux/amd64` only, so on Apple silicon it runs under emulation and the latency numbers are an upper bound.
+
+### Interview story
+
+I wanted to search the car photos with plain words, so the query is embedded by the same local CLIP encoder as the photos and matched with the HNSW index. The part I would not skip is the cutoff: text-to-image similarities are 0.15 to 0.30, so I swept the threshold, found a plateau up to 0.225 and a cliff from 0.25, and shipped 0.2 in the middle. I also measured the `a photo of` template against the bare query and found no real difference on 30 queries, which is the honest result to report.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

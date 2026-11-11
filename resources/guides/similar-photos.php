@@ -104,5 +104,5 @@ return [
             'params' => [],
         ],
     ],
-    'related' => ['photos', 'providers'],
+    'related' => ['photos', 'photo-search', 'providers'],
 ];

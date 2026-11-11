@@ -4,7 +4,7 @@ title: Search car photos by text
 type: feature
 size: M
 priority: P1
-status: approved
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-11; standing approval)
@@ -172,7 +172,7 @@ Self-decided under the owner's standing approval.
    - **Colour:** a match means the colour word is any entry of `dominant_colours` in the photo's completed extraction for `gemma4:12b` and prompt `photo-vision@v1` (the most recently updated row if there are several). `grey` and `silver` count as one colour; there are no other synonyms.
    - **precision@8:** relevant results ÷ results returned (at most 8, after the cutoff); a query with no results counts 0.
    - **Coverage:** the share of queries with at least one result.
-   - **Threshold:** the chosen one maximises mean precision@8 × coverage; on a tie, the lower threshold wins.
+   - **Threshold:** the eval reports the first threshold that maximises mean precision@8 × coverage. When the maximum is a plateau, the shipped default is the middle of the plateau, which keeps a margin before the drop and answers the same today. (Amended 2026-11-11 after the run: the curve was flat from 0.15 to 0.225 with a cliff from 0.25, so 0.2 ships.)
 2. **Eval versus search.** The eval calls the same service method uncached, so it uses the same 40 candidates, one photo per listing and the threshold under test. It writes `ai_runs` rows with origin `eval`.
    - The bare query and the template are compared at the template's chosen threshold, and the full curve is kept for both.
    - "Indexed text" means `listing_documents.description`, `docs_chunks.body` and the SL-27 extraction captions. The test checks that no query string appears as a substring, case-insensitive, in any of them.

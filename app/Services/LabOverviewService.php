@@ -23,6 +23,7 @@ final readonly class LabOverviewService
         ['docs', 'Docs search', 'ai.docs', 'ready'],
         ['chat', 'Chat', 'ai.chat', 'ready'],
         ['photos', 'Photos', 'ai.photos', 'ready'],
+        ['photo-search', 'Photo search', 'ai.photo-search', 'ready'],
     ];
 
     public function __construct(

@@ -134,7 +134,11 @@ final readonly class SimilarPhotosService
         return $kept;
     }
 
-    private function generation(string $label): int
+    /**
+     * The index generation of a label: it moves whenever photo vectors of that label are stored, so any cache keyed
+     * by it (similar photos here, text search in PhotoTextSearchService) drops its old entries.
+     */
+    public function generation(string $label): int
     {
         return (int) Cache::get($this->generationKey($label), 1);
     }

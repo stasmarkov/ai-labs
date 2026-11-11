@@ -8,13 +8,13 @@ use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
 use App\Guides\SnippetResolver;
 
-const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos'];
+const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search'];
 
 const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards'];
 
 const ALL_FILLED_GUIDES = [...CAPABILITY_GUIDES, ...FOUNDATION_GUIDES];
 
-const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat', 'ai.photos'];
+const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat', 'ai.photos', 'ai.photo-search'];
 
 /**
  * @return list<string>
@@ -179,6 +179,25 @@ it('AC-9 the similar-photos guide has six non-empty tabs, no references, and is 
     $this->get('/ai/guides/similar-photos')->assertOk();
 });
 
+it('AC-8 the photo-search guide has six non-empty tabs, no references, and is linked from the photo guides', function (): void {
+    $guide = app(GuideRepository::class)->find('photo-search');
+    $rendered = app(GuideRenderer::class)->render('photo-search');
+
+    expect($guide->kind)->toBe('capability')
+        ->and($guide->planned)->toBeFalse()
+        ->and($rendered['works'])->not->toBeEmpty()
+        ->and($rendered['failures'])->not->toBeEmpty()
+        ->and($rendered['recipes'])->not->toBeEmpty()
+        ->and($rendered['support'])->not->toBeEmpty()
+        ->and($rendered['numbers'])->not->toBeEmpty()
+        ->and($rendered['experiments'])->not->toBeEmpty()
+        ->and(app(GuideRepository::class)->find('similar-photos')->related)->toContain('photo-search')
+        ->and(app(GuideRepository::class)->find('photos')->related)->toContain('photo-search');
+
+    $this->withoutVite();
+    $this->get('/ai/guides/photo-search')->assertOk();
+});
+
 it('AC-9 the providers capability table lists the image encoder with its vector size', function (): void {
     $rows = collect(app(GuideRenderer::class)->render('providers')['table']['rows'])->keyBy('provider');
 
@@ -232,4 +251,12 @@ it('AC-5 the photos empty state names both the download script and photos:import
 
     expect($source)->toContain('stanford-cars.sh --accept-terms')
         ->and($source)->toContain('photos:import');
+});
+
+it('AC-2 photo search maps a refusal to the guard step, before the encoder and index steps', function (): void {
+    $steps = app(GuideRepository::class)->find('photo-search')->works;
+    $events = array_map(fn ($step): ?string => $step->event, $steps);
+
+    expect(array_search('refused', $events, true))->toBe(0)
+        ->and(array_search('refused', $events, true))->toBeLessThan(array_search('response_received', $events, true));
 });

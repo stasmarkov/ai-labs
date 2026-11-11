@@ -146,7 +146,7 @@ it('NFR-3 renders the listing without the block and reports the failure when the
 });
 
 it('MNC-1 a listing without matches keeps the blank line between the hero image and the title, byte for byte', function (): void {
-    $listing = App\Models\Listing::factory()->for(App\Models\Dealer::factory())->create();
+    $listing = Listing::factory()->for(Dealer::factory())->create();
 
     $html = (string) $this->get('/listings/'.$listing->id)->assertOk()->getContent();
 

@@ -44,7 +44,7 @@ it('NFR-1 no key value appears in any lab page, the guides, the log or ai_runs',
     $this->getJson('/api/listings/nl?q=a&provider=anthropic')->assertOk();
     $this->getJson('/api/listings/nl?q=b&provider=gemini')->assertStatus(200);
 
-    foreach (['/', '/ai', '/ai/describe', '/ai/semantic', '/ai/docs', '/ai/chat', '/ai/nl-search', '/ai/photos', '/ai/guides'] as $url) {
+    foreach (['/', '/ai', '/ai/describe', '/ai/semantic', '/ai/docs', '/ai/chat', '/ai/nl-search', '/ai/photos', '/ai/photo-search', '/ai/guides'] as $url) {
         $page = $this->get($url)->assertOk();
         assertNoKey($page->getContent(), $url);
     }

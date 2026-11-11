@@ -5,8 +5,8 @@ export interface ServerTimings {
 }
 
 export type SearchOutcome<T> =
-    | { ok: true; data: T[]; timings: ServerTimings; elapsedMs: number }
-    | { ok: false; message: string; status: number | null };
+    | { ok: true; data: T[]; meta?: Record<string, unknown>; timings: ServerTimings; elapsedMs: number }
+    | { ok: false; message: string; status: number | null; refused: boolean };
 
 export function parseServerTiming(header: string | null): ServerTimings {
     const timings: ServerTimings = { embed: null, model: null, db: null };
@@ -26,6 +26,8 @@ export function parseServerTiming(header: string | null): ServerTimings {
 
 interface ErrorBody {
     message?: string;
+    refused?: boolean;
+    code?: string;
     errors?: Record<string, string[]>;
 }
 
@@ -50,18 +52,21 @@ export async function searchJson<T>(url: string, params: Record<string, string>)
         if (!response.ok) {
             const body = (await response.json().catch(() => null)) as ErrorBody | null;
 
-            return { ok: false, message: errorMessage(response.status, body), status: response.status };
+            const refused = response.status === 422 && (body?.refused === true || body?.code === 'refused');
+
+            return { ok: false, message: errorMessage(response.status, body), status: response.status, refused };
         }
 
-        const body = (await response.json()) as { data: T[] };
+        const body = (await response.json()) as { data: T[]; meta?: Record<string, unknown> };
 
         return {
             ok: true,
             data: body.data,
+            meta: body.meta,
             timings: parseServerTiming(response.headers.get('Server-Timing')),
             elapsedMs: performance.now() - started,
         };
     } catch {
-        return { ok: false, message: 'Connection lost.', status: null };
+        return { ok: false, message: 'Connection lost.', status: null, refused: false };
     }
 }

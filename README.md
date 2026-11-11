@@ -90,6 +90,16 @@ ddev artisan photos:similar-eval                 # precision, coverage and laten
 
 The listing page shows a "Similar cars" block and `/ai/photos` a "Similar photos" strip. How it works: `/ai/guides/similar-photos`.
 
+### Search photos by text
+
+The same encoder has a text side, so words can find photos: `/ai/photo-search?q=red%20convertible`, or `GET /api/photos/search?q=`. The query is wrapped in `a photo of {query}` (`resources/prompts/photo-search.v1.md`), encoded and matched against the photo vectors built by `photos:embed`. Text-to-photo scores are far lower than photo-to-photo ones, so the cutoff `AI_PHOTO_SEARCH_MIN_SCORE` is calibrated on 30 labelled queries:
+
+```sh
+ddev artisan photos:search-eval                  # precision, MRR, threshold curve, template vs bare query, writes run.json
+```
+
+How it works: `/ai/guides/photo-search`.
+
 ## History
 
 The project began as a PHP server comparison (five web servers and worker mode; only the FrankenPHP family is kept) on a car marketplace, and was renamed ai-lab on 2026-11-10 when it became a study lab for AI features in Laravel. The server work stays below and in [BENCHMARKS.md](BENCHMARKS.md). The old DDEV URL is gone; use https://ai-lab.ddev.site.

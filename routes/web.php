@@ -13,6 +13,7 @@ use App\Http\Controllers\ShowLabHomeController;
 use App\Http\Controllers\ShowLabNlSearchController;
 use App\Http\Controllers\ShowLabOverviewController;
 use App\Http\Controllers\ShowLabPhotosController;
+use App\Http\Controllers\ShowLabPhotoSearchController;
 use App\Http\Controllers\ShowLabPhotoStatusController;
 use App\Http\Controllers\ShowLabRunController;
 use App\Http\Controllers\ShowLabSemanticController;
@@ -33,6 +34,7 @@ Route::middleware(HandleInertiaRequests::class)->prefix('ai')->group(function ()
     Route::get('/docs', ShowLabDocsController::class)->name('ai.docs');
     Route::get('/chat', ShowLabChatController::class)->name('ai.chat');
     Route::get('/nl-search', ShowLabNlSearchController::class)->name('ai.nl-search');
+    Route::get('/photo-search', ShowLabPhotoSearchController::class)->name('ai.photo-search');
     Route::get('/photos', ShowLabPhotosController::class)->name('ai.photos');
     Route::post('/photos/{photo}/extract', ExtractLabPhotoController::class)->whereNumber('photo')->middleware(['throttle:photo-extract', LimitCloudAi::class.':photo-vision'])->name('ai.photos.extract');
     Route::get('/photos/{photo}/status', ShowLabPhotoStatusController::class)->whereNumber('photo')->name('ai.photos.status');

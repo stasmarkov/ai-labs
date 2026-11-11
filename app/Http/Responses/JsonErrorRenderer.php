@@ -11,6 +11,8 @@ use App\Exceptions\IndexNotBuiltException;
 use App\Exceptions\NlSearchInvalidException;
 use App\Exceptions\NlSearchRefusedException;
 use App\Exceptions\NlSearchUnavailableException;
+use App\Exceptions\PhotoSearchRefusedException;
+use App\Exceptions\PhotoSearchUnavailableException;
 use App\Exceptions\ProviderNotConfiguredException;
 use App\Exceptions\ProviderNotEnabledException;
 use App\Exceptions\SemanticSearchUnavailableException;
@@ -41,6 +43,8 @@ final class JsonErrorRenderer
         return match (true) {
             $e instanceof ValidationException => ApiResponse::error(422, 'Validation failed', $e->errors()),
             $e instanceof SemanticSearchUnavailableException, $e instanceof DocsSearchUnavailableException, $e instanceof DocsAnswerUnavailableException, $e instanceof VinReportUnavailableException, $e instanceof NlSearchUnavailableException => ApiResponse::error(503, $e->getMessage()),
+            $e instanceof PhotoSearchUnavailableException => ApiResponse::error(503, $e->getMessage(), extra: ['code' => PhotoSearchUnavailableException::CODE]),
+            $e instanceof PhotoSearchRefusedException => ApiResponse::error(422, $e->getMessage(), extra: ['code' => PhotoSearchRefusedException::CODE, 'refused' => true, 'pattern' => $e->pattern, 'invocation_id' => $e->invocationId]),
             $e instanceof NlSearchRefusedException => ApiResponse::error(422, $e->getMessage(), extra: ['refused' => true, 'pattern' => $e->pattern, 'invocation_id' => $e->invocationId]),
             $e instanceof NlSearchInvalidException => ApiResponse::error(422, 'Validation failed', $e->errors, ['extracted' => $e->extracted, 'unsupported' => $e->unsupported, 'invocation_id' => $e->invocationId]),
             $e instanceof ProviderNotEnabledException => ApiResponse::error(422, $e->getMessage(), extra: ['code' => ProviderNotEnabledException::CODE]),

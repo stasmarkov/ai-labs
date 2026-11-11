@@ -1,0 +1,548 @@
+{
+    "metadata": {
+        "generated_at": "2026-11-11T20:47:52+00:00",
+        "label": "photo-encoder/openai/clip-vit-base-patch32",
+        "queries": 30,
+        "query_set": "bench/photo-search/queries.v1.jsonl",
+        "k": 8,
+        "configured_min_score": 0.2,
+        "ground_truth": "make, model and body type from the photo's listing and the catalogue; colour from the gemma4:12b photo-vision@v1 extraction (model output, not ground truth)"
+    },
+    "pool": {
+        "embedded_photos": 156,
+        "colour_photos": 50
+    },
+    "chosen_min_score": 0.15,
+    "variants": {
+        "template": {
+            "prompt": "photo-search.v1",
+            "chosen_min_score": 0.15,
+            "compared_at_min_score": 0.15,
+            "metrics": {
+                "queries": 30,
+                "answered": 29,
+                "coverage": 0.9667,
+                "precision": 0.5056,
+                "mrr": 0.5694,
+                "hit_rate": 0.6667,
+                "objective": 0.4887
+            },
+            "curve": [
+                {
+                    "threshold": 0.15,
+                    "queries": 30,
+                    "answered": 29,
+                    "coverage": 0.9667,
+                    "precision": 0.5056,
+                    "mrr": 0.5694,
+                    "hit_rate": 0.6667,
+                    "objective": 0.4887
+                },
+                {
+                    "threshold": 0.175,
+                    "queries": 30,
+                    "answered": 29,
+                    "coverage": 0.9667,
+                    "precision": 0.5056,
+                    "mrr": 0.5694,
+                    "hit_rate": 0.6667,
+                    "objective": 0.4887
+                },
+                {
+                    "threshold": 0.2,
+                    "queries": 30,
+                    "answered": 29,
+                    "coverage": 0.9667,
+                    "precision": 0.5056,
+                    "mrr": 0.5694,
+                    "hit_rate": 0.6667,
+                    "objective": 0.4887
+                },
+                {
+                    "threshold": 0.225,
+                    "queries": 30,
+                    "answered": 29,
+                    "coverage": 0.9667,
+                    "precision": 0.5056,
+                    "mrr": 0.5694,
+                    "hit_rate": 0.6667,
+                    "objective": 0.4887
+                },
+                {
+                    "threshold": 0.25,
+                    "queries": 30,
+                    "answered": 26,
+                    "coverage": 0.8667,
+                    "precision": 0.455,
+                    "mrr": 0.5028,
+                    "hit_rate": 0.6,
+                    "objective": 0.3943
+                },
+                {
+                    "threshold": 0.275,
+                    "queries": 30,
+                    "answered": 22,
+                    "coverage": 0.7333,
+                    "precision": 0.4133,
+                    "mrr": 0.4083,
+                    "hit_rate": 0.4667,
+                    "objective": 0.3031
+                },
+                {
+                    "threshold": 0.3,
+                    "queries": 30,
+                    "answered": 8,
+                    "coverage": 0.2667,
+                    "precision": 0.1889,
+                    "mrr": 0.1833,
+                    "hit_rate": 0.2,
+                    "objective": 0.0504
+                },
+                {
+                    "threshold": 0.325,
+                    "queries": 30,
+                    "answered": 2,
+                    "coverage": 0.0667,
+                    "precision": 0.0333,
+                    "mrr": 0.0333,
+                    "hit_rate": 0.0333,
+                    "objective": 0.0022
+                },
+                {
+                    "threshold": 0.35,
+                    "queries": 30,
+                    "answered": 0,
+                    "coverage": 0,
+                    "precision": 0,
+                    "mrr": 0,
+                    "hit_rate": 0,
+                    "objective": 0
+                }
+            ],
+            "per_query": [
+                {
+                    "id": "ps-01",
+                    "returned": 8,
+                    "relevant": 5
+                },
+                {
+                    "id": "ps-02",
+                    "returned": 8,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-03",
+                    "returned": 8,
+                    "relevant": 8
+                },
+                {
+                    "id": "ps-04",
+                    "returned": 8,
+                    "relevant": 8
+                },
+                {
+                    "id": "ps-05",
+                    "returned": 8,
+                    "relevant": 7
+                },
+                {
+                    "id": "ps-06",
+                    "returned": 8,
+                    "relevant": 4
+                },
+                {
+                    "id": "ps-07",
+                    "returned": 8,
+                    "relevant": 8
+                },
+                {
+                    "id": "ps-08",
+                    "returned": 8,
+                    "relevant": 2
+                },
+                {
+                    "id": "ps-09",
+                    "returned": 8,
+                    "relevant": 5
+                },
+                {
+                    "id": "ps-10",
+                    "returned": 8,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-11",
+                    "returned": 8,
+                    "relevant": 8
+                },
+                {
+                    "id": "ps-12",
+                    "returned": 8,
+                    "relevant": 8
+                },
+                {
+                    "id": "ps-13",
+                    "returned": 8,
+                    "relevant": 6
+                },
+                {
+                    "id": "ps-14",
+                    "returned": 8,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-15",
+                    "returned": 8,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-16",
+                    "returned": 8,
+                    "relevant": 8
+                },
+                {
+                    "id": "ps-17",
+                    "returned": 8,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-18",
+                    "returned": 8,
+                    "relevant": 3
+                },
+                {
+                    "id": "ps-19",
+                    "returned": 8,
+                    "relevant": 8
+                },
+                {
+                    "id": "ps-20",
+                    "returned": 8,
+                    "relevant": 8
+                },
+                {
+                    "id": "ps-21",
+                    "returned": 4,
+                    "relevant": 4
+                },
+                {
+                    "id": "ps-22",
+                    "returned": 4,
+                    "relevant": 2
+                },
+                {
+                    "id": "ps-23",
+                    "returned": 1,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-24",
+                    "returned": 0,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-25",
+                    "returned": 3,
+                    "relevant": 2
+                },
+                {
+                    "id": "ps-26",
+                    "returned": 2,
+                    "relevant": 1
+                },
+                {
+                    "id": "ps-27",
+                    "returned": 4,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-28",
+                    "returned": 4,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-29",
+                    "returned": 2,
+                    "relevant": 1
+                },
+                {
+                    "id": "ps-30",
+                    "returned": 1,
+                    "relevant": 0
+                }
+            ]
+        },
+        "bare": {
+            "prompt": "photo-search.v0",
+            "chosen_min_score": 0.15,
+            "compared_at_min_score": 0.15,
+            "metrics": {
+                "queries": 30,
+                "answered": 28,
+                "coverage": 0.9333,
+                "precision": 0.5111,
+                "mrr": 0.5756,
+                "hit_rate": 0.7333,
+                "objective": 0.477
+            },
+            "curve": [
+                {
+                    "threshold": 0.15,
+                    "queries": 30,
+                    "answered": 28,
+                    "coverage": 0.9333,
+                    "precision": 0.5111,
+                    "mrr": 0.5756,
+                    "hit_rate": 0.7333,
+                    "objective": 0.477
+                },
+                {
+                    "threshold": 0.175,
+                    "queries": 30,
+                    "answered": 28,
+                    "coverage": 0.9333,
+                    "precision": 0.5111,
+                    "mrr": 0.5756,
+                    "hit_rate": 0.7333,
+                    "objective": 0.477
+                },
+                {
+                    "threshold": 0.2,
+                    "queries": 30,
+                    "answered": 28,
+                    "coverage": 0.9333,
+                    "precision": 0.5111,
+                    "mrr": 0.5756,
+                    "hit_rate": 0.7333,
+                    "objective": 0.477
+                },
+                {
+                    "threshold": 0.225,
+                    "queries": 30,
+                    "answered": 28,
+                    "coverage": 0.9333,
+                    "precision": 0.5111,
+                    "mrr": 0.5756,
+                    "hit_rate": 0.7333,
+                    "objective": 0.477
+                },
+                {
+                    "threshold": 0.25,
+                    "queries": 30,
+                    "answered": 26,
+                    "coverage": 0.8667,
+                    "precision": 0.465,
+                    "mrr": 0.5006,
+                    "hit_rate": 0.6333,
+                    "objective": 0.403
+                },
+                {
+                    "threshold": 0.275,
+                    "queries": 30,
+                    "answered": 18,
+                    "coverage": 0.6,
+                    "precision": 0.3548,
+                    "mrr": 0.3756,
+                    "hit_rate": 0.4667,
+                    "objective": 0.2129
+                },
+                {
+                    "threshold": 0.3,
+                    "queries": 30,
+                    "answered": 6,
+                    "coverage": 0.2,
+                    "precision": 0.15,
+                    "mrr": 0.15,
+                    "hit_rate": 0.1667,
+                    "objective": 0.03
+                },
+                {
+                    "threshold": 0.325,
+                    "queries": 30,
+                    "answered": 0,
+                    "coverage": 0,
+                    "precision": 0,
+                    "mrr": 0,
+                    "hit_rate": 0,
+                    "objective": 0
+                },
+                {
+                    "threshold": 0.35,
+                    "queries": 30,
+                    "answered": 0,
+                    "coverage": 0,
+                    "precision": 0,
+                    "mrr": 0,
+                    "hit_rate": 0,
+                    "objective": 0
+                }
+            ],
+            "per_query": [
+                {
+                    "id": "ps-01",
+                    "returned": 8,
+                    "relevant": 5
+                },
+                {
+                    "id": "ps-02",
+                    "returned": 8,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-03",
+                    "returned": 8,
+                    "relevant": 7
+                },
+                {
+                    "id": "ps-04",
+                    "returned": 8,
+                    "relevant": 8
+                },
+                {
+                    "id": "ps-05",
+                    "returned": 8,
+                    "relevant": 7
+                },
+                {
+                    "id": "ps-06",
+                    "returned": 8,
+                    "relevant": 3
+                },
+                {
+                    "id": "ps-07",
+                    "returned": 8,
+                    "relevant": 8
+                },
+                {
+                    "id": "ps-08",
+                    "returned": 8,
+                    "relevant": 2
+                },
+                {
+                    "id": "ps-09",
+                    "returned": 8,
+                    "relevant": 5
+                },
+                {
+                    "id": "ps-10",
+                    "returned": 8,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-11",
+                    "returned": 8,
+                    "relevant": 8
+                },
+                {
+                    "id": "ps-12",
+                    "returned": 8,
+                    "relevant": 8
+                },
+                {
+                    "id": "ps-13",
+                    "returned": 8,
+                    "relevant": 6
+                },
+                {
+                    "id": "ps-14",
+                    "returned": 8,
+                    "relevant": 1
+                },
+                {
+                    "id": "ps-15",
+                    "returned": 8,
+                    "relevant": 1
+                },
+                {
+                    "id": "ps-16",
+                    "returned": 8,
+                    "relevant": 8
+                },
+                {
+                    "id": "ps-17",
+                    "returned": 8,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-18",
+                    "returned": 8,
+                    "relevant": 3
+                },
+                {
+                    "id": "ps-19",
+                    "returned": 8,
+                    "relevant": 8
+                },
+                {
+                    "id": "ps-20",
+                    "returned": 8,
+                    "relevant": 8
+                },
+                {
+                    "id": "ps-21",
+                    "returned": 4,
+                    "relevant": 4
+                },
+                {
+                    "id": "ps-22",
+                    "returned": 4,
+                    "relevant": 2
+                },
+                {
+                    "id": "ps-23",
+                    "returned": 0,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-24",
+                    "returned": 0,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-25",
+                    "returned": 3,
+                    "relevant": 2
+                },
+                {
+                    "id": "ps-26",
+                    "returned": 3,
+                    "relevant": 2
+                },
+                {
+                    "id": "ps-27",
+                    "returned": 5,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-28",
+                    "returned": 5,
+                    "relevant": 0
+                },
+                {
+                    "id": "ps-29",
+                    "returned": 2,
+                    "relevant": 1
+                },
+                {
+                    "id": "ps-30",
+                    "returned": 1,
+                    "relevant": 0
+                }
+            ]
+        }
+    },
+    "latency": {
+        "uncached": {
+            "samples": 30,
+            "p50_ms": 60.427,
+            "p95_ms": 136.057,
+            "mean_ms": 112.848
+        },
+        "cached": {
+            "samples": 30,
+            "p50_ms": 0.422,
+            "p95_ms": 0.971,
+            "mean_ms": 0.485
+        }
+    }
+}

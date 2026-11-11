@@ -51,6 +51,7 @@ it('AC-4 finds no removed server name in tracked files outside the allowlist', f
         'tests/Feature/DdevServerCommandTest.php' => 'asserts the removal message',
         'tests/Feature/ServerDefaultCommandTest.php' => 'asserts the removal message',
         'tests/Feature/ServerSwitchChecksTest.php' => 'MNC-1 pins the unchanged config.yaml',
+        'tests/Feature/PhotoEncoderComposeTest.php' => 'pins the unchanged config.yaml webserver_type',
         'tests/Feature/BenchRenameProjectTest.php' => 'fixture copy of the unchanged config.yaml',
         'tests/Feature/ReadmeSwitchingServersTest.php' => 'AC-5 asserts the docs hold no removed name',
         'tests/Feature/DocsDefaultServerTest.php' => 'pins what the docs say about the old default',

@@ -1,0 +1,30 @@
+{"id":"ps-01","query":"a BMW parked outside a house","rule":{"make":"BMW"}}
+{"id":"ps-02","query":"an Audi seen from the front","rule":{"make":"Audi"}}
+{"id":"ps-03","query":"a Mercedes-Benz at the roadside","rule":{"make":"Mercedes-Benz"}}
+{"id":"ps-04","query":"a Volkswagen on a quiet street","rule":{"make":"Volkswagen"}}
+{"id":"ps-05","query":"a Ford standing in a car park","rule":{"make":"Ford"}}
+{"id":"ps-06","query":"a Toyota photographed from the side","rule":{"make":"Toyota"}}
+{"id":"ps-07","query":"a Tesla electric car","rule":{"make":"Tesla"}}
+{"id":"ps-08","query":"a Volvo seen from behind","rule":{"make":"Volvo"}}
+{"id":"ps-09","query":"a BMW 3 Series driving past","rule":{"make":"BMW","model":"3 Series"}}
+{"id":"ps-10","query":"an Audi A4 in profile","rule":{"make":"Audi","model":"A4"}}
+{"id":"ps-11","query":"a Volkswagen Golf on an open road","rule":{"make":"Volkswagen","model":"Golf"}}
+{"id":"ps-12","query":"a Ford Mustang muscle car","rule":{"make":"Ford","model":"Mustang"}}
+{"id":"ps-13","query":"a compact hatchback in a city street","rule":{"body_type":"hatchback"}}
+{"id":"ps-14","query":"a four door saloon car","rule":{"body_type":"saloon"}}
+{"id":"ps-15","query":"an estate car with a long roof","rule":{"body_type":"estate"}}
+{"id":"ps-16","query":"a tall SUV on a dirt road","rule":{"body_type":"SUV"}}
+{"id":"ps-17","query":"a family people carrier","rule":{"body_type":"MPV"}}
+{"id":"ps-18","query":"a two door sports coupe","rule":{"body_type":"coupe"}}
+{"id":"ps-19","query":"a large SUV driving in the snow","rule":{"body_type":"SUV"}}
+{"id":"ps-20","query":"a hatchback seen from the rear","rule":{"body_type":"hatchback"}}
+{"id":"ps-21","query":"a red hatchback","rule":{"colour":"red","body_type":"hatchback"}}
+{"id":"ps-22","query":"a white SUV in daylight","rule":{"colour":"white","body_type":"SUV"}}
+{"id":"ps-23","query":"a black saloon at night","rule":{"colour":"black","body_type":"saloon"}}
+{"id":"ps-24","query":"a silver estate car","rule":{"colour":"silver","body_type":"estate"}}
+{"id":"ps-25","query":"a blue hatchback on a road","rule":{"colour":"blue","body_type":"hatchback"}}
+{"id":"ps-26","query":"a grey SUV near trees","rule":{"colour":"grey","body_type":"SUV"}}
+{"id":"ps-27","query":"a red sports coupe","rule":{"colour":"red","body_type":"coupe"}}
+{"id":"ps-28","query":"a white saloon parked on grass","rule":{"colour":"white","body_type":"saloon"}}
+{"id":"ps-29","query":"a black SUV on a wide road","rule":{"colour":"black","body_type":"SUV"}}
+{"id":"ps-30","query":"a blue estate car","rule":{"colour":"blue","body_type":"estate"}}

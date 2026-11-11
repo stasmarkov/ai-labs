@@ -104,6 +104,7 @@ it('AC-6 every experiment preset URL uses only parameters its target page reads'
         'ai.chat' => ['q'],
         'ai.nl-search' => ['q'],
         'ai.photos' => [],
+        'ai.photo-search' => ['q'],
     ];
     $repository = app(GuideRepository::class);
 
@@ -119,7 +120,7 @@ it('AC-6 every experiment preset URL uses only parameters its target page reads'
 });
 
 it('AC-6 the live pages that accept q prefill their field without auto-running', function (): void {
-    foreach (['Semantic', 'NlSearch', 'Docs', 'Chat'] as $page) {
+    foreach (['Semantic', 'NlSearch', 'Docs', 'Chat', 'PhotoSearch'] as $page) {
         $source = (string) file_get_contents(resource_path("js/ai/Pages/Lab/{$page}.vue"));
 
         expect($source)->toContain('ref(presetQuery())');

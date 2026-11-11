@@ -78,18 +78,40 @@ final readonly class PhotoEncoderClient
     }
 
     /**
-     * @param  list<string>  $batch
+     * The L2-normalised vector of one text, from the encoder's text tower.
+     *
+     * @return list<float>
+     *
+     * @throws PhotoEncoderException
+     */
+    public function embedText(string $text): array
+    {
+        $choice = $this->providers->configured(self::FEATURE);
+        $entry = config("ai.providers.{$choice->provider}");
+
+        if (! is_array($entry) || ($entry['driver'] ?? null) !== 'image-encoder') {
+            throw PhotoEncoderException::notConfigured($choice->provider);
+        }
+
+        $vector = $this->embedBatch($choice->provider, $choice->model, [$text], $this->dimensions(), 'text', min($this->timeout($choice->provider), (int) config("ai.providers.{$choice->provider}.text_timeout", 10)), 0)[0];
+        $norm = sqrt(array_sum(array_map(fn (float $value): float => $value * $value, $vector)));
+
+        return $norm > 0.0 ? array_map(fn (float $value): float => $value / $norm, $vector) : $vector;
+    }
+
+    /**
+     * @param  list<string>  $batch  data URLs for the image modality, plain strings for text
      * @return list<list<float>>
      */
-    private function embedBatch(string $provider, string $model, array $batch, int $dimensions): array
+    private function embedBatch(string $provider, string $model, array $batch, int $dimensions, string $modality = 'image', ?int $timeout = null, int $retries = 2): array
     {
         try {
-            $response = $this->request($provider, (int) config("ai.providers.{$provider}.timeout", 120))
-                ->retry(2, 200, fn (Throwable $e): bool => $e instanceof ConnectionException, throw: false)
+            $response = $this->request($provider, $timeout ?? $this->timeout($provider))
+                ->retry($retries, 200, fn (Throwable $e): bool => $e instanceof ConnectionException, throw: false)
                 ->post('/embeddings', [
                     'model' => $model,
-                    'modality' => 'image',
-                    'input' => array_map(fn (string $bytes): string => $this->dataUrl($bytes), $batch),
+                    'modality' => $modality,
+                    'input' => $modality === 'image' ? array_map(fn (string $bytes): string => $this->dataUrl($bytes), $batch) : $batch,
                 ]);
         } catch (ConnectionException) {
             throw PhotoEncoderException::unreachable($provider);
@@ -126,6 +148,11 @@ final readonly class PhotoEncoderClient
         }
 
         return $vectors;
+    }
+
+    private function timeout(string $provider): int
+    {
+        return (int) config("ai.providers.{$provider}.timeout", 120);
     }
 
     private function request(string $provider, int $timeout): PendingRequest
