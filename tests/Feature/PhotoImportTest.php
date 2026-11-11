@@ -264,3 +264,22 @@ test('MNC-5 imported photos land in a git-ignored folder', function () {
 
     expect($process->getExitCode())->toBe(0);
 });
+
+it('AC-2 warns when the public storage link is missing, so the photos would answer 403', function (): void {
+    $link = public_path('storage');
+    $had = is_link($link);
+    $target = $had ? readlink($link) : null;
+
+    if ($had) {
+        unlink($link);
+    }
+
+    try {
+        datasetPhoto($this, '00001.jpg', 'BMW X3 SUV 2012');
+        $this->artisan('photos:import', ['--dataset' => $this->dataset])->expectsOutputToContain('storage:link');
+    } finally {
+        if ($had) {
+            symlink((string) $target, $link);
+        }
+    }
+});

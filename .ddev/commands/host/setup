@@ -161,6 +161,12 @@ fi
 
 ddev artisan migrate --force
 
+# Imported photos live on the public disk; without this link /storage/... answers 403 and the photo lab shows no images.
+if [[ ! -L "$APPROOT/public/storage" ]]; then
+  ddev artisan storage:link
+  CHANGED=1
+fi
+
 if [[ ! -f "$APPROOT/public/build/manifest.json" ]]; then
   ddev npm install
   ddev npm run build

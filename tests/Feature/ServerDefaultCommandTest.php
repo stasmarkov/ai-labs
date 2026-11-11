@@ -110,8 +110,10 @@ it('AC-2 setup switches to the default, creates missing keys, migrates and then 
         ->and($log)->toContain('artisan mercure:keys')
         ->and($log)->not->toContain('mercure:keys --force')
         ->and($log)->toContain('artisan migrate --force')
+        ->and($log)->toContain('artisan storage:link')
         ->and(file_get_contents($this->overlay))->toContain('# server: frankenphp');
 
+    @symlink($this->root.'/storage/app/public', $this->root.'/public/storage');
     unlink($this->calls);
     $second = ($this->run)('setup');
     $log = file_get_contents($this->calls);
@@ -121,6 +123,7 @@ it('AC-2 setup switches to the default, creates missing keys, migrates and then 
         ->and($log)->not->toContain('mercure:keys')
         ->and($log)->not->toContain('server default')
         ->and($log)->not->toContain('restart')
+        ->and($log)->not->toContain('storage:link')
         ->and($log)->toContain('artisan migrate --force');
 });
 

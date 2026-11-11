@@ -49,6 +49,10 @@ final class ImportPhotosCommand extends Command
         $this->line("Unreadable or missing files: {$report->unreadableFiles}");
         $this->info("Listings with a photo: {$report->listingsWithPhoto}");
 
+        if (! is_link(public_path('storage'))) {
+            $this->warn('The photos are stored but not served yet: run ddev artisan storage:link (ddev setup does it).');
+        }
+
         return self::SUCCESS;
     }
 
