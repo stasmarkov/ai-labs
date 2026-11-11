@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Contracts;
 
+use App\DTOs\EmbeddingIndexCount;
 use App\DTOs\NewListingPhoto;
+use App\DTOs\PhotoEmbedding;
 use App\DTOs\PhotoListingCandidate;
+use App\DTOs\PhotoToEmbed;
+use Carbon\CarbonImmutable;
 use Closure;
 
 interface ListingPhotoRepositoryInterface
@@ -40,4 +44,38 @@ interface ListingPhotoRepositoryInterface
      * @return list<string> the paths of the deleted rows
      */
     public function deleteBySource(string $source): array;
+
+    /**
+     * Photos, photos with a vector, and photos whose vector was made with the given model label.
+     */
+    public function embeddingCount(string $model): EmbeddingIndexCount;
+
+    /**
+     * Remove the vectors of the first $limit photos by id (every photo with a null limit), so they are stale again.
+     */
+    public function clearEmbeddings(?int $limit): int;
+
+    /**
+     * Ids, in ascending order, of the photos without a vector or with one made by another model label, among the
+     * first $limit photos by id.
+     *
+     * @return list<int>
+     */
+    public function staleEmbeddingPhotoIds(string $model, ?int $limit): array;
+
+    /**
+     * The stale photos among the given ids.
+     *
+     * @param  list<int>  $photoIds
+     * @return list<PhotoToEmbed>
+     */
+    public function stalePhotos(array $photoIds, string $model): array;
+
+    /**
+     * @param  list<PhotoEmbedding>  $embeddings
+     * @return int the number of rows stored
+     */
+    public function storeEmbeddings(array $embeddings, string $model, CarbonImmutable $embeddedAt): int;
+
+    public function countEmbeddedSince(CarbonImmutable $since): int;
 }

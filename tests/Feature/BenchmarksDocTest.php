@@ -780,3 +780,47 @@ test('AC-9 BENCHMARKS.md describes unsupported recall per term', function () {
         ->not->toContain('12 queries')
         ->not->toContain('is not empty');
 });
+
+test('AC-8 BENCHMARKS.md similar-photos section quotes the committed run.json', function (): void {
+    $run = json_decode(file_get_contents(base_path('bench/results/photo-similar/2026-11-11/run.json')), true, flags: JSON_THROW_ON_ERROR);
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+
+    preg_match('/^## Similar car photos \(2026-11-11\)\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $section = $matches[1] ?? '';
+    expect($section)->not->toBe('');
+
+    expect($section)->toContain('bench/results/photo-similar/2026-11-11/run.json')
+        ->toContain($run['metadata']['label'])
+        ->toContain("({$run['metadata']['photos']}")
+        ->toContain("`k` {$run['metadata']['k']}")
+        ->toContain("near-duplicate cutoff {$run['metadata']['near_duplicate_cutoff']}")
+        ->toContain("\n### What the numbers say\n")
+        ->toContain("\n### Interview story\n");
+
+    $ratio = static fn (float $value): string => number_format($value, 3, '.', '');
+    $chosen = $run['metadata']['min_score'];
+    expect($run['curve'])->toHaveCount(8);
+
+    foreach ($run['curve'] as $row) {
+        $threshold = number_format($row['threshold'], 2, '.', '');
+        $label = $row['threshold'] === $chosen ? "**{$threshold}**" : $threshold;
+        $make = $row['answered'] === 0 ? 'n/a' : $ratio($row['precision_make']);
+        $makeModel = $row['answered'] === 0 ? 'n/a' : $ratio($row['precision_make_model']);
+
+        expect($section)->toContain("| {$label} | {$ratio($row['coverage'])} | {$make} | {$makeModel} |");
+    }
+
+    $metrics = $run['metrics'];
+    $latency = $run['latency'];
+    $ms = static fn (float $value): string => number_format($value, 2, '.', '');
+    $throughput = number_format($run['throughput']['photos_per_second'], 2, '.', '');
+
+    expect($section)->toContain(
+        "At the chosen {$chosen}: ".number_format($metrics['returned']).' results for '
+        ."{$metrics['answered']} answered queries, uncached latency p50 {$ms($latency['uncached']['p50_ms'])} ms "
+        ."and p95 {$ms($latency['uncached']['p95_ms'])} ms, cached p50 {$ms($latency['cached']['p50_ms'])} ms "
+        ."and p95 {$ms($latency['cached']['p95_ms'])} ms, encoder throughput {$throughput} photos/s."
+    );
+    expect($section)->toContain("At {$chosen}, {$ratio($metrics['precision_make'])} of results share the make "
+        ."and {$ratio($metrics['precision_make_model'])} share the make and model");
+});

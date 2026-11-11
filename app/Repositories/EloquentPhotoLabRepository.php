@@ -19,7 +19,9 @@ final readonly class EloquentPhotoLabRepository implements PhotoLabRepositoryInt
 {
     public function paginate(PhotoExtractionRequest $request, int $page, int $perPage): LengthAwarePaginator
     {
+        // Only the columns the grid needs: the 512-number embedding stays in the database.
         return ListingPhoto::query()
+            ->select(['id', 'listing_id', 'path'])
             ->with(['listing', 'extractions' => $this->forRequest($request)])
             ->orderBy('id')
             ->paginate($perPage, page: $page)
@@ -64,6 +66,8 @@ final readonly class EloquentPhotoLabRepository implements PhotoLabRepositoryInt
             $extraction?->errors,
             $extraction->invocation_ids ?? [],
             $others,
+            $photo->listing->make,
+            $photo->listing->model,
         );
     }
 

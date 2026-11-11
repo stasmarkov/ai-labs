@@ -20,6 +20,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $width
  * @property int $height
  * @property string $sha256
+ * @property string|null $embedding
+ * @property string|null $embedding_model
+ * @property CarbonImmutable|null $embedded_at
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
  * @property-read Listing $listing
@@ -39,12 +42,16 @@ class ListingPhoto extends Model
      *
      * @return array<string, string>
      */
+    /** @var list<string> the vector never travels to a page or a JSON response */
+    protected $hidden = ['embedding'];
+
     protected function casts(): array
     {
         return [
             'listing_id' => 'integer',
             'width' => 'integer',
             'height' => 'integer',
+            'embedded_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];

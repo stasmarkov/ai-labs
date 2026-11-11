@@ -41,6 +41,8 @@ final readonly class AiProviders
 
     private const EMBEDDING_FEATURES = ['embeddings-listings', 'embeddings-docs'];
 
+    private const IMAGE_EMBEDDING_FEATURES = ['embeddings-photos'];
+
     /**
      * Cloud SDK driver => the key variable of the stock entry. Local or cloud is decided by the entry's driver, never
      * by its name, so a renamed or second cloud entry is still key-checked and rate-limited.
@@ -55,7 +57,7 @@ final readonly class AiProviders
 
     /**
      * Every provider that can run here: the fakes (local and testing environments only), Ollama, and each cloud
-     * provider with a non-empty key.
+     * provider with a non-empty key. Image encoders are not listed; enabledImageEmbeddingProviders() names them.
      *
      * @return list<string>
      */
@@ -63,7 +65,7 @@ final readonly class AiProviders
     {
         return array_values(array_filter(
             array_keys((array) config('ai.providers', [])),
-            fn (string $name): bool => $this->isEnabled($name),
+            fn (string $name): bool => ! $this->isImageEncoder($name) && $this->isEnabled($name),
         ));
     }
 
@@ -131,7 +133,7 @@ final readonly class AiProviders
     }
 
     /**
-     * Every feature key with its kind, text or embeddings.
+     * Every feature key with its kind: text, embeddings or image-embeddings.
      *
      * @return array<string, string>
      */
@@ -140,6 +142,7 @@ final readonly class AiProviders
         return [
             ...array_fill_keys(self::TEXT_FEATURES, 'text'),
             ...array_fill_keys(self::EMBEDDING_FEATURES, 'embeddings'),
+            ...array_fill_keys(self::IMAGE_EMBEDDING_FEATURES, 'image-embeddings'),
         ];
     }
 
@@ -165,6 +168,26 @@ final readonly class AiProviders
     }
 
     /**
+     * Enabled providers that name an image-embeddings model.
+     *
+     * @return list<string>
+     */
+    public function enabledImageEmbeddingProviders(): array
+    {
+        return array_values(array_filter(
+            array_keys((array) config('ai.providers', [])),
+            fn (string $name): bool => $this->isImageEncoder($name)
+                && $this->isEnabled($name)
+                && config("ai.providers.{$name}.models.image_embeddings.default") !== null,
+        ));
+    }
+
+    private function isImageEncoder(string $provider): bool
+    {
+        return config("ai.providers.{$provider}.driver") === 'image-encoder';
+    }
+
+    /**
      * What the feature resolves to with no request override: a saved setting that counts, else configuration or default.
      * No enabled check, so a page can show a misconfiguration.
      */
@@ -178,7 +201,7 @@ final readonly class AiProviders
      */
     public function withoutSettings(string $feature): ResolvedChoice
     {
-        return $this->configurationChoice($feature, $this->kindOf($feature) === 'embeddings');
+        return $this->configurationChoice($feature, $this->kindOf($feature));
     }
 
     /**
@@ -205,7 +228,7 @@ final readonly class AiProviders
         $baseline = $this->resolveConfigured($feature);
 
         if (filled($override) && $override !== $baseline->choice->provider) {
-            if (! $this->isEnabledTextProvider($override) || $this->kindOf($feature) === 'embeddings') {
+            if (! $this->isEnabledTextProvider($override) || $this->kindOf($feature) !== 'text') {
                 throw ProviderNotEnabledException::named($override);
             }
 
@@ -221,13 +244,13 @@ final readonly class AiProviders
 
     private function resolveConfigured(string $feature, ?string $override = null, ?ResolvedChoice $baseline = null): ResolvedChoice
     {
-        $embeddings = $this->kindOf($feature) === 'embeddings';
-        $baseline ??= $this->baseline($feature, $embeddings);
+        $kind = $this->kindOf($feature);
+        $baseline ??= $this->baseline($feature, $kind);
 
-        if (filled($override) && ! $embeddings && $override !== $baseline->choice->provider) {
-            $configuration = $this->configurationChoice($feature, false)->choice;
+        if (filled($override) && $kind === 'text' && $override !== $baseline->choice->provider) {
+            $configuration = $this->configurationChoice($feature, $kind)->choice;
             $fromConfiguration = $configuration->provider === $override;
-            $model = $fromConfiguration ? $configuration->model : $this->defaultModel($override, false);
+            $model = $fromConfiguration ? $configuration->model : $this->defaultModel($override, $kind);
             $modelSource = $fromConfiguration && filled(config("ai.features.{$feature}.model")) ? self::SOURCE_CONFIGURATION : self::SOURCE_DEFAULT;
 
             return new ResolvedChoice($this->choice($override, $model), self::SOURCE_REQUEST, $modelSource);
@@ -239,7 +262,7 @@ final readonly class AiProviders
     /**
      * The level below the request: a saved setting, then configuration, then the provider's default model.
      */
-    private function baseline(string $feature, bool $embeddings): ResolvedChoice
+    private function baseline(string $feature, string $kind): ResolvedChoice
     {
         $saved = $this->savedChoice($feature);
 
@@ -247,18 +270,18 @@ final readonly class AiProviders
             return new ResolvedChoice($this->choice($saved->provider, $saved->model), self::SOURCE_SETTINGS);
         }
 
-        return $this->configurationChoice($feature, $embeddings);
+        return $this->configurationChoice($feature, $kind);
     }
 
-    private function configurationChoice(string $feature, bool $embeddings): ResolvedChoice
+    private function configurationChoice(string $feature, string $kind): ResolvedChoice
     {
         $configuredProvider = config("ai.features.{$feature}.provider");
         $configuredModel = config("ai.features.{$feature}.model");
-        $provider = (string) ($configuredProvider ?: config($embeddings ? 'ai.default_for_embeddings' : 'ai.default'));
+        $provider = (string) ($configuredProvider ?: config($kind === 'embeddings' ? 'ai.default_for_embeddings' : 'ai.default'));
 
         $model = (string) ($configuredModel
             ?: (in_array($feature, self::VISION_FEATURES, true) ? config("ai.providers.{$provider}.models.vision.default") : null)
-            ?: $this->defaultModel($provider, $embeddings));
+            ?: $this->defaultModel($provider, $kind));
 
         // The row's source is the level that supplied the provider; the model carries its own source label.
         $source = filled($configuredProvider) ? self::SOURCE_CONFIGURATION : self::SOURCE_DEFAULT;
@@ -328,9 +351,17 @@ final readonly class AiProviders
         return new ProviderChoice($provider, $model, (string) config("ai.providers.{$provider}.driver", $provider));
     }
 
-    private function defaultModel(string $provider, bool $embeddings): string
+    private function defaultModel(string $provider, string $kind): string
     {
-        return (string) config('ai.providers.'.$provider.'.models.'.($embeddings ? 'embeddings' : 'text').'.default');
+        return (string) config('ai.providers.'.$provider.'.models.'.self::modelKey($kind).'.default');
+    }
+
+    /**
+     * The key under a provider's "models" that holds the entries of a feature kind.
+     */
+    public static function modelKey(string $kind): string
+    {
+        return $kind === 'image-embeddings' ? 'image_embeddings' : $kind;
     }
 
     private function kindOf(string $feature): string
@@ -338,6 +369,7 @@ final readonly class AiProviders
         return match (true) {
             in_array($feature, self::TEXT_FEATURES, true) => 'text',
             in_array($feature, self::EMBEDDING_FEATURES, true) => 'embeddings',
+            in_array($feature, self::IMAGE_EMBEDDING_FEATURES, true) => 'image-embeddings',
             default => throw new InvalidArgumentException("Unknown AI feature \"{$feature}\"."),
         };
     }

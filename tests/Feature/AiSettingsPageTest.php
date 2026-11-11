@@ -55,7 +55,7 @@ it('AC-4 the page lists every feature with enabled providers and the right model
 
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('Lab/Settings', false)
-        ->has('rows', 7)
+        ->has('rows', 8)
         ->where('rows.0.feature', 'describe')
         ->where('rows.0.effective.source', 'default')
         ->where('rows.0.providers', fn ($providers) => collect($providers)->pluck('name')->contains('ollama')
@@ -306,4 +306,40 @@ it('AC-5 after saving another embeddings model the row counts 0 current vectors 
         ->where('rows.5.index.foreign', 2)
         ->where('rows.5.index.warning', true)
         ->where('rows.5.index.command', 'ddev artisan listings:embed --fresh --wait'));
+});
+
+it('AC-7 the embeddings-photos row offers only the image encoder and its models', function (): void {
+    $this->get('/ai/settings')->assertInertia(fn (Assert $page) => $page
+        ->where('rows.7.feature', 'embeddings-photos')
+        ->where('rows.7.kind', 'image-embeddings')
+        ->where('rows.7.effective.provider', 'photo-encoder')
+        ->where('rows.7.effective.model', 'openai/clip-vit-base-patch32')
+        ->where('rows.7.providers', fn ($providers) => collect($providers)->pluck('name')->all() === ['photo-encoder']
+            && collect($providers)->firstWhere('name', 'photo-encoder')['models'] === ['openai/clip-vit-base-patch32', 'laion/CLIP-ViT-B-32-laion2B-s34B-b79K'])
+        ->where('rows.7.index.table', 'listing_photos')
+        ->where('rows.7.index.command', 'ddev artisan photos:embed --fresh --wait'));
+});
+
+it('AC-7 the text and embeddings rows do not offer the image encoder', function (): void {
+    $this->get('/ai/settings')->assertInertia(fn (Assert $page) => $page
+        ->where('rows.0.providers', fn ($providers) => ! collect($providers)->pluck('name')->contains('photo-encoder'))
+        ->where('rows.5.providers', fn ($providers) => ! collect($providers)->pluck('name')->contains('photo-encoder')));
+});
+
+it('AC-7 changing the photo encoder model needs the re-index acknowledgement', function (): void {
+    $this->put('/ai/settings/embeddings-photos', ['provider' => 'photo-encoder', 'model' => 'laion/CLIP-ViT-B-32-laion2B-s34B-b79K'])
+        ->assertSessionHasErrors('reindex_acknowledged', errorBag: 'settings-embeddings-photos');
+    expect(AiSetting::query()->count())->toBe(0);
+
+    $this->put('/ai/settings/embeddings-photos', ['provider' => 'photo-encoder', 'model' => 'laion/CLIP-ViT-B-32-laion2B-s34B-b79K', 'reindex_acknowledged' => true])
+        ->assertSessionHasNoErrors();
+    expect(AiSetting::query()->count())->toBe(1);
+});
+
+it('AC-7 a model the encoder does not offer is refused for embeddings-photos', function (): void {
+    $this->put('/ai/settings/embeddings-photos', ['provider' => 'photo-encoder', 'model' => 'unlisted/model', 'reindex_acknowledged' => true])
+        ->assertSessionHasErrors('model', errorBag: 'settings-embeddings-photos');
+
+    $this->put('/ai/settings/embeddings-photos', ['provider' => 'ollama', 'model' => 'bge-m3', 'reindex_acknowledged' => true])
+        ->assertSessionHasErrors('model', errorBag: 'settings-embeddings-photos');
 });

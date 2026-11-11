@@ -33,6 +33,7 @@ final class ShowLabPhotosController extends Controller
                 'total' => $page->total(),
             ],
             'selected' => $selected?->toArray(),
+            'similar' => $selected === null ? null : $lab->similar($selected)->toArray(),
             'extraction' => [
                 'provider' => $extraction->provider,
                 'model' => $extraction->model,

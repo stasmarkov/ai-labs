@@ -13,6 +13,7 @@ use App\DTOs\ListingPriceUpdate;
 use App\DTOs\ListingSummary;
 use App\Models\Listing;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 final readonly class EloquentListingRepository implements ListingRepositoryInterface
 {
@@ -51,12 +52,20 @@ final readonly class EloquentListingRepository implements ListingRepositoryInter
 
     public function findDetail(int $id): ListingDetail
     {
-        $listing = Listing::query()->with('dealer')->findOrFail($id);
+        $listing = Listing::query()
+            ->select('listings.*')
+            ->selectSub(
+                DB::table('listing_photos')->select('id')->whereColumn('listing_id', 'listings.id')->orderBy('id')->limit(1),
+                'first_photo_id',
+            )
+            ->with('dealer')
+            ->findOrFail($id);
 
         return new ListingDetail(
             $this->toSummary($listing),
             new DealerSummary($listing->dealer->id, $listing->dealer->name, $listing->dealer->city),
             '/images/heroes/hero-'.($listing->id % self::HERO_VARIANTS).'.webp',
+            $listing->getAttribute('first_photo_id') === null ? null : (int) $listing->getAttribute('first_photo_id'),
         );
     }
 

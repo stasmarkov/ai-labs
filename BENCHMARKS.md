@@ -1012,6 +1012,44 @@ Method:
 
 I wanted the lab to read car photos with a local model and to know how reliable that is, not only that it runs. Each photo goes to the model with a JSON schema, and the answer is checked again in PHP with fixed lists for colours, body types and damage. A bad answer gets up to two more attempts, and every attempt is a logged run. On 50 photos gemma4:12b passed the rules every time, while qwen3.5:9b failed 7 photos and never recovered on retry: the same input produced the same mistake. qwen read the body type better when it did answer (41 of 43 against 37 of 50) and was faster at the median. So the model I would pick depends on what breaks first: if a broken record is worse than a wrong guess, gemma; if the body type matters most, qwen with a fallback. The retry budget did not change either result, which told me to spend effort on the prompt or the schema rather than on more attempts.
 
+## Similar car photos (2026-11-11)
+
+`photos:similar-eval` queries every embedded photo (156, the Stanford Cars subset imported by `photos:import`) against the index and scores the answer against the make and model of the query photo's listing. The encoder is `openai/clip-vit-base-patch32` (512 dimensions) on the Infinity CPU sidecar, label `photo-encoder/openai/clip-vit-base-patch32`; `photos:embed` took 11.4 s for 156 photos. Run on frankenphp, `k` 8, near-duplicate cutoff 0.98. Raw file: [`bench/results/photo-similar/2026-11-11/run.json`](bench/results/photo-similar/2026-11-11/run.json). Reproduce with `ddev artisan photos:embed --wait` and `ddev artisan photos:similar-eval`.
+
+Method:
+- **Relevant** means the result's listing has the same make and model as the query photo's listing (or the same make, for the make column). Precision is the micro average: relevant results over all results returned (at most 8 per query), not a mean per query.
+- **Coverage** is the share of queries that returned at least one photo.
+- **Latency** is the in-process `SimilarPhotosService::for` call over the 156 queries. The uncached pass bumps the cache generation first, so every call reads the database.
+- **Threshold** is the `min_score` cutoff applied to the cosine similarity after the same-listing and near-duplicate filters.
+
+| min_score | Coverage | P@8 make | P@8 make and model |
+|-----------|----------|----------|--------------------|
+| 0.60 | 1.000 | 0.773 | 0.665 |
+| 0.65 | 1.000 | 0.774 | 0.667 |
+| 0.70 | 0.994 | 0.775 | 0.667 |
+| **0.75** | 0.987 | 0.785 | 0.677 |
+| 0.80 | 0.897 | 0.846 | 0.735 |
+| 0.85 | 0.603 | 0.967 | 0.895 |
+| 0.90 | 0.205 | 1.000 | 1.000 |
+| 0.95 | 0.000 | n/a | n/a |
+
+At the chosen 0.75: 1,173 results for 154 answered queries, uncached latency p50 0.82 ms and p95 1.26 ms, cached p50 0.05 ms and p95 0.07 ms, encoder throughput 11.55 photos/s.
+
+### What the numbers say
+
+- **Threshold barely matters below 0.75.** CLIP scores any two car photos high, so almost nothing is cut until 0.75, and precision for the same make stays near 0.77 to 0.79. Precision only climbs at 0.80 and above, and it pays for it in coverage: 0.85 is 0.97 for the make but answers 60% of photos.
+- **Make is easier than make and model.** At 0.75, 0.785 of results share the make and 0.677 share the make and model. A photo of another model of the same brand is a plausible neighbour, so part of the gap is the label, not the encoder.
+- **Latency is not the constraint.** With 156 vectors the HNSW search and the PHP filtering stay near 1 ms at p95, and a cache hit is a Redis read. The NFR-1 budgets (50 ms and 5 ms) hold with a wide margin; they say little about a large index.
+
+### Surprises
+
+- **The score scale was the whole calibration.** The 0.80 placeholder looked sensible and cost 9 points of coverage for 6 points of precision; the make times coverage rule moved the default to 0.75.
+- **The sidecar runs emulated.** The Infinity image is `linux/amd64` only, so on Apple silicon it runs under emulation; it still embedded 156 photos in 11 s.
+
+### Interview story
+
+I wanted similar photos without a hosted service, so the lab runs a local CLIP encoder, stores 512-dimension vectors in pgvector and searches them with an HNSW cosine index. The part I would not skip is calibrating the cutoff: CLIP scores any two car photos high, so I measured precision and coverage for every threshold from 0.60 to 0.95 against the make and model of each photo instead of guessing. At 0.75, 78% of results share the make and 68% the make and model, and 99% of photos get at least one match; 0.80 would raise precision by about 6 points and drop 9 points of coverage, so which one is right depends on whether an empty strip is worse than a weak match.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

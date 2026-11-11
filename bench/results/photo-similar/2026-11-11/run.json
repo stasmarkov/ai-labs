@@ -1,0 +1,96 @@
+{
+    "metadata": {
+        "generated_at": "2026-11-11T15:53:42+00:00",
+        "label": "photo-encoder/openai/clip-vit-base-patch32",
+        "photos": 156,
+        "k": 8,
+        "min_score": 0.75,
+        "near_duplicate_cutoff": 0.98,
+        "ground_truth": "make and model of the query photo's listing"
+    },
+    "metrics": {
+        "queries": 156,
+        "answered": 154,
+        "coverage": 0.9872,
+        "returned": 1173,
+        "precision_make": 0.7852,
+        "precision_make_model": 0.6769
+    },
+    "curve": [
+        {
+            "threshold": 0.6,
+            "answered": 156,
+            "coverage": 1,
+            "precision_make": 0.7732,
+            "precision_make_model": 0.6651
+        },
+        {
+            "threshold": 0.65,
+            "answered": 156,
+            "coverage": 1,
+            "precision_make": 0.7744,
+            "precision_make_model": 0.6672
+        },
+        {
+            "threshold": 0.7,
+            "answered": 155,
+            "coverage": 0.9936,
+            "precision_make": 0.7745,
+            "precision_make_model": 0.6669
+        },
+        {
+            "threshold": 0.75,
+            "answered": 154,
+            "coverage": 0.9872,
+            "precision_make": 0.7852,
+            "precision_make_model": 0.6769
+        },
+        {
+            "threshold": 0.8,
+            "answered": 140,
+            "coverage": 0.8974,
+            "precision_make": 0.8461,
+            "precision_make_model": 0.7349
+        },
+        {
+            "threshold": 0.85,
+            "answered": 94,
+            "coverage": 0.6026,
+            "precision_make": 0.9671,
+            "precision_make_model": 0.8947
+        },
+        {
+            "threshold": 0.9,
+            "answered": 32,
+            "coverage": 0.2051,
+            "precision_make": 1,
+            "precision_make_model": 1
+        },
+        {
+            "threshold": 0.95,
+            "answered": 0,
+            "coverage": 0,
+            "precision_make": 0,
+            "precision_make_model": 0
+        }
+    ],
+    "latency": {
+        "uncached": {
+            "samples": 156,
+            "p50_ms": 0.822,
+            "p95_ms": 1.258,
+            "mean_ms": 0.88
+        },
+        "cached": {
+            "samples": 156,
+            "p50_ms": 0.046,
+            "p95_ms": 0.074,
+            "mean_ms": 0.052
+        }
+    },
+    "throughput": {
+        "photos": 156,
+        "encoder_ms": 13507,
+        "photos_per_second": 11.55
+    }
+}

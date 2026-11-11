@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Contracts\ListingPhotoRepositoryInterface;
 use App\Contracts\PhotoExtractionRepositoryInterface;
+use App\DTOs\PhotoEmbedding;
 use App\Jobs\ExtractPhotoJob;
 use App\Models\Listing;
 use App\Models\ListingPhoto;
 use App\Models\PhotoExtraction;
 use App\Services\PhotoLabService;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -202,4 +205,71 @@ it('AC-5 lists the photo results of other models next to the effective one', fun
             ->where('selected.others.0.model', 'qwen3.5:9b')
             ->where('selected.others.0.data.caption', 'From qwen.')
             ->where('selected.others.0.run_href', '/ai/runs/run-q'));
+});
+
+const LAB_SIMILAR_LABEL = 'photo-encoder/openai/clip-vit-base-patch32';
+
+function labSimilarSetUp(): void
+{
+    config([
+        'ai.features.embeddings-photos.provider' => 'photo-encoder',
+        'ai.features.embeddings-photos.model' => null,
+        'ai.providers.photo-encoder.url' => 'http://encoder.test:7997',
+        'ai.similar_photos.min_score' => 0.80,
+        'ai.similar_photos.near_duplicate_cutoff' => 0.98,
+    ]);
+}
+
+function labEmbeddedPhoto(float $score, Listing $listing): ListingPhoto
+{
+    $vector = array_fill(0, 512, 0.0);
+    $vector[0] = $score;
+    $vector[1] = sqrt(1 - $score * $score);
+    $photo = ListingPhoto::factory()->for($listing)->create(['path' => "photos/{$listing->id}/x.jpg"]);
+    app(ListingPhotoRepositoryInterface::class)->storeEmbeddings([new PhotoEmbedding($photo->id, $vector)], LAB_SIMILAR_LABEL, CarbonImmutable::now());
+
+    return $photo;
+}
+
+it('AC-6 the selected photo carries the similar strip with similarity, make and model match, label, cutoffs and cache flag', function (): void {
+    labSimilarSetUp();
+    $query = labEmbeddedPhoto(1.0, Listing::factory()->create(['make' => 'Ford', 'model' => 'Fiesta', 'year' => 2012]));
+    $same = labEmbeddedPhoto(0.95, Listing::factory()->create(['make' => 'Ford', 'model' => 'Fiesta', 'year' => 2014]));
+    $other = labEmbeddedPhoto(0.90, Listing::factory()->create(['make' => 'Ford', 'model' => 'Focus', 'year' => 2015]));
+
+    $this->get('/ai/photos?photo='.$query->id)
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('similar.label', LAB_SIMILAR_LABEL)
+            ->where('similar.reason', null)
+            ->where('similar.cached', false)
+            ->where('similar.min_score', 0.8)
+            ->where('similar.near_duplicate_cutoff', 0.98)
+            ->has('similar.matches', 2)
+            ->where('similar.matches.0.photo_id', $same->id)
+            ->where('similar.matches.0.url', "/storage/photos/{$same->listing_id}/x.jpg")
+            ->where('similar.matches.0.title', '2014 Ford Fiesta')
+            ->where('similar.matches.0.same_make_model', true)
+            ->where('similar.matches.0.similarity', fn ($value) => abs($value - 0.95) < 0.001)
+            ->where('similar.matches.1.photo_id', $other->id)
+            ->where('similar.matches.1.same_make_model', false)
+            ->where('similar.matches.0.href', fn (string $href) => str_contains($href, 'photo='.$same->id)));
+
+    $this->get('/ai/photos?photo='.$query->id)
+        ->assertInertia(fn (Assert $page) => $page->where('similar.cached', true)->has('similar.matches', 2));
+});
+
+it('AC-6 a photo without a vector gets an empty strip with its reason', function (): void {
+    labSimilarSetUp();
+    $photo = ListingPhoto::factory()->create();
+
+    $this->get('/ai/photos?photo='.$photo->id)
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('similar.matches', 0)
+            ->where('similar.reason', 'not embedded')
+            ->where('similar.label', LAB_SIMILAR_LABEL));
+});
+
+it('AC-6 the page has no similar strip when there are no photos', function (): void {
+    $this->get('/ai/photos')->assertInertia(fn (Assert $page) => $page->where('similar', null));
 });

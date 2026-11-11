@@ -443,7 +443,7 @@ Throughput counts from the first model call of a run, not from dispatch: worker 
 
 **In this repo.**
 - Front end: [`resources/js/ai/`](../resources/js/ai/) (pages, layout, design components, composables); first page controller: [`ShowLabOverviewController`](../app/Http/Controllers/ShowLabOverviewController.php).
-- Pages: `/ai/chat` (SL-45) and `/ai/photos` (SL-27) are built inside this UI; the image-similarity part of the photos page (SL-36) is still to come.
+- Pages: `/ai/chat` (SL-45) and `/ai/photos` (SL-27) are built inside this UI; the photos page shows a similar-photos strip (SL-36).
 - Tests: `AiLabOverviewTest`, `AiLabDescribeTest`, `AiLabSearchPagesTest`, `AiLabPlaceholderTest`.
 - Spec: [`.ai/specs/spec-20261103-0012-ai-lab-ui/`](../.ai/specs/spec-20261103-0012-ai-lab-ui/).
 
@@ -616,6 +616,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`RagGraderAgent`](../app/Ai/RagGraderAgent.php) | Grades an answer's correctness and groundedness (0–2) with structured output; prompt `rag-grader.v2.md` | SL-33 |
 | [`PhotoVisionAgent`](../app/Ai/PhotoVisionAgent.php) | Sends one stored photo to the vision model and asks for caption, tags, colours, body type, damage and people count; prompt `photo-vision.v1.md`, feature `photo-vision` | SL-27 |
 | [`OllamaVisionModels`](../app/Ai/OllamaVisionModels.php) | Checks that a model is installed on Ollama and reports the `vision` capability, so `photos:extract --model` refuses text-only models | SL-27 |
+| [`PhotoEncoderClient`](../app/Ai/PhotoEncoderClient.php) | Sends listing photos to the local image-encoder sidecar as base64 data URLs, 16 per call, and checks every vector against the configured 512 dimensions; feature `embeddings-photos`, provider `photo-encoder` | SL-36 |
 | [`ListingFilterAgent`](../app/Ai/ListingFilterAgent.php) | Turns a plain-language car search into filter fields plus an `unsupported` list with structured output; prompt `listing-filters.v1.md` | SL-23 |
 | [`SseProtocol`](../app/Ai/SseProtocol.php) | One `data:` line per SDK event, then `[DONE]`; masks provider errors; drains the generator so FrankenPHP workers send a body | SL-20 |
 | [`AbortWatcher`](../app/Ai/AbortWatcher.php), [`ConnectionAbortWatcher`](../app/Ai/ConnectionAbortWatcher.php) | Tells the stream whether the client has gone; checked after every flush so a Stop ends the model call and writes a `stopped` row | SL-46 |
@@ -694,6 +695,22 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`create_listing_photos_table`](../database/migrations/2026_11_11_090000_create_listing_photos_table.php), [`create_photo_extractions_table`](../database/migrations/2026_11_11_100000_create_photo_extractions_table.php), [`stanford-cars-convert.py`](../bench/datasets/stanford-cars-convert.py) | The two tables, and the converter the download script runs in a pinned container to turn the mirror's files into `images/` plus `classes.csv` | SL-27 |
 | [`PhotoLabPageTest`](../tests/Feature/PhotoLabPageTest.php), [`PhotoVisionAgentTest`](../tests/Feature/PhotoVisionAgentTest.php), [`PhotoDatasetScriptTest`](../tests/Feature/PhotoDatasetScriptTest.php) | The lab page and its endpoints, the agent and its configuration, the download script's terms gate and checksums | SL-27 |
 | [`PhotoImportTest`](../tests/Feature/PhotoImportTest.php), [`PhotoExtractTest`](../tests/Feature/PhotoExtractTest.php), [`PhotoEvalTest`](../tests/Feature/PhotoEvalTest.php) | Offline tests with generated fixture images and a faked agent | SL-27 |
+
+**Similar photos: encoder, embed, search, eval (SL-36)**
+
+| File | Purpose | Slice |
+|---|---|---|
+| [`docker-compose.photo-encoder.yaml`](../.ddev/docker-compose.photo-encoder.yaml) | The image-encoder sidecar: Infinity with CLIP (512 dimensions), pinned by digest, capped at 2 GB, weights in a named volume | SL-36 |
+| [`PhotoEncoderClient`](../app/Ai/PhotoEncoderClient.php), [`PhotoEncoderException`](../app/Exceptions/PhotoEncoderException.php) | Calls the sidecar and checks every vector's size; provider `photo-encoder`, feature `embeddings-photos` | SL-36 |
+| [`EmbedPhotosCommand`](../app/Console/Commands/EmbedPhotosCommand.php), [`EmbedPhotosBatchJob`](../app/Jobs/EmbedPhotosBatchJob.php), [`PhotoEmbeddingService`](../app/Services/PhotoEmbeddingService.php) | `photos:embed`: queues batches of 16 on `ai-vision`, normalises and stores vectors with the model label, bumps the cache generation | SL-36 |
+| [`PhotoEmbedding`](../app/DTOs/PhotoEmbedding.php), [`PhotoToEmbed`](../app/DTOs/PhotoToEmbed.php), [`PhotoEmbedRun`](../app/DTOs/PhotoEmbedRun.php), [`PhotoEmbedProgress`](../app/DTOs/PhotoEmbedProgress.php) | What the embed command and its batches pass around | SL-36 |
+| [`SimilarPhotosService`](../app/Services/SimilarPhotosService.php), [`SimilarPhotosRepositoryInterface`](../app/Contracts/SimilarPhotosRepositoryInterface.php), [`EloquentSimilarPhotosRepository`](../app/Repositories/EloquentSimilarPhotosRepository.php) | Nearest photos of other listings through the HNSW index, the cutoffs, the reasons and the generation-keyed cache | SL-36 |
+| [`SimilarPhotos`](../app/DTOs/SimilarPhotos.php), [`SimilarPhotoMatch`](../app/DTOs/SimilarPhotoMatch.php), [`PhotoLabSimilar`](../app/DTOs/PhotoLabSimilar.php) | The result, one match, and the strip shown on `/ai/photos` | SL-36 |
+| [`SimilarPhotosEvalCommand`](../app/Console/Commands/SimilarPhotosEvalCommand.php), [`SimilarEvalService`](../app/Services/SimilarEvalService.php), [`SimilarEvalScorer`](../app/Services/SimilarEvalScorer.php) | `photos:similar-eval`: precision at k, coverage, latency and throughput, and the threshold curve, written to `run.json` | SL-36 |
+| [`SimilarEvalRepositoryInterface`](../app/Contracts/SimilarEvalRepositoryInterface.php), [`EloquentSimilarEvalRepository`](../app/Repositories/EloquentSimilarEvalRepository.php), [`SimilarEvalPhoto`](../app/DTOs/SimilarEvalPhoto.php), [`SimilarEvalQuery`](../app/DTOs/SimilarEvalQuery.php), [`EncoderRunTotals`](../app/DTOs/EncoderRunTotals.php) | The eval's reads and their DTOs | SL-36 |
+| [`add_embedding_columns_to_listing_photos_table`](../database/migrations/2026_11_11_160000_add_embedding_columns_to_listing_photos_table.php) | `embedding vector(512)`, `embedding_model`, `embedded_at` and the HNSW cosine index | SL-36 |
+| [`similar-photos.php`](../resources/guides/similar-photos.php) | The capability guide behind `/ai/guides/similar-photos` | SL-36 |
+| [`PhotoEncoderComposeTest`](../tests/Feature/PhotoEncoderComposeTest.php), [`PhotoEncoderClientTest`](../tests/Feature/PhotoEncoderClientTest.php), [`PhotoEmbedTest`](../tests/Feature/PhotoEmbedTest.php), [`SimilarPhotosServiceTest`](../tests/Feature/SimilarPhotosServiceTest.php), [`SimilarPhotosPageTest`](../tests/Feature/SimilarPhotosPageTest.php), [`PhotoSimilarEvalTest`](../tests/Feature/PhotoSimilarEvalTest.php) | Offline tests with a faked encoder and generated vectors | SL-36 |
 
 **Stop and conversations (section 18)**
 
@@ -836,6 +853,7 @@ The guide files:
 - [`providers.php`](../resources/guides/providers.php): providers and models
 - [`run-log.php`](../resources/guides/run-log.php): the `ai_runs` log
 - [`semantic.php`](../resources/guides/semantic.php): semantic search
+- [`similar-photos.php`](../resources/guides/similar-photos.php): finding similar car photos with an image encoder
 - [`streaming.php`](../resources/guides/streaming.php): streaming events
 
 ### Testing patterns used everywhere

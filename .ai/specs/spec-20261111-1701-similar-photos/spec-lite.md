@@ -4,7 +4,7 @@ title: Similar car photos with a local image encoder
 type: feature
 size: L
 priority: P1
-status: approved
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-11; standing approval)

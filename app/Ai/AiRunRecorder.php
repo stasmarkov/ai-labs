@@ -213,6 +213,7 @@ final class AiRunRecorder
         ?string $refusalReason = null,
         ?bool $validationFailed = null,
         ?string $origin = null,
+        ?int $inputs = null,
     ): string {
         $invocationId ??= (string) Str::uuid();
 
@@ -229,6 +230,7 @@ final class AiRunRecorder
             status: $status,
             errorClass: $exception === null ? null : $exception::class,
             errorMessage: $exception === null ? null : self::safeMessage($exception),
+            inputs: $inputs,
             retrievedChunkIds: $retrieved,
             citedChunkIds: $cited,
             refusalReason: $refusalReason === null ? null : mb_substr($refusalReason, 0, self::MAX_REASON_LENGTH),

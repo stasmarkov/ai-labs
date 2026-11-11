@@ -10,8 +10,11 @@ use App\Contracts\PhotoLabRepositoryInterface;
 use App\DTOs\PhotoExtractionRequest;
 use App\DTOs\PhotoLabDetail;
 use App\DTOs\PhotoLabItem;
+use App\DTOs\PhotoLabSimilar;
+use App\DTOs\SimilarPhotoMatch;
 use App\Exceptions\PhotoExtractionInFlightException;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final readonly class PhotoLabService
@@ -22,6 +25,7 @@ final readonly class PhotoLabService
         private PhotoLabRepositoryInterface $photos,
         private PhotoExtractionService $extraction,
         private AiProviders $providers,
+        private SimilarPhotosService $similar,
     ) {}
 
     /**
@@ -66,6 +70,31 @@ final readonly class PhotoLabService
         $first = $page->items()[0] ?? null;
 
         return $first === null ? null : $this->photos->find($first->id, $request);
+    }
+
+    /**
+     * The photos most like the chosen one, each flagged when its listing has the same make and model.
+     */
+    public function similar(PhotoLabDetail $photo): PhotoLabSimilar
+    {
+        $result = $this->similar->for($photo->id);
+
+        return new PhotoLabSimilar(
+            array_map(fn (SimilarPhotoMatch $match): array => [
+                'photo_id' => $match->photoId,
+                'listing_id' => $match->listingId,
+                'title' => $match->listingTitle,
+                'url' => (string) parse_url(Storage::disk('public')->url($match->path), PHP_URL_PATH),
+                'href' => route('ai.photos', ['photo' => $match->photoId], false),
+                'similarity' => $match->similarity,
+                'same_make_model' => strcasecmp($match->make, $photo->make) === 0 && strcasecmp($match->model, $photo->model) === 0,
+            ], $result->matches),
+            $result->reason,
+            $result->label,
+            $result->cached,
+            (float) config('ai.similar_photos.min_score'),
+            (float) config('ai.similar_photos.near_duplicate_cutoff', 0.98),
+        );
     }
 
     /**

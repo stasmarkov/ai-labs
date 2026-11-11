@@ -10,6 +10,7 @@ final readonly class ListingDetail
         public ListingSummary $listing,
         public DealerSummary $dealer,
         public string $heroImagePath,
+        public ?int $photoId = null,
     ) {}
 
     /**

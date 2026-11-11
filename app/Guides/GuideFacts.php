@@ -69,7 +69,7 @@ final readonly class GuideFacts
                 'text' => $yesNo($capability['text']),
                 'streaming' => $yesNo($capability['streaming']),
                 'structured' => $yesNo($capability['structured']),
-                'embeddings' => $capability['embeddings'] === null ? 'no' : $capability['embeddings'].' dimensions',
+                'embeddings' => $this->embeddingsCell($name, $capability['embeddings']),
                 'key' => $capability['keyVariable'] === null
                     ? 'none needed'
                     : (app(AiProviders::class)->hasKey($name) ? 'set' : 'not set').' ('.$capability['keyVariable'].')',
@@ -80,6 +80,17 @@ final readonly class GuideFacts
             'columns' => ['Provider', 'Where', 'Text', 'Streaming', 'Structured output', 'Embeddings', 'Key'],
             'rows' => $rows,
         ];
+    }
+
+    private function embeddingsCell(string $provider, ?int $dimensions): string
+    {
+        $imageDimensions = config("ai.providers.{$provider}.models.image_embeddings.dimensions");
+
+        if ($imageDimensions !== null) {
+            return $imageDimensions.' dimensions (images)';
+        }
+
+        return $dimensions === null ? 'no' : $dimensions.' dimensions';
     }
 
     /**

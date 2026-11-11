@@ -1,0 +1,35 @@
+services:
+  photo-encoder:
+    container_name: ddev-${DDEV_SITENAME}-photo-encoder
+    image: michaelf34/infinity:latest-cpu@sha256:b9cb35a93a793a2808d5c1bd78ecafacc8c0dafb2e233f961b96e405b8bc4a30
+    platform: linux/amd64
+    hostname: photo-encoder
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: ${DDEV_APPROOT}
+    restart: unless-stopped
+    expose:
+      - 7997
+    environment:
+      HF_HOME: /models
+      INFINITY_ANONYMOUS_USAGE_STATS: "0"
+    volumes:
+      - "photo-encoder-models:/models"
+    # Each model is pinned to a Hugging Face commit and no repository code is run, so a changed or taken-over model
+    # repo cannot execute anything on the next fresh start. The options repeat once per --model-id, in the same order.
+    command: >-
+      v2
+      --model-id openai/clip-vit-base-patch32 --revision 3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268 --no-trust-remote-code
+      --model-id laion/CLIP-ViT-B-32-laion2B-s34B-b79K --revision 1a25a446712ba5ee05982a381eed697ef9b435cf --no-trust-remote-code
+      --engine torch --device cpu --port 7997 --batch-size 16
+    mem_limit: 2g
+    memswap_limit: 2g
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7997/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+volumes:
+  photo-encoder-models:

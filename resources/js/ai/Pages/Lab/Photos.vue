@@ -10,6 +10,7 @@ import { Link } from '@inertiajs/vue3';
 import LabButton from '../../components/LabButton.vue';
 import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabMetric from '../../components/LabMetric.vue';
+import LabSimilarityBar from '../../components/LabSimilarityBar.vue';
 import LabTag from '../../components/LabTag.vue';
 import type { GuideRunState, GuideStep } from '../../composables/useGuideSteps';
 
@@ -18,6 +19,25 @@ interface PhotoItem {
     url: string;
     title: string;
     status: string | null;
+}
+
+interface SimilarMatch {
+    photo_id: number;
+    listing_id: number;
+    title: string;
+    url: string;
+    href: string;
+    similarity: number;
+    same_make_model: boolean;
+}
+
+interface SimilarStrip {
+    label: string;
+    reason: string | null;
+    cached: boolean;
+    min_score: number;
+    near_duplicate_cutoff: number;
+    matches: SimilarMatch[];
 }
 
 interface PhotoDetail extends PhotoItem {
@@ -35,6 +55,7 @@ const props = defineProps<{
     photos: PhotoItem[];
     pagination: { page: number; lastPage: number; total: number };
     selected: PhotoDetail | null;
+    similar: SimilarStrip | null;
     extraction: { provider: string; model: string; promptVersion: string; queue: string };
     pageUrl: string;
     extractUrl: string;
@@ -271,6 +292,26 @@ ddev artisan photos:import</pre>
         <section v-if="detail" aria-labelledby="photos-detail-title" class="min-w-0">
             <h2 id="photos-detail-title" class="m-0 text-[18px]">{{ detail.title }}</h2>
             <img :src="detail.url" :alt="detail.title" class="mt-3 w-full rounded-sm bg-rule" />
+
+            <div v-if="similar" class="mt-6" aria-labelledby="photos-similar-title" role="region">
+                <h3 id="photos-similar-title" class="m-0 text-[15px]">Similar photos</h3>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <LabTag caption="model">{{ similar.label }}</LabTag>
+                    <LabTag caption="cutoffs">{{ similar.min_score.toFixed(2) }} to below {{ similar.near_duplicate_cutoff.toFixed(2) }}</LabTag>
+                    <LabTag caption="source">{{ similar.cached ? 'cache' : 'database' }}</LabTag>
+                </div>
+                <p v-if="similar.matches.length === 0" class="mt-2 text-[15px] text-muted">No similar photos: {{ similar.reason }}.</p>
+                <ul v-else class="m-0 mt-3 grid list-none grid-cols-2 gap-3 p-0">
+                    <li v-for="match in similar.matches" :key="match.photo_id" class="min-w-0">
+                        <Link :href="match.href" preserve-scroll class="block rounded-sm border border-rule p-1">
+                            <img :src="match.url" :alt="match.title" loading="lazy" class="aspect-[4/3] w-full rounded-sm bg-rule object-cover" />
+                            <span class="mt-1 block truncate text-[13px]">{{ match.title }}</span>
+                            <LabSimilarityBar :value="match.similarity" />
+                            <span class="block text-[13px]" :class="match.same_make_model ? 'text-success' : 'text-muted'">{{ match.same_make_model ? 'same make and model' : 'other make or model' }}</span>
+                        </Link>
+                    </li>
+                </ul>
+            </div>
 
             <div class="mt-3 flex flex-wrap items-center gap-2">
                 <LabTag caption="model">{{ extraction.model }}</LabTag>

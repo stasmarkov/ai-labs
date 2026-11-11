@@ -25,6 +25,8 @@ final readonly class PhotoLabDetail
         public ?array $errors,
         public array $invocationIds,
         public array $others = [],
+        public string $make = '',
+        public string $model = '',
     ) {}
 
     /**

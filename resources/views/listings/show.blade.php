@@ -1,5 +1,20 @@
 <x-layouts.app :title="$listing->listing->make.' '.$listing->listing->model">
-    <img src="{{ asset($listing->heroImagePath) }}" alt="{{ $listing->listing->make }} {{ $listing->listing->model }}" class="mb-6 w-full rounded-lg">
+    <img src="{{ asset($listing->heroImagePath) }}" alt="{{ $listing->listing->make }} {{ $listing->listing->model }}" class="mb-6 w-full rounded-lg">@if ($similarCars !== [])
+        <section id="similar-cars" class="mb-6" aria-labelledby="similar-cars-heading">
+            <h2 id="similar-cars-heading" class="text-xl font-semibold">Similar cars</h2>
+            <ul class="mt-4 grid grid-cols-2 gap-4">
+                @foreach ($similarCars as $car)
+                    <li>
+                        <a href="{{ route('listings.show', ['id' => $car->listingId]) }}">
+                            <img src="{{ asset('storage/'.$car->path) }}" alt="{{ $car->listingTitle }}" loading="lazy" class="w-full rounded-lg">
+                            <p class="mt-1 text-sm">{{ $car->listingTitle }}</p>
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
 
     <h1 class="text-3xl font-semibold">{{ $listing->listing->make }} {{ $listing->listing->model }}</h1>
     <p id="listing-price" class="mt-1 text-lg" data-price-topic="{{ $watch->topic }}" data-price-rendered-ms="{{ $renderedAtMs }}"@if ($watch->privateTopic !== null) data-price-topic-private="{{ $watch->privateTopic }}"@endif>{{ \App\Support\PriceFormatter::format($listing->listing->priceCents, $listing->listing->currency) }}</p>

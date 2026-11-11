@@ -71,6 +71,25 @@ ddev artisan photos:eval                         # measure models on a sample, w
 
 Extraction needs a vision model on Ollama (default `gemma4:12b`) and a worker for the `ai-vision` queue: `ddev artisan queue:work --queue=ai-vision`. The tests run offline with fixture images.
 
+### Image encoder
+
+Similar-photo search uses a local image encoder, the Infinity CPU server with `openai/clip-vit-base-patch32` (512 dimensions), as a DDEV sidecar. Its compose file is `.ddev/docker-compose.photo-encoder.yaml`; `.ddev/config.yaml` is not touched. The image is pinned by digest and runs as `linux/amd64` (emulated on Apple silicon). It is capped at 2 GB, and its model weights live in the named volume `photo-encoder-models`, so a restart does not download them again.
+
+```sh
+ddev restart
+ddev exec curl -s http://photo-encoder:7997/health   # the first start downloads about 600 MB of weights
+```
+
+Embedding and search, once the encoder answers, with a worker on `ai-vision`:
+
+```sh
+ddev artisan photos:embed --wait                 # embed every listing photo in queued batches
+ddev artisan photos:embed --fresh --wait         # rebuild after switching the encoder model
+ddev artisan photos:similar-eval                 # precision, coverage and latency, writes run.json
+```
+
+The listing page shows a "Similar cars" block and `/ai/photos` a "Similar photos" strip. How it works: `/ai/guides/similar-photos`.
+
 ## History
 
 The project began as a PHP server comparison (five web servers and worker mode; only the FrankenPHP family is kept) on a car marketplace, and was renamed ai-lab on 2026-11-10 when it became a study lab for AI features in Laravel. The server work stays below and in [BENCHMARKS.md](BENCHMARKS.md). The old DDEV URL is gone; use https://ai-lab.ddev.site.

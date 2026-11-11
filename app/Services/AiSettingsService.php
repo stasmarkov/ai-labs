@@ -9,6 +9,7 @@ use App\Ai\OllamaServerInfo;
 use App\Contracts\AiSettingsRepositoryInterface;
 use App\Contracts\DocsIndexRepositoryInterface;
 use App\Contracts\ListingDocumentRepositoryInterface;
+use App\Contracts\ListingPhotoRepositoryInterface;
 use App\DTOs\AiSettingChoice;
 use App\DTOs\ModelOption;
 
@@ -25,6 +26,7 @@ final readonly class AiSettingsService
         private OllamaServerInfo $ollama,
         private ListingDocumentRepositoryInterface $listingDocuments,
         private DocsIndexRepositoryInterface $docsIndex,
+        private ListingPhotoRepositoryInterface $photos,
     ) {}
 
     /**
@@ -55,7 +57,7 @@ final readonly class AiSettingsService
                 'saved' => $savedChoice?->toArray(),
                 'savedProviderEnabled' => $savedChoice === null ? null : $this->providers->isEnabled($savedChoice->provider),
                 'providers' => $this->withCurrentModel($this->options($feature), $effective->choice->provider, $effective->choice->model),
-                'index' => $kind === 'embeddings' ? $this->indexStatus($feature, $effective->choice->provider.'/'.$effective->choice->model) : null,
+                'index' => $kind !== 'text' ? $this->indexStatus($feature, $effective->choice->provider.'/'.$effective->choice->model) : null,
             ];
         }
 
@@ -114,12 +116,15 @@ final readonly class AiSettingsService
      */
     public function indexStatus(string $feature, string $label): array
     {
-        $listings = $feature === 'embeddings-listings';
-        $count = $listings ? $this->listingDocuments->embeddingCount($label) : $this->docsIndex->embeddingCount($label);
+        [$table, $command, $count] = match ($feature) {
+            'embeddings-listings' => ['listing_documents', 'ddev artisan listings:embed --fresh --wait', $this->listingDocuments->embeddingCount($label)],
+            'embeddings-photos' => ['listing_photos', 'ddev artisan photos:embed --fresh --wait', $this->photos->embeddingCount($label)],
+            default => ['docs_chunks', 'ddev artisan docs:index', $this->docsIndex->embeddingCount($label)],
+        };
 
         return [
-            'table' => $listings ? 'listing_documents' : 'docs_chunks',
-            'command' => $listings ? 'ddev artisan listings:embed --fresh --wait' : 'ddev artisan docs:index',
+            'table' => $table,
+            'command' => $command,
             'total' => $count->total,
             'indexed' => $count->embedded,
             'current' => $count->current,
@@ -135,12 +140,11 @@ final readonly class AiSettingsService
      */
     public function options(string $feature): array
     {
-        $embeddings = AiProviders::features()[$feature] === 'embeddings';
-        $names = $embeddings ? $this->providers->enabledEmbeddingProviders() : $this->providers->enabledTextProviders();
+        $kind = AiProviders::features()[$feature];
         $options = [];
 
-        foreach ($names as $name) {
-            $options[] = ['name' => $name, ...$this->modelsFor($feature, $name, $embeddings)];
+        foreach ($this->enabledFor($kind) as $name) {
+            $options[] = ['name' => $name, ...$this->modelsFor($feature, $name, $kind)];
         }
 
         return $options;
@@ -151,14 +155,13 @@ final readonly class AiSettingsService
      */
     public function modelError(string $feature, string $provider, string $model): ?string
     {
-        $embeddings = AiProviders::features()[$feature] === 'embeddings';
-        $enabled = $embeddings ? $this->providers->enabledEmbeddingProviders() : $this->providers->enabledTextProviders();
+        $kind = AiProviders::features()[$feature];
 
-        if (! in_array($provider, $enabled, true)) {
+        if (! in_array($provider, $this->enabledFor($kind), true)) {
             return "The provider {$provider} is not enabled for this feature.";
         }
 
-        $allowed = $this->modelsFor($feature, $provider, $embeddings);
+        $allowed = $this->modelsFor($feature, $provider, $kind);
 
         $compared = config("ai.providers.{$provider}.driver") === 'ollama' ? OllamaServerInfo::canonical($model) : $model;
 
@@ -178,7 +181,7 @@ final readonly class AiSettingsService
      */
     public function changesEmbeddingModel(string $feature, string $provider, string $model): bool
     {
-        if (AiProviders::features()[$feature] !== 'embeddings') {
+        if (AiProviders::features()[$feature] === 'text') {
             return false;
         }
 
@@ -216,23 +219,38 @@ final readonly class AiSettingsService
     /**
      * @return array{models: list<string>, free: bool, note: ?string}
      */
-    private function modelsFor(string $feature, string $provider, bool $embeddings): array
+    private function modelsFor(string $feature, string $provider, string $kind): array
     {
-        $kind = $embeddings ? 'embeddings' : 'text';
+        $key = AiProviders::modelKey($kind);
         $driver = (string) config("ai.providers.{$provider}.driver");
-        $default = config("ai.providers.{$provider}.models.{$kind}.default");
+        $default = config("ai.providers.{$provider}.models.{$key}.default");
 
         if ($driver === 'ollama') {
-            return $this->ollamaModels($feature, $embeddings);
+            return $this->ollamaModels($feature, $kind === 'embeddings');
         }
 
         if ($this->providers->isCloud($provider)) {
-            $models = array_merge(is_string($default) ? [$default] : [], $this->ollama->available($provider, $kind));
+            $models = array_merge(is_string($default) ? [$default] : [], $this->ollama->available($provider, $key));
 
             return ['models' => array_values(array_unique($models)), 'free' => true, 'note' => null];
         }
 
-        return ['models' => is_string($default) ? [$default] : [], 'free' => false, 'note' => null];
+        $available = config("ai.providers.{$provider}.models.{$key}.available");
+        $models = is_array($available) ? array_merge(is_string($default) ? [$default] : [], $available) : (is_string($default) ? [$default] : []);
+
+        return ['models' => array_values(array_unique(array_filter($models, 'is_string'))), 'free' => false, 'note' => null];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function enabledFor(string $kind): array
+    {
+        return match ($kind) {
+            'embeddings' => $this->providers->enabledEmbeddingProviders(),
+            'image-embeddings' => $this->providers->enabledImageEmbeddingProviders(),
+            default => $this->providers->enabledTextProviders(),
+        };
     }
 
     /**

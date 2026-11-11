@@ -8,7 +8,7 @@ use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
 use App\Guides\SnippetResolver;
 
-const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos'];
+const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos'];
 
 const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards'];
 
@@ -159,6 +159,30 @@ it('AC-7 counts photos as a capability guide with six non-empty tabs and no refe
         ->and($rendered['support'])->not->toBeEmpty()
         ->and($rendered['numbers'])->not->toBeEmpty()
         ->and($rendered['experiments'])->not->toBeEmpty();
+});
+
+it('AC-9 the similar-photos guide has six non-empty tabs, no references, and is linked from the photos guide', function (): void {
+    $guide = app(GuideRepository::class)->find('similar-photos');
+    $rendered = app(GuideRenderer::class)->render('similar-photos');
+
+    expect($guide->kind)->toBe('capability')
+        ->and($guide->planned)->toBeFalse()
+        ->and($rendered['works'])->not->toBeEmpty()
+        ->and($rendered['failures'])->not->toBeEmpty()
+        ->and($rendered['recipes'])->not->toBeEmpty()
+        ->and($rendered['support'])->not->toBeEmpty()
+        ->and($rendered['numbers'])->not->toBeEmpty()
+        ->and($rendered['experiments'])->not->toBeEmpty()
+        ->and(app(GuideRepository::class)->find('photos')->related)->toContain('similar-photos');
+
+    $this->withoutVite();
+    $this->get('/ai/guides/similar-photos')->assertOk();
+});
+
+it('AC-9 the providers capability table lists the image encoder with its vector size', function (): void {
+    $rows = collect(app(GuideRenderer::class)->render('providers')['table']['rows'])->keyBy('provider');
+
+    expect($rows['photo-encoder'])->toMatchArray(['where' => 'local', 'text' => 'no', 'embeddings' => '512 dimensions (images)', 'key' => 'none needed']);
 });
 
 it('AC-6 every experiment offers 2 to 4 predictions and its answer id is one of them', function (string $key): void {

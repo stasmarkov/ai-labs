@@ -81,6 +81,32 @@ return [
             'provider' => env('AI_EMBEDDINGS_DOCS_PROVIDER') ?: null,
             'model' => env('AI_EMBEDDINGS_DOCS_MODEL') ?: null,
         ],
+        // Image vectors of the listing photos; runs on its own provider, never on "default_for_embeddings".
+        'embeddings-photos' => [
+            'provider' => env('AI_EMBEDDINGS_PHOTOS_PROVIDER') ?: 'photo-encoder',
+            'model' => env('AI_EMBEDDINGS_PHOTOS_MODEL') ?: null,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Similar Photos
+    |--------------------------------------------------------------------------
+    |
+    | Photos of other listings shown as similar: at most "limit", with a cosine
+    | similarity of at least "min_score" and below "near_duplicate_cutoff". The
+    | search reads "candidates" nearest vectors (hnsw.ef_search "ef_search") and
+    | filters them in PHP; results are cached for "ttl_seconds".
+    |
+    */
+
+    'similar_photos' => [
+        'min_score' => filled(env('AI_SIMILAR_MIN_SCORE')) ? (float) env('AI_SIMILAR_MIN_SCORE') : 0.75,
+        'near_duplicate_cutoff' => 0.98,
+        'limit' => 8,
+        'candidates' => 40,
+        'ef_search' => 100,
+        'ttl_seconds' => 3600,
     ],
 
     /*
@@ -309,6 +335,20 @@ return [
         ],
         // guide:end provider-cloud
 
+        // The local image-encoder sidecar (.ddev/docker-compose.photo-encoder.yaml), an app-level driver, not an SDK one.
+        'photo-encoder' => [
+            'driver' => 'image-encoder',
+            'url' => env('PHOTO_ENCODER_URL') ?: 'http://photo-encoder:7997',
+            'timeout' => filled(env('PHOTO_ENCODER_TIMEOUT')) ? max(1, (int) env('PHOTO_ENCODER_TIMEOUT')) : 120,
+            'batch' => 16,
+            'models' => [
+                'image_embeddings' => [
+                    'default' => env('PHOTO_ENCODER_MODEL') ?: 'openai/clip-vit-base-patch32',
+                    'dimensions' => 512,
+                    'available' => ['openai/clip-vit-base-patch32', 'laion/CLIP-ViT-B-32-laion2B-s34B-b79K'],
+                ],
+            ],
+        ],
     ],
 
 ];
