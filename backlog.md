@@ -329,8 +329,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-94, BR-90
 - **Depends on:** SL-23
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261112-1708-buyer-assistant
 - **Source:** brief (Phase 11)
 - **Run:** `/sdd "SL-25: buyer-assistant agent with a SearchListings tool (schema = NL-search filters), max 4 steps and tool-call repair, recording tool-call success rate on the local model (BR-94, BR-90). Rules in product-brief.md."`
 
