@@ -24,6 +24,7 @@ final readonly class LabOverviewService
         ['chat', 'Chat', 'ai.chat', 'ready'],
         ['photos', 'Photos', 'ai.photos', 'ready'],
         ['photo-search', 'Photo search', 'ai.photo-search', 'ready'],
+        ['photo-duplicates', 'Duplicate photos', 'ai.photos.duplicates', 'ready'],
     ];
 
     public function __construct(

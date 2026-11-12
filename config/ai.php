@@ -117,6 +117,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Photo Duplicates
+    |--------------------------------------------------------------------------
+    |
+    | Photos whose image similarity is at least "cutoff" are joined into groups
+    | (connected components) read from the "candidates" nearest vectors of each
+    | photo (hnsw.ef_search "ef_search"); a group larger than "max_group" is split
+    | along its weakest links. The cutoff was calibrated by photos:duplicates-eval
+    | on 2026-11-12 (0.92: no threshold reached recall 0.9 with no wrong pair,
+    | so the best F1 was taken).
+    |
+    */
+
+    'photo_duplicates' => [
+        'cutoff' => filled(env('AI_PHOTO_DUPLICATE_CUTOFF')) ? (float) env('AI_PHOTO_DUPLICATE_CUTOFF') : 0.92,
+        'candidates' => 20,
+        'ef_search' => 100,
+        'max_group' => min(6, (int) (env('AI_PHOTO_DUPLICATE_MAX_GROUP') ?: 6)), // a judgement sends at most 6 images
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Photo Text Search
     |--------------------------------------------------------------------------
     |
@@ -264,6 +285,7 @@ return [
         'listing_filters' => env('AI_PROMPT_LISTING_FILTERS') ?: 'listing-filters.v1',
         'rag_grader' => env('AI_PROMPT_RAG_GRADER') ?: 'rag-grader.v2',
         'photo_vision' => env('AI_PROMPT_PHOTO_VISION') ?: 'photo-vision.v1',
+        'photo_best_pick' => env('AI_PROMPT_PHOTO_BEST_PICK') ?: 'photo-best-pick.v1',
     ],
     // guide:end prompts
 

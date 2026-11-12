@@ -7,6 +7,7 @@ namespace App\Repositories;
 use App\Contracts\SimilarEvalRepositoryInterface;
 use App\DTOs\EncoderRunTotals;
 use App\DTOs\SimilarEvalPhoto;
+use App\Models\ListingPhoto;
 use Illuminate\Support\Facades\DB;
 
 final readonly class EloquentSimilarEvalRepository implements SimilarEvalRepositoryInterface
@@ -15,6 +16,7 @@ final readonly class EloquentSimilarEvalRepository implements SimilarEvalReposit
     {
         return DB::table('listing_photos as p')
             ->join('listings as l', 'l.id', '=', 'p.listing_id')
+            ->where('p.source', '<>', ListingPhoto::SOURCE_AUGMENTED)
             ->whereNotNull('p.embedding')
             ->where('p.embedding_model', $label)
             ->orderBy('p.id')
@@ -27,6 +29,7 @@ final readonly class EloquentSimilarEvalRepository implements SimilarEvalReposit
     {
         return DB::table('listing_photos as p')
             ->join('listings as l', 'l.id', '=', 'p.listing_id')
+            ->where('p.source', '<>', ListingPhoto::SOURCE_AUGMENTED)
             ->whereNotNull('p.embedding')
             ->where('p.embedding_model', $label)
             ->distinct()

@@ -7,6 +7,7 @@ namespace App\Repositories;
 use App\Contracts\CaptionSimilarityRepositoryInterface;
 use App\DTOs\SimilarPhotoMatch;
 use App\DTOs\VectorQuery;
+use App\Models\ListingPhoto;
 use Illuminate\Support\Facades\DB;
 
 final readonly class PhotoVectorRepository implements CaptionSimilarityRepositoryInterface
@@ -37,6 +38,7 @@ final readonly class PhotoVectorRepository implements CaptionSimilarityRepositor
                 ->whereNotNull('p.embedding')
                 ->where('p.embedding_model', $query->model)
                 ->selectRaw("p.id, p.listing_id, p.path, p.embedding <=> {$reference} AS distance", [$binding])
+                ->when($query->excludeAugmented, fn ($photos) => $photos->where('p.source', '<>', ListingPhoto::SOURCE_AUGMENTED))
                 ->orderByRaw("p.embedding <=> {$reference}", [$binding])
                 ->limit($query->limit);
 

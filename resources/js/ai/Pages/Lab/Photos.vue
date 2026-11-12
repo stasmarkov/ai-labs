@@ -19,6 +19,7 @@ interface PhotoItem {
     url: string;
     title: string;
     status: string | null;
+    variant: string | null;
 }
 
 interface SimilarMatch {
@@ -360,6 +361,7 @@ ddev artisan photos:import</pre>
                     >
                         <img :src="photo.url" :alt="photo.title" loading="lazy" class="aspect-[4/3] w-full rounded-sm bg-rule object-cover" />
                         <span class="mt-1 block truncate text-[13px]">{{ photo.title }}</span>
+                        <span v-if="photo.variant" class="block text-[13px] text-muted">augmented · {{ photo.variant }}</span>
                         <span
                             class="block text-[13px]"
                             :class="statusOf(photo) === 'failed' ? 'text-danger' : statusOf(photo) === 'completed' ? 'text-success' : 'text-muted'"

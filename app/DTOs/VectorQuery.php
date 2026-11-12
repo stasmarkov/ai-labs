@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\DTOs;
 
 /**
- * A nearest-photos query: the reference is either a stored photo's vector or a literal vector.
+ * A nearest-photos query: the reference is either a stored photo's vector or a literal vector. Generated duplicates are
+ * left out unless the caller asks for them.
  */
 final readonly class VectorQuery
 {
@@ -18,18 +19,19 @@ final readonly class VectorQuery
         public string $model,
         public int $limit,
         public int $efSearch,
+        public bool $excludeAugmented,
     ) {}
 
-    public static function fromPhoto(int $photoId, string $model, int $limit, int $efSearch): self
+    public static function fromPhoto(int $photoId, string $model, int $limit, int $efSearch, bool $excludeAugmented = true): self
     {
-        return new self($photoId, null, $model, $limit, $efSearch);
+        return new self($photoId, null, $model, $limit, $efSearch, $excludeAugmented);
     }
 
     /**
      * @param  list<float>  $vector
      */
-    public static function fromVector(array $vector, string $model, int $limit, int $efSearch): self
+    public static function fromVector(array $vector, string $model, int $limit, int $efSearch, bool $excludeAugmented = true): self
     {
-        return new self(null, $vector, $model, $limit, $efSearch);
+        return new self(null, $vector, $model, $limit, $efSearch, $excludeAugmented);
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Contracts\ListingPhotoRepositoryInterface;
+use App\DTOs\DuplicateOriginal;
 use App\DTOs\EmbeddingIndexCount;
 use App\DTOs\NewListingPhoto;
 use App\DTOs\PhotoCaptionRow;
@@ -71,6 +72,8 @@ final readonly class EloquentListingPhotoRepository implements ListingPhotoRepos
                 'width' => $photo->width,
                 'height' => $photo->height,
                 'sha256' => $photo->sha256,
+                'duplicate_of' => $photo->duplicateOf,
+                'variant' => $photo->variant?->value,
             ]);
 
             $path = "photos/{$photo->listingId}/{$row->id}.jpg";
@@ -79,6 +82,17 @@ final readonly class EloquentListingPhotoRepository implements ListingPhotoRepos
 
             return $path;
         });
+    }
+
+    public function originalsWithVector(): array
+    {
+        return ListingPhoto::query()
+            ->where('source', '<>', ListingPhoto::SOURCE_AUGMENTED)
+            ->whereNotNull('embedding')
+            ->orderBy('sha256')
+            ->get(['id', 'listing_id', 'path', 'source_class', 'source_file'])
+            ->map(fn (ListingPhoto $photo): DuplicateOriginal => new DuplicateOriginal($photo->id, $photo->listing_id, $photo->path, $photo->source_class, $photo->source_file))
+            ->all();
     }
 
     public function deleteBySource(string $source): array
@@ -252,6 +266,7 @@ final readonly class EloquentListingPhotoRepository implements ListingPhotoRepos
     private function captionQuery(PhotoExtractionRequest $request): Builder
     {
         return DB::table('listing_photos as p')
+            ->where('p.source', '<>', ListingPhoto::SOURCE_AUGMENTED)
             ->leftJoin('photo_extractions as e', function (JoinClause $join) use ($request): void {
                 $join->on('e.photo_id', '=', 'p.id')
                     ->where('e.provider', $request->provider)

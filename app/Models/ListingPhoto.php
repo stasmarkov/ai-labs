@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\DTOs\NewListingPhoto;
+use App\Enums\PhotoVariant;
 use Carbon\CarbonImmutable;
 use Database\Factories\ListingPhotoFactory;
 use Illuminate\Database\Eloquent\Collection;
@@ -28,6 +30,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $text_source
  * @property string|null $text_hash
  * @property CarbonImmutable|null $text_embedded_at
+ * @property int|null $duplicate_of
+ * @property PhotoVariant|null $variant
+ * @property string|null $review_status
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable $updated_at
  * @property-read Listing $listing
@@ -39,6 +44,8 @@ class ListingPhoto extends Model
     use HasFactory;
 
     public const SOURCE_STANFORD_CARS = 'stanford-cars';
+
+    public const SOURCE_AUGMENTED = NewListingPhoto::SOURCE_AUGMENTED;
 
     public const TEXT_SOURCE_CAPTION = 'caption';
 
@@ -58,6 +65,8 @@ class ListingPhoto extends Model
             'listing_id' => 'integer',
             'width' => 'integer',
             'height' => 'integer',
+            'duplicate_of' => 'integer',
+            'variant' => PhotoVariant::class,
             'embedded_at' => 'immutable_datetime',
             'text_embedded_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',

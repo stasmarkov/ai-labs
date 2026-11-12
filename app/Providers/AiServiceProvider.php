@@ -74,6 +74,8 @@ class AiServiceProvider extends ServiceProvider
         RateLimiter::for('photo-extract', fn (Request $request): Limit => Limit::perMinute(30)->by((string) $request->ip()));
         // The slider re-ranks on every pause, each a vector query, so the lab endpoint is limited per IP.
         RateLimiter::for('photo-similar', fn (Request $request): Limit => Limit::perMinute((int) config('ai.similar_photos.per_minute'))->by((string) $request->ip()));
+        // The review only writes marks, but each click is a write, so the lab endpoints are limited per IP.
+        RateLimiter::for('duplicate-review', fn (Request $request): Limit => Limit::perMinute(60)->by((string) $request->ip()));
         RateLimiter::for('docs-ask', fn (Request $request): Limit => Limit::perMinute((int) config('ai.docs.answer.per_minute'))->by((string) $request->ip()));
     }
 }

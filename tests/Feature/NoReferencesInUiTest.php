@@ -49,6 +49,7 @@ function labUiPaths(): array
         '/ai/chat',
         '/ai/photos',
         '/ai/photo-search',
+        '/ai/photos/duplicates',
         '/ai/guides',
         ...array_map(fn (string $key): string => '/ai/guides/'.$key, $keys),
     ];

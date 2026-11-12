@@ -42,7 +42,7 @@ it('AC-1 the overview shows models, Ollama status, capabilities and recent runs'
             ->where('embeddingProvider', 'ollama')
             ->where('embeddingModel', config('ai.providers.ollama.models.embeddings.default'))
             ->where('ollama.reachable', true)
-            ->has('capabilities', 7)
+            ->has('capabilities', 8)
             ->has('capabilities.0', fn (Assert $card) => $card
                 ->where('key', 'describe')
                 ->where('route', '/ai/describe')
@@ -55,6 +55,7 @@ it('AC-1 the overview shows models, Ollama status, capabilities and recent runs'
             ->where('capabilities.5.status', 'ready')
             ->where('capabilities.5.guideKey', 'photos')
             ->where('capabilities.6.guideKey', 'photo-search')
+            ->where('capabilities.7.guideKey', 'photo-duplicates')
             ->has('recentRuns', 20)
             ->has('recentRuns.0', fn (Assert $run) => $run
                 ->where('invocation_id', 'run-25')
@@ -126,7 +127,7 @@ it('AC-1 every capability card links to a page that opens, and none is coming', 
 
     $cards = collect($this->get('/ai')->assertOk()->inertiaProps('capabilities'));
 
-    expect($cards)->toHaveCount(7)
+    expect($cards)->toHaveCount(8)
         ->and($cards->where('status', 'coming')->all())->toBe([]);
 
     foreach ($cards as $card) {

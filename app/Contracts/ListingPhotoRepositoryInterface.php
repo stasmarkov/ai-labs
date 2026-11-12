@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Contracts;
 
+use App\DTOs\DuplicateOriginal;
 use App\DTOs\EmbeddingIndexCount;
 use App\DTOs\NewListingPhoto;
 use App\DTOs\PhotoCaptionRow;
@@ -40,6 +41,13 @@ interface ListingPhotoRepositoryInterface
      * @return string the stored path
      */
     public function store(NewListingPhoto $photo, Closure $writeFile): string;
+
+    /**
+     * The imported photos that have an image vector, in ascending sha256 order.
+     *
+     * @return list<DuplicateOriginal>
+     */
+    public function originalsWithVector(): array;
 
     /**
      * Delete the rows of a source.

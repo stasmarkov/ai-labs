@@ -8,13 +8,13 @@ use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
 use App\Guides\SnippetResolver;
 
-const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search'];
+const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search', 'photo-duplicates'];
 
 const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards'];
 
 const ALL_FILLED_GUIDES = [...CAPABILITY_GUIDES, ...FOUNDATION_GUIDES];
 
-const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat', 'ai.photos', 'ai.photo-search'];
+const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat', 'ai.photos', 'ai.photo-search', 'ai.photos.duplicates'];
 
 /**
  * @return list<string>
@@ -277,4 +277,23 @@ it('AC-7 the similar-photos guide teaches the hybrid step, the recipe, the two f
     $learning = file_get_contents(base_path('docs/learning-guide.md'));
 
     expect($learning)->toContain('Hybrid similar photos')->toContain('HybridEvalScorer');
+});
+
+it('AC-8 the photo-duplicates guide has six non-empty tabs, no references, and is linked from the photo guides', function (): void {
+    $guide = app(GuideRepository::class)->find('photo-duplicates');
+    $rendered = app(GuideRenderer::class)->render('photo-duplicates');
+
+    expect($guide->kind)->toBe('capability')
+        ->and($guide->planned)->toBeFalse()
+        ->and($rendered['works'])->not->toBeEmpty()
+        ->and($rendered['failures'])->not->toBeEmpty()
+        ->and($rendered['recipes'])->not->toBeEmpty()
+        ->and($rendered['support'])->not->toBeEmpty()
+        ->and($rendered['numbers'])->not->toBeEmpty()
+        ->and($rendered['experiments'])->not->toBeEmpty()
+        ->and(app(GuideRepository::class)->find('similar-photos')->related)->toContain('photo-duplicates')
+        ->and(app(GuideRepository::class)->find('photos')->related)->toContain('photo-duplicates');
+
+    $this->withoutVite();
+    $this->get('/ai/guides/photo-duplicates')->assertOk();
 });

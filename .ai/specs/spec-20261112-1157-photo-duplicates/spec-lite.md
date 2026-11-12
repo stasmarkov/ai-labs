@@ -4,7 +4,7 @@ title: Duplicate photos and the best-photo pick
 type: feature
 size: L
 priority: P2
-status: approved
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-12; standing approval)

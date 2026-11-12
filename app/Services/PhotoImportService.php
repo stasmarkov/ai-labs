@@ -130,8 +130,12 @@ final readonly class PhotoImportService
     {
         $disk = Storage::disk('public');
 
-        foreach ($this->photos->deleteBySource(self::SOURCE) as $path) {
-            $disk->delete($path);
+        // Generated copies point at imported photos and go with them (foreign key cascade), so their files are
+        // removed first; otherwise the rows vanish and the files stay on disk for good.
+        foreach ([NewListingPhoto::SOURCE_AUGMENTED, self::SOURCE] as $source) {
+            foreach ($this->photos->deleteBySource($source) as $path) {
+                $disk->delete($path);
+            }
         }
     }
 }

@@ -21,7 +21,7 @@ final readonly class EloquentPhotoLabRepository implements PhotoLabRepositoryInt
     {
         // Only the columns the grid needs: the 512-number embedding stays in the database.
         return ListingPhoto::query()
-            ->select(['id', 'listing_id', 'path'])
+            ->select(['id', 'listing_id', 'path', 'variant'])
             ->with(['listing', 'extractions' => $this->forRequest($request)])
             ->orderBy('id')
             ->paginate($perPage, page: $page)
@@ -30,6 +30,7 @@ final readonly class EloquentPhotoLabRepository implements PhotoLabRepositoryInt
                 $this->url($photo->path),
                 $this->title($photo),
                 $photo->extractions->first()?->status,
+                $photo->variant?->value,
             ));
     }
 

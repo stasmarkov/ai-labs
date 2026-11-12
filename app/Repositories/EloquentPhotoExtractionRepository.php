@@ -17,6 +17,7 @@ final readonly class EloquentPhotoExtractionRepository implements PhotoExtractio
     public function pendingPhotoIds(PhotoExtractionRequest $request, ?int $limit): array
     {
         $query = ListingPhoto::query()
+            ->where('listing_photos.source', '<>', ListingPhoto::SOURCE_AUGMENTED)
             ->whereNotExists(fn ($existing) => $existing->selectRaw('1')
                 ->from('photo_extractions')
                 ->whereColumn('photo_extractions.photo_id', 'listing_photos.id')
@@ -126,6 +127,6 @@ final readonly class EloquentPhotoExtractionRepository implements PhotoExtractio
 
     public function countPhotos(): int
     {
-        return ListingPhoto::query()->count();
+        return ListingPhoto::query()->where('source', '<>', ListingPhoto::SOURCE_AUGMENTED)->count();
     }
 }

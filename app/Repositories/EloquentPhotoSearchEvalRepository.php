@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Contracts\PhotoSearchEvalRepositoryInterface;
+use App\Models\ListingPhoto;
 use App\Models\PhotoExtraction;
 use Illuminate\Support\Facades\DB;
 
@@ -13,6 +14,7 @@ final readonly class EloquentPhotoSearchEvalRepository implements PhotoSearchEva
     public function embeddedPhotoIds(string $label): array
     {
         return DB::table('listing_photos')
+            ->where('source', '<>', ListingPhoto::SOURCE_AUGMENTED)
             ->whereNotNull('embedding')
             ->where('embedding_model', $label)
             ->orderBy('id')

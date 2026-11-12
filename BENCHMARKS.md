@@ -1154,6 +1154,53 @@ Latency over 30 queries: uncached p50 60.4 ms and p95 136.1 ms (budget 400 ms), 
 
 I wanted to search the car photos with plain words, so the query is embedded by the same local CLIP encoder as the photos and matched with the HNSW index. The part I would not skip is the cutoff: text-to-image similarities are 0.15 to 0.30, so I swept the threshold, found a plateau up to 0.225 and a cliff from 0.25, and shipped 0.2 in the middle. I also measured the `a photo of` template against the bare query and found no real difference on 30 queries, which is the honest result to report.
 
+## Duplicate photos and the best pick (2026-11-12)
+
+`photos:make-duplicates --photos=20` took 20 imported photos and stored 56 generated copies (2 to 4 kinds each: mirrored, darkened, downscaled, recompressed, cropped) as `source = 'augmented'` rows on the same listing. `photos:embed --wait` gave them image vectors (56 photos; the 635 s were mostly waiting for a worker to be started). `photos:duplicates-eval` then read 212 photos (156 originals, 56 copies, 114 true pairs) with one nearest query per photo and swept the cutoff. Run on frankenphp with `openai/clip-vit-base-patch32`, 20 candidates per photo, groups capped at 6. Raw file: [`bench/results/photo-duplicates/2026-11-12/run.json`](bench/results/photo-duplicates/2026-11-12/run.json). Reproduce with the four commands above, a worker (`ddev artisan queue:work --queue=ai-vision`) and `photos:duplicates --judge --wait`.
+
+Method:
+- **True pair:** both photos come from the same original. Any other pair above the cutoff is false.
+- **Chosen cutoff:** the highest threshold with recall at least 0.9 and no false pair; if none, the best F1.
+
+| Cutoff | Pairs | Precision | Recall | F1 | cropped | darkened | downscaled | mirrored | recompressed |
+|--------|-------|-----------|--------|-----|---|---|---|---|---|
+| 0.90 | 158 | 0.690 | 0.956 | 0.801 | 7/8 | 12/12 | 12/12 | 12/12 | 12/12 |
+| 0.91 | 139 | 0.784 | 0.956 | 0.862 | 7/8 | 12/12 | 12/12 | 12/12 | 12/12 |
+| **0.92** | 112 | 0.902 | 0.886 | 0.894 | 6/8 | 12/12 | 12/12 | 12/12 | 11/12 |
+| 0.93 | 99 | 0.950 | 0.825 | 0.883 | 5/8 | 12/12 | 12/12 | 12/12 | 11/12 |
+| 0.94 | 79 | 1.000 | 0.693 | 0.819 | 4/8 | 12/12 | 11/12 | 12/12 | 9/12 |
+| 0.95 | 69 | 1.000 | 0.605 | 0.754 | 3/8 | 12/12 | 11/12 | 12/12 | 7/12 |
+| 0.96 | 58 | 1.000 | 0.509 | 0.674 | 3/8 | 12/12 | 11/12 | 12/12 | 3/12 |
+| 0.97 | 39 | 1.000 | 0.342 | 0.510 | 1/8 | 9/12 | 8/12 | 10/12 | 1/12 |
+| 0.98 | 21 | 1.000 | 0.184 | 0.311 | 0/8 | 7/12 | 5/12 | 8/12 | 1/12 |
+| 0.99 | 5 | 1.000 | 0.044 | 0.084 | 0/8 | 2/12 | 0/12 | 3/12 | 0/12 |
+
+No cutoff reaches recall 0.9 without a false pair, so the F1 fallback chose 0.92 (`ai.photo_duplicates.cutoff`, was 0.98 before the run). At 0.92 the recall per kind is 1.00 for mirrored, darkened and downscaled, 0.92 for recompressed and 0.75 for cropped. At 0.98 it was 0.67, 0.58, 0.42, 0.08 and 0.
+
+At 0.92 the clustering made 23 groups (84 photos, none split to fit the cap): 19 with one original and its copies, 4 with several originals. Clustering 212 photos took 185 ms (NFR-3 budget: 5 s for 300). `photos:duplicates --judge --wait` queued the 23 groups on `ai-vision` for `gemma4:12b` and all 23 completed.
+
+Judging the 19 clean groups with each model in one live call (the original is the expected pick):
+
+| Model | Picked original | Valid first try | Valid after retries | p50 ms | p95 ms |
+|-------|-----------------|-----------------|---------------------|--------|--------|
+| gemma4:12b | 5 of 19 (0.263) | 1.000 | 1.000 | 4092 | 11164 |
+| qwen3.5:9b | 8 of 19 (0.421) | 1.000 | 1.000 | 3537 | 8280 |
+
+### What the numbers say
+
+- **The encoder separates copies from lookalikes only by a margin.** Perfect precision starts at 0.94, where recall is 0.69; 0.92 trades 11 false pairs for 0.89 recall. Cropping is the weak kind because it changes the frame most.
+- **Format-only changes are easy.** Mirrored, downscaled and darkened copies are all found at 0.92.
+- **Models rarely pick the original.** Copies are degraded in simple ways, yet the models chose the untouched original in 26% and 42% of groups. A darkened or recompressed copy can look equally good, and the pick is a judgement, not a lookup, so the rate is a floor for the real "best photo" quality.
+
+### Surprises
+
+- **The old default cutoff of 0.98 was far too strict**: it found 18% of the true pairs.
+- **Valid output was not the problem.** Every answer was valid on the first attempt for both models; the weakness is the choice, not the format.
+
+### Interview story
+
+I generated my own ground truth by copying 20 photos in five controlled ways, so precision and recall were measurable instead of guessed. The result I did not expect was that the cutoff I had picked by feel, 0.98, would have missed more than 80% of the copies; the sweep moved it to 0.92. I report that the vision models pick the untouched original only 26% to 42% of the time as a limit of this setup, not a win.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

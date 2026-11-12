@@ -12,12 +12,13 @@ final readonly class EloquentPhotoEvalRepository implements PhotoEvalRepositoryI
 {
     public function countPhotos(): int
     {
-        return ListingPhoto::query()->count();
+        return ListingPhoto::query()->where('source', '<>', ListingPhoto::SOURCE_AUGMENTED)->count();
     }
 
     public function sample(int $limit): array
     {
         return ListingPhoto::query()
+            ->where('source', '<>', ListingPhoto::SOURCE_AUGMENTED)
             ->orderBy('sha256')
             ->limit($limit)
             ->get(['id', 'path', 'source_class'])

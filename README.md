@@ -100,6 +100,19 @@ ddev artisan photos:search-eval                  # precision, MRR, threshold cur
 
 How it works: `/ai/guides/photo-search`.
 
+### Find duplicate photos and pick the best one
+
+Real photos hold no duplicates, so the lab generates some, groups close vectors, and asks the vision model which photo of a group is best. The review page only marks photos: no row and no file is deleted.
+
+```sh
+ddev artisan photos:make-duplicates --photos=20   # degraded copies on the same listing, source augmented
+ddev artisan photos:embed --wait                  # embed the copies
+ddev artisan photos:duplicates-eval               # threshold curve, chosen cutoff, pick accuracy, writes run.json
+ddev artisan photos:duplicates --judge --wait     # group by the cutoff, judge each group on the ai-vision queue
+```
+
+The review page is `/ai/photos/duplicates`. The cutoff is `AI_PHOTO_DUPLICATE_CUTOFF`. How it works: `/ai/guides/photo-duplicates`.
+
 ## History
 
 The project began as a PHP server comparison (five web servers and worker mode; only the FrankenPHP family is kept) on a car marketplace, and was renamed ai-lab on 2026-11-10 when it became a study lab for AI features in Laravel. The server work stays below and in [BENCHMARKS.md](BENCHMARKS.md). The old DDEV URL is gone; use https://ai-lab.ddev.site.

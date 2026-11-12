@@ -543,7 +543,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-90, BR-27
 - **Depends on:** SL-36, SL-27
 - **Blocked by:** none (Q-06 answered 2026-11-05: Stanford Cars dataset)
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261112-1157-photo-duplicates
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-39: cluster near-duplicate photos by image vector and ask the local vision model which photo per cluster is best; review page "keep this one, remove N" (BR-90, BR-27). Rules in product-brief.md."`
