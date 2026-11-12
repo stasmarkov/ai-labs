@@ -181,3 +181,4 @@ Checks:
 - Fingerprint `app-DNob7CFE.css` / `app-PTzu1QaN.js`, unchanged.
 - Parity on frankenphp identical.
 - `/ai/photos/duplicates`, `/ai/guides/photo-duplicates`, `/ai/photos` and `/listings/1` answer 200.
+- Clean-tree bench: after commit b065e2f, `bench/run.sh ping --quick` exited 0 on frankenphp.
