@@ -6,6 +6,7 @@ namespace App\Ai;
 
 use App\Contracts\AiRunRepositoryInterface;
 use App\DTOs\AiRunRecord;
+use App\DTOs\AiToolStepRecord;
 use App\Enums\DocsCacheKind;
 use Illuminate\Support\Str;
 use Throwable;
@@ -25,6 +26,9 @@ final class AiRunRecorder
 
     /** @var array<string, array{retrieved: list<int>, cited: ?list<int>, origin: ?string, historyTurns: ?int}> */
     private array $pendingAnnotations = [];
+
+    /** @var array<string, list<AiToolStepRecord>> tool calls seen so far, by invocation id; written with the run row */
+    private array $toolSteps = [];
 
     private ?string $embeddingsAgent = null;
 
@@ -236,9 +240,41 @@ final class AiRunRecorder
             refusalReason: $refusalReason === null ? null : mb_substr($refusalReason, 0, self::MAX_REASON_LENGTH),
             origin: $origin,
             validationFailed: $validationFailed,
+            toolSteps: $this->takeToolSteps($invocationId),
         )));
 
         return $invocationId;
+    }
+
+    /**
+     * Keeps one tool call of a run; the run row, written when the run ends, carries it. Calls are numbered from 1 in the
+     * order they finish.
+     *
+     * @param  array<string, mixed>  $arguments
+     * @param  array<string, mixed>|null  $resultSummary
+     */
+    public function toolStep(string $invocationId, string $tool, array $arguments, string $outcome, ?string $error, ?array $resultSummary, int $durationMs): void
+    {
+        $this->toolSteps[$invocationId][] = new AiToolStepRecord(
+            position: count($this->toolSteps[$invocationId] ?? []) + 1,
+            tool: mb_substr($tool, 0, 120),
+            arguments: $arguments,
+            outcome: $outcome,
+            error: $error === null ? null : mb_substr($error, 0, 120),
+            resultSummary: $resultSummary,
+            durationMs: $durationMs,
+        );
+    }
+
+    /**
+     * @return list<AiToolStepRecord>
+     */
+    private function takeToolSteps(string $invocationId): array
+    {
+        $steps = $this->toolSteps[$invocationId] ?? [];
+        unset($this->toolSteps[$invocationId]);
+
+        return $steps;
     }
 
     public function firstToken(string $invocationId): void
@@ -317,6 +353,7 @@ final class AiRunRecorder
             origin: $run['origin'],
             historyTurns: $run['historyTurns'],
             stoppedAfterMs: $stopped && $run['firstTokenAt'] !== null ? $this->millisecondsSince($run['firstTokenAt'], $endedAt) : null,
+            toolSteps: $this->takeToolSteps($invocationId),
         )));
     }
 

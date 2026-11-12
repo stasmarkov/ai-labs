@@ -33,5 +33,7 @@ final readonly class AiRunRecord
         public ?int $historyTurns = null,
         public ?int $stoppedAfterMs = null,
         public ?bool $validationFailed = null,
+        /** @var list<AiToolStepRecord> */
+        public array $toolSteps = [],
     ) {}
 }

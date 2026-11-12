@@ -1201,6 +1201,45 @@ Judging the 19 clean groups with each model in one live call (the original is th
 
 I generated my own ground truth by copying 20 photos in five controlled ways, so precision and recall were measurable instead of guessed. The result I did not expect was that the cutoff I had picked by feel, 0.98, would have missed more than 80% of the copies; the sweep moved it to 0.92. I report that the vision models pick the untouched original only 26% to 42% of the time as a limit of this setup, not a win.
 
+## Buyer assistant tool use (2026-11-12)
+
+`ddev artisan assistant:eval --models=qwen3.5:9b,gemma4:12b --force` asked 30 questions from `bench/assistant/questions.v1.jsonl`:
+- 24 need the `SearchListings` tool, including 6 follow-ups with a scripted history;
+- 6 should be answered without it;
+- 4 ask for something the tool cannot filter on (body type, distance, colour, a currency other than euro).
+
+The questions ran on Ollama through the agent loop, with prompt `buyer-assistant@v3`, on frankenphp. Raw file: [`bench/results/assistant/2026-11-12/run.json`](bench/results/assistant/2026-11-12/run.json).
+
+Method:
+- **Made-up id:** a `/listings/{id}` link the tool did not return in that turn. The prompt requires that link form, so plain numbers ("#1 pick") are never read as ids. A listing named without a link is counted separately as an unlinked mention.
+- **"Unsupported said":** whether the answer names the missing capability as a whole word.
+- **Latency:** per question, request to final answer.
+
+Earlier runs of this section used prompts v1 and v2 and a looser id check (`#N`, `id N`). That check counted ranking numbers as made-up ids and matched "red" inside "offered", so those numbers were not evidence and are replaced by this run.
+
+| Model | Tool precision | Tool recall | Valid first try | Repaired | Filter accuracy | Steps mean/max | Made-up ids | Unlinked | Unsupported said | p50 ms | p95 ms |
+|-------|----------------|-------------|-----------------|----------|-----------------|----------------|-------------|----------|------------------|--------|--------|
+| qwen3.5:9b | 1.000 | 0.958 | 1.000 | none needed | 0.958 | 0.77 / 1 | 1 of 30 | 0 of 30 | 3 of 4 | 3782 | 6816 |
+| gemma4:12b | 1.000 | 0.958 | 1.000 | none needed | 0.917 | 0.77 / 1 | 0 of 30 | 0 of 30 | 1 of 4 | 3683 | 7255 |
+
+### What the numbers say
+
+- **Both models searched exactly when they should, with valid arguments.** Precision is 1.000, and every first call passed `ListingFilterRules`, so the one-repair path was never needed. The offline tests cover it; a harder question set is needed to measure it live.
+- **The one "missed" search per model is the currency question** ("Diesel Audi under 12000 dollars"). Prompt v3 tells the model not to convert another currency and to ask for euros or search without a price. Both models asked instead of searching, which the prompt allows. The label expected a search, so recall 0.958 here reflects a label that disagrees with the prompt, not a model mistake.
+- **qwen3.5:9b linked one listing the search never returned** (as-16, id 3). gemma4:12b linked none.
+- **Saying what the tool cannot do is the weak spot.** qwen3.5:9b said it for 3 of the 4 questions; gemma4:12b for 1 of 4, silently searching "near Munich" as Munich and "red Fiat 500" as any Fiat 500. A rule in the prompt is not enough for the smaller-effort habit of just answering.
+- **gemma4:12b read "from 2018 onwards" as `min_year` 2019.** It applied the prompt's "after 2018 means 2019" rule to a wording that means 2018, so a prompt example became a wrong rule.
+- **No question needed more than one search.** Even the follow-ups ("and only from 2018?") were one call each, because the history carries the previous filters; the 4-step cap was never approached.
+
+### Surprises
+
+- **The scorer, not the models, made the earlier runs look clean or dirty.** A loose id pattern counted "#1" as a listing, and substring matching found "red" in "offered". Fixing the measurement changed the story more than changing the prompt did.
+- **A blank argument used to crash a turn.** Small models send `""` for unused optional arguments; the tool now trims and drops blanks the way HTTP middleware does for a form.
+
+### Interview story
+
+I built a tool-calling assistant where the model never writes a query: it calls one read-only search tool, and the arguments go through the same validation as the public search form. On 30 fixed questions both local models chose the tool correctly and sent valid arguments every time, at about 3.7 s per answer. The interesting failures were not tool calls but honesty about limits. One model mentioned a listing the search had not returned, and the other quietly ignored "near" and "red" instead of saying it could not filter on them. Two of my first findings were caused by my own scorer, so I learned to check the measurement before blaming the model.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

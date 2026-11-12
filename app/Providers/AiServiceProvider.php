@@ -10,8 +10,11 @@ use App\Ai\ConnectionAbortWatcher;
 use App\Ai\FakeStreamProvider;
 use App\Ai\RecordAiRun;
 use App\Ai\RecordEmbeddingsRun;
+use App\Ai\RecordToolStep;
 use App\Contracts\AiRunRepositoryInterface;
+use App\Contracts\AssistantTurnRunnerInterface;
 use App\Repositories\EloquentAiRunRepository;
+use App\Services\AssistantEvalRunner;
 use App\Services\PromptInjectionGuard;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -27,6 +30,8 @@ use Laravel\Ai\Events\EmbeddingsFailed;
 use Laravel\Ai\Events\EmbeddingsGenerated;
 use Laravel\Ai\Events\GeneratingEmbeddings;
 use Laravel\Ai\Events\StreamingAgent;
+use Laravel\Ai\Events\ToolFailed;
+use Laravel\Ai\Events\ToolInvoked;
 
 class AiServiceProvider extends ServiceProvider
 {
@@ -36,6 +41,7 @@ class AiServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(AiRunRepositoryInterface::class, EloquentAiRunRepository::class);
+        $this->app->bind(AssistantTurnRunnerInterface::class, AssistantEvalRunner::class);
         $this->app->scoped(AiRunRecorder::class);
         $this->app->bind(AbortWatcher::class, ConnectionAbortWatcher::class);
         $this->app->singleton(PromptInjectionGuard::class, fn (): PromptInjectionGuard => PromptInjectionGuard::fromFile((string) config('ai.docs.answer.guard')));
@@ -49,13 +55,15 @@ class AiServiceProvider extends ServiceProvider
     }
 
     /**
-     * Log every streamed agent run and every embeddings call to ai_runs.
+     * Log every streamed agent run, its tool calls, and every embeddings call to ai_runs.
      */
     public function boot(): void
     {
         Event::listen(StreamingAgent::class, [RecordAiRun::class, 'onStreaming']);
         Event::listen(AgentStreamed::class, [RecordAiRun::class, 'onStreamed']);
         Event::listen(AgentFailed::class, [RecordAiRun::class, 'onFailed']);
+        Event::listen(ToolInvoked::class, [RecordToolStep::class, 'onInvoked']);
+        Event::listen(ToolFailed::class, [RecordToolStep::class, 'onFailed']);
         Event::listen(GeneratingEmbeddings::class, [RecordEmbeddingsRun::class, 'onGenerating']);
         Event::listen(EmbeddingsGenerated::class, [RecordEmbeddingsRun::class, 'onGenerated']);
         Event::listen(EmbeddingsFailed::class, [RecordEmbeddingsRun::class, 'onFailed']);
@@ -66,6 +74,7 @@ class AiServiceProvider extends ServiceProvider
         RateLimiter::for('cloud-ai', fn (Request $request): Limit => Limit::perMinute((int) config('ai.cloud_per_minute'))->by((string) $request->ip()));
         RateLimiter::for('cloud-ai-global', fn (Request $request): Limit => Limit::perMinute((int) config('ai.cloud_global_per_minute'))->by('all'));
         RateLimiter::for('slow', fn (Request $request): Limit => Limit::perMinute((int) config('services.vinstub.per_minute'))->by((string) $request->ip()));
+        RateLimiter::for('assistant-ask', fn (Request $request): Limit => Limit::perMinute((int) config('ai.assistant.per_minute'))->by((string) $request->ip()));
         RateLimiter::for('semantic-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.semantic_per_minute'))->by((string) $request->ip()));
         RateLimiter::for('nl-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.nl_search.per_minute'))->by((string) $request->ip()));
         RateLimiter::for('photo-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.photo_search.per_minute'))->by((string) $request->ip()));

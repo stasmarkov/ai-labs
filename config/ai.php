@@ -64,6 +64,10 @@ return [
             'provider' => env('AI_DOCS_ANSWER_PROVIDER') ?: null,
             'model' => env('AI_DOCS_ANSWER_MODEL') ?: null,
         ],
+        'assistant' => [
+            'provider' => env('AI_ASSISTANT_PROVIDER') ?: null,
+            'model' => env('AI_ASSISTANT_MODEL') ?: null,
+        ],
         'rag-grader' => [
             'provider' => env('AI_RAG_GRADER_PROVIDER') ?: null,
             'model' => env('AI_RAG_GRADER_MODEL') ?: null,
@@ -252,6 +256,9 @@ return [
     ],
     // guide:end nl-search
 
+    'assistant' => [
+        'per_minute' => filled(env('AI_ASSISTANT_PER_MINUTE')) ? (int) env('AI_ASSISTANT_PER_MINUTE') : 20,
+    ],
     'semantic_per_minute' => filled(env('AI_SEMANTIC_PER_MINUTE')) ? (int) env('AI_SEMANTIC_PER_MINUTE') : 60,
 
     /*
@@ -286,6 +293,7 @@ return [
         'rag_grader' => env('AI_PROMPT_RAG_GRADER') ?: 'rag-grader.v2',
         'photo_vision' => env('AI_PROMPT_PHOTO_VISION') ?: 'photo-vision.v1',
         'photo_best_pick' => env('AI_PROMPT_PHOTO_BEST_PICK') ?: 'photo-best-pick.v1',
+        'buyer_assistant' => env('AI_PROMPT_BUYER_ASSISTANT') ?: 'buyer-assistant.v3',
     ],
     // guide:end prompts
 

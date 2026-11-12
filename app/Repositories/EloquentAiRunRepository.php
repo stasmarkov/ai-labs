@@ -8,40 +8,58 @@ use App\Contracts\AiRunRepositoryInterface;
 use App\DTOs\AiRunDetail;
 use App\DTOs\AiRunRecord;
 use App\DTOs\AiRunSummary;
+use App\DTOs\AiToolStepRecord;
 use App\DTOs\DocsCacheRunCounts;
 use App\Models\AiRun;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 
 final readonly class EloquentAiRunRepository implements AiRunRepositoryInterface
 {
     public function save(AiRunRecord $record): void
     {
-        AiRun::create([
-            'invocation_id' => $record->invocationId,
-            'agent' => $record->agent,
-            'provider' => $record->provider,
-            'model' => $record->model,
-            'prompt_version' => $record->promptVersion,
-            'tokens_in' => $record->tokensIn,
-            'tokens_out' => $record->tokensOut,
-            'ttft_ms' => $record->ttftMs,
-            'latency_ms' => $record->latencyMs,
-            'status' => $record->status,
-            'error_class' => $record->errorClass,
-            'error_message' => $record->errorMessage,
-            'inputs' => $record->inputs,
-            'retrieved_chunk_ids' => $record->retrievedChunkIds,
-            'cited_chunk_ids' => $record->citedChunkIds,
-            'refusal_reason' => $record->refusalReason,
-            'cache_kind' => $record->cacheKind,
-            'cache_similarity' => $record->cacheSimilarity,
-            'cache_entry_id' => $record->cacheEntryId,
-            'saved_latency_ms' => $record->savedLatencyMs,
-            'origin' => $record->origin,
-            'history_turns' => $record->historyTurns,
-            'stopped_after_ms' => $record->stoppedAfterMs,
-            'validation_failed' => $record->validationFailed,
-        ]);
+        DB::transaction(function () use ($record): void {
+            $run = AiRun::create([
+                'invocation_id' => $record->invocationId,
+                'agent' => $record->agent,
+                'provider' => $record->provider,
+                'model' => $record->model,
+                'prompt_version' => $record->promptVersion,
+                'tokens_in' => $record->tokensIn,
+                'tokens_out' => $record->tokensOut,
+                'ttft_ms' => $record->ttftMs,
+                'latency_ms' => $record->latencyMs,
+                'status' => $record->status,
+                'error_class' => $record->errorClass,
+                'error_message' => $record->errorMessage,
+                'inputs' => $record->inputs,
+                'retrieved_chunk_ids' => $record->retrievedChunkIds,
+                'cited_chunk_ids' => $record->citedChunkIds,
+                'refusal_reason' => $record->refusalReason,
+                'cache_kind' => $record->cacheKind,
+                'cache_similarity' => $record->cacheSimilarity,
+                'cache_entry_id' => $record->cacheEntryId,
+                'saved_latency_ms' => $record->savedLatencyMs,
+                'origin' => $record->origin,
+                'history_turns' => $record->historyTurns,
+                'stopped_after_ms' => $record->stoppedAfterMs,
+                'validation_failed' => $record->validationFailed,
+                'tool_steps' => $record->toolSteps === [] ? null : count($record->toolSteps),
+                'tool_errors' => $record->toolSteps === [] ? null : count(array_filter($record->toolSteps, fn (AiToolStepRecord $step): bool => $step->outcome !== 'ok')),
+            ]);
+
+            foreach ($record->toolSteps as $step) {
+                $run->steps()->create([
+                    'position' => $step->position,
+                    'tool' => $step->tool,
+                    'arguments' => $step->arguments,
+                    'outcome' => $step->outcome,
+                    'error' => $step->error,
+                    'result_summary' => $step->resultSummary,
+                    'duration_ms' => $step->durationMs,
+                ]);
+            }
+        });
     }
 
     /**

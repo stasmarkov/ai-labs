@@ -5,6 +5,7 @@ use App\Http\Controllers\ExtractLabPhotoController;
 use App\Http\Controllers\KeepDuplicatePhotoController;
 use App\Http\Controllers\ResetLabSettingController;
 use App\Http\Controllers\SaveLabSettingController;
+use App\Http\Controllers\ShowLabAssistantController;
 use App\Http\Controllers\ShowLabChatController;
 use App\Http\Controllers\ShowLabDescribeController;
 use App\Http\Controllers\ShowLabDocsController;
@@ -37,6 +38,7 @@ Route::middleware(HandleInertiaRequests::class)->prefix('ai')->group(function ()
     Route::get('/semantic', ShowLabSemanticController::class)->name('ai.semantic');
     Route::get('/docs', ShowLabDocsController::class)->name('ai.docs');
     Route::get('/chat', ShowLabChatController::class)->name('ai.chat');
+    Route::get('/assistant', ShowLabAssistantController::class)->name('ai.assistant');
     Route::get('/nl-search', ShowLabNlSearchController::class)->name('ai.nl-search');
     Route::get('/photo-search', ShowLabPhotoSearchController::class)->name('ai.photo-search');
     Route::get('/photos', ShowLabPhotosController::class)->name('ai.photos');

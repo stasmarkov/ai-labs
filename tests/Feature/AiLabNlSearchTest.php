@@ -25,7 +25,7 @@ it('AC-7 the overview lists the NL search page as a ready capability right after
     $this->get('/ai')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->has('capabilities', 8)
+            ->has('capabilities', 9)
             ->where('capabilities.1.key', 'semantic')
             ->where('capabilities.2.key', 'nl-search')
             ->where('capabilities.3.key', 'docs')

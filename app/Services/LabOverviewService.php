@@ -25,6 +25,7 @@ final readonly class LabOverviewService
         ['photos', 'Photos', 'ai.photos', 'ready'],
         ['photo-search', 'Photo search', 'ai.photo-search', 'ready'],
         ['photo-duplicates', 'Duplicate photos', 'ai.photos.duplicates', 'ready'],
+        ['assistant', 'Assistant', 'ai.assistant', 'ready'],
     ];
 
     public function __construct(

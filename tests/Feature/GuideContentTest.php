@@ -8,13 +8,13 @@ use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
 use App\Guides\SnippetResolver;
 
-const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search', 'photo-duplicates'];
+const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search', 'photo-duplicates', 'assistant'];
 
 const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards'];
 
 const ALL_FILLED_GUIDES = [...CAPABILITY_GUIDES, ...FOUNDATION_GUIDES];
 
-const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat', 'ai.photos', 'ai.photo-search', 'ai.photos.duplicates'];
+const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat', 'ai.photos', 'ai.photo-search', 'ai.photos.duplicates', 'ai.assistant'];
 
 /**
  * @return list<string>
@@ -296,4 +296,22 @@ it('AC-8 the photo-duplicates guide has six non-empty tabs, no references, and i
 
     $this->withoutVite();
     $this->get('/ai/guides/photo-duplicates')->assertOk();
+});
+
+it('AC-9 the assistant guide has six non-empty tabs, no references, and its lab page renders', function (): void {
+    $guide = app(GuideRepository::class)->find('assistant');
+    $rendered = app(GuideRenderer::class)->render('assistant');
+
+    expect($guide->kind)->toBe('capability')
+        ->and($guide->planned)->toBeFalse()
+        ->and($rendered['works'])->not->toBeEmpty()
+        ->and($rendered['failures'])->not->toBeEmpty()
+        ->and($rendered['recipes'])->not->toBeEmpty()
+        ->and($rendered['support'])->not->toBeEmpty()
+        ->and($rendered['numbers'])->not->toBeEmpty()
+        ->and($rendered['experiments'])->not->toBeEmpty();
+
+    $this->withoutVite();
+    $this->get('/ai/guides/assistant')->assertOk();
+    $this->get('/ai/assistant')->assertOk();
 });

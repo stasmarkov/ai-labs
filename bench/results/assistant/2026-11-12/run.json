@@ -1,0 +1,1615 @@
+{
+    "metadata": {
+        "generated_at": "2026-11-12T17:51:53+00:00",
+        "question_set_version": "v1",
+        "questions": 30,
+        "models": [
+            "qwen3.5:9b",
+            "gemma4:12b"
+        ],
+        "provider": "ollama",
+        "prompt_version": "buyer-assistant@v3"
+    },
+    "models": [
+        {
+            "model": "qwen3.5:9b",
+            "questions": 30,
+            "failed": 0,
+            "tool_call_precision": {
+                "count": 23,
+                "of": 23,
+                "rate": 1
+            },
+            "tool_call_recall": {
+                "count": 23,
+                "of": 24,
+                "rate": 0.958
+            },
+            "argument_validity_first_try": {
+                "count": 23,
+                "of": 23,
+                "rate": 1
+            },
+            "repair_success": {
+                "count": 0,
+                "of": 0,
+                "rate": null
+            },
+            "filter_accuracy": {
+                "count": 23,
+                "of": 24,
+                "rate": 0.958
+            },
+            "steps": {
+                "mean": 0.77,
+                "max": 1,
+                "limit": 4,
+                "within_limit": true,
+                "over_label": 0
+            },
+            "answers_citing_only_returned_ids": {
+                "count": 29,
+                "of": 30,
+                "rate": 0.967,
+                "hallucinated": 1,
+                "hallucinated_rate": 0.033
+            },
+            "unlinked_mentions": {
+                "count": 0,
+                "of": 30,
+                "rate": 0
+            },
+            "unsupported_mentioned": {
+                "count": 3,
+                "of": 4,
+                "rate": 0.75
+            },
+            "latency_ms": {
+                "count": 30,
+                "p50": 3782,
+                "p95": 6816
+            }
+        },
+        {
+            "model": "gemma4:12b",
+            "questions": 30,
+            "failed": 0,
+            "tool_call_precision": {
+                "count": 23,
+                "of": 23,
+                "rate": 1
+            },
+            "tool_call_recall": {
+                "count": 23,
+                "of": 24,
+                "rate": 0.958
+            },
+            "argument_validity_first_try": {
+                "count": 23,
+                "of": 23,
+                "rate": 1
+            },
+            "repair_success": {
+                "count": 0,
+                "of": 0,
+                "rate": null
+            },
+            "filter_accuracy": {
+                "count": 22,
+                "of": 24,
+                "rate": 0.917
+            },
+            "steps": {
+                "mean": 0.77,
+                "max": 1,
+                "limit": 4,
+                "within_limit": true,
+                "over_label": 0
+            },
+            "answers_citing_only_returned_ids": {
+                "count": 30,
+                "of": 30,
+                "rate": 1,
+                "hallucinated": 0,
+                "hallucinated_rate": 0
+            },
+            "unlinked_mentions": {
+                "count": 0,
+                "of": 30,
+                "rate": 0
+            },
+            "unsupported_mentioned": {
+                "count": 1,
+                "of": 4,
+                "rate": 0.25
+            },
+            "latency_ms": {
+                "count": 30,
+                "p50": 3683,
+                "p95": 7255
+            }
+        }
+    ],
+    "results": [
+        {
+            "id": "as-01",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Audi",
+                        "model": "A4",
+                        "city": "Berlin",
+                        "fuel": "petrol",
+                        "min_year": 2016,
+                        "max_price": 15000,
+                        "limit": 10
+                    },
+                    "outcome": "ok",
+                    "returned_ids": []
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3977
+        },
+        {
+            "id": "as-02",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Tesla",
+                        "model": "Model 3",
+                        "city": "Amsterdam",
+                        "fuel": "electric",
+                        "max_price": 30000
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        7879,
+                        16431
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3433
+        },
+        {
+            "id": "as-03",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Volkswagen",
+                        "model": "Golf",
+                        "city": "Hamburg",
+                        "fuel": "diesel"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        44994,
+                        29378,
+                        11626,
+                        19794,
+                        14654
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3934
+        },
+        {
+            "id": "as-04",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Toyota",
+                        "model": "Corolla",
+                        "fuel": "hybrid",
+                        "min_year": 2021
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        23162,
+                        34644,
+                        29956,
+                        44974,
+                        18621
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3977
+        },
+        {
+            "id": "as-05",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Skoda",
+                        "model": "Octavia",
+                        "city": "Prague",
+                        "min_year": 2015,
+                        "limit": 10
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        24439,
+                        34775,
+                        18047,
+                        6917,
+                        4605,
+                        27892,
+                        28739,
+                        24592,
+                        24268,
+                        26488
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 6639
+        },
+        {
+            "id": "as-06",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Opel",
+                        "fuel": "lpg",
+                        "city": "Dresden"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        8629,
+                        15356,
+                        5393,
+                        45961,
+                        19000
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3691
+        },
+        {
+            "id": "as-07",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Ford",
+                        "model": "Focus",
+                        "fuel": "petrol",
+                        "max_price": 8000,
+                        "limit": 10
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        321,
+                        1897,
+                        43730,
+                        14306,
+                        1986,
+                        12242,
+                        3952,
+                        14300,
+                        21819,
+                        23692
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 5893
+        },
+        {
+            "id": "as-08",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Honda",
+                        "model": "Civic",
+                        "city": "Lyon",
+                        "min_year": 2019
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        41308,
+                        25571,
+                        39763,
+                        42320,
+                        7868
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 4367
+        },
+        {
+            "id": "as-09",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Renault",
+                        "model": "Clio",
+                        "min_year": 2018,
+                        "limit": 10
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        46521,
+                        36365,
+                        31853,
+                        30973,
+                        38092,
+                        16250,
+                        8032,
+                        40333,
+                        37174,
+                        13211
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": true,
+            "latency_ms": 6816
+        },
+        {
+            "id": "as-10",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Volvo",
+                        "model": "XC60",
+                        "city": "Stuttgart",
+                        "fuel": "diesel",
+                        "min_year": 2016,
+                        "limit": 10
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        48986,
+                        43078,
+                        5274,
+                        16997,
+                        45963,
+                        43603,
+                        9637
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 5249
+        },
+        {
+            "id": "as-11",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Peugeot",
+                        "model": "308",
+                        "min_year": 2018,
+                        "limit": 10
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        21059,
+                        47058,
+                        34569,
+                        40050,
+                        15200,
+                        10168,
+                        2568,
+                        46608,
+                        22065,
+                        22615
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 6580
+        },
+        {
+            "id": "as-12",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Mercedes-Benz",
+                        "model": "C-Class",
+                        "min_year": 2020,
+                        "max_price": 35000,
+                        "limit": 10
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        13695,
+                        19044,
+                        46512,
+                        33964,
+                        17883,
+                        37068,
+                        25926,
+                        44623,
+                        6142,
+                        27483
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 6870
+        },
+        {
+            "id": "as-13",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "BMW",
+                        "city": "Munich",
+                        "limit": 10
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        10001,
+                        32772,
+                        10963,
+                        28788,
+                        5924,
+                        13282,
+                        47895,
+                        18445,
+                        3585,
+                        45517
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": false,
+            "latency_ms": 6396
+        },
+        {
+            "id": "as-14",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "fuel": "electric",
+                        "max_price": 20000,
+                        "limit": 10
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        28555,
+                        10190,
+                        38692,
+                        28330,
+                        42507,
+                        13532,
+                        33552,
+                        14807,
+                        31920,
+                        18943
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 6129
+        },
+        {
+            "id": "as-15",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Fiat",
+                        "model": "500",
+                        "limit": 10
+                    },
+                    "outcome": "ok",
+                    "returned_ids": []
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": true,
+            "latency_ms": 2031
+        },
+        {
+            "id": "as-16",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "city": "Vienna",
+                        "fuel": "hybrid",
+                        "min_year": 2019,
+                        "limit": 10
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        29614,
+                        23162,
+                        11804,
+                        21673,
+                        33211,
+                        9185,
+                        19425,
+                        40231,
+                        31929,
+                        37224
+                    ]
+                }
+            ],
+            "hallucinated_ids": [
+                3
+            ],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 6169
+        },
+        {
+            "id": "as-17",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 0,
+            "calls": [],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": true,
+            "latency_ms": 930
+        },
+        {
+            "id": "as-18",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Seat",
+                        "model": "Leon",
+                        "city": "Madrid"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": []
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 1380
+        },
+        {
+            "id": "as-19",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Skoda",
+                        "model": "Octavia",
+                        "city": "Kyiv"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": []
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 1339
+        },
+        {
+            "id": "as-20",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Volkswagen",
+                        "model": "Passat",
+                        "fuel": "diesel"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        41079,
+                        4440,
+                        33216,
+                        32677,
+                        28756
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3525
+        },
+        {
+            "id": "as-21",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Opel",
+                        "model": "Astra",
+                        "max_price": 10000
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        27163,
+                        47014,
+                        23784,
+                        36303,
+                        9557
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3497
+        },
+        {
+            "id": "as-22",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Toyota",
+                        "model": "Yaris",
+                        "city": "Warsaw",
+                        "min_year": 2020
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        16863,
+                        24123,
+                        35245,
+                        7116,
+                        3419
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3782
+        },
+        {
+            "id": "as-23",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "BMW",
+                        "model": "X3",
+                        "city": "Hamburg"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        20893,
+                        38689,
+                        18972,
+                        12659,
+                        35190
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3903
+        },
+        {
+            "id": "as-24",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Honda",
+                        "model": "Jazz",
+                        "fuel": "petrol"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        45530,
+                        19537,
+                        18667,
+                        20123,
+                        47495
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3099
+        },
+        {
+            "id": "as-25",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": false,
+            "steps": 0,
+            "calls": [],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 4431
+        },
+        {
+            "id": "as-26",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": false,
+            "steps": 0,
+            "calls": [],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3146
+        },
+        {
+            "id": "as-27",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": false,
+            "steps": 0,
+            "calls": [],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3344
+        },
+        {
+            "id": "as-28",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": false,
+            "steps": 0,
+            "calls": [],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3126
+        },
+        {
+            "id": "as-29",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": false,
+            "steps": 0,
+            "calls": [],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 1590
+        },
+        {
+            "id": "as-30",
+            "model": "qwen3.5:9b",
+            "status": "completed",
+            "expects_tool": false,
+            "steps": 0,
+            "calls": [],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 1662
+        },
+        {
+            "id": "as-01",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "city": "Berlin",
+                        "fuel": "petrol",
+                        "make": "Audi",
+                        "max_price": 15000,
+                        "min_year": 2016,
+                        "model": "A4"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": []
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 7255
+        },
+        {
+            "id": "as-02",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "city": "Amsterdam",
+                        "fuel": "electric",
+                        "make": "Tesla",
+                        "max_price": 30000,
+                        "model": "Model 3"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        7879,
+                        16431
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 2659
+        },
+        {
+            "id": "as-03",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "city": "Hamburg",
+                        "fuel": "diesel",
+                        "make": "Volkswagen",
+                        "model": "Golf"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        44994,
+                        29378,
+                        11626,
+                        19794,
+                        14654
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3272
+        },
+        {
+            "id": "as-04",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "fuel": "hybrid",
+                        "make": "Toyota",
+                        "min_year": 2021,
+                        "model": "Corolla"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        23162,
+                        34644,
+                        29956,
+                        44974,
+                        18621
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 5533
+        },
+        {
+            "id": "as-05",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "city": "Prague",
+                        "make": "Skoda",
+                        "min_year": 2015,
+                        "model": "Octavia"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        24439,
+                        34775,
+                        18047,
+                        6917,
+                        4605
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3683
+        },
+        {
+            "id": "as-06",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "city": "Dresden",
+                        "fuel": "lpg",
+                        "make": "Opel"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        8629,
+                        15356,
+                        5393,
+                        45961,
+                        19000
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3695
+        },
+        {
+            "id": "as-07",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "fuel": "petrol",
+                        "make": "Ford",
+                        "max_price": 8000,
+                        "model": "Focus"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        321,
+                        1897,
+                        43730,
+                        14306,
+                        1986
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3970
+        },
+        {
+            "id": "as-08",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "city": "Lyon",
+                        "make": "Honda",
+                        "min_year": 2019,
+                        "model": "Civic"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        41308,
+                        25571,
+                        39763,
+                        42320,
+                        7868
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3560
+        },
+        {
+            "id": "as-09",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Renault",
+                        "min_year": 2018,
+                        "model": "Clio"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        46521,
+                        36365,
+                        31853,
+                        30973,
+                        38092
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": true,
+            "latency_ms": 3866
+        },
+        {
+            "id": "as-10",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "city": "Stuttgart",
+                        "fuel": "diesel",
+                        "make": "Volvo",
+                        "min_year": 2016,
+                        "model": "XC60"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        48986,
+                        43078,
+                        5274,
+                        16997,
+                        45963
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 4038
+        },
+        {
+            "id": "as-11",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Peugeot",
+                        "min_year": 2019,
+                        "model": "308"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        21059,
+                        47058,
+                        34569,
+                        40050,
+                        15200
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3745
+        },
+        {
+            "id": "as-12",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "make": "Mercedes-Benz",
+                        "max_price": 35000,
+                        "min_year": 2020,
+                        "model": "C-Class"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        13695,
+                        19044,
+                        46512,
+                        33964,
+                        17883
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 4443
+        },
+        {
+            "id": "as-13",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "city": "Munich",
+                        "make": "BMW"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        10001,
+                        32772,
+                        10963,
+                        28788,
+                        5924
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": false,
+            "latency_ms": 3044
+        },
+        {
+            "id": "as-14",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "fuel": "electric",
+                        "max_price": 20000
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        28555,
+                        10190,
+                        38692,
+                        28330,
+                        42507
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3329
+        },
+        {
+            "id": "as-15",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "limit": 3,
+                        "make": "Fiat",
+                        "model": "500"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": []
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": false,
+            "latency_ms": 1475
+        },
+        {
+            "id": "as-16",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "city": "Vienna",
+                        "fuel": "hybrid",
+                        "min_year": 2019
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        29614,
+                        23162,
+                        11804,
+                        21673,
+                        33211
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3822
+        },
+        {
+            "id": "as-17",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 0,
+            "calls": [],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": false,
+            "latency_ms": 818
+        },
+        {
+            "id": "as-18",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "city": "Madrid",
+                        "make": "Seat",
+                        "model": "Leon"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": []
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 1351
+        },
+        {
+            "id": "as-19",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "city": "Kyiv",
+                        "make": "Skoda",
+                        "model": "Octavia"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": []
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 1346
+        },
+        {
+            "id": "as-20",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "fuel": "diesel",
+                        "make": "Volkswagen",
+                        "model": "Passat"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        41079,
+                        4440,
+                        33216,
+                        32677,
+                        28756
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3270
+        },
+        {
+            "id": "as-21",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "max_price": 10000,
+                        "make": "Opel",
+                        "model": "Astra"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        27163,
+                        47014,
+                        23784,
+                        36303,
+                        9557
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3449
+        },
+        {
+            "id": "as-22",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "city": "Warsaw",
+                        "make": "Toyota",
+                        "min_year": 2020,
+                        "model": "Yaris"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        16863,
+                        24123,
+                        35245,
+                        7116,
+                        3419
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3770
+        },
+        {
+            "id": "as-23",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "city": "Hamburg",
+                        "make": "BMW",
+                        "model": "X3"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        20893,
+                        38689,
+                        18972,
+                        12659,
+                        35190
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3616
+        },
+        {
+            "id": "as-24",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": true,
+            "steps": 1,
+            "calls": [
+                {
+                    "arguments": {
+                        "fuel": "petrol",
+                        "make": "Honda",
+                        "model": "Jazz"
+                    },
+                    "outcome": "ok",
+                    "returned_ids": [
+                        45530,
+                        19537,
+                        18667,
+                        20123,
+                        47495
+                    ]
+                }
+            ],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3745
+        },
+        {
+            "id": "as-25",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": false,
+            "steps": 0,
+            "calls": [],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 5114
+        },
+        {
+            "id": "as-26",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": false,
+            "steps": 0,
+            "calls": [],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 3905
+        },
+        {
+            "id": "as-27",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": false,
+            "steps": 0,
+            "calls": [],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 7768
+        },
+        {
+            "id": "as-28",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": false,
+            "steps": 0,
+            "calls": [],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 5435
+        },
+        {
+            "id": "as-29",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": false,
+            "steps": 0,
+            "calls": [],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 2360
+        },
+        {
+            "id": "as-30",
+            "model": "gemma4:12b",
+            "status": "completed",
+            "expects_tool": false,
+            "steps": 0,
+            "calls": [],
+            "hallucinated_ids": [],
+            "unlinked_mentions": [],
+            "unsupported_mentioned": null,
+            "latency_ms": 2291
+        }
+    ]
+}

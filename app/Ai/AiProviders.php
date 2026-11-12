@@ -31,13 +31,13 @@ final readonly class AiProviders
 
     public const SOURCE_DEFAULT = 'default';
 
-    private const TEXT_FEATURES = ['describe', 'nl-search', 'docs-answer', 'rag-grader', 'photo-vision'];
+    private const TEXT_FEATURES = ['describe', 'nl-search', 'docs-answer', 'rag-grader', 'photo-vision', 'assistant'];
 
     /** Text features whose default model is the provider's vision model, when its entry names one. */
     private const VISION_FEATURES = ['photo-vision'];
 
     /** Features whose model may be chosen per request by the lab selector; the rest always run as configured. */
-    public const OVERRIDABLE_FEATURES = ['describe', 'nl-search', 'docs-answer'];
+    public const OVERRIDABLE_FEATURES = ['describe', 'nl-search', 'docs-answer', 'assistant'];
 
     private const EMBEDDING_FEATURES = ['embeddings-listings', 'embeddings-docs'];
 

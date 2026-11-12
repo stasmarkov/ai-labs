@@ -113,6 +113,16 @@ ddev artisan photos:duplicates --judge --wait     # group by the cutoff, judge e
 
 The review page is `/ai/photos/duplicates`. The cutoff is `AI_PHOTO_DUPLICATE_CUTOFF`. How it works: `/ai/guides/photo-duplicates`.
 
+## Buyer assistant
+
+`/ai/assistant` is a chat where the model decides when to search the listings. It has one read-only tool, `SearchListings`, whose arguments go through the same rules as `/listings` and then into the same search service. A bad call gets one repair, a question may use at most 4 searches, and every call is logged as a step. The stream is `POST /api/assistant/ask`; the lab shows each call and result in a timeline.
+
+```sh
+ddev artisan assistant:eval --models=qwen3.5:9b   # 30 questions: tool precision and recall, argument validity, steps, unknown ids
+```
+
+The provider and model come from the `assistant` feature on `/ai/settings`. How it works: `/ai/guides/assistant`.
+
 ## History
 
 The project began as a PHP server comparison (five web servers and worker mode; only the FrankenPHP family is kept) on a car marketplace, and was renamed ai-lab on 2026-11-10 when it became a study lab for AI features in Laravel. The server work stays below and in [BENCHMARKS.md](BENCHMARKS.md). The old DDEV URL is gone; use https://ai-lab.ddev.site.

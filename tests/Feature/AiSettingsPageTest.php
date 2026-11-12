@@ -55,14 +55,15 @@ it('AC-4 the page lists every feature with enabled providers and the right model
 
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('Lab/Settings', false)
-        ->has('rows', 8)
+        ->has('rows', 9)
         ->where('rows.0.feature', 'describe')
         ->where('rows.0.effective.source', 'default')
         ->where('rows.0.providers', fn ($providers) => collect($providers)->pluck('name')->contains('ollama')
             && collect($providers)->firstWhere('name', 'ollama')['models'] === ['qwen3.5:9b', 'gemma4:12b']
             && ! collect($providers)->pluck('name')->contains('openai'))
-        ->where('rows.5.feature', 'embeddings-listings')
-        ->where('rows.5.providers', fn ($providers) => collect($providers)->pluck('name')->all() === ['ollama']
+        ->where('rows.5.feature', 'assistant')
+        ->where('rows.6.feature', 'embeddings-listings')
+        ->where('rows.6.providers', fn ($providers) => collect($providers)->pluck('name')->all() === ['ollama']
             && collect($providers)->firstWhere('name', 'ollama')['models'] === ['bge-m3']));
 
     expect($response->getContent())->not->toContain('sk-secret-anthropic-value');
@@ -199,17 +200,17 @@ it('AC-5 an embeddings row carries the counts, the re-index command and a warnin
 
     $this->get('/ai/settings')->assertInertia(fn (Assert $page) => $page
         ->where('rows.0.index', null)
-        ->where('rows.5.feature', 'embeddings-listings')
-        ->where('rows.5.index.total', 3)
-        ->where('rows.5.index.indexed', 2)
-        ->where('rows.5.index.current', 1)
-        ->where('rows.5.index.foreign', 1)
-        ->where('rows.5.index.warning', true)
-        ->where('rows.5.index.command', 'ddev artisan listings:embed --fresh --wait')
-        ->where('rows.6.feature', 'embeddings-docs')
-        ->where('rows.6.index.indexed', 0)
-        ->where('rows.6.index.warning', false)
-        ->where('rows.6.index.command', 'ddev artisan docs:index'));
+        ->where('rows.6.feature', 'embeddings-listings')
+        ->where('rows.6.index.total', 3)
+        ->where('rows.6.index.indexed', 2)
+        ->where('rows.6.index.current', 1)
+        ->where('rows.6.index.foreign', 1)
+        ->where('rows.6.index.warning', true)
+        ->where('rows.6.index.command', 'ddev artisan listings:embed --fresh --wait')
+        ->where('rows.7.feature', 'embeddings-docs')
+        ->where('rows.7.index.indexed', 0)
+        ->where('rows.7.index.warning', false)
+        ->where('rows.7.index.command', 'ddev artisan docs:index'));
 });
 
 it('AC-2 the navigation lists Settings only where the settings are available', function (): void {
@@ -300,30 +301,30 @@ it('AC-5 after saving another embeddings model the row counts 0 current vectors 
     $this->put('/ai/settings/embeddings-listings', [...$choice, 'reindex_acknowledged' => '1'])->assertSessionHasNoErrors();
 
     $this->get('/ai/settings')->assertInertia(fn (Assert $page) => $page
-        ->where('rows.5.feature', 'embeddings-listings')
-        ->where('rows.5.effective.model', 'text-embedding-3-small')
-        ->where('rows.5.index.current', 0)
-        ->where('rows.5.index.foreign', 2)
-        ->where('rows.5.index.warning', true)
-        ->where('rows.5.index.command', 'ddev artisan listings:embed --fresh --wait'));
+        ->where('rows.6.feature', 'embeddings-listings')
+        ->where('rows.6.effective.model', 'text-embedding-3-small')
+        ->where('rows.6.index.current', 0)
+        ->where('rows.6.index.foreign', 2)
+        ->where('rows.6.index.warning', true)
+        ->where('rows.6.index.command', 'ddev artisan listings:embed --fresh --wait'));
 });
 
 it('AC-7 the embeddings-photos row offers only the image encoder and its models', function (): void {
     $this->get('/ai/settings')->assertInertia(fn (Assert $page) => $page
-        ->where('rows.7.feature', 'embeddings-photos')
-        ->where('rows.7.kind', 'image-embeddings')
-        ->where('rows.7.effective.provider', 'photo-encoder')
-        ->where('rows.7.effective.model', 'openai/clip-vit-base-patch32')
-        ->where('rows.7.providers', fn ($providers) => collect($providers)->pluck('name')->all() === ['photo-encoder']
+        ->where('rows.8.feature', 'embeddings-photos')
+        ->where('rows.8.kind', 'image-embeddings')
+        ->where('rows.8.effective.provider', 'photo-encoder')
+        ->where('rows.8.effective.model', 'openai/clip-vit-base-patch32')
+        ->where('rows.8.providers', fn ($providers) => collect($providers)->pluck('name')->all() === ['photo-encoder']
             && collect($providers)->firstWhere('name', 'photo-encoder')['models'] === ['openai/clip-vit-base-patch32', 'laion/CLIP-ViT-B-32-laion2B-s34B-b79K'])
-        ->where('rows.7.index.table', 'listing_photos')
-        ->where('rows.7.index.command', 'ddev artisan photos:embed --fresh --wait'));
+        ->where('rows.8.index.table', 'listing_photos')
+        ->where('rows.8.index.command', 'ddev artisan photos:embed --fresh --wait'));
 });
 
 it('AC-7 the text and embeddings rows do not offer the image encoder', function (): void {
     $this->get('/ai/settings')->assertInertia(fn (Assert $page) => $page
         ->where('rows.0.providers', fn ($providers) => ! collect($providers)->pluck('name')->contains('photo-encoder'))
-        ->where('rows.5.providers', fn ($providers) => ! collect($providers)->pluck('name')->contains('photo-encoder')));
+        ->where('rows.6.providers', fn ($providers) => ! collect($providers)->pluck('name')->contains('photo-encoder')));
 });
 
 it('AC-7 changing the photo encoder model needs the re-index acknowledgement', function (): void {

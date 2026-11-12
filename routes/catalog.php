@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AskAssistantController;
 use App\Http\Controllers\AskDocsController;
 use App\Http\Controllers\DescribeListingController;
 use App\Http\Controllers\ListListingsController;
@@ -46,6 +47,9 @@ Route::get('/api/docs/search', SearchDocsController::class)
 Route::post('/api/docs/ask', AskDocsController::class)
     ->middleware(['throttle:docs-ask', LimitCloudAi::class.':docs-answer,embeddings-docs', AddServerTimingHeader::class])
     ->name('docs.ask');
+Route::post('/api/assistant/ask', AskAssistantController::class)
+    ->middleware(['throttle:assistant-ask', LimitCloudAi::class.':assistant', AddServerTimingHeader::class])
+    ->name('assistant.ask');
 Route::get('/exports/{id}', ServeExportController::class)
     ->where('id', ExportFileService::ID_PATTERN)
     ->middleware([EnsureDebugRoutes::class, 'throttle:exports'])

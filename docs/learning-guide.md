@@ -616,15 +616,18 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`RagGraderAgent`](../app/Ai/RagGraderAgent.php) | Grades an answer's correctness and groundedness (0–2) with structured output; prompt `rag-grader.v2.md` | SL-33 |
 | [`PhotoVisionAgent`](../app/Ai/PhotoVisionAgent.php) | Sends one stored photo to the vision model and asks for caption, tags, colours, body type, damage and people count; prompt `photo-vision.v1.md`, feature `photo-vision` | SL-27 |
 | [`PhotoBestPickAgent`](../app/Ai/PhotoBestPickAgent.php) | Sends all photos of a duplicate group (1–6 images, each introduced by `Photo id <id>:`) in one call and asks for the best photo id, reasons and an issue per other photo; prompt `photo-best-pick.v1.md`, feature `photo-vision` | SL-39 |
+| [`BuyerAssistantAgent`](../app/Ai/BuyerAssistantAgent.php) | Tool-calling agent: one read-only tool, [`SearchListings`](../app/Ai/Tools/SearchListings.php), runs the existing listings search on arguments checked by `ListingFilterRules`; at most 4 searches and 10 listings per question; prompt `buyer-assistant.v2.md`, feature `assistant` | SL-25 |
 | [`OllamaVisionModels`](../app/Ai/OllamaVisionModels.php) | Checks that a model is installed on Ollama and reports the `vision` capability, so `photos:extract --model` refuses text-only models | SL-27 |
 | [`PhotoEncoderClient`](../app/Ai/PhotoEncoderClient.php) | Sends listing photos to the local image-encoder sidecar as base64 data URLs, 16 per call, and checks every vector against the configured 512 dimensions; feature `embeddings-photos`, provider `photo-encoder` | SL-36 |
 | [`ListingFilterAgent`](../app/Ai/ListingFilterAgent.php) | Turns a plain-language car search into filter fields plus an `unsupported` list with structured output; prompt `listing-filters.v1.md` | SL-23 |
 | [`SseProtocol`](../app/Ai/SseProtocol.php) | One `data:` line per SDK event, then `[DONE]`; masks provider errors; drains the generator so FrankenPHP workers send a body | SL-20 |
 | [`AbortWatcher`](../app/Ai/AbortWatcher.php), [`ConnectionAbortWatcher`](../app/Ai/ConnectionAbortWatcher.php) | Tells the stream whether the client has gone; checked after every flush so a Stop ends the model call and writes a `stopped` row | SL-46 |
 | [`DocsAnswerProtocol`](../app/Ai/DocsAnswerProtocol.php) | The answer stream: `sources` first, output guard on every delta, reasoning dropped, `citations` last | SL-45 |
+| [`AssistantProtocol`](../app/Ai/AssistantProtocol.php) | The assistant stream: the SDK events as the chat sends them, with the tool loop as `tool_call`, `tool_result` and `tool_error`; reasoning dropped | SL-25 |
 | [`SseEventsResponse`](../app/Ai/SseEventsResponse.php) | The same framing for outcomes that never call the model (`no_context`, input refusal) | SL-45 |
 | [`AiRunRecorder`](../app/Ai/AiRunRecorder.php) | Times each run (start, first token, end) and writes the `ai_runs` row; also writes rows for refused and `no_context` outcomes | SL-20, SL-45 |
 | [`RecordAiRun`](../app/Ai/RecordAiRun.php) | Listens to the SDK's streaming events and drives the recorder | SL-20 |
+| [`RecordToolStep`](../app/Ai/RecordToolStep.php) | Listens to the SDK's tool events and gives the recorder one step per tool call, the arguments and a result summary | SL-25 |
 | [`RecordEmbeddingsRun`](../app/Ai/RecordEmbeddingsRun.php) | The same for embeddings calls, so query and indexing embeddings are logged | SL-24 |
 | [`OutputGuard`](../app/Ai/OutputGuard.php) | Detects a leaked prompt: the canary or 12 copied prompt words not found in the context | SL-45 |
 | [`CanaryGenerator`](../app/Ai/CanaryGenerator.php) | Makes the random `ap-canary-…` string; tests pass a fixed one | SL-45 |
@@ -713,6 +716,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`similar-photos.php`](../resources/guides/similar-photos.php) | The capability guide behind `/ai/guides/similar-photos` | SL-36 |
 | [`photo-search.php`](../resources/guides/photo-search.php) | The capability guide behind `/ai/guides/photo-search` | SL-37 |
 | [`photo-duplicates.php`](../resources/guides/photo-duplicates.php) | The capability guide behind `/ai/guides/photo-duplicates` | SL-39 |
+| [`assistant.php`](../resources/guides/assistant.php) | The capability guide behind `/ai/guides/assistant` | SL-25 |
 | [`DuplicateReviewService`](../app/Services/DuplicateReviewService.php), [`DuplicateReviewRepositoryInterface`](../app/Contracts/DuplicateReviewRepositoryInterface.php), [`EloquentDuplicateReviewRepository`](../app/Repositories/EloquentDuplicateReviewRepository.php), [`ShowLabPhotoDuplicatesController`](../app/Http/Controllers/ShowLabPhotoDuplicatesController.php), [`KeepDuplicatePhotoController`](../app/Http/Controllers/KeepDuplicatePhotoController.php), [`UndoDuplicateReviewController`](../app/Http/Controllers/UndoDuplicateReviewController.php), [`PhotoDuplicates.vue`](../resources/js/ai/Pages/Lab/PhotoDuplicates.vue) | The review page `/ai/photos/duplicates`: groups, the model's pick, keep, pick another and undo; marks only, nothing is deleted | SL-39 |
 | [`PhotoTextSearchService`](../app/Services/PhotoTextSearchService.php), [`PhotoTextSearchResult`](../app/DTOs/PhotoTextSearchResult.php), [`PhotoTextSearchRepositoryInterface`](../app/Contracts/PhotoTextSearchRepositoryInterface.php), [`EloquentPhotoTextSearchRepository`](../app/Repositories/EloquentPhotoTextSearchRepository.php) | Text to photos: validate, guard, encode the templated text, nearest 40, one per listing, cutoff, cache | SL-37 |
 | [`PhotoSearchRefusedException`](../app/Exceptions/PhotoSearchRefusedException.php), [`PhotoSearchUnavailableException`](../app/Exceptions/PhotoSearchUnavailableException.php), [`PhotoTextSearchRequest`](../app/Http/Requests/PhotoTextSearchRequest.php), [`PhotoTextSearchController`](../app/Http/Controllers/PhotoTextSearchController.php) | `GET /api/photos/search` and its 422, 409 and 503 answers | SL-37 |
@@ -1269,6 +1273,28 @@ Neither model produced a 422 (0 of 40). The first run scored 0.400 for both mode
 **In this repo.** Code: [`ListingFilterAgent`](../app/Ai/ListingFilterAgent.php), [`NlSearchService`](../app/Services/NlSearchService.php), [`NlSearchController`](../app/Http/Controllers/NlSearchController.php), [`ListingFilterRules`](../app/Rules/ListingFilterRules.php), [`NlEvalCommand`](../app/Console/Commands/NlEvalCommand.php), [`NlEvalScorer`](../app/Services/NlEvalScorer.php); prompt [`listing-filters.v1.md`](../resources/prompts/listing-filters.v1.md); eval set [`queries.v1.jsonl`](../bench/nl-search/queries.v1.jsonl); results [`bench/results/nl-search/2026-11-09/`](../bench/results/nl-search/2026-11-09/). Tests: [`NlSearchTest`](../tests/Feature/NlSearchTest.php) (one per criterion, with faked structured output), [`NlEvalCommandTest`](../tests/Feature/NlEvalCommandTest.php), [`AiLabNlSearchTest`](../tests/Feature/AiLabNlSearchTest.php). Spec: [`.ai/specs/spec-20261109-1213-nl-search/`](../.ai/specs/spec-20261109-1213-nl-search/).
 
 **Read next.** [Laravel AI SDK: structured output](https://laravel.com/docs/13.x/ai-sdk) · [Ollama: structured outputs](https://ollama.com/blog/structured-outputs) · [OWASP: LLM01 prompt injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/)
+
+---
+
+## 25. A model that decides when to search: tool calling
+
+**What it is.** Section 24 calls the model once and treats the reply as data. Here the model chooses: `/ai/assistant` gives it one tool, `SearchListings`, and it may answer directly or ask for a search first. The SDK runs the loop: model, tool call, tool result, model again, until there is an answer. The model never touches the database; it only proposes arguments.
+
+**One question, step by step.**
+1. `AskAssistantController` validates the request and `PromptInjectionGuard` checks the question and every earlier `user` turn **before** any model call. A hit answers one `refused` event and logs a row.
+2. [`BuyerAssistantAgent`](../app/Ai/BuyerAssistantAgent.php) declares the tool; the tool itself refuses a fifth search (`SearchListings::MAX_CALLS`), and the SDK step cap leaves room for the answer and one repair. The prompt is `buyer-assistant@v2`.
+3. When the model asks for a search, [`SearchListings`](../app/Ai/Tools/SearchListings.php) validates the arguments with [`ListingFilterRules`](../app/Rules/ListingFilterRules.php), the rules `/listings` uses, and passes them to the same search service. Values reach SQL only as bound parameters. At most 10 listings come back, as compact summaries.
+4. Invalid arguments are not run. The field errors go back to the model as a `tool_error`, and it gets one repair. A second invalid call ends the tool for that question.
+5. The stream carries `tool_call`, `tool_result` and `tool_error` next to the chat's own events ([`AssistantProtocol`](../app/Ai/AssistantProtocol.php)). Stop uses the same abort watcher as section 18.
+6. [`RecordToolStep`](../app/Ai/RecordToolStep.php) stores each call as an `ai_tool_steps` row; the `ai_runs` row counts `tool_steps` and `tool_errors`.
+
+**Tools are an attack surface.** The tool carries the `ReadOnlyTool` marker, and the agent's tool list is typed to accept only marked tools. Arguments from the model are untrusted input like a user's, so they get the same validation, not a shortcut.
+
+**How it is measured.** `assistant:eval` plays 30 questions from `bench/assistant/questions.v1.jsonl` (18 searches, 6 follow-ups that need two searches, 6 that need no tool) and reports tool-call precision and recall, argument validity on the first try, repair success, filter accuracy, steps, latency, and the share of answers that mention a listing id the tool did not return. A made-up id is a `/listings/{id}` link the tool did not return; the prompt requires that link form, so plain numbers such as "#1 pick" never count. A listing named without a link ("listing 12") is reported separately as an unlinked mention. It exits with failure if any question used more than 4 steps.
+
+**In this repo.** Code: [`BuyerAssistantAgent`](../app/Ai/BuyerAssistantAgent.php), [`SearchListings`](../app/Ai/Tools/SearchListings.php), [`AssistantProtocol`](../app/Ai/AssistantProtocol.php), [`RecordToolStep`](../app/Ai/RecordToolStep.php), [`AskAssistantController`](../app/Http/Controllers/AskAssistantController.php), [`AssistantEvalCommand`](../app/Console/Commands/AssistantEvalCommand.php). Tests: [`BuyerAssistantToolTest`](../tests/Feature/BuyerAssistantToolTest.php), [`BuyerAssistantAgentTest`](../tests/Feature/BuyerAssistantAgentTest.php), [`AssistantStepLogTest`](../tests/Feature/AssistantStepLogTest.php), [`AssistantEndpointTest`](../tests/Feature/AssistantEndpointTest.php), [`AssistantEvalTest`](../tests/Feature/AssistantEvalTest.php). Spec: [`.ai/specs/spec-20261112-1708-buyer-assistant/`](../.ai/specs/spec-20261112-1708-buyer-assistant/).
+
+**Read next.** [Laravel AI SDK: tools](https://laravel.com/docs/13.x/ai-sdk) · [OWASP: LLM06 excessive agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/)
 
 ---
 

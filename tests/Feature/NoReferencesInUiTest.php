@@ -47,6 +47,7 @@ function labUiPaths(): array
         '/ai/nl-search',
         '/ai/docs',
         '/ai/chat',
+        '/ai/assistant',
         '/ai/photos',
         '/ai/photo-search',
         '/ai/photos/duplicates',
