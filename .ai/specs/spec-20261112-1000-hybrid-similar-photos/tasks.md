@@ -43,7 +43,7 @@
     - Gates: full suite 2013 tests green, Pint passed, PHPStan no errors, `npm run typecheck` and `npm run build` clean.
     - MNC-4: `bench/asset-fingerprint.sh` prints `app-DNob7CFE.css` (176bae5b...) and `app-PTzu1QaN.js` (7fbc3860...), identical to BENCHMARKS.md.
     - MNC-3: `PARITY_INSECURE=1 bench/parity.sh capture` changed only the `captured=` line of `bench/parity/frankenphp.txt` (restored, not committed).
-    - NFR-1: within budget (above). `bench/run.sh ping --quick` runs after the commit, see the commit report.
+    - NFR-1: within budget (above). `bench/run.sh ping --quick` ran on the clean tree after commit e05f5af (frankenphp, 1 repeat, spread 0%, raw file under `bench/results/raw/2026-11-12/frankenphp/`, gitignored).
 
 ## Traceability
 
