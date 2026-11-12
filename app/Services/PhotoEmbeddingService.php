@@ -7,13 +7,18 @@ namespace App\Services;
 use App\Ai\AiProviders;
 use App\Ai\AiRunRecorder;
 use App\Ai\PhotoEncoderClient;
+use App\Ai\PhotoVisionAgent;
 use App\Contracts\ListingPhotoRepositoryInterface;
+use App\DTOs\PhotoCaptionRow;
 use App\DTOs\PhotoEmbedding;
 use App\DTOs\PhotoEmbedProgress;
 use App\DTOs\PhotoEmbedRun;
+use App\DTOs\PhotoExtractionRequest;
+use App\DTOs\PhotoTextEmbedding;
 use App\Exceptions\EmbeddingDimensionsException;
 use App\Exceptions\PhotoEncoderException;
 use App\Jobs\EmbedPhotosBatchJob;
+use App\Jobs\EmbedPhotoTextsBatchJob;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -25,6 +30,8 @@ final readonly class PhotoEmbeddingService
     public const FEATURE = 'embeddings-photos';
 
     public const AGENT = 'PhotoEncoder';
+
+    public const TEXT_AGENT = 'PhotoTextEncoder';
 
     public const VECTOR_DIMENSIONS = 512;
 
@@ -38,6 +45,7 @@ final readonly class PhotoEmbeddingService
         private AiProviders $providers,
         private AiRunRecorder $recorder,
         private SimilarPhotosService $similar,
+        private PhotoTextSearchService $textSearch,
     ) {}
 
     public function label(): string
@@ -182,6 +190,123 @@ final readonly class PhotoEmbeddingService
         return $stored;
     }
 
+    /**
+     * Queue one job per batch of photos whose caption vector is missing, made by another label or from another text.
+     * Photos that lost their caption (a new vision model or prompt version without a completed extraction) get a null
+     * vector now.
+     */
+    public function dispatchText(?int $limit, bool $fresh): PhotoEmbedRun
+    {
+        $startedAt = CarbonImmutable::now();
+        $label = $this->label();
+        $changed = $fresh ? $this->photos->clearTextEmbeddingsInScope($limit) : 0;
+
+        $rows = $this->photos->captionRows($this->captionRequest(), $limit);
+        $lost = array_map(
+            fn (PhotoCaptionRow $row): int => $row->photoId,
+            array_filter($rows, fn (PhotoCaptionRow $row): bool => $row->caption === null && ($row->hasTextVector || $row->textHash !== null)),
+        );
+        $changed += $this->photos->clearTextEmbeddings(array_values($lost));
+
+        if ($changed > 0) {
+            $this->similar->invalidateText();
+        }
+
+        $ids = $this->staleTextIds($rows, $label);
+        $batches = array_chunk($ids, $this->batchSize());
+        $run = new PhotoEmbedRun((string) Str::uuid(), $startedAt, count($ids), count($batches));
+
+        foreach ($batches as $photoIds) {
+            EmbedPhotoTextsBatchJob::dispatch($photoIds, $run->id);
+        }
+
+        return $run;
+    }
+
+    /**
+     * How many of the first $limit photos have no caption from the current extraction, so no text vector.
+     */
+    public function withoutCaption(?int $limit): int
+    {
+        return count(array_filter($this->photos->captionRows($this->captionRequest(), $limit), fn (PhotoCaptionRow $row): bool => $row->caption === null));
+    }
+
+    /**
+     * Encode the still-stale captions of one batch in one encoder call and store their vectors. An encoder failure
+     * writes a failed ai_runs row and leaves the photos as they were.
+     *
+     * @param  list<int>  $photoIds
+     * @return int the number of vectors stored
+     */
+    public function embedTextBatch(array $photoIds, ?string $runId = null): int
+    {
+        $label = $this->label();
+        $stored = 0;
+        $failed = 0;
+
+        try {
+            $stale = array_values(array_filter(
+                $this->photos->captionRowsFor($this->captionRequest(), $photoIds),
+                fn (PhotoCaptionRow $row): bool => $row->caption !== null && $this->isTextStale($row, $label),
+            ));
+
+            if ($stale !== []) {
+                $choice = $this->providers->configured(self::FEATURE);
+                $startedAt = hrtime(true);
+
+                try {
+                    $texts = array_map(fn (PhotoCaptionRow $row): string => $this->textSearch->prompt((string) $row->caption), $stale);
+                    $vectors = $this->encoder->embedTexts($texts);
+                    $embeddings = [];
+
+                    foreach ($stale as $index => $row) {
+                        $embeddings[] = new PhotoTextEmbedding($row->photoId, $vectors[$index], hash('sha256', $texts[$index]));
+                    }
+
+                    $stored = $this->photos->storeTextEmbeddings($embeddings, $label, CarbonImmutable::now());
+
+                    if ($stored > 0) {
+                        $this->similar->invalidateText();
+                    }
+
+                    $exception = null;
+                } catch (Throwable $e) {
+                    $failed = count($stale);
+                    $exception = $e;
+                }
+
+                $this->recorder->recordRun(
+                    $exception === null ? 'completed' : 'failed',
+                    self::TEXT_AGENT,
+                    $choice->provider,
+                    $choice->model,
+                    null,
+                    intdiv(hrtime(true) - $startedAt, 1_000_000),
+                    null,
+                    invocationId: $runId === null ? null : self::INVOCATION_PREFIX.$runId.':'.substr(str_replace('-', '', (string) Str::uuid()), 0, 16),
+                    exception: $exception,
+                    inputs: count($stale),
+                );
+            }
+        } catch (Throwable $e) {
+            $failed = count($photoIds);
+
+            throw $e;
+        } finally {
+            if ($runId !== null) {
+                $this->count($runId, 'settled', count($photoIds));
+                $this->count($runId, 'failed', $failed);
+            }
+        }
+
+        return $stored;
+    }
+
+    public function textEmbeddedSince(CarbonImmutable $since): int
+    {
+        return $this->photos->countTextEmbeddedSince($since);
+    }
+
     public function progress(PhotoEmbedRun $run): PhotoEmbedProgress
     {
         return new PhotoEmbedProgress(
@@ -194,6 +319,35 @@ final readonly class PhotoEmbeddingService
     public function embeddedSince(CarbonImmutable $since): int
     {
         return $this->photos->countEmbeddedSince($since);
+    }
+
+    /**
+     * The model and prompt version that wrote the captions in use: the effective photo-vision choice.
+     */
+    private function captionRequest(): PhotoExtractionRequest
+    {
+        $choice = $this->providers->configured('photo-vision');
+
+        return new PhotoExtractionRequest($choice->provider, $choice->model, (new PhotoVisionAgent($choice->model))->promptVersion());
+    }
+
+    /**
+     * @param  list<PhotoCaptionRow>  $rows
+     * @return list<int>
+     */
+    private function staleTextIds(array $rows, string $label): array
+    {
+        return array_values(array_map(
+            fn (PhotoCaptionRow $row): int => $row->photoId,
+            array_filter($rows, fn (PhotoCaptionRow $row): bool => $row->caption !== null && $this->isTextStale($row, $label)),
+        ));
+    }
+
+    private function isTextStale(PhotoCaptionRow $row, string $label): bool
+    {
+        return ! $row->hasTextVector
+            || $row->textModel !== $label
+            || $row->textHash !== hash('sha256', $this->textSearch->prompt((string) $row->caption));
     }
 
     /**

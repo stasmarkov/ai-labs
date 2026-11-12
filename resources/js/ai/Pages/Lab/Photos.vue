@@ -29,6 +29,7 @@ interface SimilarMatch {
     href: string;
     similarity: number;
     same_make_model: boolean;
+    parts?: { image: number; caption: number | null; image_only: boolean };
 }
 
 interface SimilarStrip {
@@ -38,6 +39,11 @@ interface SimilarStrip {
     min_score: number;
     near_duplicate_cutoff: number;
     matches: SimilarMatch[];
+}
+
+interface HybridStrip extends SimilarStrip {
+    w: number | null;
+    coverage: { captioned: number; total: number } | null;
 }
 
 interface PhotoDetail extends PhotoItem {
@@ -60,10 +66,13 @@ const props = defineProps<{
     pageUrl: string;
     extractUrl: string;
     statusUrl: string;
+    similarUrl: string;
+    hybridWeight: number;
     idPlaceholder: string;
 }>();
 
 const POLL_MS = 2000;
+const SLIDER_DEBOUNCE_MS = 250;
 /** Failed status reads in a row before polling gives up; each retry waits twice as long as the one before. */
 const MAX_POLL_FAILURES = 5;
 
@@ -74,10 +83,27 @@ const busy = ref(false);
 let timer: ReturnType<typeof setTimeout> | null = null;
 let pollFailures = 0;
 
+const weight = ref(props.hybridWeight);
+const hybrid = ref<HybridStrip | null>(null);
+const hybridMessage = ref<string | null>(null);
+const hybridBusy = ref(false);
+let sliderTimer: ReturnType<typeof setTimeout> | null = null;
+let hybridRequest = 0;
+
 watch(() => props.selected, (next) => {
     detail.value = next;
     message.value = null;
     schedule();
+});
+
+watch(() => props.selected?.id, () => void loadHybrid(), { immediate: true });
+
+watch(weight, () => {
+    if (sliderTimer !== null) {
+        clearTimeout(sliderTimer);
+    }
+
+    sliderTimer = setTimeout(() => void loadHybrid(), SLIDER_DEBOUNCE_MS);
 });
 
 const inFlight = computed(() => detail.value?.status === 'queued' || detail.value?.status === 'running');
@@ -139,6 +165,55 @@ function csrfToken(): string {
     const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
 
     return match ? decodeURIComponent(match[1]) : '';
+}
+
+/** The newest slider position wins: an older answer that arrives late is dropped. */
+async function loadHybrid(): Promise<void> {
+    const photo = props.selected;
+
+    if (photo === null || photo === undefined) {
+        hybrid.value = null;
+
+        return;
+    }
+
+    const request = ++hybridRequest;
+    hybridBusy.value = true;
+    hybridMessage.value = null;
+
+    try {
+        const response = await fetch(`${urlFor(props.similarUrl, photo.id)}?${new URLSearchParams({ w: String(weight.value) }).toString()}`, { headers: { Accept: 'application/json' } });
+
+        if (request !== hybridRequest) {
+            return;
+        }
+
+        if (!response.ok) {
+            hybridMessage.value = response.status === 429 ? 'Too many requests; wait a moment and move the slider again.' : `Could not rank the photos (server error ${response.status}).`;
+
+            return;
+        }
+
+        hybrid.value = (await response.json()) as HybridStrip;
+    } catch {
+        if (request === hybridRequest) {
+            hybridMessage.value = 'Could not rank the photos (connection lost).';
+        }
+    } finally {
+        if (request === hybridRequest) {
+            hybridBusy.value = false;
+        }
+    }
+}
+
+function partsLabel(match: SimilarMatch): string | null {
+    if (!match.parts) {
+        return null;
+    }
+
+    return match.parts.image_only
+        ? `image ${match.parts.image.toFixed(4)}, no caption`
+        : `image ${match.parts.image.toFixed(4)}, caption ${(match.parts.caption ?? 0).toFixed(4)}`;
 }
 
 function apply(next: PhotoDetail): void {
@@ -237,7 +312,13 @@ async function extract(): Promise<void> {
 
 schedule();
 
-onBeforeUnmount(stopPolling);
+onBeforeUnmount(() => {
+    stopPolling();
+
+    if (sliderTimer !== null) {
+        clearTimeout(sliderTimer);
+    }
+});
 </script>
 
 <template>
@@ -300,17 +381,53 @@ ddev artisan photos:import</pre>
                     <LabTag caption="cutoffs">{{ similar.min_score.toFixed(2) }} to below {{ similar.near_duplicate_cutoff.toFixed(2) }}</LabTag>
                     <LabTag caption="source">{{ similar.cached ? 'cache' : 'database' }}</LabTag>
                 </div>
-                <p v-if="similar.matches.length === 0" class="mt-2 text-[15px] text-muted">No similar photos: {{ similar.reason }}.</p>
-                <ul v-else class="m-0 mt-3 grid list-none grid-cols-2 gap-3 p-0">
-                    <li v-for="match in similar.matches" :key="match.photo_id" class="min-w-0">
-                        <Link :href="match.href" preserve-scroll class="block rounded-sm border border-rule p-1">
-                            <img :src="match.url" :alt="match.title" loading="lazy" class="aspect-[4/3] w-full rounded-sm bg-rule object-cover" />
-                            <span class="mt-1 block truncate text-[13px]">{{ match.title }}</span>
-                            <LabSimilarityBar :value="match.similarity" />
-                            <span class="block text-[13px]" :class="match.same_make_model ? 'text-success' : 'text-muted'">{{ match.same_make_model ? 'same make and model' : 'other make or model' }}</span>
-                        </Link>
-                    </li>
-                </ul>
+
+                <div class="mt-3">
+                    <label for="photos-weight" class="block text-[13px] text-muted">
+                        Weight of the image: <span class="font-mono tabular-nums">{{ weight.toFixed(2) }}</span>, of the caption: <span class="font-mono tabular-nums">{{ (1 - weight).toFixed(2) }}</span>
+                    </label>
+                    <input id="photos-weight" v-model.number="weight" type="range" min="0" max="1" step="0.05" class="mt-1 w-full" />
+                </div>
+
+                <div class="mt-3 grid grid-cols-2 gap-3">
+                    <section aria-labelledby="photos-similar-image-title" class="min-w-0">
+                        <h4 id="photos-similar-image-title" class="m-0 text-[13px] font-semibold">Image only</h4>
+                        <p v-if="similar.matches.length === 0" class="mt-2 text-[13px] text-muted">No similar photos: {{ similar.reason }}.</p>
+                        <ul v-else class="m-0 mt-2 grid list-none gap-3 p-0">
+                            <li v-for="match in similar.matches" :key="match.photo_id" class="min-w-0">
+                                <Link :href="match.href" preserve-scroll class="block rounded-sm border border-rule p-1">
+                                    <img :src="match.url" :alt="match.title" loading="lazy" class="aspect-[4/3] w-full rounded-sm bg-rule object-cover" />
+                                    <span class="mt-1 block truncate text-[13px]">{{ match.title }}</span>
+                                    <LabSimilarityBar :value="match.similarity" />
+                                    <span class="block text-[13px]" :class="match.same_make_model ? 'text-success' : 'text-muted'">{{ match.same_make_model ? 'same make and model' : 'other make or model' }}</span>
+                                </Link>
+                            </li>
+                        </ul>
+                    </section>
+
+                    <section aria-labelledby="photos-similar-hybrid-title" :aria-busy="hybridBusy" class="min-w-0">
+                        <h4 id="photos-similar-hybrid-title" class="m-0 text-[13px] font-semibold">Image and caption</h4>
+                        <p v-if="hybridMessage" role="alert" class="mt-2 text-[13px] font-medium text-danger">{{ hybridMessage }}</p>
+                        <template v-else-if="hybrid">
+                            <p v-if="hybrid.coverage" class="mt-1 text-[13px] text-muted" aria-live="polite">
+                                {{ hybrid.coverage.captioned }} of {{ hybrid.coverage.total }} matches scored with a caption.
+                            </p>
+                            <p v-if="hybrid.matches.length === 0" class="mt-2 text-[13px] text-muted">No similar photos: {{ hybrid.reason }}.</p>
+                            <ul v-else class="m-0 mt-2 grid list-none gap-3 p-0">
+                                <li v-for="match in hybrid.matches" :key="match.photo_id" class="min-w-0">
+                                    <Link :href="match.href" preserve-scroll class="block rounded-sm border border-rule p-1">
+                                        <img :src="match.url" :alt="match.title" loading="lazy" class="aspect-[4/3] w-full rounded-sm bg-rule object-cover" />
+                                        <span class="mt-1 block truncate text-[13px]">{{ match.title }}</span>
+                                        <LabSimilarityBar :value="match.similarity" />
+                                        <span v-if="partsLabel(match)" class="block text-[13px] text-muted">{{ partsLabel(match) }}</span>
+                                        <span v-if="match.parts?.image_only" class="block text-[13px] font-semibold text-muted">image only</span>
+                                        <span class="block text-[13px]" :class="match.same_make_model ? 'text-success' : 'text-muted'">{{ match.same_make_model ? 'same make and model' : 'other make or model' }}</span>
+                                    </Link>
+                                </li>
+                            </ul>
+                        </template>
+                    </section>
+                </div>
             </div>
 
             <div class="mt-3 flex flex-wrap items-center gap-2">

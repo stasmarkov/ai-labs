@@ -1,0 +1,1743 @@
+{
+    "metadata": {
+        "generated_at": "2026-11-12T09:00:31+00:00",
+        "label": "photo-encoder/openai/clip-vit-base-patch32",
+        "photos": 156,
+        "k": 8,
+        "thresholds": [
+            0.6,
+            0.65,
+            0.7,
+            0.75,
+            0.8,
+            0.85,
+            0.9,
+            0.95
+        ],
+        "weights": [
+            0,
+            0.1,
+            0.2,
+            0.3,
+            0.4,
+            0.5,
+            0.6,
+            0.7,
+            0.8,
+            0.9,
+            1
+        ],
+        "near_duplicate_cutoff": 0.98,
+        "ground_truth": "make and model of the query photo's listing"
+    },
+    "baseline": {
+        "w": 1,
+        "min_score": 0.75,
+        "queries": 156,
+        "coverage": 0.9872,
+        "returned": 1173,
+        "precision_make": 0.7852,
+        "precision_make_model": 0.6769,
+        "text_pair_share": 0
+    },
+    "sweep": [
+        {
+            "w": 0,
+            "min_score": 0.6,
+            "queries": 156,
+            "coverage": 1,
+            "returned": 1136,
+            "precision_make": 0.5211,
+            "precision_make_model": 0.4173,
+            "text_pair_share": 0.9806,
+            "curve": [
+                {
+                    "threshold": 0.6,
+                    "coverage": 1,
+                    "precision_make": 0.5211,
+                    "precision_make_model": 0.4173,
+                    "text_pair_share": 0.9806,
+                    "objective": 0.4173
+                },
+                {
+                    "threshold": 0.65,
+                    "coverage": 0.9615,
+                    "precision_make": 0.5267,
+                    "precision_make_model": 0.427,
+                    "text_pair_share": 0.9794,
+                    "objective": 0.4106
+                },
+                {
+                    "threshold": 0.7,
+                    "coverage": 0.9103,
+                    "precision_make": 0.5358,
+                    "precision_make_model": 0.4386,
+                    "text_pair_share": 0.9744,
+                    "objective": 0.3993
+                },
+                {
+                    "threshold": 0.75,
+                    "coverage": 0.7692,
+                    "precision_make": 0.5295,
+                    "precision_make_model": 0.4515,
+                    "text_pair_share": 0.9684,
+                    "objective": 0.3473
+                },
+                {
+                    "threshold": 0.8,
+                    "coverage": 0.5321,
+                    "precision_make": 0.5756,
+                    "precision_make_model": 0.5463,
+                    "text_pair_share": 0.9902,
+                    "objective": 0.2907
+                },
+                {
+                    "threshold": 0.85,
+                    "coverage": 0.2756,
+                    "precision_make": 0.6506,
+                    "precision_make_model": 0.6506,
+                    "text_pair_share": 1,
+                    "objective": 0.1793
+                },
+                {
+                    "threshold": 0.9,
+                    "coverage": 0.1154,
+                    "precision_make": 0.7419,
+                    "precision_make_model": 0.7419,
+                    "text_pair_share": 1,
+                    "objective": 0.0856
+                },
+                {
+                    "threshold": 0.95,
+                    "coverage": 0.0321,
+                    "precision_make": 1,
+                    "precision_make_model": 1,
+                    "text_pair_share": 1,
+                    "objective": 0.0321
+                }
+            ]
+        },
+        {
+            "w": 0.1,
+            "min_score": 0.65,
+            "queries": 156,
+            "coverage": 0.9808,
+            "returned": 1010,
+            "precision_make": 0.5426,
+            "precision_make_model": 0.4436,
+            "text_pair_share": 0.9812,
+            "curve": [
+                {
+                    "threshold": 0.6,
+                    "coverage": 1,
+                    "precision_make": 0.5365,
+                    "precision_make_model": 0.4318,
+                    "text_pair_share": 0.982,
+                    "objective": 0.4318
+                },
+                {
+                    "threshold": 0.65,
+                    "coverage": 0.9808,
+                    "precision_make": 0.5426,
+                    "precision_make_model": 0.4436,
+                    "text_pair_share": 0.9812,
+                    "objective": 0.4351
+                },
+                {
+                    "threshold": 0.7,
+                    "coverage": 0.9295,
+                    "precision_make": 0.5629,
+                    "precision_make_model": 0.4676,
+                    "text_pair_share": 0.9771,
+                    "objective": 0.4346
+                },
+                {
+                    "threshold": 0.75,
+                    "coverage": 0.7692,
+                    "precision_make": 0.564,
+                    "precision_make_model": 0.4752,
+                    "text_pair_share": 0.969,
+                    "objective": 0.3655
+                },
+                {
+                    "threshold": 0.8,
+                    "coverage": 0.5577,
+                    "precision_make": 0.6468,
+                    "precision_make_model": 0.6219,
+                    "text_pair_share": 0.99,
+                    "objective": 0.3468
+                },
+                {
+                    "threshold": 0.85,
+                    "coverage": 0.2436,
+                    "precision_make": 0.7101,
+                    "precision_make_model": 0.7101,
+                    "text_pair_share": 1,
+                    "objective": 0.173
+                },
+                {
+                    "threshold": 0.9,
+                    "coverage": 0.1154,
+                    "precision_make": 0.7308,
+                    "precision_make_model": 0.7308,
+                    "text_pair_share": 1,
+                    "objective": 0.0843
+                },
+                {
+                    "threshold": 0.95,
+                    "coverage": 0.0128,
+                    "precision_make": 1,
+                    "precision_make_model": 1,
+                    "text_pair_share": 1,
+                    "objective": 0.0128
+                }
+            ]
+        },
+        {
+            "w": 0.2,
+            "min_score": 0.65,
+            "queries": 156,
+            "coverage": 0.9808,
+            "returned": 1058,
+            "precision_make": 0.5643,
+            "precision_make_model": 0.4612,
+            "text_pair_share": 0.983,
+            "curve": [
+                {
+                    "threshold": 0.6,
+                    "coverage": 1,
+                    "precision_make": 0.5533,
+                    "precision_make_model": 0.4484,
+                    "text_pair_share": 0.9835,
+                    "objective": 0.4484
+                },
+                {
+                    "threshold": 0.65,
+                    "coverage": 0.9808,
+                    "precision_make": 0.5643,
+                    "precision_make_model": 0.4612,
+                    "text_pair_share": 0.983,
+                    "objective": 0.4523
+                },
+                {
+                    "threshold": 0.7,
+                    "coverage": 0.9359,
+                    "precision_make": 0.5795,
+                    "precision_make_model": 0.4817,
+                    "text_pair_share": 0.9792,
+                    "objective": 0.4508
+                },
+                {
+                    "threshold": 0.75,
+                    "coverage": 0.7628,
+                    "precision_make": 0.6053,
+                    "precision_make_model": 0.5202,
+                    "text_pair_share": 0.9696,
+                    "objective": 0.3968
+                },
+                {
+                    "threshold": 0.8,
+                    "coverage": 0.5385,
+                    "precision_make": 0.6683,
+                    "precision_make_model": 0.6332,
+                    "text_pair_share": 0.9899,
+                    "objective": 0.341
+                },
+                {
+                    "threshold": 0.85,
+                    "coverage": 0.2308,
+                    "precision_make": 0.7966,
+                    "precision_make_model": 0.7966,
+                    "text_pair_share": 1,
+                    "objective": 0.1839
+                },
+                {
+                    "threshold": 0.9,
+                    "coverage": 0.0769,
+                    "precision_make": 0.8889,
+                    "precision_make_model": 0.8889,
+                    "text_pair_share": 1,
+                    "objective": 0.0684
+                },
+                {
+                    "threshold": 0.95,
+                    "coverage": 0.0128,
+                    "precision_make": 1,
+                    "precision_make_model": 1,
+                    "text_pair_share": 1,
+                    "objective": 0.0128
+                }
+            ]
+        },
+        {
+            "w": 0.3,
+            "min_score": 0.65,
+            "queries": 156,
+            "coverage": 0.9936,
+            "returned": 1117,
+            "precision_make": 0.5962,
+            "precision_make_model": 0.4942,
+            "text_pair_share": 0.9839,
+            "curve": [
+                {
+                    "threshold": 0.6,
+                    "coverage": 1,
+                    "precision_make": 0.5834,
+                    "precision_make_model": 0.4801,
+                    "text_pair_share": 0.9837,
+                    "objective": 0.4801
+                },
+                {
+                    "threshold": 0.65,
+                    "coverage": 0.9936,
+                    "precision_make": 0.5962,
+                    "precision_make_model": 0.4942,
+                    "text_pair_share": 0.9839,
+                    "objective": 0.491
+                },
+                {
+                    "threshold": 0.7,
+                    "coverage": 0.9615,
+                    "precision_make": 0.6069,
+                    "precision_make_model": 0.511,
+                    "text_pair_share": 0.9803,
+                    "objective": 0.4913
+                },
+                {
+                    "threshold": 0.75,
+                    "coverage": 0.7821,
+                    "precision_make": 0.6314,
+                    "precision_make_model": 0.549,
+                    "text_pair_share": 0.9706,
+                    "objective": 0.4294
+                },
+                {
+                    "threshold": 0.8,
+                    "coverage": 0.5,
+                    "precision_make": 0.7386,
+                    "precision_make_model": 0.7045,
+                    "text_pair_share": 0.9886,
+                    "objective": 0.3523
+                },
+                {
+                    "threshold": 0.85,
+                    "coverage": 0.1923,
+                    "precision_make": 0.8478,
+                    "precision_make_model": 0.8478,
+                    "text_pair_share": 1,
+                    "objective": 0.163
+                },
+                {
+                    "threshold": 0.9,
+                    "coverage": 0.0577,
+                    "precision_make": 1,
+                    "precision_make_model": 1,
+                    "text_pair_share": 1,
+                    "objective": 0.0577
+                },
+                {
+                    "threshold": 0.95,
+                    "coverage": 0.0128,
+                    "precision_make": 1,
+                    "precision_make_model": 1,
+                    "text_pair_share": 1,
+                    "objective": 0.0128
+                }
+            ]
+        },
+        {
+            "w": 0.4,
+            "min_score": 0.65,
+            "queries": 156,
+            "coverage": 1,
+            "returned": 1165,
+            "precision_make": 0.6266,
+            "precision_make_model": 0.5279,
+            "text_pair_share": 0.9845,
+            "curve": [
+                {
+                    "threshold": 0.6,
+                    "coverage": 1,
+                    "precision_make": 0.6177,
+                    "precision_make_model": 0.5165,
+                    "text_pair_share": 0.9847,
+                    "objective": 0.5165
+                },
+                {
+                    "threshold": 0.65,
+                    "coverage": 1,
+                    "precision_make": 0.6266,
+                    "precision_make_model": 0.5279,
+                    "text_pair_share": 0.9845,
+                    "objective": 0.5279
+                },
+                {
+                    "threshold": 0.7,
+                    "coverage": 0.9679,
+                    "precision_make": 0.6381,
+                    "precision_make_model": 0.5407,
+                    "text_pair_share": 0.9818,
+                    "objective": 0.5233
+                },
+                {
+                    "threshold": 0.75,
+                    "coverage": 0.8077,
+                    "precision_make": 0.6636,
+                    "precision_make_model": 0.5868,
+                    "text_pair_share": 0.9726,
+                    "objective": 0.474
+                },
+                {
+                    "threshold": 0.8,
+                    "coverage": 0.4808,
+                    "precision_make": 0.8012,
+                    "precision_make_model": 0.7661,
+                    "text_pair_share": 0.9883,
+                    "objective": 0.3683
+                },
+                {
+                    "threshold": 0.85,
+                    "coverage": 0.2179,
+                    "precision_make": 0.9167,
+                    "precision_make_model": 0.9167,
+                    "text_pair_share": 1,
+                    "objective": 0.1997
+                },
+                {
+                    "threshold": 0.9,
+                    "coverage": 0.0577,
+                    "precision_make": 1,
+                    "precision_make_model": 1,
+                    "text_pair_share": 1,
+                    "objective": 0.0577
+                },
+                {
+                    "threshold": 0.95,
+                    "coverage": 0.0128,
+                    "precision_make": 1,
+                    "precision_make_model": 1,
+                    "text_pair_share": 1,
+                    "objective": 0.0128
+                }
+            ]
+        },
+        {
+            "w": 0.5,
+            "min_score": 0.65,
+            "queries": 156,
+            "coverage": 1,
+            "returned": 1211,
+            "precision_make": 0.6623,
+            "precision_make_model": 0.5632,
+            "text_pair_share": 0.9851,
+            "curve": [
+                {
+                    "threshold": 0.6,
+                    "coverage": 1,
+                    "precision_make": 0.6554,
+                    "precision_make_model": 0.5561,
+                    "text_pair_share": 0.9848,
+                    "objective": 0.5561
+                },
+                {
+                    "threshold": 0.65,
+                    "coverage": 1,
+                    "precision_make": 0.6623,
+                    "precision_make_model": 0.5632,
+                    "text_pair_share": 0.9851,
+                    "objective": 0.5632
+                },
+                {
+                    "threshold": 0.7,
+                    "coverage": 0.9744,
+                    "precision_make": 0.6781,
+                    "precision_make_model": 0.5778,
+                    "text_pair_share": 0.9833,
+                    "objective": 0.563
+                },
+                {
+                    "threshold": 0.75,
+                    "coverage": 0.859,
+                    "precision_make": 0.7157,
+                    "precision_make_model": 0.6254,
+                    "text_pair_share": 0.9749,
+                    "objective": 0.5372
+                },
+                {
+                    "threshold": 0.8,
+                    "coverage": 0.4872,
+                    "precision_make": 0.8588,
+                    "precision_make_model": 0.791,
+                    "text_pair_share": 0.9887,
+                    "objective": 0.3854
+                },
+                {
+                    "threshold": 0.85,
+                    "coverage": 0.2179,
+                    "precision_make": 0.9583,
+                    "precision_make_model": 0.9583,
+                    "text_pair_share": 1,
+                    "objective": 0.2088
+                },
+                {
+                    "threshold": 0.9,
+                    "coverage": 0.0449,
+                    "precision_make": 1,
+                    "precision_make_model": 1,
+                    "text_pair_share": 1,
+                    "objective": 0.0449
+                },
+                {
+                    "threshold": 0.95,
+                    "coverage": 0,
+                    "precision_make": 0,
+                    "precision_make_model": 0,
+                    "text_pair_share": 0,
+                    "objective": 0
+                }
+            ]
+        },
+        {
+            "w": 0.6,
+            "min_score": 0.7,
+            "queries": 156,
+            "coverage": 0.9872,
+            "returned": 1089,
+            "precision_make": 0.708,
+            "precision_make_model": 0.6152,
+            "text_pair_share": 0.9853,
+            "curve": [
+                {
+                    "threshold": 0.6,
+                    "coverage": 1,
+                    "precision_make": 0.6891,
+                    "precision_make_model": 0.5946,
+                    "text_pair_share": 0.9856,
+                    "objective": 0.5946
+                },
+                {
+                    "threshold": 0.65,
+                    "coverage": 1,
+                    "precision_make": 0.6921,
+                    "precision_make_model": 0.5989,
+                    "text_pair_share": 0.9862,
+                    "objective": 0.5989
+                },
+                {
+                    "threshold": 0.7,
+                    "coverage": 0.9872,
+                    "precision_make": 0.708,
+                    "precision_make_model": 0.6152,
+                    "text_pair_share": 0.9853,
+                    "objective": 0.6073
+                },
+                {
+                    "threshold": 0.75,
+                    "coverage": 0.8974,
+                    "precision_make": 0.742,
+                    "precision_make_model": 0.6487,
+                    "text_pair_share": 0.9781,
+                    "objective": 0.5821
+                },
+                {
+                    "threshold": 0.8,
+                    "coverage": 0.5385,
+                    "precision_make": 0.9234,
+                    "precision_make_model": 0.866,
+                    "text_pair_share": 0.9904,
+                    "objective": 0.4663
+                },
+                {
+                    "threshold": 0.85,
+                    "coverage": 0.2308,
+                    "precision_make": 0.963,
+                    "precision_make_model": 0.963,
+                    "text_pair_share": 1,
+                    "objective": 0.2223
+                },
+                {
+                    "threshold": 0.9,
+                    "coverage": 0.0385,
+                    "precision_make": 1,
+                    "precision_make_model": 1,
+                    "text_pair_share": 1,
+                    "objective": 0.0385
+                },
+                {
+                    "threshold": 0.95,
+                    "coverage": 0,
+                    "precision_make": 0,
+                    "precision_make_model": 0,
+                    "text_pair_share": 0,
+                    "objective": 0
+                }
+            ]
+        },
+        {
+            "w": 0.7,
+            "min_score": 0.7,
+            "queries": 156,
+            "coverage": 0.9936,
+            "returned": 1162,
+            "precision_make": 0.7341,
+            "precision_make_model": 0.6411,
+            "text_pair_share": 0.9871,
+            "curve": [
+                {
+                    "threshold": 0.6,
+                    "coverage": 1,
+                    "precision_make": 0.7236,
+                    "precision_make_model": 0.6282,
+                    "text_pair_share": 0.988,
+                    "objective": 0.6282
+                },
+                {
+                    "threshold": 0.65,
+                    "coverage": 1,
+                    "precision_make": 0.7246,
+                    "precision_make_model": 0.6304,
+                    "text_pair_share": 0.9879,
+                    "objective": 0.6304
+                },
+                {
+                    "threshold": 0.7,
+                    "coverage": 0.9936,
+                    "precision_make": 0.7341,
+                    "precision_make_model": 0.6411,
+                    "text_pair_share": 0.9871,
+                    "objective": 0.637
+                },
+                {
+                    "threshold": 0.75,
+                    "coverage": 0.9167,
+                    "precision_make": 0.7818,
+                    "precision_make_model": 0.6845,
+                    "text_pair_share": 0.9825,
+                    "objective": 0.6275
+                },
+                {
+                    "threshold": 0.8,
+                    "coverage": 0.6218,
+                    "precision_make": 0.9357,
+                    "precision_make_model": 0.8643,
+                    "text_pair_share": 0.9929,
+                    "objective": 0.5374
+                },
+                {
+                    "threshold": 0.85,
+                    "coverage": 0.2756,
+                    "precision_make": 0.9706,
+                    "precision_make_model": 0.9706,
+                    "text_pair_share": 1,
+                    "objective": 0.2675
+                },
+                {
+                    "threshold": 0.9,
+                    "coverage": 0.0513,
+                    "precision_make": 1,
+                    "precision_make_model": 1,
+                    "text_pair_share": 1,
+                    "objective": 0.0513
+                },
+                {
+                    "threshold": 0.95,
+                    "coverage": 0,
+                    "precision_make": 0,
+                    "precision_make_model": 0,
+                    "text_pair_share": 0,
+                    "objective": 0
+                }
+            ]
+        },
+        {
+            "w": 0.8,
+            "min_score": 0.75,
+            "queries": 156,
+            "coverage": 0.9679,
+            "returned": 938,
+            "precision_make": 0.7985,
+            "precision_make_model": 0.7068,
+            "text_pair_share": 0.9861,
+            "curve": [
+                {
+                    "threshold": 0.6,
+                    "coverage": 1,
+                    "precision_make": 0.7556,
+                    "precision_make_model": 0.6627,
+                    "text_pair_share": 0.9888,
+                    "objective": 0.6627
+                },
+                {
+                    "threshold": 0.65,
+                    "coverage": 0.9936,
+                    "precision_make": 0.7565,
+                    "precision_make_model": 0.6653,
+                    "text_pair_share": 0.9887,
+                    "objective": 0.661
+                },
+                {
+                    "threshold": 0.7,
+                    "coverage": 0.9936,
+                    "precision_make": 0.7633,
+                    "precision_make_model": 0.6708,
+                    "text_pair_share": 0.9885,
+                    "objective": 0.6665
+                },
+                {
+                    "threshold": 0.75,
+                    "coverage": 0.9679,
+                    "precision_make": 0.7985,
+                    "precision_make_model": 0.7068,
+                    "text_pair_share": 0.9861,
+                    "objective": 0.6841
+                },
+                {
+                    "threshold": 0.8,
+                    "coverage": 0.7051,
+                    "precision_make": 0.9082,
+                    "precision_make_model": 0.8214,
+                    "text_pair_share": 0.9949,
+                    "objective": 0.5792
+                },
+                {
+                    "threshold": 0.85,
+                    "coverage": 0.3462,
+                    "precision_make": 0.9796,
+                    "precision_make_model": 0.9592,
+                    "text_pair_share": 1,
+                    "objective": 0.3321
+                },
+                {
+                    "threshold": 0.9,
+                    "coverage": 0.0769,
+                    "precision_make": 1,
+                    "precision_make_model": 1,
+                    "text_pair_share": 1,
+                    "objective": 0.0769
+                },
+                {
+                    "threshold": 0.95,
+                    "coverage": 0,
+                    "precision_make": 0,
+                    "precision_make_model": 0,
+                    "text_pair_share": 0,
+                    "objective": 0
+                }
+            ]
+        },
+        {
+            "w": 0.9,
+            "min_score": 0.75,
+            "queries": 156,
+            "coverage": 0.9872,
+            "returned": 1083,
+            "precision_make": 0.7913,
+            "precision_make_model": 0.6934,
+            "text_pair_share": 0.9889,
+            "curve": [
+                {
+                    "threshold": 0.6,
+                    "coverage": 1,
+                    "precision_make": 0.77,
+                    "precision_make_model": 0.6699,
+                    "text_pair_share": 0.9896,
+                    "objective": 0.6699
+                },
+                {
+                    "threshold": 0.65,
+                    "coverage": 0.9936,
+                    "precision_make": 0.7718,
+                    "precision_make_model": 0.6726,
+                    "text_pair_share": 0.9895,
+                    "objective": 0.6683
+                },
+                {
+                    "threshold": 0.7,
+                    "coverage": 0.9936,
+                    "precision_make": 0.7725,
+                    "precision_make_model": 0.6729,
+                    "text_pair_share": 0.9895,
+                    "objective": 0.6686
+                },
+                {
+                    "threshold": 0.75,
+                    "coverage": 0.9872,
+                    "precision_make": 0.7913,
+                    "precision_make_model": 0.6934,
+                    "text_pair_share": 0.9889,
+                    "objective": 0.6845
+                },
+                {
+                    "threshold": 0.8,
+                    "coverage": 0.8013,
+                    "precision_make": 0.8852,
+                    "precision_make_model": 0.7791,
+                    "text_pair_share": 0.9965,
+                    "objective": 0.6243
+                },
+                {
+                    "threshold": 0.85,
+                    "coverage": 0.4551,
+                    "precision_make": 0.9886,
+                    "precision_make_model": 0.9432,
+                    "text_pair_share": 1,
+                    "objective": 0.4293
+                },
+                {
+                    "threshold": 0.9,
+                    "coverage": 0.0962,
+                    "precision_make": 1,
+                    "precision_make_model": 1,
+                    "text_pair_share": 1,
+                    "objective": 0.0962
+                },
+                {
+                    "threshold": 0.95,
+                    "coverage": 0,
+                    "precision_make": 0,
+                    "precision_make_model": 0,
+                    "text_pair_share": 0,
+                    "objective": 0
+                }
+            ]
+        },
+        {
+            "w": 1,
+            "min_score": 0.75,
+            "queries": 156,
+            "coverage": 0.9872,
+            "returned": 1173,
+            "precision_make": 0.7852,
+            "precision_make_model": 0.6769,
+            "text_pair_share": 0.9898,
+            "curve": [
+                {
+                    "threshold": 0.6,
+                    "coverage": 1,
+                    "precision_make": 0.7732,
+                    "precision_make_model": 0.6651,
+                    "text_pair_share": 0.9904,
+                    "objective": 0.6651
+                },
+                {
+                    "threshold": 0.65,
+                    "coverage": 1,
+                    "precision_make": 0.7744,
+                    "precision_make_model": 0.6672,
+                    "text_pair_share": 0.9903,
+                    "objective": 0.6672
+                },
+                {
+                    "threshold": 0.7,
+                    "coverage": 0.9936,
+                    "precision_make": 0.7745,
+                    "precision_make_model": 0.6669,
+                    "text_pair_share": 0.9903,
+                    "objective": 0.6626
+                },
+                {
+                    "threshold": 0.75,
+                    "coverage": 0.9872,
+                    "precision_make": 0.7852,
+                    "precision_make_model": 0.6769,
+                    "text_pair_share": 0.9898,
+                    "objective": 0.6682
+                },
+                {
+                    "threshold": 0.8,
+                    "coverage": 0.8974,
+                    "precision_make": 0.8461,
+                    "precision_make_model": 0.7349,
+                    "text_pair_share": 0.9973,
+                    "objective": 0.6595
+                },
+                {
+                    "threshold": 0.85,
+                    "coverage": 0.6026,
+                    "precision_make": 0.9671,
+                    "precision_make_model": 0.8947,
+                    "text_pair_share": 1,
+                    "objective": 0.5391
+                },
+                {
+                    "threshold": 0.9,
+                    "coverage": 0.2051,
+                    "precision_make": 1,
+                    "precision_make_model": 1,
+                    "text_pair_share": 1,
+                    "objective": 0.2051
+                },
+                {
+                    "threshold": 0.95,
+                    "coverage": 0,
+                    "precision_make": 0,
+                    "precision_make_model": 0,
+                    "text_pair_share": 0,
+                    "objective": 0
+                }
+            ]
+        }
+    ],
+    "best": {
+        "w": 0.9,
+        "min_score": 0.75,
+        "precision_make_model": 0.6934,
+        "coverage": 0.9872,
+        "beats_baseline": true
+    },
+    "title": {
+        "source": "title",
+        "leaks_ground_truth": true,
+        "headline": false,
+        "note": "The listing title holds the make and model the eval grades, so these numbers measure the leak, not the photos. Never chosen as the default.",
+        "sweep": [
+            {
+                "w": 0,
+                "min_score": 0.95,
+                "queries": 156,
+                "coverage": 1,
+                "returned": 1237,
+                "precision_make": 1,
+                "precision_make_model": 0.9871,
+                "text_pair_share": 1,
+                "curve": [
+                    {
+                        "threshold": 0.6,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9784,
+                        "text_pair_share": 1,
+                        "objective": 0.9784
+                    },
+                    {
+                        "threshold": 0.65,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9784,
+                        "text_pair_share": 1,
+                        "objective": 0.9784
+                    },
+                    {
+                        "threshold": 0.7,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9784,
+                        "text_pair_share": 1,
+                        "objective": 0.9784
+                    },
+                    {
+                        "threshold": 0.75,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9784,
+                        "text_pair_share": 1,
+                        "objective": 0.9784
+                    },
+                    {
+                        "threshold": 0.8,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9784,
+                        "text_pair_share": 1,
+                        "objective": 0.9784
+                    },
+                    {
+                        "threshold": 0.85,
+                        "coverage": 1,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9799,
+                        "text_pair_share": 1,
+                        "objective": 0.9799
+                    },
+                    {
+                        "threshold": 0.9,
+                        "coverage": 1,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9807,
+                        "text_pair_share": 1,
+                        "objective": 0.9807
+                    },
+                    {
+                        "threshold": 0.95,
+                        "coverage": 1,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9871,
+                        "text_pair_share": 1,
+                        "objective": 0.9871
+                    }
+                ]
+            },
+            {
+                "w": 0.1,
+                "min_score": 0.95,
+                "queries": 156,
+                "coverage": 1,
+                "returned": 1225,
+                "precision_make": 1,
+                "precision_make_model": 0.9967,
+                "text_pair_share": 1,
+                "curve": [
+                    {
+                        "threshold": 0.6,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9784,
+                        "text_pair_share": 1,
+                        "objective": 0.9784
+                    },
+                    {
+                        "threshold": 0.65,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9784,
+                        "text_pair_share": 1,
+                        "objective": 0.9784
+                    },
+                    {
+                        "threshold": 0.7,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9784,
+                        "text_pair_share": 1,
+                        "objective": 0.9784
+                    },
+                    {
+                        "threshold": 0.75,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9784,
+                        "text_pair_share": 1,
+                        "objective": 0.9784
+                    },
+                    {
+                        "threshold": 0.8,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9784,
+                        "text_pair_share": 1,
+                        "objective": 0.9784
+                    },
+                    {
+                        "threshold": 0.85,
+                        "coverage": 1,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9799,
+                        "text_pair_share": 1,
+                        "objective": 0.9799
+                    },
+                    {
+                        "threshold": 0.9,
+                        "coverage": 1,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9871,
+                        "text_pair_share": 1,
+                        "objective": 0.9871
+                    },
+                    {
+                        "threshold": 0.95,
+                        "coverage": 1,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9967,
+                        "text_pair_share": 1,
+                        "objective": 0.9967
+                    }
+                ]
+            },
+            {
+                "w": 0.2,
+                "min_score": 0.9,
+                "queries": 156,
+                "coverage": 1,
+                "returned": 1236,
+                "precision_make": 1,
+                "precision_make_model": 0.9806,
+                "text_pair_share": 1,
+                "curve": [
+                    {
+                        "threshold": 0.6,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9712,
+                        "text_pair_share": 1,
+                        "objective": 0.9712
+                    },
+                    {
+                        "threshold": 0.65,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9712,
+                        "text_pair_share": 1,
+                        "objective": 0.9712
+                    },
+                    {
+                        "threshold": 0.7,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9712,
+                        "text_pair_share": 1,
+                        "objective": 0.9712
+                    },
+                    {
+                        "threshold": 0.75,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9712,
+                        "text_pair_share": 1,
+                        "objective": 0.9712
+                    },
+                    {
+                        "threshold": 0.8,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9712,
+                        "text_pair_share": 1,
+                        "objective": 0.9712
+                    },
+                    {
+                        "threshold": 0.85,
+                        "coverage": 1,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9727,
+                        "text_pair_share": 1,
+                        "objective": 0.9727
+                    },
+                    {
+                        "threshold": 0.9,
+                        "coverage": 1,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9806,
+                        "text_pair_share": 1,
+                        "objective": 0.9806
+                    },
+                    {
+                        "threshold": 0.95,
+                        "coverage": 0.9808,
+                        "precision_make": 1,
+                        "precision_make_model": 0.998,
+                        "text_pair_share": 1,
+                        "objective": 0.9788
+                    }
+                ]
+            },
+            {
+                "w": 0.3,
+                "min_score": 0.9,
+                "queries": 156,
+                "coverage": 0.9936,
+                "returned": 1220,
+                "precision_make": 1,
+                "precision_make_model": 0.9738,
+                "text_pair_share": 1,
+                "curve": [
+                    {
+                        "threshold": 0.6,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9591,
+                        "text_pair_share": 1,
+                        "objective": 0.9591
+                    },
+                    {
+                        "threshold": 0.65,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9591,
+                        "text_pair_share": 1,
+                        "objective": 0.9591
+                    },
+                    {
+                        "threshold": 0.7,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9591,
+                        "text_pair_share": 1,
+                        "objective": 0.9591
+                    },
+                    {
+                        "threshold": 0.75,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9591,
+                        "text_pair_share": 1,
+                        "objective": 0.9591
+                    },
+                    {
+                        "threshold": 0.8,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9591,
+                        "text_pair_share": 1,
+                        "objective": 0.9591
+                    },
+                    {
+                        "threshold": 0.85,
+                        "coverage": 1,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9607,
+                        "text_pair_share": 1,
+                        "objective": 0.9607
+                    },
+                    {
+                        "threshold": 0.9,
+                        "coverage": 0.9936,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9738,
+                        "text_pair_share": 1,
+                        "objective": 0.9676
+                    },
+                    {
+                        "threshold": 0.95,
+                        "coverage": 0.6923,
+                        "precision_make": 1,
+                        "precision_make_model": 1,
+                        "text_pair_share": 1,
+                        "objective": 0.6923
+                    }
+                ]
+            },
+            {
+                "w": 0.4,
+                "min_score": 0.85,
+                "queries": 156,
+                "coverage": 1,
+                "returned": 1232,
+                "precision_make": 1,
+                "precision_make_model": 0.9521,
+                "text_pair_share": 1,
+                "curve": [
+                    {
+                        "threshold": 0.6,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9423,
+                        "text_pair_share": 1,
+                        "objective": 0.9423
+                    },
+                    {
+                        "threshold": 0.65,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9423,
+                        "text_pair_share": 1,
+                        "objective": 0.9423
+                    },
+                    {
+                        "threshold": 0.7,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9423,
+                        "text_pair_share": 1,
+                        "objective": 0.9423
+                    },
+                    {
+                        "threshold": 0.75,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9423,
+                        "text_pair_share": 1,
+                        "objective": 0.9423
+                    },
+                    {
+                        "threshold": 0.8,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9423,
+                        "text_pair_share": 1,
+                        "objective": 0.9423
+                    },
+                    {
+                        "threshold": 0.85,
+                        "coverage": 1,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9521,
+                        "text_pair_share": 1,
+                        "objective": 0.9521
+                    },
+                    {
+                        "threshold": 0.9,
+                        "coverage": 0.9872,
+                        "precision_make": 1,
+                        "precision_make_model": 0.961,
+                        "text_pair_share": 1,
+                        "objective": 0.9487
+                    },
+                    {
+                        "threshold": 0.95,
+                        "coverage": 0.391,
+                        "precision_make": 1,
+                        "precision_make_model": 1,
+                        "text_pair_share": 1,
+                        "objective": 0.391
+                    }
+                ]
+            },
+            {
+                "w": 0.5,
+                "min_score": 0.85,
+                "queries": 156,
+                "coverage": 0.9936,
+                "returned": 1200,
+                "precision_make": 1,
+                "precision_make_model": 0.9467,
+                "text_pair_share": 1,
+                "curve": [
+                    {
+                        "threshold": 0.6,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9343,
+                        "text_pair_share": 1,
+                        "objective": 0.9343
+                    },
+                    {
+                        "threshold": 0.65,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9343,
+                        "text_pair_share": 1,
+                        "objective": 0.9343
+                    },
+                    {
+                        "threshold": 0.7,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9343,
+                        "text_pair_share": 1,
+                        "objective": 0.9343
+                    },
+                    {
+                        "threshold": 0.75,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9343,
+                        "text_pair_share": 1,
+                        "objective": 0.9343
+                    },
+                    {
+                        "threshold": 0.8,
+                        "coverage": 1,
+                        "precision_make": 0.9984,
+                        "precision_make_model": 0.9357,
+                        "text_pair_share": 1,
+                        "objective": 0.9357
+                    },
+                    {
+                        "threshold": 0.85,
+                        "coverage": 0.9936,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9467,
+                        "text_pair_share": 1,
+                        "objective": 0.9406
+                    },
+                    {
+                        "threshold": 0.9,
+                        "coverage": 0.859,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9568,
+                        "text_pair_share": 1,
+                        "objective": 0.8219
+                    },
+                    {
+                        "threshold": 0.95,
+                        "coverage": 0.2051,
+                        "precision_make": 1,
+                        "precision_make_model": 1,
+                        "text_pair_share": 1,
+                        "objective": 0.2051
+                    }
+                ]
+            },
+            {
+                "w": 0.6,
+                "min_score": 0.85,
+                "queries": 156,
+                "coverage": 0.9872,
+                "returned": 1036,
+                "precision_make": 1,
+                "precision_make_model": 0.9276,
+                "text_pair_share": 1,
+                "curve": [
+                    {
+                        "threshold": 0.6,
+                        "coverage": 1,
+                        "precision_make": 0.9976,
+                        "precision_make_model": 0.9127,
+                        "text_pair_share": 1,
+                        "objective": 0.9127
+                    },
+                    {
+                        "threshold": 0.65,
+                        "coverage": 1,
+                        "precision_make": 0.9976,
+                        "precision_make_model": 0.9127,
+                        "text_pair_share": 1,
+                        "objective": 0.9127
+                    },
+                    {
+                        "threshold": 0.7,
+                        "coverage": 1,
+                        "precision_make": 0.9976,
+                        "precision_make_model": 0.9127,
+                        "text_pair_share": 1,
+                        "objective": 0.9127
+                    },
+                    {
+                        "threshold": 0.75,
+                        "coverage": 1,
+                        "precision_make": 0.9976,
+                        "precision_make_model": 0.9127,
+                        "text_pair_share": 1,
+                        "objective": 0.9127
+                    },
+                    {
+                        "threshold": 0.8,
+                        "coverage": 0.9936,
+                        "precision_make": 0.9976,
+                        "precision_make_model": 0.9157,
+                        "text_pair_share": 1,
+                        "objective": 0.9098
+                    },
+                    {
+                        "threshold": 0.85,
+                        "coverage": 0.9872,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9276,
+                        "text_pair_share": 1,
+                        "objective": 0.9157
+                    },
+                    {
+                        "threshold": 0.9,
+                        "coverage": 0.6923,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9651,
+                        "text_pair_share": 1,
+                        "objective": 0.6681
+                    },
+                    {
+                        "threshold": 0.95,
+                        "coverage": 0.0705,
+                        "precision_make": 1,
+                        "precision_make_model": 1,
+                        "text_pair_share": 1,
+                        "objective": 0.0705
+                    }
+                ]
+            },
+            {
+                "w": 0.7,
+                "min_score": 0.65,
+                "queries": 156,
+                "coverage": 1,
+                "returned": 1248,
+                "precision_make": 0.9792,
+                "precision_make_model": 0.8838,
+                "text_pair_share": 1,
+                "curve": [
+                    {
+                        "threshold": 0.6,
+                        "coverage": 1,
+                        "precision_make": 0.9792,
+                        "precision_make_model": 0.8838,
+                        "text_pair_share": 1,
+                        "objective": 0.8838
+                    },
+                    {
+                        "threshold": 0.65,
+                        "coverage": 1,
+                        "precision_make": 0.9792,
+                        "precision_make_model": 0.8838,
+                        "text_pair_share": 1,
+                        "objective": 0.8838
+                    },
+                    {
+                        "threshold": 0.7,
+                        "coverage": 1,
+                        "precision_make": 0.9792,
+                        "precision_make_model": 0.8838,
+                        "text_pair_share": 1,
+                        "objective": 0.8838
+                    },
+                    {
+                        "threshold": 0.75,
+                        "coverage": 0.9936,
+                        "precision_make": 0.979,
+                        "precision_make_model": 0.8863,
+                        "text_pair_share": 1,
+                        "objective": 0.8806
+                    },
+                    {
+                        "threshold": 0.8,
+                        "coverage": 0.9872,
+                        "precision_make": 0.9842,
+                        "precision_make_model": 0.8894,
+                        "text_pair_share": 1,
+                        "objective": 0.878
+                    },
+                    {
+                        "threshold": 0.85,
+                        "coverage": 0.9167,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9061,
+                        "text_pair_share": 1,
+                        "objective": 0.8306
+                    },
+                    {
+                        "threshold": 0.9,
+                        "coverage": 0.5321,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9667,
+                        "text_pair_share": 1,
+                        "objective": 0.5144
+                    },
+                    {
+                        "threshold": 0.95,
+                        "coverage": 0.0513,
+                        "precision_make": 1,
+                        "precision_make_model": 1,
+                        "text_pair_share": 1,
+                        "objective": 0.0513
+                    }
+                ]
+            },
+            {
+                "w": 0.8,
+                "min_score": 0.8,
+                "queries": 156,
+                "coverage": 0.9872,
+                "returned": 1079,
+                "precision_make": 0.949,
+                "precision_make_model": 0.8499,
+                "text_pair_share": 1,
+                "curve": [
+                    {
+                        "threshold": 0.6,
+                        "coverage": 1,
+                        "precision_make": 0.9351,
+                        "precision_make_model": 0.8277,
+                        "text_pair_share": 1,
+                        "objective": 0.8277
+                    },
+                    {
+                        "threshold": 0.65,
+                        "coverage": 1,
+                        "precision_make": 0.9351,
+                        "precision_make_model": 0.8277,
+                        "text_pair_share": 1,
+                        "objective": 0.8277
+                    },
+                    {
+                        "threshold": 0.7,
+                        "coverage": 1,
+                        "precision_make": 0.9347,
+                        "precision_make_model": 0.8308,
+                        "text_pair_share": 1,
+                        "objective": 0.8308
+                    },
+                    {
+                        "threshold": 0.75,
+                        "coverage": 0.9936,
+                        "precision_make": 0.9359,
+                        "precision_make_model": 0.8313,
+                        "text_pair_share": 1,
+                        "objective": 0.826
+                    },
+                    {
+                        "threshold": 0.8,
+                        "coverage": 0.9872,
+                        "precision_make": 0.949,
+                        "precision_make_model": 0.8499,
+                        "text_pair_share": 1,
+                        "objective": 0.839
+                    },
+                    {
+                        "threshold": 0.85,
+                        "coverage": 0.7949,
+                        "precision_make": 0.9963,
+                        "precision_make_model": 0.9045,
+                        "text_pair_share": 1,
+                        "objective": 0.719
+                    },
+                    {
+                        "threshold": 0.9,
+                        "coverage": 0.3974,
+                        "precision_make": 1,
+                        "precision_make_model": 0.974,
+                        "text_pair_share": 1,
+                        "objective": 0.3871
+                    },
+                    {
+                        "threshold": 0.95,
+                        "coverage": 0.0256,
+                        "precision_make": 1,
+                        "precision_make_model": 1,
+                        "text_pair_share": 1,
+                        "objective": 0.0256
+                    }
+                ]
+            },
+            {
+                "w": 0.9,
+                "min_score": 0.8,
+                "queries": 156,
+                "coverage": 0.9744,
+                "returned": 903,
+                "precision_make": 0.907,
+                "precision_make_model": 0.7984,
+                "text_pair_share": 1,
+                "curve": [
+                    {
+                        "threshold": 0.6,
+                        "coverage": 1,
+                        "precision_make": 0.855,
+                        "precision_make_model": 0.7476,
+                        "text_pair_share": 1,
+                        "objective": 0.7476
+                    },
+                    {
+                        "threshold": 0.65,
+                        "coverage": 1,
+                        "precision_make": 0.855,
+                        "precision_make_model": 0.7476,
+                        "text_pair_share": 1,
+                        "objective": 0.7476
+                    },
+                    {
+                        "threshold": 0.7,
+                        "coverage": 0.9936,
+                        "precision_make": 0.8556,
+                        "precision_make_model": 0.75,
+                        "text_pair_share": 1,
+                        "objective": 0.7452
+                    },
+                    {
+                        "threshold": 0.75,
+                        "coverage": 0.9872,
+                        "precision_make": 0.8616,
+                        "precision_make_model": 0.7537,
+                        "text_pair_share": 1,
+                        "objective": 0.7441
+                    },
+                    {
+                        "threshold": 0.8,
+                        "coverage": 0.9744,
+                        "precision_make": 0.907,
+                        "precision_make_model": 0.7984,
+                        "text_pair_share": 1,
+                        "objective": 0.778
+                    },
+                    {
+                        "threshold": 0.85,
+                        "coverage": 0.6923,
+                        "precision_make": 0.9952,
+                        "precision_make_model": 0.9212,
+                        "text_pair_share": 1,
+                        "objective": 0.6377
+                    },
+                    {
+                        "threshold": 0.9,
+                        "coverage": 0.2564,
+                        "precision_make": 1,
+                        "precision_make_model": 0.9796,
+                        "text_pair_share": 1,
+                        "objective": 0.2512
+                    },
+                    {
+                        "threshold": 0.95,
+                        "coverage": 0,
+                        "precision_make": 0,
+                        "precision_make_model": 0,
+                        "text_pair_share": 0,
+                        "objective": 0
+                    }
+                ]
+            },
+            {
+                "w": 1,
+                "min_score": 0.75,
+                "queries": 156,
+                "coverage": 0.9872,
+                "returned": 1173,
+                "precision_make": 0.7852,
+                "precision_make_model": 0.6769,
+                "text_pair_share": 1,
+                "curve": [
+                    {
+                        "threshold": 0.6,
+                        "coverage": 1,
+                        "precision_make": 0.7732,
+                        "precision_make_model": 0.6651,
+                        "text_pair_share": 1,
+                        "objective": 0.6651
+                    },
+                    {
+                        "threshold": 0.65,
+                        "coverage": 1,
+                        "precision_make": 0.7744,
+                        "precision_make_model": 0.6672,
+                        "text_pair_share": 1,
+                        "objective": 0.6672
+                    },
+                    {
+                        "threshold": 0.7,
+                        "coverage": 0.9936,
+                        "precision_make": 0.7745,
+                        "precision_make_model": 0.6669,
+                        "text_pair_share": 1,
+                        "objective": 0.6626
+                    },
+                    {
+                        "threshold": 0.75,
+                        "coverage": 0.9872,
+                        "precision_make": 0.7852,
+                        "precision_make_model": 0.6769,
+                        "text_pair_share": 1,
+                        "objective": 0.6682
+                    },
+                    {
+                        "threshold": 0.8,
+                        "coverage": 0.8974,
+                        "precision_make": 0.8461,
+                        "precision_make_model": 0.7349,
+                        "text_pair_share": 1,
+                        "objective": 0.6595
+                    },
+                    {
+                        "threshold": 0.85,
+                        "coverage": 0.6026,
+                        "precision_make": 0.9671,
+                        "precision_make_model": 0.8947,
+                        "text_pair_share": 1,
+                        "objective": 0.5391
+                    },
+                    {
+                        "threshold": 0.9,
+                        "coverage": 0.2051,
+                        "precision_make": 1,
+                        "precision_make_model": 1,
+                        "text_pair_share": 1,
+                        "objective": 0.2051
+                    },
+                    {
+                        "threshold": 0.95,
+                        "coverage": 0,
+                        "precision_make": 0,
+                        "precision_make_model": 0,
+                        "text_pair_share": 0,
+                        "objective": 0
+                    }
+                ]
+            }
+        ]
+    },
+    "latency": {
+        "w": 0.9,
+        "uncached": {
+            "samples": 156,
+            "p50_ms": 2.423,
+            "p95_ms": 4.317,
+            "mean_ms": 2.686
+        },
+        "budget_ms": 80,
+        "within_budget": true
+    }
+}

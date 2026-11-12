@@ -107,6 +107,9 @@ return [
         'candidates' => 40,
         'ef_search' => 100,
         'ttl_seconds' => 3600,
+        'per_minute' => 60,
+        'default_weight' => 0.9, // calibrated 2026-11-12: best weight of the sweep that beats the image-only baseline on precision at equal coverage
+        'hybrid_min_score' => filled(env('AI_SIMILAR_HYBRID_MIN_SCORE')) ? (float) env('AI_SIMILAR_HYBRID_MIN_SCORE') : 0.75,
     ],
 
     /*

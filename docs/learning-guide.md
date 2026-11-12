@@ -720,6 +720,18 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`PhotoEncoderTextTest`](../tests/Feature/PhotoEncoderTextTest.php), [`PhotoTextSearchTest`](../tests/Feature/PhotoTextSearchTest.php), [`PhotoTextSearchApiTest`](../tests/Feature/PhotoTextSearchApiTest.php), [`PhotoSearchPageTest`](../tests/Feature/PhotoSearchPageTest.php), [`PhotoSearchEvalTest`](../tests/Feature/PhotoSearchEvalTest.php) | Offline tests with a faked text encoder | SL-37 |
 | [`PhotoEncoderComposeTest`](../tests/Feature/PhotoEncoderComposeTest.php), [`PhotoEncoderClientTest`](../tests/Feature/PhotoEncoderClientTest.php), [`PhotoEmbedTest`](../tests/Feature/PhotoEmbedTest.php), [`SimilarPhotosServiceTest`](../tests/Feature/SimilarPhotosServiceTest.php), [`SimilarPhotosPageTest`](../tests/Feature/SimilarPhotosPageTest.php), [`PhotoSimilarEvalTest`](../tests/Feature/PhotoSimilarEvalTest.php) | Offline tests with a faked encoder and generated vectors | SL-36 |
 
+**Hybrid similar photos: caption vectors, blend, eval (SL-38)**
+
+| File | Purpose | Slice |
+|---|---|---|
+| [`add_text_embedding_columns_to_listing_photos_table`](../database/migrations/2026_11_12_100000_add_text_embedding_columns_to_listing_photos_table.php) | `text_embedding vector(512)`, its label, source (`caption`), hash and time; no index | SL-38 |
+| [`PhotoVectorRepository`](../app/Repositories/PhotoVectorRepository.php), [`CaptionSimilarityRepositoryInterface`](../app/Contracts/CaptionSimilarityRepositoryInterface.php), [`VectorQuery`](../app/DTOs/VectorQuery.php) | The one nearest-by-vector query that similar photos and text search share, and the caption similarity of a photo to its candidates in one query | SL-38 |
+| [`EmbedPhotoTextsBatchJob`](../app/Jobs/EmbedPhotoTextsBatchJob.php), [`PhotoCaptionRow`](../app/DTOs/PhotoCaptionRow.php), [`PhotoTextEmbedding`](../app/DTOs/PhotoTextEmbedding.php) | `photos:embed --text`: encodes the templated caption of each photo on `ai-vision`, skips current rows, clears a lost caption | SL-38 |
+| [`SimilarPhotosService`](../app/Services/SimilarPhotosService.php), [`HybridParts`](../app/DTOs/HybridParts.php) | `w * image + (1 - w) * caption` over the 40 image candidates; a pair without a caption keeps its image similarity and is flagged image only; `w` of 1 is the SL-36 path | SL-38 |
+| [`ShowLabPhotoSimilarController`](../app/Http/Controllers/ShowLabPhotoSimilarController.php), [`PhotoSimilarRequest`](../app/Http/Requests/PhotoSimilarRequest.php) | `GET /ai/photos/{photo}/similar?w=`: the two columns and the slider on `/ai/photos` | SL-38 |
+| [`HybridEvalScorer`](../app/Services/HybridEvalScorer.php), [`SimilarEvalService`](../app/Services/SimilarEvalService.php), [`SimilarPhotosEvalCommand`](../app/Console/Commands/SimilarPhotosEvalCommand.php) | `photos:similar-eval --hybrid`: the `w` sweep, the minimum score calibrated per `w` on the plateau, the image-only baseline, the title run flagged as leaking and never chosen, and the uncached latency; written to `hybrid.json` | SL-38 |
+| [`PhotoVectorRepositoryTest`](../tests/Feature/PhotoVectorRepositoryTest.php), [`PhotoTextEmbedTest`](../tests/Feature/PhotoTextEmbedTest.php), [`HybridSimilarPhotosTest`](../tests/Feature/HybridSimilarPhotosTest.php), [`PhotoSimilarEndpointTest`](../tests/Feature/PhotoSimilarEndpointTest.php), [`PhotoHybridEvalTest`](../tests/Feature/PhotoHybridEvalTest.php) | Offline tests on fixed vectors and a faked encoder | SL-38 |
+
 **Stop and conversations (section 18)**
 
 | File | Purpose | Slice |

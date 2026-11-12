@@ -10,5 +10,6 @@ final readonly class SimilarEvalPhoto
         public int $photoId,
         public string $make,
         public string $model,
+        public string $title = '',
     ) {}
 }

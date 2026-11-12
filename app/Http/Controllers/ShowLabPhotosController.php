@@ -43,6 +43,8 @@ final class ShowLabPhotosController extends Controller
             'pageUrl' => route('ai.photos', absolute: false),
             'extractUrl' => route('ai.photos.extract', ['photo' => self::ID_PLACEHOLDER], false),
             'statusUrl' => route('ai.photos.status', ['photo' => self::ID_PLACEHOLDER], false),
+            'similarUrl' => route('ai.photos.similar', ['photo' => self::ID_PLACEHOLDER], false),
+            'hybridWeight' => (float) config('ai.similar_photos.default_weight'),
             'idPlaceholder' => self::ID_PLACEHOLDER,
         ]);
     }

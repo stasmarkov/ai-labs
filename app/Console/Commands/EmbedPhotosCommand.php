@@ -16,6 +16,7 @@ use Illuminate\Console\Command;
 
 #[Signature('photos:embed
     {--limit= : Only the first n photos by id}
+    {--text : Embed the captions with the text encoder instead of the images}
     {--fresh : Clear the vectors in scope first}
     {--wait : Wait for the queue to drain, then print the summary}')]
 #[Description('Embed listing photos with the image encoder in queued batches')]
@@ -45,9 +46,11 @@ final class EmbedPhotosCommand extends Command
             return self::FAILURE;
         }
 
-        $run = $service->dispatch($limit === null ? null : (int) $limit, (bool) $this->option('fresh'));
+        $limit = $limit === null ? null : (int) $limit;
+        $text = (bool) $this->option('text');
+        $run = $text ? $service->dispatchText($limit, (bool) $this->option('fresh')) : $service->dispatch($limit, (bool) $this->option('fresh'));
 
-        $this->info("Queued {$run->jobs} jobs for {$run->photos} photos on ".EmbedPhotosBatchJob::QUEUE." ({$service->label()}).");
+        $this->info("Queued {$run->jobs} jobs for {$run->photos} ".($text ? 'captions' : 'photos').' on '.EmbedPhotosBatchJob::QUEUE." ({$service->label()}).");
 
         if (! $this->option('wait')) {
             return self::SUCCESS;
@@ -59,9 +62,13 @@ final class EmbedPhotosCommand extends Command
 
         $progress = $service->progress($run);
         $seconds = max(0.001, $run->startedAt->diffInMilliseconds(CarbonImmutable::now()) / 1000);
-        $embedded = $service->embeddedSince($run->startedAt);
+        $embedded = $text ? $service->textEmbeddedSince($run->startedAt) : $service->embeddedSince($run->startedAt);
 
-        $this->info(sprintf('Embedded %d photos in %.1f s (%.1f/s).', $embedded, $seconds, $embedded / $seconds));
+        $this->info(sprintf('Embedded %d %s in %.1f s (%.1f/s).', $embedded, $text ? 'caption vectors' : 'photos', $seconds, $embedded / $seconds));
+
+        if ($text) {
+            $this->line($service->withoutCaption($limit).' photos have no caption from the current vision model and prompt, so no caption vector.');
+        }
 
         if ($progress->missing > 0) {
             $this->warn("{$progress->missing} files missing, skipped.");

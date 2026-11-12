@@ -1050,6 +1050,43 @@ At the chosen 0.75: 1,173 results for 154 answered queries, uncached latency p50
 
 I wanted similar photos without a hosted service, so the lab runs a local CLIP encoder, stores 512-dimension vectors in pgvector and searches them with an HNSW cosine index. The part I would not skip is calibrating the cutoff: CLIP scores any two car photos high, so I measured precision and coverage for every threshold from 0.60 to 0.95 against the make and model of each photo instead of guessing. At 0.75, 78% of results share the make and 68% the make and model, and 99% of photos get at least one match; 0.80 would raise precision by about 6 points and drop 9 points of coverage, so which one is right depends on whether an empty strip is worse than a weak match.
 
+## Hybrid similar photos (2026-11-12)
+
+`photos:similar-eval --hybrid` ranks the same 156 queries as SL-36 with `score = w * image + (1 - w) * caption`, where the caption side is the CLIP text vector of the `gemma4:12b` / `photo-vision@v1` caption wrapped by the `photo-search.v1` template ("a photo of {caption}"). 155 of 156 photos have a caption vector (`photos:embed --text --wait` reported 617 s, most of it waiting for a worker to be started; the batches themselves ran in a few seconds). For each `w` from 0 to 1 in steps of 0.1 the cutoff `min_score` is calibrated on the threshold plateau; the image-only baseline is the SL-36 ranking in the same run. Run on frankenphp, `k` 8, near-duplicate cutoff 0.98. Raw file: [`bench/results/photo-similar/2026-11-12/hybrid.json`](bench/results/photo-similar/2026-11-12/hybrid.json). Reproduce with `ddev artisan photos:extract`, one `queue:work --queue=ai-vision --stop-when-empty`, `ddev artisan photos:embed --text --wait` and `ddev artisan photos:similar-eval --hybrid`.
+
+Method:
+- **Relevant** and **coverage** are as in the SL-36 section: the same make and model as the query photo's listing, and the share of queries with at least one result.
+- **Chosen `w`** must keep coverage at least the baseline's and beat its precision by at least 0.01; otherwise the default stays 1.0 (image only).
+- **Title run** encodes the listing titles instead of the captions. The title contains the make and model, so it leaks the ground truth; it is reported for contrast and never chosen.
+
+| w | min_score | P@8 make and model | Coverage |
+|---|-----------|--------------------|----------|
+| 0.0 (caption only) | 0.60 | 0.417 | 1.000 |
+| 0.3 | 0.65 | 0.494 | 0.994 |
+| 0.5 | 0.65 | 0.563 | 1.000 |
+| 0.7 | 0.70 | 0.641 | 0.994 |
+| 0.8 | 0.75 | 0.707 | 0.968 |
+| **0.9** | 0.75 | 0.693 | 0.987 |
+| 1.0 (image only, baseline) | 0.75 | 0.677 | 0.987 |
+| title only, leaks ground truth | 0.95 | 0.987 | 1.000 |
+
+The chosen weight is 0.9 at `min_score` 0.75 (`ai.similar_photos.default_weight`, `hybrid_min_score`). Uncached hybrid latency at 0.9: p50 2.42 ms, p95 4.32 ms against the 80 ms budget.
+
+### What the numbers say
+
+- **Captions help a little, at the top end only.** Precision rises from 0.677 to 0.693 (+1.6 points) at w 0.9 with coverage unchanged. At w 0.8 it is higher (0.707) but coverage falls to 0.968, so the rule rejects it.
+- **Captions alone are weak.** At w 0 precision is 0.417 against 0.677 for images: a caption describes colour and body type and rarely names the model. 98% of candidate pairs had a caption vector on both sides, so the gap is not missing data.
+- **The title run shows what the metric could say.** Title text reaches 0.987 at w 0 because it contains the answer; this is the leakage the flag exists for, and it is not a result.
+
+### Surprises
+
+- **The gain is small and only one weight clears the rule.** Eleven weights, one winner by 1.6 points on 156 queries; that is a difference I would not defend as more than noise without a larger set.
+- **The expensive step is the captions, not the ranking.** The ranking adds one query and about 2 ms; producing the captions needs the vision model (gemma4:12b), a step measured in the vision section.
+
+### Interview story
+
+I wanted to know whether the captions the vision model already writes make photo similarity better, so I blended the CLIP image similarity with the CLIP similarity of the caption and swept the weight against the make and model of each photo. The part I would not skip is the control: titles contain the answer, so I ran them too, labelled them as leaking and kept them out of the choice. Captions gave 69.3% against 67.7% for images alone at the same coverage, a gain I report as small rather than a win, and the default weight is 0.9 because it was the only one that beat the baseline without losing coverage.
+
 ## Search car photos by text (2026-11-11)
 
 `photos:search-eval` runs 30 labelled queries ([`bench/photo-search/queries.v1.jsonl`](bench/photo-search/queries.v1.jsonl)) against the 156 embedded photos through `PhotoTextSearchService`. The query text goes to the same CLIP encoder as the photos (`openai/clip-vit-base-patch32`, 512 dimensions, label `photo-encoder/openai/clip-vit-base-patch32`) and the 40 nearest vectors are filtered to one photo per listing. Run on frankenphp, `k` 8. Raw file: [`bench/results/photo-search/2026-11-11/run.json`](bench/results/photo-search/2026-11-11/run.json). Reproduce with `ddev artisan photos:search-eval`.

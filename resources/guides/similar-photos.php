@@ -32,6 +32,11 @@ return [
             'snippet' => 'App\Services\SimilarPhotosService::for',
         ],
         [
+            'title' => 'Hybrid: add what the caption says',
+            'body' => "Image vectors miss what a photo shows but does not look like. `photos:embed --text` also encodes each photo's caption (from the vision model) with the same encoder's text side. With a weight `w` below 1, the 40 image candidates are re-scored as `w * image + (1 - w) * caption` similarity, then one photo per listing is kept at the hybrid minimum score. A pair without a caption vector keeps its image similarity and is flagged image only, so the mix of both is visible. A weight of 1 is the image-only result, unchanged.",
+            'snippet' => 'App\\Services\\SimilarPhotosService::blend',
+        ],
+        [
             'title' => 'Results are cached as plain arrays',
             'body' => 'The key holds the model label and a generation number. A cache hit skips the database. Every batch that stores a vector, and every fresh run, moves to the next generation, so no stale list outlives an index change.',
         ],
@@ -53,8 +58,20 @@ return [
             'title' => 'The listing page has no Similar cars block',
             'body' => "**Cause:** the listing has no photo, no photo of another listing is similar enough, or the encoder failed. The page never shows an encoder error to visitors.\n\n**Fix:** open the photo in the photos lab and read the reason there.",
         ],
+        [
+            'title' => 'Title leakage makes hybrid look perfect',
+            'body' => "**Cause:** the listing title holds the make and model that the eval grades. A text vector made from the title finds the same make and model by construction, so precision jumps without the photos adding anything.\n\n**Fix:** use the caption as the only text source. The eval reports the title run separately, marked as leaking the ground truth, and never picks its weight.",
+        ],
+        [
+            'title' => 'Hybrid changes little for most photos',
+            'body' => "**Cause:** few photos have a caption vector, so most pairs fall back to the image similarity and are flagged image only.\n\n**Fix:** run `photos:extract` for the photos, then `photos:embed --text`, and read the share of pairs with both vectors in `hybrid.json`.",
+        ],
     ],
     'recipes' => [
+        [
+            'title' => 'Change the hybrid weight or the text source',
+            'body' => "Run `photos:similar-eval --hybrid`: it sweeps `w` from 0 to 1, calibrates the minimum score for each `w`, and writes `hybrid.json` with the image-only baseline. Set `AI_SIMILAR_HYBRID_MIN_SCORE` to the calibrated value of the weight you choose. The text source is the caption only. The eval also runs listing titles, in memory, to show the leak; never use that run as the source.\n\n**Check:** the best weight in `hybrid.json` beats the baseline by at least 0.01 precision; if not, keep `w` at 1.",
+        ],
         [
             'title' => 'Change the encoder model',
             'body' => "Pick the model for the image embeddings row on the settings page, or set `PHOTO_ENCODER_MODEL`. The model must produce 512 dimensions. Saving asks you to confirm the re-index, because the old vectors no longer match.\n\n**Check:** the strip says the index was built with another model until the embed command runs with `--fresh`.",
@@ -90,6 +107,8 @@ return [
         ['label' => 'Precision at 8, same make and model', 'file' => 'photo-similar/2026-11-11/run.json', 'path' => 'metrics.precision_make_model'],
         ['label' => 'Latency from the database, 95th percentile', 'unit' => 'ms', 'file' => 'photo-similar/2026-11-11/run.json', 'path' => 'latency.uncached.p95_ms'],
         ['label' => 'Latency from the cache, 95th percentile', 'unit' => 'ms', 'file' => 'photo-similar/2026-11-11/run.json', 'path' => 'latency.cached.p95_ms'],
+        ['label' => 'Hybrid precision at 8, same make and model (best weight)', 'file' => 'photo-similar/2026-11-12/hybrid.json', 'path' => 'best.precision_make_model'],
+        ['label' => 'Image-only precision at 8 in the same run (baseline)', 'file' => 'photo-similar/2026-11-12/hybrid.json', 'path' => 'baseline.precision_make_model'],
     ],
     'experiments' => [
         [
@@ -100,6 +119,17 @@ return [
                 ['id' => 'c', 'text' => 'The strip always shows the same photos of the same listing.'],
             ],
             'answer' => ['id' => 'a', 'body' => 'Open a photo and read the make and model label of each match. Most agree; the eval command measures how many. Photos of the same listing never appear.'],
+            'page' => 'ai.photos',
+            'params' => [],
+        ],
+        [
+            'title' => 'Do captions help?',
+            'predictions' => [
+                ['id' => 'a', 'text' => 'Adding the caption always finds the same make and model more often.'],
+                ['id' => 'b', 'text' => 'Captions help only some photos; the eval tells whether the best weight beats image only.'],
+                ['id' => 'c', 'text' => 'Titles are a fair text source, because they describe the car.'],
+            ],
+            'answer' => ['id' => 'b', 'body' => 'Move the slider on a photo and compare the two columns: photos with a caption move, photos without one stay as they were. The eval sweeps every weight against the image-only baseline and keeps image only unless a weight wins by 0.01. Titles are not fair: they hold the answer the eval grades, so that run is marked as leaking.'],
             'page' => 'ai.photos',
             'params' => [],
         ],

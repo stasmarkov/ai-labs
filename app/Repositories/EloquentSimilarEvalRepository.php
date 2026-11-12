@@ -18,8 +18,23 @@ final readonly class EloquentSimilarEvalRepository implements SimilarEvalReposit
             ->whereNotNull('p.embedding')
             ->where('p.embedding_model', $label)
             ->orderBy('p.id')
-            ->get(['p.id', 'l.make', 'l.model'])
-            ->map(fn (object $row): SimilarEvalPhoto => new SimilarEvalPhoto((int) $row->id, $row->make, $row->model))
+            ->get(['p.id', 'l.year', 'l.make', 'l.model'])
+            ->map(fn (object $row): SimilarEvalPhoto => new SimilarEvalPhoto((int) $row->id, $row->make, $row->model, "{$row->year} {$row->make} {$row->model}"))
+            ->all();
+    }
+
+    public function embeddedTitles(string $label): array
+    {
+        return DB::table('listing_photos as p')
+            ->join('listings as l', 'l.id', '=', 'p.listing_id')
+            ->whereNotNull('p.embedding')
+            ->where('p.embedding_model', $label)
+            ->distinct()
+            ->orderBy('l.year')
+            ->orderBy('l.make')
+            ->orderBy('l.model')
+            ->get(['l.year', 'l.make', 'l.model'])
+            ->map(fn (object $row): string => "{$row->year} {$row->make} {$row->model}")
             ->all();
     }
 

@@ -170,7 +170,10 @@ final readonly class PhotoTextSearchService
         return trim((string) file_get_contents(resource_path('prompts/'.$this->promptName().'.md')));
     }
 
-    private function prompt(string $text): string
+    /**
+     * The text as the encoder receives it: wrapped by the prompt template.
+     */
+    public function prompt(string $text): string
     {
         return str_replace('{query}', $text, $this->template());
     }

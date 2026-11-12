@@ -75,9 +75,9 @@ final readonly class PhotoLabService
     /**
      * The photos most like the chosen one, each flagged when its listing has the same make and model.
      */
-    public function similar(PhotoLabDetail $photo): PhotoLabSimilar
+    public function similar(PhotoLabDetail $photo, ?float $w = null): PhotoLabSimilar
     {
-        $result = $this->similar->for($photo->id);
+        $result = $this->similar->for($photo->id, $w);
 
         return new PhotoLabSimilar(
             array_map(fn (SimilarPhotoMatch $match): array => [
@@ -88,12 +88,14 @@ final readonly class PhotoLabService
                 'href' => route('ai.photos', ['photo' => $match->photoId], false),
                 'similarity' => $match->similarity,
                 'same_make_model' => strcasecmp($match->make, $photo->make) === 0 && strcasecmp($match->model, $photo->model) === 0,
+                ...($match->parts === null ? [] : ['parts' => $match->parts->toArray()]),
             ], $result->matches),
             $result->reason,
             $result->label,
             $result->cached,
             (float) config('ai.similar_photos.min_score'),
             (float) config('ai.similar_photos.near_duplicate_cutoff', 0.98),
+            $w === null || $w >= 1.0 ? null : max(0.0, $w),
         );
     }
 

@@ -260,3 +260,21 @@ it('AC-2 photo search maps a refusal to the guard step, before the encoder and i
     expect(array_search('refused', $events, true))->toBe(0)
         ->and(array_search('refused', $events, true))->toBeLessThan(array_search('response_received', $events, true));
 });
+
+it('AC-7 the similar-photos guide teaches the hybrid step, the recipe, the two failure modes and the hybrid numbers', function (): void {
+    $rendered = app(GuideRenderer::class)->render('similar-photos');
+    $titles = fn (string $tab): array => array_column($rendered[$tab], 'title');
+
+    expect(implode(' ', $titles('works')))->toContain('Hybrid')
+        ->and(implode(' ', $titles('recipes')))->toContain('hybrid weight')
+        ->and(implode(' ', $titles('failures')))->toContain('Title leakage')->toContain('Hybrid changes little')
+        ->and(implode(' ', array_column($rendered['numbers'], 'label')))->toContain('Hybrid precision')->toContain('baseline')
+        ->and(collect(app(GuideRepository::class)->find('similar-photos')->works)->pluck('snippet')->filter()->all())->toContain('App\\Services\\SimilarPhotosService::blend');
+
+    $this->withoutVite();
+    $this->get('/ai/guides/similar-photos')->assertOk();
+
+    $learning = file_get_contents(base_path('docs/learning-guide.md'));
+
+    expect($learning)->toContain('Hybrid similar photos')->toContain('HybridEvalScorer');
+});

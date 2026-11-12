@@ -17,6 +17,13 @@ interface SimilarEvalRepositoryInterface
     public function embeddedPhotos(string $label): array;
 
     /**
+     * The distinct listing titles ("year make model") of the photos embedded with the model label.
+     *
+     * @return list<string>
+     */
+    public function embeddedTitles(string $label): array;
+
+    /**
      * The photos and the encoder latency summed over the completed batches of the latest photos:embed run of the
      * provider and model, told apart by the agent and the invocation id prefix.
      */

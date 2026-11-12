@@ -100,6 +100,37 @@ final readonly class PhotoEncoderClient
     }
 
     /**
+     * One L2-normalised vector per text, in the order given, from the encoder's text tower in batches of the provider's
+     * "batch" size.
+     *
+     * @param  list<string>  $texts
+     * @return list<list<float>>
+     *
+     * @throws PhotoEncoderException
+     */
+    public function embedTexts(array $texts): array
+    {
+        $choice = $this->providers->configured(self::FEATURE);
+        $entry = config("ai.providers.{$choice->provider}");
+
+        if (! is_array($entry) || ($entry['driver'] ?? null) !== 'image-encoder') {
+            throw PhotoEncoderException::notConfigured($choice->provider);
+        }
+
+        $size = max(1, (int) ($entry['batch'] ?? 16));
+        $vectors = [];
+
+        foreach (array_chunk($texts, $size) as $batch) {
+            foreach ($this->embedBatch($choice->provider, $choice->model, $batch, $this->dimensions(), 'text') as $vector) {
+                $norm = sqrt(array_sum(array_map(fn (float $value): float => $value * $value, $vector)));
+                $vectors[] = $norm > 0.0 ? array_map(fn (float $value): float => $value / $norm, $vector) : $vector;
+            }
+        }
+
+        return $vectors;
+    }
+
+    /**
      * @param  list<string>  $batch  data URLs for the image modality, plain strings for text
      * @return list<list<float>>
      */

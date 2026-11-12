@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Contracts\AiSettingsRepositoryInterface;
+use App\Contracts\CaptionSimilarityRepositoryInterface;
 use App\Contracts\DocsAnswerCacheRepositoryInterface;
 use App\Contracts\DocsBenchRepositoryInterface;
 use App\Contracts\DocsIndexRepositoryInterface;
@@ -49,6 +50,7 @@ use App\Repositories\EloquentSemanticBenchRepository;
 use App\Repositories\EloquentSemanticSearchRepository;
 use App\Repositories\EloquentSimilarEvalRepository;
 use App\Repositories\EloquentSimilarPhotosRepository;
+use App\Repositories\PhotoVectorRepository;
 use App\Services\MarkdownChunker;
 use App\Support\PhpEarlyHintSender;
 use App\Support\PhpShutdownScheduler;
@@ -79,6 +81,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(PhotoExtractionRepositoryInterface::class, EloquentPhotoExtractionRepository::class);
         $this->app->bind(PhotoLabRepositoryInterface::class, EloquentPhotoLabRepository::class);
         $this->app->bind(SimilarPhotosRepositoryInterface::class, EloquentSimilarPhotosRepository::class);
+        $this->app->bind(CaptionSimilarityRepositoryInterface::class, PhotoVectorRepository::class);
         $this->app->bind(PhotoTextSearchRepositoryInterface::class, EloquentPhotoTextSearchRepository::class);
         $this->app->bind(SimilarEvalRepositoryInterface::class, EloquentSimilarEvalRepository::class);
         $this->app->bind(PhotoSearchEvalRepositoryInterface::class, EloquentPhotoSearchEvalRepository::class);
