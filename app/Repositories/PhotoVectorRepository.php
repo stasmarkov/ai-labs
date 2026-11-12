@@ -68,15 +68,28 @@ final readonly class PhotoVectorRepository implements CaptionSimilarityRepositor
 
         return DB::table('listing_photos as p')
             ->join('listing_photos as q', function ($join) use ($referencePhotoId, $model): void {
-                $join->where('q.id', '=', $referencePhotoId)->where('q.text_embedding_model', '=', $model);
+                $join->where('q.id', '=', $referencePhotoId)
+                    ->where('q.text_embedding_model', '=', $model)
+                    ->where('q.text_source', '=', 'caption');
             })
             ->whereIn('p.id', $photoIds)
             ->whereNotNull('p.text_embedding')
             ->whereNotNull('q.text_embedding')
             ->where('p.text_embedding_model', $model)
+            ->where('p.text_source', 'caption')
             ->selectRaw('p.id, 1 - (p.text_embedding <=> q.text_embedding) AS similarity')
             ->get()
             ->mapWithKeys(fn (object $row): array => [(int) $row->id => (float) $row->similarity])
             ->all();
+    }
+
+    public function hasCaptionVector(int $photoId, string $model): bool
+    {
+        return DB::table('listing_photos')
+            ->where('id', $photoId)
+            ->where('text_embedding_model', $model)
+            ->where('text_source', 'caption')
+            ->whereNotNull('text_embedding')
+            ->exists();
     }
 }

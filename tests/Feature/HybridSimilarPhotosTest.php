@@ -21,6 +21,7 @@ beforeEach(function (): void {
         'ai.providers.photo-encoder.url' => 'http://encoder.test:7997',
         'ai.similar_photos.min_score' => 0.50,
         'ai.similar_photos.hybrid_min_score' => 0.50,
+        'ai.similar_photos.hybrid_min_scores' => [],
         'ai.similar_photos.near_duplicate_cutoff' => 0.98,
     ]);
     Cache::flush();
@@ -118,6 +119,34 @@ it('AC-2 flags every match as image only when the query photo has no caption', f
     expect($match->parts->imageOnly)->toBeTrue()->and($match->similarity)->toEqualWithDelta(0.90, 1e-5);
 });
 
+it('AC-2 a query photo without a caption ranks like the image-only strip even when hybrid_min_score is higher', function (): void {
+    config(['ai.similar_photos.min_score' => 0.50, 'ai.similar_photos.hybrid_min_score' => 0.85]);
+    $query = hybridPhoto(1.0, null);
+    hybridPhoto(0.95, hybridVector(0.95));
+    hybridPhoto(0.70, hybridVector(0.70));
+
+    $service = app(SimilarPhotosService::class);
+    $image = $service->for($query->id)->matches;
+    $hybrid = $service->for($query->id, 0.5)->matches;
+
+    expect($hybrid)->toHaveCount(2)
+        ->and(array_map(fn ($m): int => $m->photoId, $hybrid))->toBe(array_map(fn ($m): int => $m->photoId, $image))
+        ->and(array_map(fn ($m): float => round($m->similarity, 5), $hybrid))->toBe(array_map(fn ($m): float => round($m->similarity, 5), $image));
+});
+
+it('AC-2 a candidate whose text source is title is scored image only', function (): void {
+    $query = hybridPhoto(1.0, hybridVector(1.0));
+    $title = hybridPhoto(0.90, hybridVector(0.20));
+    DB::table('listing_photos')->where('id', $title->id)->update(['text_source' => 'title']);
+
+    $match = app(SimilarPhotosService::class)->for($query->id, 0.5)->matches[0];
+
+    expect($match->photoId)->toBe($title->id)
+        ->and($match->parts->imageOnly)->toBeTrue()
+        ->and($match->parts->caption)->toBeNull()
+        ->and($match->similarity)->toEqualWithDelta(0.90, 1e-5);
+});
+
 it('AC-2 cuts near duplicates on the image similarity and weak scores at hybrid_min_score', function (): void {
     $query = hybridPhoto(1.0, hybridVector(1.0));
     $duplicate = hybridPhoto(0.99, hybridVector(0.60));
@@ -183,4 +212,42 @@ it('AC-2 the cache varies by w and by the text generation and serves the parts b
     expect($service->cacheKey($query->id, 0.5))->not->toBe($before)
         ->and($service->cacheKey($query->id))->toBe($imageKey)
         ->and($service->for($query->id, 0.5)->cached)->toBeFalse();
+});
+
+it('AC-2 returns at most 8 photos even when more than 8 qualify', function (): void {
+    $query = hybridPhoto(1.0, hybridVector(1.0));
+
+    for ($i = 0; $i < 12; $i++) {
+        hybridPhoto(0.90 - $i * 0.01, hybridVector(0.90));
+    }
+
+    expect(hybridIds($query->id, 0.5))->toHaveCount(8);
+});
+
+it('AC-2 orders equal hybrid scores by photo id ascending', function (): void {
+    $query = hybridPhoto(1.0, hybridVector(1.0));
+    $first = hybridPhoto(0.80, hybridVector(0.80));
+    $second = hybridPhoto(0.80, hybridVector(0.80));
+
+    expect(hybridIds($query->id, 0.5))->toBe([$first->id, $second->id]);
+});
+
+it('AC-2 uses the cutoff calibrated for the weight, and reports the cutoff it applied', function (): void {
+    config(['ai.similar_photos.hybrid_min_scores' => ['0.5' => 0.85], 'ai.similar_photos.hybrid_min_score' => 0.50]);
+    $query = hybridPhoto(1.0, hybridVector(1.0));
+    hybridPhoto(0.80, hybridVector(0.80));
+
+    $result = app(SimilarPhotosService::class)->for($query->id, 0.5);
+
+    expect($result->matches)->toBe([])
+        ->and($result->pool->appliedMinScore)->toBe(0.85)
+        ->and(app(SimilarPhotosService::class)->hybridMinScore(0.7))->toBe(0.50);
+});
+
+it('AC-2 a query photo without a caption reports the image cutoff it was really cut at', function (): void {
+    config(['ai.similar_photos.min_score' => 0.60, 'ai.similar_photos.hybrid_min_score' => 0.55]);
+    $query = hybridPhoto(1.0, null);
+    hybridPhoto(0.90, hybridVector(0.50));
+
+    expect(app(SimilarPhotosService::class)->for($query->id, 0.5)->pool->appliedMinScore)->toBe(0.60);
 });

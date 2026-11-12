@@ -1083,6 +1083,8 @@ The chosen weight is 0.9 at `min_score` 0.75 (`ai.similar_photos.default_weight`
 - **The gain is small and only one weight clears the rule.** Eleven weights, one winner by 1.6 points on 156 queries; that is a difference I would not defend as more than noise without a larger set.
 - **The expensive step is the captions, not the ranking.** The ranking adds one query and about 2 ms; producing the captions needs the vision model (gemma4:12b), a step measured in the vision section.
 
+- **One cutoff cannot serve every weight.** Blended scores sit lower as the caption weight grows, so the 0.75 cutoff calibrated for w 0.9 left the lab's hybrid column empty at w 0.5. The sweep already calibrates a cutoff per weight (0.60 at w 0 up to 0.75 at w 0.8 and 0.9), so the app now uses that table (`ai.similar_photos.hybrid_min_scores`); at w 0.5 the cutoff is 0.65 and the column shows 8 photos.
+
 ### Interview story
 
 I wanted to know whether the captions the vision model already writes make photo similarity better, so I blended the CLIP image similarity with the CLIP similarity of the caption and swept the weight against the make and model of each photo. The part I would not skip is the control: titles contain the answer, so I ran them too, labelled them as leaking and kept them out of the choice. Captions gave 69.3% against 67.7% for images alone at the same coverage, a gain I report as small rather than a win, and the default weight is 0.9 because it was the only one that beat the baseline without losing coverage.

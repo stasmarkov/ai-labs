@@ -78,6 +78,7 @@ final readonly class PhotoLabService
     public function similar(PhotoLabDetail $photo, ?float $w = null): PhotoLabSimilar
     {
         $result = $this->similar->for($photo->id, $w);
+        $hybrid = $w !== null && round($w, 1) < 1.0;
 
         return new PhotoLabSimilar(
             array_map(fn (SimilarPhotoMatch $match): array => [
@@ -93,9 +94,11 @@ final readonly class PhotoLabService
             $result->reason,
             $result->label,
             $result->cached,
-            (float) config('ai.similar_photos.min_score'),
+            // The cutoff the ranking really applied (a query photo without a caption is cut at the image cutoff).
+            $result->pool->appliedMinScore ?? (float) config('ai.similar_photos.min_score'),
             (float) config('ai.similar_photos.near_duplicate_cutoff', 0.98),
-            $w === null || $w >= 1.0 ? null : max(0.0, $w),
+            $hybrid ? max(0.0, round($w, 1)) : null,
+            $result->pool,
         );
     }
 

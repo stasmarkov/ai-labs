@@ -44,6 +44,9 @@ interface SimilarStrip {
 interface HybridStrip extends SimilarStrip {
     w: number | null;
     coverage: { captioned: number; total: number } | null;
+    query_has_caption?: boolean;
+    candidates?: number;
+    candidates_with_caption?: number;
 }
 
 interface PhotoDetail extends PhotoItem {
@@ -386,7 +389,7 @@ ddev artisan photos:import</pre>
                     <label for="photos-weight" class="block text-[13px] text-muted">
                         Weight of the image: <span class="font-mono tabular-nums">{{ weight.toFixed(2) }}</span>, of the caption: <span class="font-mono tabular-nums">{{ (1 - weight).toFixed(2) }}</span>
                     </label>
-                    <input id="photos-weight" v-model.number="weight" type="range" min="0" max="1" step="0.05" class="mt-1 w-full" />
+                    <input id="photos-weight" v-model.number="weight" type="range" min="0" max="1" step="0.1" class="mt-1 w-full" />
                 </div>
 
                 <div class="mt-3 grid grid-cols-2 gap-3">
@@ -406,11 +409,14 @@ ddev artisan photos:import</pre>
                     </section>
 
                     <section aria-labelledby="photos-similar-hybrid-title" :aria-busy="hybridBusy" class="min-w-0">
-                        <h4 id="photos-similar-hybrid-title" class="m-0 text-[13px] font-semibold">Image and caption</h4>
+                        <h4 id="photos-similar-hybrid-title" class="m-0 text-[13px] font-semibold">Image and caption (w = {{ weight.toFixed(1) }})</h4>
                         <p v-if="hybridMessage" role="alert" class="mt-2 text-[13px] font-medium text-danger">{{ hybridMessage }}</p>
                         <template v-else-if="hybrid">
-                            <p v-if="hybrid.coverage" class="mt-1 text-[13px] text-muted" aria-live="polite">
-                                {{ hybrid.coverage.captioned }} of {{ hybrid.coverage.total }} matches scored with a caption.
+                            <p v-if="hybrid.query_has_caption === false" class="mt-1 text-[13px] text-muted" aria-live="polite">
+                                No caption for this photo.
+                            </p>
+                            <p v-else-if="hybrid.candidates !== undefined" class="mt-1 text-[13px] text-muted" aria-live="polite">
+                                {{ hybrid.candidates_with_caption }} of {{ hybrid.candidates }} neighbours have a caption.
                             </p>
                             <p v-if="hybrid.matches.length === 0" class="mt-2 text-[13px] text-muted">No similar photos: {{ hybrid.reason }}.</p>
                             <ul v-else class="m-0 mt-2 grid list-none gap-3 p-0">

@@ -36,6 +36,7 @@ final readonly class EloquentPhotoLabRepository implements PhotoLabRepositoryInt
     public function find(int $photoId, PhotoExtractionRequest $request): ?PhotoLabDetail
     {
         $photo = ListingPhoto::query()
+            ->select(['id', 'listing_id', 'path'])
             ->with(['listing', 'extractions' => fn ($query) => $query->orderByDesc('updated_at')])
             ->find($photoId);
 

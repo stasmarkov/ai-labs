@@ -7,6 +7,7 @@ use App\DTOs\PhotoEmbedding;
 use App\DTOs\PhotoTextEmbedding;
 use App\Models\Listing;
 use App\Models\ListingPhoto;
+use App\Services\SimilarPhotosService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -80,11 +81,11 @@ it('AC-4 returns the hybrid matches with the parts, the flags and the caption co
         ->and($response->json('matches.0.similarity'))->toEqualWithDelta(0.90, 0.001);
 });
 
-it('AC-4 without w or with w 1 returns the image-only strip with no parts', function (): void {
+it('AC-4 with w 1 returns the image-only strip with no parts', function (): void {
     $query = endpointPhoto(1.0, endpointVector(1.0));
     endpointPhoto(0.90, endpointVector(0.50));
 
-    foreach (['', '?w=1', '?w=1.0'] as $suffix) {
+    foreach (['?w=1', '?w=1.0', '?w=0.96'] as $suffix) {
         Cache::flush();
         $this->getJson("/ai/photos/{$query->id}/similar{$suffix}")
             ->assertOk()
@@ -92,6 +93,61 @@ it('AC-4 without w or with w 1 returns the image-only strip with no parts', func
             ->assertJsonPath('coverage', null)
             ->assertJsonMissingPath('matches.0.parts');
     }
+});
+
+it('AC-4 a missing w is rejected with 422', function (): void {
+    $query = endpointPhoto(1.0, null);
+
+    $this->getJson("/ai/photos/{$query->id}/similar")
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('w');
+});
+
+it('AC-4 rounds w to one decimal and shares the cache entry with the rounded value', function (): void {
+    $query = endpointPhoto(1.0, endpointVector(1.0));
+    endpointPhoto(0.90, endpointVector(0.50));
+
+    $this->getJson("/ai/photos/{$query->id}/similar?w=0.7")->assertOk()->assertJsonPath('cached', false);
+    $this->getJson("/ai/photos/{$query->id}/similar?w=0.73")
+        ->assertOk()
+        ->assertJsonPath('w', 0.7)
+        ->assertJsonPath('cached', true);
+
+    $service = app(SimilarPhotosService::class);
+    expect($service->cacheKey($query->id, 0.73))->toBe($service->cacheKey($query->id, 0.7));
+});
+
+it('AC-4 reports whether the query photo has a caption', function (): void {
+    $captioned = endpointPhoto(1.0, endpointVector(1.0));
+    $bare = endpointPhoto(1.0, null);
+    endpointPhoto(0.90, endpointVector(0.50));
+
+    $this->getJson("/ai/photos/{$captioned->id}/similar?w=0.5")->assertOk()->assertJsonPath('query_has_caption', true);
+    $this->getJson("/ai/photos/{$bare->id}/similar?w=0.5")->assertOk()->assertJsonPath('query_has_caption', false);
+});
+
+it('AC-4 counts the candidate pool and the candidates with a caption vector', function (): void {
+    $query = endpointPhoto(1.0, endpointVector(1.0));
+    endpointPhoto(0.90, endpointVector(0.50));
+    endpointPhoto(0.85, endpointVector(0.60));
+    endpointPhoto(0.80, null);
+    endpointPhoto(0.30, null);
+
+    $this->getJson("/ai/photos/{$query->id}/similar?w=0.5")
+        ->assertOk()
+        ->assertJsonPath('candidates', 4)
+        ->assertJsonPath('candidates_with_caption', 2);
+
+    $this->getJson("/ai/photos/{$query->id}/similar?w=0.5")->assertJsonPath('cached', true)->assertJsonPath('candidates', 4);
+});
+
+it('AC-4 reports the hybrid minimum score on a hybrid answer and the image one otherwise', function (): void {
+    config(['ai.similar_photos.min_score' => 0.60, 'ai.similar_photos.hybrid_min_score' => 0.55, 'ai.similar_photos.hybrid_min_scores' => []]);
+    $query = endpointPhoto(1.0, endpointVector(1.0));
+    endpointPhoto(0.90, endpointVector(0.50));
+
+    $this->getJson("/ai/photos/{$query->id}/similar?w=0.5")->assertOk()->assertJsonPath('min_score', 0.55);
+    $this->getJson("/ai/photos/{$query->id}/similar?w=1")->assertOk()->assertJsonPath('min_score', 0.6);
 });
 
 it('AC-4 rejects a weight outside 0 to 1 or not a number with 422 and a field error', function (string $w): void {

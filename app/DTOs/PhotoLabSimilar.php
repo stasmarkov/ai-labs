@@ -18,6 +18,7 @@ final readonly class PhotoLabSimilar
         public float $minScore,
         public float $nearDuplicateCutoff,
         public ?float $w = null,
+        public ?HybridPool $pool = null,
     ) {}
 
     /**
@@ -38,7 +39,7 @@ final readonly class PhotoLabSimilar
     /**
      * The hybrid payload of the endpoint: the strip, the weight, and how many matches were scored with a caption.
      *
-     * @return array{label: string, reason: string|null, cached: bool, min_score: float, near_duplicate_cutoff: float, matches: list<array<string, mixed>>, w: float|null, coverage: array{captioned: int, total: int}|null}
+     * @return array{label: string, reason: string|null, cached: bool, min_score: float, near_duplicate_cutoff: float, matches: list<array<string, mixed>>, w: float|null, coverage: array{captioned: int, total: int}|null, query_has_caption?: bool, candidates?: int, candidates_with_caption?: int}
      */
     public function toHybridArray(): array
     {
@@ -48,6 +49,7 @@ final readonly class PhotoLabSimilar
             ...$this->toArray(),
             'w' => $this->w,
             'coverage' => $this->w === null ? null : ['captioned' => $captioned, 'total' => count($this->matches)],
+            ...($this->pool?->toArray() ?? []),
         ];
     }
 }

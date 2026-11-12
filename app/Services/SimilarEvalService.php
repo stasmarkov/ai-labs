@@ -253,7 +253,8 @@ final readonly class SimilarEvalService
             $this->similar->for($photo->photoId, $w);
         }
 
-        $this->similar->invalidate();
+        // Hybrid keys carry the text generation, so moving it is enough; the image-only cache (and the listing page
+        // block that reads it) stays warm.
         $this->similar->invalidateText();
 
         $samples = array_map(function (SimilarEvalPhoto $photo) use ($w): int {

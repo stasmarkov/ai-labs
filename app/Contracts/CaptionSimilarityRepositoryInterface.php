@@ -14,4 +14,9 @@ interface CaptionSimilarityRepositoryInterface
      * @return array<int, float>
      */
     public function captionSimilarities(int $referencePhotoId, array $photoIds, string $model): array;
+
+    /**
+     * Whether the photo has a caption vector of this model.
+     */
+    public function hasCaptionVector(int $photoId, string $model): bool;
 }

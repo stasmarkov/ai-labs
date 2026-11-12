@@ -19,14 +19,12 @@ final class PhotoSimilarRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'w' => ['nullable', 'numeric', 'between:0,1'],
+            'w' => ['required', 'numeric', 'between:0,1'],
         ];
     }
 
-    public function weight(): ?float
+    public function weight(): float
     {
-        $w = $this->validated('w');
-
-        return $w === null ? null : (float) $w;
+        return round((float) $this->validated('w'), 1);
     }
 }

@@ -108,7 +108,10 @@ return [
         'ef_search' => 100,
         'ttl_seconds' => 3600,
         'per_minute' => 60,
-        'default_weight' => 0.9, // calibrated 2026-11-12: best weight of the sweep that beats the image-only baseline on precision at equal coverage
+        // Calibrated 2026-11-12 (photos:similar-eval --hybrid): the best weight that beats image only at equal coverage.
+        'default_weight' => filled(env('AI_SIMILAR_HYBRID_WEIGHT')) ? (float) env('AI_SIMILAR_HYBRID_WEIGHT') : 0.9,
+        // The cutoff calibrated for each weight of the sweep; blended scores sit lower as the caption weight grows.
+        'hybrid_min_scores' => ['0.0' => 0.6, '0.1' => 0.65, '0.2' => 0.65, '0.3' => 0.65, '0.4' => 0.65, '0.5' => 0.65, '0.6' => 0.7, '0.7' => 0.7, '0.8' => 0.75, '0.9' => 0.75],
         'hybrid_min_score' => filled(env('AI_SIMILAR_HYBRID_MIN_SCORE')) ? (float) env('AI_SIMILAR_HYBRID_MIN_SCORE') : 0.75,
     ],
 

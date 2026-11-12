@@ -14,5 +14,6 @@ final readonly class SimilarPhotos
         public ?string $reason,
         public string $label,
         public bool $cached,
+        public ?HybridPool $pool = null,
     ) {}
 }

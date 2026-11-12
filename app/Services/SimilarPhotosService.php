@@ -8,6 +8,7 @@ use App\Ai\PhotoEncoderClient;
 use App\Contracts\CaptionSimilarityRepositoryInterface;
 use App\Contracts\SimilarPhotosRepositoryInterface;
 use App\DTOs\HybridParts;
+use App\DTOs\HybridPool;
 use App\DTOs\SimilarPhotoMatch;
 use App\DTOs\SimilarPhotos;
 use Illuminate\Support\Facades\Cache;
@@ -61,20 +62,27 @@ final readonly class SimilarPhotosService
                 $cached['reason'],
                 $label,
                 true,
+                isset($cached['pool']) ? HybridPool::fromArray($cached['pool']) : null,
             );
         }
 
-        $matches = $w === null
-            ? $this->rank($photoId, $this->minScore())
-            : $this->rankHybrid($photoId, $w, (float) config('ai.similar_photos.hybrid_min_score'));
+        $pool = null;
+
+        if ($w === null) {
+            $matches = $this->rank($photoId, $this->minScore());
+        } else {
+            [$matches, $pool] = $this->scoreHybrid($photoId, $w, $this->hybridMinScore($w));
+        }
+
         $reason = $matches === [] ? self::REASON_NONE_QUALIFY : null;
 
         Cache::put($key, [
             'matches' => array_map(fn (SimilarPhotoMatch $match): array => $match->toArray(), $matches),
             'reason' => $reason,
+            'pool' => $pool?->toArray(),
         ], max(1, (int) config('ai.similar_photos.ttl_seconds', 3600)));
 
-        return new SimilarPhotos($matches, $reason, $label, false);
+        return new SimilarPhotos($matches, $reason, $label, false, $pool);
     }
 
     /**
@@ -117,9 +125,21 @@ final readonly class SimilarPhotosService
             return "similar-photos:{$label}:{$this->generation($label)}:".substr(md5($thresholds), 0, 8).":{$photoId}";
         }
 
-        $hybrid = $thresholds.'|'.config('ai.similar_photos.hybrid_min_score');
+        $hybrid = $thresholds.'|'.$this->hybridMinScore($w);
 
-        return "similar-photos:{$label}:{$this->generation($label)}:t{$this->textGeneration($label)}:w".number_format($w, 4, '.', '').':'.substr(md5($hybrid), 0, 8).":{$photoId}";
+        // "h2": the hybrid entry shape and cutoff rules of this version; entries written before it are never read.
+        return "similar-photos:{$label}:{$this->generation($label)}:h2:t{$this->textGeneration($label)}:w".number_format($w, 4, '.', '').':'.substr(md5($hybrid), 0, 8).":{$photoId}";
+    }
+
+    /**
+     * The hybrid cutoff for a weight: each weight blends scores on its own scale, so the eval calibrates one cutoff per
+     * weight (`hybrid_min_scores`, keyed by the weight with one decimal); a weight without one uses `hybrid_min_score`.
+     */
+    public function hybridMinScore(float $w): float
+    {
+        $byWeight = (array) config('ai.similar_photos.hybrid_min_scores', []);
+
+        return (float) ($byWeight[number_format(round($w, 1), 1, '.', '')] ?? config('ai.similar_photos.hybrid_min_score'));
     }
 
     /**
@@ -178,6 +198,16 @@ final readonly class SimilarPhotosService
      */
     public function rankHybrid(int $photoId, float $w, float $minScore, ?int $limit = null): array
     {
+        return $this->scoreHybrid($photoId, $w, $minScore, $limit)[0];
+    }
+
+    /**
+     * The hybrid matches and the counts of the candidate pool they were scored from.
+     *
+     * @return array{0: list<SimilarPhotoMatch>, 1: HybridPool}
+     */
+    private function scoreHybrid(int $photoId, float $w, float $minScore, ?int $limit = null): array
+    {
         $limit = max(1, $limit ?? (int) config('ai.similar_photos.limit', 8));
         $candidates = $this->hybridCandidates($photoId, $limit);
 
@@ -187,7 +217,16 @@ final readonly class SimilarPhotosService
             $this->encoder->label(),
         );
 
-        return $this->blend($candidates, $captionSimilarities, $w, $minScore, $limit);
+        $queryHasCaption = $captionSimilarities !== [] || $this->captions->hasCaptionVector($photoId, $this->encoder->label());
+
+        // Without a caption on the query photo every score is the image similarity, so the image cutoff applies.
+        if (! $queryHasCaption) {
+            $minScore = $this->minScore();
+        }
+
+        $pool = new HybridPool($queryHasCaption, count($candidates), count($captionSimilarities), $minScore);
+
+        return [$this->blend($candidates, $captionSimilarities, $w, $minScore, $limit), $pool];
     }
 
     /**
@@ -262,10 +301,12 @@ final readonly class SimilarPhotosService
     }
 
     /**
-     * A weight of 1 or more (or none) means image only, reported as null; below that it is clamped to 0.
+     * The weight is rounded to one decimal first. A weight of 1 or more (or none) means image only, reported as null; below that it is clamped to 0.
      */
     private function hybridWeight(?float $w): ?float
     {
+        $w = $w === null ? null : round($w, 1);
+
         return $w === null || $w >= 1.0 ? null : max(0.0, $w);
     }
 

@@ -530,7 +530,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-96, BR-27
 - **Depends on:** SL-36, SL-27
 - **Blocked by:** none (Q-06 answered 2026-11-05: Stanford Cars dataset)
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261112-1000-hybrid-similar-photos
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-38: hybrid similarity — add a text vector (title or SL-27 caption), combine with the image vector by weights (default 0.7/0.3), compare against image-only results (BR-96, BR-27). Rules in product-brief.md."`
