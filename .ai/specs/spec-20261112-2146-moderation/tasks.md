@@ -140,3 +140,4 @@ Live eval re-run, numbers for qwen3.5:9b / gemma4:12b:
 | Recall | 1.000 | 1.000 |
 | Hard-negative FP | 3 of 15 | 0 of 15 |
 | p50 | 1389 ms | 1870 ms |
+- Clean-tree bench: after commit 0dd47a7, `bench/run.sh ping --quick` exited 0 on frankenphp.
