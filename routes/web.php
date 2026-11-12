@@ -12,6 +12,7 @@ use App\Http\Controllers\ShowLabDocsController;
 use App\Http\Controllers\ShowLabGuideController;
 use App\Http\Controllers\ShowLabGuidesController;
 use App\Http\Controllers\ShowLabHomeController;
+use App\Http\Controllers\ShowLabModerationController;
 use App\Http\Controllers\ShowLabNlSearchController;
 use App\Http\Controllers\ShowLabOverviewController;
 use App\Http\Controllers\ShowLabPhotoDuplicatesController;
@@ -39,6 +40,7 @@ Route::middleware(HandleInertiaRequests::class)->prefix('ai')->group(function ()
     Route::get('/docs', ShowLabDocsController::class)->name('ai.docs');
     Route::get('/chat', ShowLabChatController::class)->name('ai.chat');
     Route::get('/assistant', ShowLabAssistantController::class)->name('ai.assistant');
+    Route::get('/moderation', ShowLabModerationController::class)->name('ai.moderation');
     Route::get('/nl-search', ShowLabNlSearchController::class)->name('ai.nl-search');
     Route::get('/photo-search', ShowLabPhotoSearchController::class)->name('ai.photo-search');
     Route::get('/photos', ShowLabPhotosController::class)->name('ai.photos');

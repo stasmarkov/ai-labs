@@ -114,6 +114,15 @@ it('AC-2 reads a number by JSON path and shows not measured yet only when pendin
     expect($numbers[0]['value'])->toBe('42')->and($numbers[1]['value'])->toBe('not measured yet');
 });
 
+it('AC-2 reads a number under a key that contains dots, such as a model id', function (): void {
+    file_put_contents($this->root.'/bench/results/run/models.json', json_encode(['summary' => ['qwen3.5:9b' => ['recall' => 0.5]]]));
+    file_put_contents($this->root.'/resources/guides/providers.php', factsGuide([
+        ['label' => 'Recall', 'file' => 'run/models.json', 'path' => 'summary.qwen3.5:9b.recall'],
+    ]));
+
+    expect(($this->render)('providers')['numbers'][0]['value'])->toBe('0.5');
+});
+
 it('AC-2 fails on a missing number file, a missing path, or a traversal', function (string $file, string $path): void {
     file_put_contents($this->root.'/resources/guides/providers.php', factsGuide([
         ['label' => 'X', 'file' => $file, 'path' => $path],

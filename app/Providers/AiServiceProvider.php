@@ -13,8 +13,13 @@ use App\Ai\RecordEmbeddingsRun;
 use App\Ai\RecordToolStep;
 use App\Contracts\AiRunRepositoryInterface;
 use App\Contracts\AssistantTurnRunnerInterface;
+use App\Contracts\ListingRepositoryInterface;
 use App\Repositories\EloquentAiRunRepository;
 use App\Services\AssistantEvalRunner;
+use App\Services\LabModerationService;
+use App\Services\ListingDocumentGenerator;
+use App\Services\ModerationFacts;
+use App\Services\ModerationSetBuilder;
 use App\Services\PromptInjectionGuard;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -46,12 +51,45 @@ class AiServiceProvider extends ServiceProvider
         $this->app->bind(AbortWatcher::class, ConnectionAbortWatcher::class);
         $this->app->singleton(PromptInjectionGuard::class, fn (): PromptInjectionGuard => PromptInjectionGuard::fromFile((string) config('ai.docs.answer.guard')));
 
+        // The register is read once; a missing file is an empty register everywhere it is used.
+        $this->app->singleton('moderation.reported-vins', fn (): array => $this->moderationResource('reported-vins'));
+
+        $this->app->singleton(ModerationFacts::class, fn (Application $app): ModerationFacts => new ModerationFacts(
+            $app->make(ListingRepositoryInterface::class),
+            $app->make(PromptInjectionGuard::class),
+            $app->make('moderation.reported-vins'),
+        ));
+
+        $this->app->singleton(ModerationSetBuilder::class, fn (Application $app): ModerationSetBuilder => new ModerationSetBuilder(
+            $app->make(ListingDocumentGenerator::class),
+            require resource_path('moderation/set-seed.php'),
+            array_map('strtoupper', $app->make('moderation.reported-vins')),
+        ));
+
+        $this->app->singleton(LabModerationService::class, fn (Application $app): LabModerationService => new LabModerationService(
+            $app->make(ListingRepositoryInterface::class),
+            $app->make(ListingDocumentGenerator::class),
+            $this->moderationResource('lab-examples'),
+        ));
+
         $this->callAfterResolving(AiManager::class, function (AiManager $manager): void {
             $manager->extend('fake-stream', fn (Application $app, array $config): FakeStreamProvider => new FakeStreamProvider(
                 $config,
                 $app->make(Dispatcher::class),
             ));
         });
+    }
+
+    /**
+     * A list committed under resources/moderation, or an empty one when the file is missing.
+     *
+     * @return list<mixed>
+     */
+    private function moderationResource(string $name): array
+    {
+        $path = resource_path("moderation/{$name}.php");
+
+        return is_file($path) ? array_values((array) require $path) : [];
     }
 
     /**
@@ -75,6 +113,7 @@ class AiServiceProvider extends ServiceProvider
         RateLimiter::for('cloud-ai-global', fn (Request $request): Limit => Limit::perMinute((int) config('ai.cloud_global_per_minute'))->by('all'));
         RateLimiter::for('slow', fn (Request $request): Limit => Limit::perMinute((int) config('services.vinstub.per_minute'))->by((string) $request->ip()));
         RateLimiter::for('assistant-ask', fn (Request $request): Limit => Limit::perMinute((int) config('ai.assistant.per_minute'))->by((string) $request->ip()));
+        RateLimiter::for('moderation', fn (Request $request): Limit => Limit::perMinute((int) config('ai.moderation.per_minute'))->by((string) $request->ip()));
         RateLimiter::for('semantic-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.semantic_per_minute'))->by((string) $request->ip()));
         RateLimiter::for('nl-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.nl_search.per_minute'))->by((string) $request->ip()));
         RateLimiter::for('photo-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.photo_search.per_minute'))->by((string) $request->ip()));

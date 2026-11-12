@@ -123,6 +123,17 @@ ddev artisan assistant:eval --models=qwen3.5:9b   # 30 questions: tool precision
 
 The provider and model come from the `assistant` feature on `/ai/settings`. How it works: `/ai/guides/assistant`.
 
+## Listing moderation
+
+`/ai/moderation` rates how risky a listing is for a buyer: a risk from 0 to 1, reasons from a closed list of seven, and a short explanation. The app computes what the model cannot know (the market median for the make, model and year, the price ratio, the VINs in the text and whether one is reported) and passes it as facts. PHP checks the answer; a rejected or unparsable one is asked for once more, then ends as `invalid`. A description that matches the input guard is classified, not refused. The endpoint is `POST /api/moderation` (JSON only, 30 requests a minute per IP, `AI_MODERATION_PER_MINUTE`).
+
+```sh
+ddev artisan moderation:make-set                  # the 100 labelled listings, same seed, same file
+ddev artisan moderation:eval                      # once per model (--models, default qwen3.5:9b,gemma4:12b): accuracy, precision, recall, reason recall, threshold curve
+```
+
+The provider and model come from the `moderation` feature on `/ai/settings`; the risky cut-off is `AI_MODERATION_THRESHOLD`, or a per-model value in `ai.moderation.thresholds`. How it works: `/ai/guides/moderation`.
+
 ## History
 
 The project began as a PHP server comparison (five web servers and worker mode; only the FrankenPHP family is kept) on a car marketplace, and was renamed ai-lab on 2026-11-10 when it became a study lab for AI features in Laravel. The server work stays below and in [BENCHMARKS.md](BENCHMARKS.md). The old DDEV URL is gone; use https://ai-lab.ddev.site.

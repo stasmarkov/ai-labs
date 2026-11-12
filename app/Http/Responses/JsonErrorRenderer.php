@@ -8,6 +8,7 @@ use App\Exceptions\DocsAnswerUnavailableException;
 use App\Exceptions\DocsSearchUnavailableException;
 use App\Exceptions\ExportNotFoundException;
 use App\Exceptions\IndexNotBuiltException;
+use App\Exceptions\ModerationUnavailableException;
 use App\Exceptions\NlSearchInvalidException;
 use App\Exceptions\NlSearchRefusedException;
 use App\Exceptions\NlSearchUnavailableException;
@@ -47,6 +48,7 @@ final class JsonErrorRenderer
             $e instanceof PhotoSearchRefusedException => ApiResponse::error(422, $e->getMessage(), extra: ['code' => PhotoSearchRefusedException::CODE, 'refused' => true, 'pattern' => $e->pattern, 'invocation_id' => $e->invocationId]),
             $e instanceof NlSearchRefusedException => ApiResponse::error(422, $e->getMessage(), extra: ['refused' => true, 'pattern' => $e->pattern, 'invocation_id' => $e->invocationId]),
             $e instanceof NlSearchInvalidException => ApiResponse::error(422, 'Validation failed', $e->errors, ['extracted' => $e->extracted, 'unsupported' => $e->unsupported, 'invocation_id' => $e->invocationId]),
+            $e instanceof ModerationUnavailableException => ApiResponse::error(503, $e->getMessage(), extra: ['code' => ModerationUnavailableException::CODE, 'attempts' => $e->attempts, 'invocation_ids' => $e->invocationIds]),
             $e instanceof ProviderNotEnabledException => ApiResponse::error(422, $e->getMessage(), extra: ['code' => ProviderNotEnabledException::CODE]),
             $e instanceof ProviderNotConfiguredException => ApiResponse::error(503, $e->getMessage(), extra: ['code' => ProviderNotConfiguredException::CODE]),
             $e instanceof IndexNotBuiltException => ApiResponse::error(409, $e->getMessage(), extra: ['code' => IndexNotBuiltException::CODE]),

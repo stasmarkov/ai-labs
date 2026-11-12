@@ -72,6 +72,10 @@ return [
             'provider' => env('AI_RAG_GRADER_PROVIDER') ?: null,
             'model' => env('AI_RAG_GRADER_MODEL') ?: null,
         ],
+        'moderation' => [
+            'provider' => env('AI_MODERATION_PROVIDER') ?: null,
+            'model' => env('AI_MODERATION_MODEL') ?: null,
+        ],
         'photo-vision' => [
             'provider' => env('AI_PHOTO_VISION_PROVIDER') ?: 'ollama',
             // Empty means the provider's vision model (Ollama: gemma4:12b), or its text model when it names none.
@@ -259,6 +263,15 @@ return [
     'assistant' => [
         'per_minute' => filled(env('AI_ASSISTANT_PER_MINUTE')) ? (int) env('AI_ASSISTANT_PER_MINUTE') : 20,
     ],
+    // Risk at or above the threshold is "risky". "thresholds" maps a model id to its calibrated value; the rest use "threshold".
+    'moderation' => [
+        'threshold' => filled(env('AI_MODERATION_THRESHOLD')) ? (float) env('AI_MODERATION_THRESHOLD') : 0.5,
+        'thresholds' => [
+            'qwen3.5:9b' => 0.2,
+            'gemma4:12b' => 0.5,
+        ],
+        'per_minute' => filled(env('AI_MODERATION_PER_MINUTE')) ? (int) env('AI_MODERATION_PER_MINUTE') : 30,
+    ],
     'semantic_per_minute' => filled(env('AI_SEMANTIC_PER_MINUTE')) ? (int) env('AI_SEMANTIC_PER_MINUTE') : 60,
 
     /*
@@ -293,6 +306,7 @@ return [
         'rag_grader' => env('AI_PROMPT_RAG_GRADER') ?: 'rag-grader.v2',
         'photo_vision' => env('AI_PROMPT_PHOTO_VISION') ?: 'photo-vision.v1',
         'photo_best_pick' => env('AI_PROMPT_PHOTO_BEST_PICK') ?: 'photo-best-pick.v1',
+        'moderation' => env('AI_PROMPT_MODERATION') ?: 'moderation.v1',
         'buyer_assistant' => env('AI_PROMPT_BUYER_ASSISTANT') ?: 'buyer-assistant.v3',
     ],
     // guide:end prompts

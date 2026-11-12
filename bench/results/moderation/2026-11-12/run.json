@@ -1,0 +1,3079 @@
+{
+    "metadata": {
+        "generated_at": "2026-11-12T22:07:36+00:00",
+        "set_version": "v1",
+        "items": 100,
+        "provider": "ollama",
+        "models": [
+            "qwen3.5:9b",
+            "gemma4:12b"
+        ],
+        "prompt_version": "moderation@v1"
+    },
+    "summary": {
+        "qwen3.5:9b": {
+            "model": "qwen3.5:9b",
+            "items": 100,
+            "json_valid_first_try": {
+                "found": 100,
+                "of": 100,
+                "rate": 1
+            },
+            "json_valid_after_retry": {
+                "found": 100,
+                "of": 100,
+                "rate": 1
+            },
+            "invalid": 0,
+            "failed": 0,
+            "scored": 100,
+            "threshold": 0.2,
+            "at_configured_threshold": {
+                "tp": 50,
+                "fp": 4,
+                "fn": 0,
+                "tn": 46,
+                "accuracy": 0.96,
+                "precision": 0.9259,
+                "recall": 1,
+                "f1": 0.9615
+            },
+            "threshold_curve": [
+                {
+                    "threshold": 0.1,
+                    "tp": 50,
+                    "fp": 20,
+                    "fn": 0,
+                    "tn": 30,
+                    "accuracy": 0.8,
+                    "precision": 0.7143,
+                    "recall": 1,
+                    "f1": 0.8333
+                },
+                {
+                    "threshold": 0.15,
+                    "tp": 50,
+                    "fp": 5,
+                    "fn": 0,
+                    "tn": 45,
+                    "accuracy": 0.95,
+                    "precision": 0.9091,
+                    "recall": 1,
+                    "f1": 0.9524
+                },
+                {
+                    "threshold": 0.2,
+                    "tp": 50,
+                    "fp": 4,
+                    "fn": 0,
+                    "tn": 46,
+                    "accuracy": 0.96,
+                    "precision": 0.9259,
+                    "recall": 1,
+                    "f1": 0.9615
+                },
+                {
+                    "threshold": 0.25,
+                    "tp": 47,
+                    "fp": 2,
+                    "fn": 3,
+                    "tn": 48,
+                    "accuracy": 0.95,
+                    "precision": 0.9592,
+                    "recall": 0.94,
+                    "f1": 0.9495
+                },
+                {
+                    "threshold": 0.3,
+                    "tp": 46,
+                    "fp": 2,
+                    "fn": 4,
+                    "tn": 48,
+                    "accuracy": 0.94,
+                    "precision": 0.9583,
+                    "recall": 0.92,
+                    "f1": 0.9388
+                },
+                {
+                    "threshold": 0.35,
+                    "tp": 43,
+                    "fp": 2,
+                    "fn": 7,
+                    "tn": 48,
+                    "accuracy": 0.91,
+                    "precision": 0.9556,
+                    "recall": 0.86,
+                    "f1": 0.9053
+                },
+                {
+                    "threshold": 0.4,
+                    "tp": 43,
+                    "fp": 1,
+                    "fn": 7,
+                    "tn": 49,
+                    "accuracy": 0.92,
+                    "precision": 0.9773,
+                    "recall": 0.86,
+                    "f1": 0.9149
+                },
+                {
+                    "threshold": 0.45,
+                    "tp": 43,
+                    "fp": 1,
+                    "fn": 7,
+                    "tn": 49,
+                    "accuracy": 0.92,
+                    "precision": 0.9773,
+                    "recall": 0.86,
+                    "f1": 0.9149
+                },
+                {
+                    "threshold": 0.5,
+                    "tp": 43,
+                    "fp": 1,
+                    "fn": 7,
+                    "tn": 49,
+                    "accuracy": 0.92,
+                    "precision": 0.9773,
+                    "recall": 0.86,
+                    "f1": 0.9149
+                },
+                {
+                    "threshold": 0.55,
+                    "tp": 42,
+                    "fp": 1,
+                    "fn": 8,
+                    "tn": 49,
+                    "accuracy": 0.91,
+                    "precision": 0.9767,
+                    "recall": 0.84,
+                    "f1": 0.9032
+                },
+                {
+                    "threshold": 0.6,
+                    "tp": 42,
+                    "fp": 1,
+                    "fn": 8,
+                    "tn": 49,
+                    "accuracy": 0.91,
+                    "precision": 0.9767,
+                    "recall": 0.84,
+                    "f1": 0.9032
+                },
+                {
+                    "threshold": 0.65,
+                    "tp": 39,
+                    "fp": 1,
+                    "fn": 11,
+                    "tn": 49,
+                    "accuracy": 0.88,
+                    "precision": 0.975,
+                    "recall": 0.78,
+                    "f1": 0.8667
+                },
+                {
+                    "threshold": 0.7,
+                    "tp": 38,
+                    "fp": 1,
+                    "fn": 12,
+                    "tn": 49,
+                    "accuracy": 0.87,
+                    "precision": 0.9744,
+                    "recall": 0.76,
+                    "f1": 0.8539
+                },
+                {
+                    "threshold": 0.75,
+                    "tp": 36,
+                    "fp": 1,
+                    "fn": 14,
+                    "tn": 49,
+                    "accuracy": 0.85,
+                    "precision": 0.973,
+                    "recall": 0.72,
+                    "f1": 0.8276
+                },
+                {
+                    "threshold": 0.8,
+                    "tp": 33,
+                    "fp": 1,
+                    "fn": 17,
+                    "tn": 49,
+                    "accuracy": 0.82,
+                    "precision": 0.9706,
+                    "recall": 0.66,
+                    "f1": 0.7857
+                },
+                {
+                    "threshold": 0.85,
+                    "tp": 18,
+                    "fp": 1,
+                    "fn": 32,
+                    "tn": 49,
+                    "accuracy": 0.67,
+                    "precision": 0.9474,
+                    "recall": 0.36,
+                    "f1": 0.5217
+                },
+                {
+                    "threshold": 0.9,
+                    "tp": 8,
+                    "fp": 1,
+                    "fn": 42,
+                    "tn": 49,
+                    "accuracy": 0.57,
+                    "precision": 0.8889,
+                    "recall": 0.16,
+                    "f1": 0.2712
+                }
+            ],
+            "best_f1": {
+                "threshold": 0.2,
+                "tp": 50,
+                "fp": 4,
+                "fn": 0,
+                "tn": 46,
+                "accuracy": 0.96,
+                "precision": 0.9259,
+                "recall": 1,
+                "f1": 0.9615
+            },
+            "false_positives_on_hard_negatives": {
+                "count": 3,
+                "of": 15,
+                "ids": [
+                    "mod-041",
+                    "mod-045",
+                    "mod-047"
+                ]
+            },
+            "false_positives_on_hard_negatives_at_configured_threshold": {
+                "count": 3,
+                "of": 15,
+                "ids": [
+                    "mod-041",
+                    "mod-045",
+                    "mod-047"
+                ]
+            },
+            "reason_recall": {
+                "overall": {
+                    "found": 60,
+                    "of": 60,
+                    "rate": 1
+                },
+                "by_reason": {
+                    "advance_payment": {
+                        "found": 15,
+                        "of": 15,
+                        "rate": 1
+                    },
+                    "off_platform_contact": {
+                        "found": 13,
+                        "of": 13,
+                        "rate": 1
+                    },
+                    "price_far_below_market": {
+                        "found": 13,
+                        "of": 13,
+                        "rate": 1
+                    },
+                    "reported_vin": {
+                        "found": 14,
+                        "of": 14,
+                        "rate": 1
+                    },
+                    "other": {
+                        "found": 5,
+                        "of": 5,
+                        "rate": 1
+                    }
+                }
+            },
+            "latency_ms": {
+                "p50": 1389,
+                "p95": 2011,
+                "mean": 1514.8
+            }
+        },
+        "gemma4:12b": {
+            "model": "gemma4:12b",
+            "items": 100,
+            "json_valid_first_try": {
+                "found": 100,
+                "of": 100,
+                "rate": 1
+            },
+            "json_valid_after_retry": {
+                "found": 100,
+                "of": 100,
+                "rate": 1
+            },
+            "invalid": 0,
+            "failed": 0,
+            "scored": 100,
+            "threshold": 0.5,
+            "at_configured_threshold": {
+                "tp": 50,
+                "fp": 1,
+                "fn": 0,
+                "tn": 49,
+                "accuracy": 0.99,
+                "precision": 0.9804,
+                "recall": 1,
+                "f1": 0.9901
+            },
+            "threshold_curve": [
+                {
+                    "threshold": 0.1,
+                    "tp": 50,
+                    "fp": 3,
+                    "fn": 0,
+                    "tn": 47,
+                    "accuracy": 0.97,
+                    "precision": 0.9434,
+                    "recall": 1,
+                    "f1": 0.9709
+                },
+                {
+                    "threshold": 0.15,
+                    "tp": 50,
+                    "fp": 3,
+                    "fn": 0,
+                    "tn": 47,
+                    "accuracy": 0.97,
+                    "precision": 0.9434,
+                    "recall": 1,
+                    "f1": 0.9709
+                },
+                {
+                    "threshold": 0.2,
+                    "tp": 50,
+                    "fp": 3,
+                    "fn": 0,
+                    "tn": 47,
+                    "accuracy": 0.97,
+                    "precision": 0.9434,
+                    "recall": 1,
+                    "f1": 0.9709
+                },
+                {
+                    "threshold": 0.25,
+                    "tp": 50,
+                    "fp": 3,
+                    "fn": 0,
+                    "tn": 47,
+                    "accuracy": 0.97,
+                    "precision": 0.9434,
+                    "recall": 1,
+                    "f1": 0.9709
+                },
+                {
+                    "threshold": 0.3,
+                    "tp": 50,
+                    "fp": 3,
+                    "fn": 0,
+                    "tn": 47,
+                    "accuracy": 0.97,
+                    "precision": 0.9434,
+                    "recall": 1,
+                    "f1": 0.9709
+                },
+                {
+                    "threshold": 0.35,
+                    "tp": 50,
+                    "fp": 1,
+                    "fn": 0,
+                    "tn": 49,
+                    "accuracy": 0.99,
+                    "precision": 0.9804,
+                    "recall": 1,
+                    "f1": 0.9901
+                },
+                {
+                    "threshold": 0.4,
+                    "tp": 50,
+                    "fp": 1,
+                    "fn": 0,
+                    "tn": 49,
+                    "accuracy": 0.99,
+                    "precision": 0.9804,
+                    "recall": 1,
+                    "f1": 0.9901
+                },
+                {
+                    "threshold": 0.45,
+                    "tp": 50,
+                    "fp": 1,
+                    "fn": 0,
+                    "tn": 49,
+                    "accuracy": 0.99,
+                    "precision": 0.9804,
+                    "recall": 1,
+                    "f1": 0.9901
+                },
+                {
+                    "threshold": 0.5,
+                    "tp": 50,
+                    "fp": 1,
+                    "fn": 0,
+                    "tn": 49,
+                    "accuracy": 0.99,
+                    "precision": 0.9804,
+                    "recall": 1,
+                    "f1": 0.9901
+                },
+                {
+                    "threshold": 0.55,
+                    "tp": 40,
+                    "fp": 1,
+                    "fn": 10,
+                    "tn": 49,
+                    "accuracy": 0.89,
+                    "precision": 0.9756,
+                    "recall": 0.8,
+                    "f1": 0.8791
+                },
+                {
+                    "threshold": 0.6,
+                    "tp": 40,
+                    "fp": 1,
+                    "fn": 10,
+                    "tn": 49,
+                    "accuracy": 0.89,
+                    "precision": 0.9756,
+                    "recall": 0.8,
+                    "f1": 0.8791
+                },
+                {
+                    "threshold": 0.65,
+                    "tp": 40,
+                    "fp": 1,
+                    "fn": 10,
+                    "tn": 49,
+                    "accuracy": 0.89,
+                    "precision": 0.9756,
+                    "recall": 0.8,
+                    "f1": 0.8791
+                },
+                {
+                    "threshold": 0.7,
+                    "tp": 40,
+                    "fp": 1,
+                    "fn": 10,
+                    "tn": 49,
+                    "accuracy": 0.89,
+                    "precision": 0.9756,
+                    "recall": 0.8,
+                    "f1": 0.8791
+                },
+                {
+                    "threshold": 0.75,
+                    "tp": 40,
+                    "fp": 1,
+                    "fn": 10,
+                    "tn": 49,
+                    "accuracy": 0.89,
+                    "precision": 0.9756,
+                    "recall": 0.8,
+                    "f1": 0.8791
+                },
+                {
+                    "threshold": 0.8,
+                    "tp": 40,
+                    "fp": 1,
+                    "fn": 10,
+                    "tn": 49,
+                    "accuracy": 0.89,
+                    "precision": 0.9756,
+                    "recall": 0.8,
+                    "f1": 0.8791
+                },
+                {
+                    "threshold": 0.85,
+                    "tp": 21,
+                    "fp": 0,
+                    "fn": 29,
+                    "tn": 50,
+                    "accuracy": 0.71,
+                    "precision": 1,
+                    "recall": 0.42,
+                    "f1": 0.5915
+                },
+                {
+                    "threshold": 0.9,
+                    "tp": 21,
+                    "fp": 0,
+                    "fn": 29,
+                    "tn": 50,
+                    "accuracy": 0.71,
+                    "precision": 1,
+                    "recall": 0.42,
+                    "f1": 0.5915
+                }
+            ],
+            "best_f1": {
+                "threshold": 0.5,
+                "tp": 50,
+                "fp": 1,
+                "fn": 0,
+                "tn": 49,
+                "accuracy": 0.99,
+                "precision": 0.9804,
+                "recall": 1,
+                "f1": 0.9901
+            },
+            "false_positives_on_hard_negatives": {
+                "count": 0,
+                "of": 15,
+                "ids": []
+            },
+            "false_positives_on_hard_negatives_at_configured_threshold": {
+                "count": 0,
+                "of": 15,
+                "ids": []
+            },
+            "reason_recall": {
+                "overall": {
+                    "found": 60,
+                    "of": 60,
+                    "rate": 1
+                },
+                "by_reason": {
+                    "advance_payment": {
+                        "found": 15,
+                        "of": 15,
+                        "rate": 1
+                    },
+                    "off_platform_contact": {
+                        "found": 13,
+                        "of": 13,
+                        "rate": 1
+                    },
+                    "price_far_below_market": {
+                        "found": 13,
+                        "of": 13,
+                        "rate": 1
+                    },
+                    "reported_vin": {
+                        "found": 14,
+                        "of": 14,
+                        "rate": 1
+                    },
+                    "other": {
+                        "found": 5,
+                        "of": 5,
+                        "rate": 1
+                    }
+                }
+            },
+            "latency_ms": {
+                "p50": 1870,
+                "p95": 2489,
+                "mean": 1986.9
+            }
+        }
+    },
+    "results": {
+        "qwen3.5:9b": [
+            {
+                "id": "mod-001",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 7916
+            },
+            {
+                "id": "mod-002",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 2708
+            },
+            {
+                "id": "mod-003",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1319
+            },
+            {
+                "id": "mod-004",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1213
+            },
+            {
+                "id": "mod-005",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1286
+            },
+            {
+                "id": "mod-006",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1275
+            },
+            {
+                "id": "mod-007",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1315
+            },
+            {
+                "id": "mod-008",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.1,
+                "reasons": [],
+                "latency_ms": 1880
+            },
+            {
+                "id": "mod-009",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.1,
+                "reasons": [],
+                "latency_ms": 1264
+            },
+            {
+                "id": "mod-010",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1269
+            },
+            {
+                "id": "mod-011",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1216
+            },
+            {
+                "id": "mod-012",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.1,
+                "reasons": [],
+                "latency_ms": 1170
+            },
+            {
+                "id": "mod-013",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1256
+            },
+            {
+                "id": "mod-014",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1257
+            },
+            {
+                "id": "mod-015",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.1,
+                "reasons": [],
+                "latency_ms": 1261
+            },
+            {
+                "id": "mod-016",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.1,
+                "reasons": [],
+                "latency_ms": 1136
+            },
+            {
+                "id": "mod-017",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.95,
+                "reasons": [
+                    "other"
+                ],
+                "latency_ms": 1464
+            },
+            {
+                "id": "mod-018",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1104
+            },
+            {
+                "id": "mod-019",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1518
+            },
+            {
+                "id": "mod-020",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1267
+            },
+            {
+                "id": "mod-021",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1288
+            },
+            {
+                "id": "mod-022",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.1,
+                "reasons": [],
+                "latency_ms": 1232
+            },
+            {
+                "id": "mod-023",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1251
+            },
+            {
+                "id": "mod-024",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1178
+            },
+            {
+                "id": "mod-025",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1177
+            },
+            {
+                "id": "mod-026",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1273
+            },
+            {
+                "id": "mod-027",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.04,
+                "reasons": [
+                    "price_far_below_market"
+                ],
+                "latency_ms": 1577
+            },
+            {
+                "id": "mod-028",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1234
+            },
+            {
+                "id": "mod-029",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.13,
+                "reasons": [
+                    "price_far_below_market"
+                ],
+                "latency_ms": 1183
+            },
+            {
+                "id": "mod-030",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1283
+            },
+            {
+                "id": "mod-031",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.1,
+                "reasons": [],
+                "latency_ms": 1333
+            },
+            {
+                "id": "mod-032",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1331
+            },
+            {
+                "id": "mod-033",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.1,
+                "reasons": [],
+                "latency_ms": 1366
+            },
+            {
+                "id": "mod-034",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.1,
+                "reasons": [],
+                "latency_ms": 1461
+            },
+            {
+                "id": "mod-035",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1211
+            },
+            {
+                "id": "mod-036",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.1,
+                "reasons": [],
+                "latency_ms": 1242
+            },
+            {
+                "id": "mod-037",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1425
+            },
+            {
+                "id": "mod-038",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1323
+            },
+            {
+                "id": "mod-039",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1253
+            },
+            {
+                "id": "mod-040",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.1,
+                "reasons": [
+                    "price_far_below_market"
+                ],
+                "latency_ms": 1200
+            },
+            {
+                "id": "mod-041",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.2,
+                "reasons": [
+                    "advance_payment"
+                ],
+                "latency_ms": 1502
+            },
+            {
+                "id": "mod-042",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.1,
+                "reasons": [],
+                "latency_ms": 1290
+            },
+            {
+                "id": "mod-043",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.1,
+                "reasons": [],
+                "latency_ms": 1359
+            },
+            {
+                "id": "mod-044",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1343
+            },
+            {
+                "id": "mod-045",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.2,
+                "reasons": [
+                    "price_far_below_market"
+                ],
+                "latency_ms": 1244
+            },
+            {
+                "id": "mod-046",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1289
+            },
+            {
+                "id": "mod-047",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.35,
+                "reasons": [
+                    "price_far_below_market"
+                ],
+                "latency_ms": 1444
+            },
+            {
+                "id": "mod-048",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.1,
+                "reasons": [],
+                "latency_ms": 1362
+            },
+            {
+                "id": "mod-049",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1294
+            },
+            {
+                "id": "mod-050",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.15,
+                "reasons": [
+                    "price_far_below_market"
+                ],
+                "latency_ms": 1234
+            },
+            {
+                "id": "mod-051",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "advance_payment",
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1525
+            },
+            {
+                "id": "mod-052",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.6,
+                "reasons": [
+                    "advance_payment"
+                ],
+                "latency_ms": 1348
+            },
+            {
+                "id": "mod-053",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.85,
+                "reasons": [
+                    "advance_payment",
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1614
+            },
+            {
+                "id": "mod-054",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "advance_payment"
+                ],
+                "latency_ms": 1529
+            },
+            {
+                "id": "mod-055",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.85,
+                "reasons": [
+                    "advance_payment",
+                    "other"
+                ],
+                "latency_ms": 1933
+            },
+            {
+                "id": "mod-056",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.85,
+                "reasons": [
+                    "advance_payment",
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1649
+            },
+            {
+                "id": "mod-057",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.85,
+                "reasons": [
+                    "advance_payment",
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1470
+            },
+            {
+                "id": "mod-058",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "advance_payment"
+                ],
+                "latency_ms": 1404
+            },
+            {
+                "id": "mod-059",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.6,
+                "reasons": [
+                    "advance_payment"
+                ],
+                "latency_ms": 1454
+            },
+            {
+                "id": "mod-060",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.75,
+                "reasons": [
+                    "advance_payment",
+                    "other"
+                ],
+                "latency_ms": 1797
+            },
+            {
+                "id": "mod-061",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.5,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1339
+            },
+            {
+                "id": "mod-062",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "off_platform_contact",
+                    "other"
+                ],
+                "latency_ms": 1831
+            },
+            {
+                "id": "mod-063",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.6,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1292
+            },
+            {
+                "id": "mod-064",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.3,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1460
+            },
+            {
+                "id": "mod-065",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.3,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1318
+            },
+            {
+                "id": "mod-066",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.25,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1392
+            },
+            {
+                "id": "mod-067",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.2,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1429
+            },
+            {
+                "id": "mod-068",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.2,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1254
+            },
+            {
+                "id": "mod-069",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.3,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1366
+            },
+            {
+                "id": "mod-070",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.2,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1401
+            },
+            {
+                "id": "mod-071",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "price_far_below_market",
+                    "other"
+                ],
+                "latency_ms": 2011
+            },
+            {
+                "id": "mod-072",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.85,
+                "reasons": [
+                    "price_far_below_market"
+                ],
+                "latency_ms": 1515
+            },
+            {
+                "id": "mod-073",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.75,
+                "reasons": [
+                    "price_far_below_market",
+                    "pressure_tactics"
+                ],
+                "latency_ms": 1925
+            },
+            {
+                "id": "mod-074",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.85,
+                "reasons": [
+                    "price_far_below_market",
+                    "other"
+                ],
+                "latency_ms": 2033
+            },
+            {
+                "id": "mod-075",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "price_far_below_market",
+                    "pressure_tactics"
+                ],
+                "latency_ms": 1727
+            },
+            {
+                "id": "mod-076",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.85,
+                "reasons": [
+                    "price_far_below_market",
+                    "pressure_tactics"
+                ],
+                "latency_ms": 1638
+            },
+            {
+                "id": "mod-077",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.85,
+                "reasons": [
+                    "price_far_below_market"
+                ],
+                "latency_ms": 1485
+            },
+            {
+                "id": "mod-078",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.75,
+                "reasons": [
+                    "price_far_below_market",
+                    "other"
+                ],
+                "latency_ms": 2084
+            },
+            {
+                "id": "mod-079",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.7,
+                "reasons": [
+                    "price_far_below_market"
+                ],
+                "latency_ms": 1529
+            },
+            {
+                "id": "mod-080",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.65,
+                "reasons": [
+                    "price_far_below_market"
+                ],
+                "latency_ms": 1594
+            },
+            {
+                "id": "mod-081",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.9,
+                "reasons": [
+                    "reported_vin"
+                ],
+                "latency_ms": 1413
+            },
+            {
+                "id": "mod-082",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin",
+                    "other"
+                ],
+                "latency_ms": 1656
+            },
+            {
+                "id": "mod-083",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin",
+                    "price_far_below_market"
+                ],
+                "latency_ms": 1349
+            },
+            {
+                "id": "mod-084",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.7,
+                "reasons": [
+                    "reported_vin",
+                    "other"
+                ],
+                "latency_ms": 1680
+            },
+            {
+                "id": "mod-085",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin",
+                    "other"
+                ],
+                "latency_ms": 1585
+            },
+            {
+                "id": "mod-086",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin",
+                    "other"
+                ],
+                "latency_ms": 1569
+            },
+            {
+                "id": "mod-087",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin",
+                    "other"
+                ],
+                "latency_ms": 1660
+            },
+            {
+                "id": "mod-088",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin",
+                    "price_far_below_market"
+                ],
+                "latency_ms": 1389
+            },
+            {
+                "id": "mod-089",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin",
+                    "price_far_below_market"
+                ],
+                "latency_ms": 1382
+            },
+            {
+                "id": "mod-090",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin",
+                    "price_far_below_market"
+                ],
+                "latency_ms": 1466
+            },
+            {
+                "id": "mod-091",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment",
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.85,
+                "reasons": [
+                    "advance_payment",
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1480
+            },
+            {
+                "id": "mod-092",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment",
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.95,
+                "reasons": [
+                    "advance_payment",
+                    "price_far_below_market"
+                ],
+                "latency_ms": 2028
+            },
+            {
+                "id": "mod-093",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact",
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.85,
+                "reasons": [
+                    "off_platform_contact",
+                    "reported_vin"
+                ],
+                "latency_ms": 1623
+            },
+            {
+                "id": "mod-094",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market",
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.95,
+                "reasons": [
+                    "price_far_below_market",
+                    "reported_vin"
+                ],
+                "latency_ms": 1495
+            },
+            {
+                "id": "mod-095",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment",
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.9,
+                "reasons": [
+                    "advance_payment",
+                    "reported_vin"
+                ],
+                "latency_ms": 1351
+            },
+            {
+                "id": "mod-096",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment",
+                    "other"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.9,
+                "reasons": [
+                    "advance_payment",
+                    "other"
+                ],
+                "latency_ms": 1428
+            },
+            {
+                "id": "mod-097",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact",
+                    "other"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "off_platform_contact",
+                    "other"
+                ],
+                "latency_ms": 1556
+            },
+            {
+                "id": "mod-098",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market",
+                    "other"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.9,
+                "reasons": [
+                    "price_far_below_market",
+                    "other"
+                ],
+                "latency_ms": 1535
+            },
+            {
+                "id": "mod-099",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin",
+                    "other"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.9,
+                "reasons": [
+                    "reported_vin",
+                    "other"
+                ],
+                "latency_ms": 1595
+            },
+            {
+                "id": "mod-100",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment",
+                    "other"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.9,
+                "reasons": [
+                    "advance_payment",
+                    "off_platform_contact",
+                    "other"
+                ],
+                "latency_ms": 1621
+            }
+        ],
+        "gemma4:12b": [
+            {
+                "id": "mod-001",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 6192
+            },
+            {
+                "id": "mod-002",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 3665
+            },
+            {
+                "id": "mod-003",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1338
+            },
+            {
+                "id": "mod-004",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1351
+            },
+            {
+                "id": "mod-005",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.3,
+                "reasons": [
+                    "inconsistent_details"
+                ],
+                "latency_ms": 1903
+            },
+            {
+                "id": "mod-006",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1382
+            },
+            {
+                "id": "mod-007",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1459
+            },
+            {
+                "id": "mod-008",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1698
+            },
+            {
+                "id": "mod-009",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1477
+            },
+            {
+                "id": "mod-010",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1738
+            },
+            {
+                "id": "mod-011",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1636
+            },
+            {
+                "id": "mod-012",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1898
+            },
+            {
+                "id": "mod-013",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1605
+            },
+            {
+                "id": "mod-014",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1463
+            },
+            {
+                "id": "mod-015",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1561
+            },
+            {
+                "id": "mod-016",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1413
+            },
+            {
+                "id": "mod-017",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "inconsistent_details"
+                ],
+                "latency_ms": 1789
+            },
+            {
+                "id": "mod-018",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1487
+            },
+            {
+                "id": "mod-019",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1779
+            },
+            {
+                "id": "mod-020",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1367
+            },
+            {
+                "id": "mod-021",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1521
+            },
+            {
+                "id": "mod-022",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1933
+            },
+            {
+                "id": "mod-023",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1759
+            },
+            {
+                "id": "mod-024",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1936
+            },
+            {
+                "id": "mod-025",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1933
+            },
+            {
+                "id": "mod-026",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1348
+            },
+            {
+                "id": "mod-027",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1945
+            },
+            {
+                "id": "mod-028",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1661
+            },
+            {
+                "id": "mod-029",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1477
+            },
+            {
+                "id": "mod-030",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1764
+            },
+            {
+                "id": "mod-031",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1790
+            },
+            {
+                "id": "mod-032",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1678
+            },
+            {
+                "id": "mod-033",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1606
+            },
+            {
+                "id": "mod-034",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.3,
+                "reasons": [
+                    "inconsistent_details"
+                ],
+                "latency_ms": 1667
+            },
+            {
+                "id": "mod-035",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1750
+            },
+            {
+                "id": "mod-036",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1851
+            },
+            {
+                "id": "mod-037",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1719
+            },
+            {
+                "id": "mod-038",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1432
+            },
+            {
+                "id": "mod-039",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1791
+            },
+            {
+                "id": "mod-040",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 2306
+            },
+            {
+                "id": "mod-041",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1776
+            },
+            {
+                "id": "mod-042",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1870
+            },
+            {
+                "id": "mod-043",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1652
+            },
+            {
+                "id": "mod-044",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1954
+            },
+            {
+                "id": "mod-045",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1529
+            },
+            {
+                "id": "mod-046",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1747
+            },
+            {
+                "id": "mod-047",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 2188
+            },
+            {
+                "id": "mod-048",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1771
+            },
+            {
+                "id": "mod-049",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1417
+            },
+            {
+                "id": "mod-050",
+                "label": "safe",
+                "expected_reasons": [],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0,
+                "reasons": [],
+                "latency_ms": 1855
+            },
+            {
+                "id": "mod-051",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "advance_payment"
+                ],
+                "latency_ms": 2070
+            },
+            {
+                "id": "mod-052",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "advance_payment"
+                ],
+                "latency_ms": 1587
+            },
+            {
+                "id": "mod-053",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "advance_payment"
+                ],
+                "latency_ms": 1930
+            },
+            {
+                "id": "mod-054",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "advance_payment"
+                ],
+                "latency_ms": 1886
+            },
+            {
+                "id": "mod-055",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "advance_payment"
+                ],
+                "latency_ms": 1935
+            },
+            {
+                "id": "mod-056",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "advance_payment"
+                ],
+                "latency_ms": 2175
+            },
+            {
+                "id": "mod-057",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "advance_payment"
+                ],
+                "latency_ms": 2078
+            },
+            {
+                "id": "mod-058",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "advance_payment"
+                ],
+                "latency_ms": 4755
+            },
+            {
+                "id": "mod-059",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "advance_payment"
+                ],
+                "latency_ms": 1873
+            },
+            {
+                "id": "mod-060",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "advance_payment"
+                ],
+                "latency_ms": 1925
+            },
+            {
+                "id": "mod-061",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.5,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1517
+            },
+            {
+                "id": "mod-062",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "inconsistent_details",
+                    "off_platform_contact"
+                ],
+                "latency_ms": 5714
+            },
+            {
+                "id": "mod-063",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.5,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1810
+            },
+            {
+                "id": "mod-064",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.5,
+                "reasons": [
+                    "off_platform_contact",
+                    "inconsistent_details"
+                ],
+                "latency_ms": 2272
+            },
+            {
+                "id": "mod-065",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.5,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1781
+            },
+            {
+                "id": "mod-066",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.5,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 2151
+            },
+            {
+                "id": "mod-067",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.5,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1696
+            },
+            {
+                "id": "mod-068",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.5,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1699
+            },
+            {
+                "id": "mod-069",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.5,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1654
+            },
+            {
+                "id": "mod-070",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.5,
+                "reasons": [
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1874
+            },
+            {
+                "id": "mod-071",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "price_far_below_market",
+                    "inconsistent_details"
+                ],
+                "latency_ms": 2515
+            },
+            {
+                "id": "mod-072",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "price_far_below_market"
+                ],
+                "latency_ms": 2219
+            },
+            {
+                "id": "mod-073",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "price_far_below_market",
+                    "pressure_tactics"
+                ],
+                "latency_ms": 2273
+            },
+            {
+                "id": "mod-074",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "price_far_below_market",
+                    "inconsistent_details"
+                ],
+                "latency_ms": 2165
+            },
+            {
+                "id": "mod-075",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "price_far_below_market",
+                    "inconsistent_details"
+                ],
+                "latency_ms": 2489
+            },
+            {
+                "id": "mod-076",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "price_far_below_market",
+                    "pressure_tactics"
+                ],
+                "latency_ms": 2407
+            },
+            {
+                "id": "mod-077",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "price_far_below_market"
+                ],
+                "latency_ms": 2245
+            },
+            {
+                "id": "mod-078",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "price_far_below_market",
+                    "inconsistent_details"
+                ],
+                "latency_ms": 2242
+            },
+            {
+                "id": "mod-079",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "price_far_below_market"
+                ],
+                "latency_ms": 2439
+            },
+            {
+                "id": "mod-080",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.5,
+                "reasons": [
+                    "price_far_below_market"
+                ],
+                "latency_ms": 2264
+            },
+            {
+                "id": "mod-081",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin"
+                ],
+                "latency_ms": 1959
+            },
+            {
+                "id": "mod-082",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin"
+                ],
+                "latency_ms": 1973
+            },
+            {
+                "id": "mod-083",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin"
+                ],
+                "latency_ms": 1815
+            },
+            {
+                "id": "mod-084",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin"
+                ],
+                "latency_ms": 2166
+            },
+            {
+                "id": "mod-085",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin"
+                ],
+                "latency_ms": 2080
+            },
+            {
+                "id": "mod-086",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "reported_vin"
+                ],
+                "latency_ms": 1762
+            },
+            {
+                "id": "mod-087",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin"
+                ],
+                "latency_ms": 2078
+            },
+            {
+                "id": "mod-088",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin"
+                ],
+                "latency_ms": 2198
+            },
+            {
+                "id": "mod-089",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin"
+                ],
+                "latency_ms": 2144
+            },
+            {
+                "id": "mod-090",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.8,
+                "reasons": [
+                    "reported_vin"
+                ],
+                "latency_ms": 1964
+            },
+            {
+                "id": "mod-091",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment",
+                    "off_platform_contact"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "advance_payment",
+                    "off_platform_contact"
+                ],
+                "latency_ms": 1982
+            },
+            {
+                "id": "mod-092",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment",
+                    "price_far_below_market"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "advance_payment",
+                    "price_far_below_market"
+                ],
+                "latency_ms": 1882
+            },
+            {
+                "id": "mod-093",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact",
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 0.9,
+                "reasons": [
+                    "off_platform_contact",
+                    "reported_vin"
+                ],
+                "latency_ms": 2190
+            },
+            {
+                "id": "mod-094",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market",
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "price_far_below_market",
+                    "reported_vin",
+                    "pressure_tactics"
+                ],
+                "latency_ms": 2361
+            },
+            {
+                "id": "mod-095",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment",
+                    "reported_vin"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "advance_payment",
+                    "reported_vin"
+                ],
+                "latency_ms": 2193
+            },
+            {
+                "id": "mod-096",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment",
+                    "other"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "advance_payment",
+                    "other"
+                ],
+                "latency_ms": 2014
+            },
+            {
+                "id": "mod-097",
+                "label": "risky",
+                "expected_reasons": [
+                    "off_platform_contact",
+                    "other"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "off_platform_contact",
+                    "other"
+                ],
+                "latency_ms": 1713
+            },
+            {
+                "id": "mod-098",
+                "label": "risky",
+                "expected_reasons": [
+                    "price_far_below_market",
+                    "other"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "price_far_below_market",
+                    "inconsistent_details",
+                    "other"
+                ],
+                "latency_ms": 2048
+            },
+            {
+                "id": "mod-099",
+                "label": "risky",
+                "expected_reasons": [
+                    "reported_vin",
+                    "other"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "reported_vin",
+                    "other"
+                ],
+                "latency_ms": 1773
+            },
+            {
+                "id": "mod-100",
+                "label": "risky",
+                "expected_reasons": [
+                    "advance_payment",
+                    "other"
+                ],
+                "status": "classified",
+                "attempts": 1,
+                "risk": 1,
+                "reasons": [
+                    "advance_payment",
+                    "off_platform_contact",
+                    "other"
+                ],
+                "latency_ms": 1926
+            }
+        ]
+    }
+}

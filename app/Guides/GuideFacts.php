@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Guides;
 
 use App\Ai\AiProviders;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Schema;
 
 final readonly class GuideFacts
@@ -24,13 +23,41 @@ final readonly class GuideFacts
         }
 
         $data = $this->load((string) $file);
-        $value = Arr::get($data, (string) $path, null);
+        $value = $this->lookup($data, (string) $path);
 
         if ($value === null) {
             throw new InvalidGuideException("Number path [{$path}] was not found in [{$file}].");
         }
 
         return is_scalar($value) ? (string) $value : (string) json_encode($value);
+    }
+
+    /**
+     * Dot notation where a key may itself contain dots, as a model id does ("qwen3.5:9b"): the longest key that matches wins.
+     *
+     * @param  array<array-key, mixed>  $data
+     */
+    private function lookup(array $data, string $path): mixed
+    {
+        if (array_key_exists($path, $data)) {
+            return $data[$path];
+        }
+
+        $parts = explode('.', $path);
+
+        for ($length = count($parts) - 1; $length >= 1; $length--) {
+            $key = implode('.', array_slice($parts, 0, $length));
+
+            if (array_key_exists($key, $data) && is_array($data[$key])) {
+                $found = $this->lookup($data[$key], implode('.', array_slice($parts, $length)));
+
+                if ($found !== null) {
+                    return $found;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**

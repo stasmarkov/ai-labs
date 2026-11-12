@@ -10,7 +10,6 @@ use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
  * Applies the "cloud-ai" limiter to a request whose resolved provider is a cloud one, so paid calls are capped per IP
@@ -41,9 +40,7 @@ final class LimitCloudAi
         }
 
         // A paid call must not be triggerable from another site (an <img> or link to a GET endpoint).
-        if ($request->headers->get('Sec-Fetch-Site') === 'cross-site') {
-            throw new AccessDeniedHttpException('Cloud providers only answer requests from this site.');
-        }
+        RefuseCrossSiteRequests::assertSameSite($request);
 
         foreach (['cloud-ai' => 'cloud-ai:', 'cloud-ai-global' => 'cloud-ai-global:'] as $name => $prefix) {
             $limit = RateLimiter::limiter($name)($request);

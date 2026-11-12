@@ -32,6 +32,24 @@ final readonly class EloquentListingRepository implements ListingRepositoryInter
         return new ListingPriceUpdate($listing->id, $listing->price_cents, $listing->currency, $previous);
     }
 
+    public function medianPriceCents(string $make, string $model, int $minYear, int $maxYear, int $minCount, ?int $excludeId = null): ?float
+    {
+        $row = Listing::query()
+            ->whereRaw('lower(make) = lower(?)', [$make])
+            ->whereRaw('lower(model) = lower(?)', [$model])
+            ->whereBetween('year', [$minYear, $maxYear])
+            ->when($excludeId !== null, fn (Builder $query) => $query->where('id', '!=', $excludeId))
+            ->selectRaw('count(*) AS total, percentile_cont(0.5) WITHIN GROUP (ORDER BY price_cents) AS median')
+            ->toBase()
+            ->first();
+
+        if ($row === null || (int) $row->total < $minCount) {
+            return null;
+        }
+
+        return (float) $row->median;
+    }
+
     public function search(ListingFilter $filter): ListingPage
     {
         $query = $this->filtered($filter);

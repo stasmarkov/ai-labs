@@ -342,7 +342,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-93, BR-90
 - **Depends on:** SL-22
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261112-2146-moderation
 - **Source:** brief (Phase 11)
 - **Run:** `/sdd "SL-26: moderation classifier with structured output {risk 0..1, reasons[]}, a 100-listing hand-labelled eval set including scam-like listings, and an eval command reporting accuracy and JSON-valid rate (BR-93, BR-90). Rules in product-brief.md."`

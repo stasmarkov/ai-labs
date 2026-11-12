@@ -107,6 +107,7 @@ it('AC-6 every experiment preset URL uses only parameters its target page reads'
         'ai.photo-search' => ['q'],
         'ai.photos.duplicates' => [],
         'ai.assistant' => ['q'],
+        'ai.moderation' => [],
     ];
     $repository = app(GuideRepository::class);
 

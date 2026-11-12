@@ -4,6 +4,7 @@ use App\Http\Controllers\AskAssistantController;
 use App\Http\Controllers\AskDocsController;
 use App\Http\Controllers\DescribeListingController;
 use App\Http\Controllers\ListListingsController;
+use App\Http\Controllers\ModerateListingController;
 use App\Http\Controllers\NlSearchController;
 use App\Http\Controllers\PhotoTextSearchController;
 use App\Http\Controllers\SearchDocsController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\ShowSlowListingController;
 use App\Http\Middleware\AddServerTimingHeader;
 use App\Http\Middleware\EnsureDebugRoutes;
 use App\Http\Middleware\LimitCloudAi;
+use App\Http\Middleware\RefuseCrossSiteRequests;
 use App\Http\Middleware\SendEarlyHints;
 use App\Services\ExportFileService;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
@@ -50,6 +52,9 @@ Route::post('/api/docs/ask', AskDocsController::class)
 Route::post('/api/assistant/ask', AskAssistantController::class)
     ->middleware(['throttle:assistant-ask', LimitCloudAi::class.':assistant', AddServerTimingHeader::class])
     ->name('assistant.ask');
+Route::post('/api/moderation', ModerateListingController::class)
+    ->middleware([RefuseCrossSiteRequests::class, 'throttle:moderation', LimitCloudAi::class.':moderation', AddServerTimingHeader::class])
+    ->name('moderation.moderate');
 Route::get('/exports/{id}', ServeExportController::class)
     ->where('id', ExportFileService::ID_PATTERN)
     ->middleware([EnsureDebugRoutes::class, 'throttle:exports'])

@@ -1240,6 +1240,55 @@ Earlier runs of this section used prompts v1 and v2 and a looser id check (`#N`,
 
 I built a tool-calling assistant where the model never writes a query: it calls one read-only search tool, and the arguments go through the same validation as the public search form. On 30 fixed questions both local models chose the tool correctly and sent valid arguments every time, at about 3.7 s per answer. The interesting failures were not tool calls but honesty about limits. One model mentioned a listing the search had not returned, and the other quietly ignored "near" and "red" instead of saying it could not filter on them. Two of my first findings were caused by my own scorer, so I learned to check the measurement before blaming the model.
 
+## Listing moderation (2026-11-12)
+
+`POST /api/moderation` (SL-26) asks a model to rate one listing as a risk between 0 and 1 and to name reasons from a closed list of seven. The service computes facts first (market median, price ratio, VINs, whether a VIN is reported, injection pattern) and the model sees them next to the listing. `ddev artisan moderation:eval` classified the 100 items of `bench/moderation/listings.v1.jsonl` (50 safe, of which 15 are hand-written hard negatives, and 50 risky) on Ollama, on frankenphp, with prompt `moderation@v1`. The set is written by `ddev artisan moderation:make-set` from seed 11, so it is reproducible and kept out of the corpus. Raw file: [`bench/results/moderation/2026-11-12/run.json`](bench/results/moderation/2026-11-12/run.json), one run with a `summary` and `results` entry per model id. Reproduce with `ddev artisan moderation:eval --models=qwen3.5:9b,gemma4:12b`.
+
+Method:
+- **Risky:** risk at or above the model's threshold. The threshold comes from `ai.moderation.thresholds` per model, with `ai.moderation.threshold` (0.5) as the fallback.
+- **Valid:** an answer that passes the shape rules. The service asks at most twice; two rejected answers end as `invalid` and count against the valid rates.
+- **Reason recall:** over the reasons the labels expect (60 reasons on the 50 risky items), a reason is found when the model returned it.
+- **Which threshold the table is read at:** the best-F1 threshold, the one in the Threshold column. Accuracy, precision, recall, F1 and the hard-negative false positives are all computed there (`best_f1` and `false_positives_on_hard_negatives` in `run.json`). The same figures at the configured threshold stay in `at_configured_threshold` and `false_positives_on_hard_negatives_at_configured_threshold`; they equal the table while the configured value is the calibrated one, as it is here. A model with no F1 at any threshold has `best_f1: null` and the command prints "no threshold calibrated".
+- **Floor:** the risk in the results is the final one. An injection pattern in any free-text field or a reported VIN lifts it to at least 0.7 in PHP (`ModerationService::FLOOR_RISK`); the model's own value stays in the endpoint answer as `model_risk`. The run of this section was made after the floor was added.
+- **Hard negatives:** the set file marks each item with `kind` (`safe`, `hard_negative`, `risky`, `mixed`), so the 15 hard negatives are read from the file, not inferred from the id.
+- **Choosing the threshold:** the highest F1 on the curve from 0.1 to 0.9 in steps of 0.05 (17 points); the highest threshold wins a tie. An item the model never answered (`invalid` or `failed`) counts as wrong: a risky one is a false negative, a safe one a false positive, and a hard negative that went unanswered counts in the hard-negative FP. This set is also the one the threshold is chosen on, so the figures at the chosen threshold are fitted to it and say nothing about unseen listings.
+
+| Model | Valid 1st | Valid after retry | Threshold | Accuracy | Precision | Recall | F1 | Hard-negative FP | Reason recall | Latency p50 | Latency p95 |
+|-------|-----------|-------------------|-----------|----------|-----------|--------|----|------------------|---------------|-------------|-------------|
+| qwen3.5:9b | 1.000 | 1.000 | 0.2 | 0.960 | 0.926 | 1.000 | 0.962 | 3 of 15 | 60/60 | 1389 ms | 2011 ms |
+| gemma4:12b | 1.000 | 1.000 | 0.5 | 0.990 | 0.980 | 1.000 | 0.990 | 0 of 15 | 60/60 | 1870 ms | 2489 ms |
+
+qwen3.5:9b at the default 0.5, from the first run of the same set (not kept as a file): accuracy 0.920, precision 0.977, recall 0.860, F1 0.915, 0 of 15 hard negatives flagged.
+
+Threshold curve, the rows that matter (false positives out of 50 safe, false negatives out of 50 risky):
+
+| Threshold | qwen3.5:9b FP / FN | qwen3.5:9b F1 | gemma4:12b FP / FN | gemma4:12b F1 |
+|-----------|--------------------|---------------|--------------------|---------------|
+| 0.10 | 20 / 0 | 0.833 | 3 / 0 | 0.971 |
+| 0.15 | 5 / 0 | 0.952 | 3 / 0 | 0.971 |
+| 0.20 | 4 / 0 | 0.962 | 3 / 0 | 0.971 |
+| 0.35 | 2 / 7 | 0.905 | 1 / 0 | 0.990 |
+| 0.50 | 1 / 7 | 0.915 | 1 / 0 | 0.990 |
+| 0.55 | 1 / 8 | 0.903 | 1 / 10 | 0.879 |
+
+### What the numbers say
+
+- **Both models answered in the shape every time.** 100 of 100 valid on the first try, so the retry never ran on this set. The offline tests cover it.
+- **Both models name the right reasons.** Reason recall is 60 of 60, so the facts and the closed list work; the models differ in how high they put the risk, not in what they notice.
+- **qwen3.5:9b under-rates risk.** Its risky listings sit between 0.2 and 0.5 often enough that 0.5 misses 7 of 50. At 0.2 it catches all 50, and pays with 3 of the 15 hand-written hard negatives (mod-041, mod-045, mod-047) and 4 false positives in all.
+- **gemma4:12b is separated cleanly.** Recall is 1.000 at 0.5, and 10 risky listings score from 0.5 up to just under 0.55: F1 is flat at 0.990 from 0.35 to 0.5 and drops to 0.879 at 0.55. The chosen 0.5 is the top of that plateau, where the highest-threshold tie rule lands.
+- **The best-F1 rule has ties.** On a 100-item set one item moves F1 by about 0.01, so the choice among 0.35 to 0.5 for gemma4:12b is not a measured difference. The highest tied threshold wins, in the scorer and in the config.
+- **gemma4:12b is slower by about 0.5 s at the median**, 1870 ms against 1389 ms, on this machine and this run.
+
+### Surprises
+
+- **One threshold does not fit two models.** The same prompt and the same listings need 0.2 for one model and 0.5 for the other, which is why the threshold is a per-model setting.
+- **A calibrated threshold trades one error for another.** Lowering qwen3.5:9b to 0.2 removes every miss and adds three flagged hard negatives. For moderation that sends a listing to a person, that trade is acceptable; for one that blocks a seller, it would not be.
+
+### Interview story
+
+I built a listing moderator where code computes the facts (the market median for the car, whether a VIN is on the stolen register) and the model only rates the text against them and names reasons from a closed list. On 100 labelled listings both local models gave valid JSON every time and found every expected reason, but they disagreed on how risky is risky: one needed a threshold of 0.2 and the other 0.5. The lesson was that the accuracy at a default threshold hid a model that was right about the reasons and timid about the score, and only the threshold curve showed it.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.
