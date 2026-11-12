@@ -156,3 +156,4 @@ Checks:
 - Full suite: 2024 passed. PHPStan clean, typecheck and build pass.
 - Fingerprint `app-DNob7CFE.css` / `app-PTzu1QaN.js`, unchanged.
 - Parity on frankenphp identical.
+- Clean-tree bench: after commit b621f09, `bench/run.sh ping --quick` exited 0 on frankenphp.
