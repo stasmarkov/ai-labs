@@ -193,3 +193,4 @@ Checks:
 - Fingerprint `app-DNob7CFE.css` / `app-PTzu1QaN.js`, unchanged.
 - Parity on frankenphp identical.
 - `/ai/assistant`, `/ai/guides/assistant` and `/ai/settings` answer 200.
+- Clean-tree bench: after commit d8f7b03, `bench/run.sh ping --quick` exited 0 on frankenphp.
