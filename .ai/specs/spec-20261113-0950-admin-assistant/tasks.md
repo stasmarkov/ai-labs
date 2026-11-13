@@ -199,3 +199,4 @@
 - **Time limit:** `set_time_limit(150)` in the controllers capped the whole test process. `App\Support\RequestTimeLimit::atLeast()` now only raises a finite limit (`tests/Unit/RequestTimeLimitTest.php`).
 - **SL-28 spec:** the failover query no longer quotes nl-search eval text (`RagEvalContaminationTest`).
 - **Gates:** suite 2594 passed and 3 skipped; Pint, PHPStan, typecheck and build clean; the fingerprint `app-DNob7CFE.css` / `app-PTzu1QaN.js` unchanged; parity differs only in `captured=`.
+- Clean-tree bench: after commit 3b709a8, `bench/run.sh ping --quick` exited 0 on frankenphp.
