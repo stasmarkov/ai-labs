@@ -49,6 +49,7 @@ function labUiPaths(): array
         '/ai/chat',
         '/ai/assistant',
         '/ai/moderation',
+        '/ai/admin-assistant',
         '/ai/photos',
         '/ai/photo-search',
         '/ai/photos/duplicates',
@@ -58,6 +59,7 @@ function labUiPaths(): array
 }
 
 it('AC-1 no lab page shows a slice id, a markdown file name or a repository path', function (string $path): void {
+    app()->detectEnvironment(fn (): string => 'local');
     $response = $this->get($path)->assertOk();
 
     $props = json_encode(withoutSnippetFiles($response->viewData('page')['props']), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

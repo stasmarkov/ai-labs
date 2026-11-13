@@ -4,7 +4,7 @@ title: Admin assistant with a hand-written agent loop
 type: feature
 size: M
 priority: P2
-status: approved
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-13; standing approval)
@@ -97,9 +97,9 @@ Every model call and every tool step is logged, and a question takes at most 4 t
    - **Turn cap:** the loop also stops after 6 model calls per question as a safety net.
    - **Model:** the feature key `admin-assistant` in `AiProviders` resolves the model (BR-91: settings page row, config, default). The provider must be `ollama`, and any other provider is refused with 422 `provider_not_supported`. The timeout is the provider's.
 5. **Conversation and confirmation state** live on the server:
-   - **Conversation:** the conversation is a cache entry (`admin-assistant:conv:{uuid}`, TTL 60 min) holding the messages and the step count.
+   - **Conversation:** the conversation is a cache entry (`admin-assistant:conversation:{uuid}`, TTL 60 min) holding the messages and the step count.
    - **Pending action:** at most one at a time, stored in the conversation as tool, arguments, `tool_call_id`, a preview (for a title: the old and new title; for a tag: the listing and the tag), a random 32-character `action_id` and `expires_at` (10 minutes).
-   - **Confirm or reject:** `POST /api/admin-assistant/actions/{action_id}` with `{conversation_id, decision: confirm|reject}`.
+   - **Confirm or reject:** two routes, `POST /api/admin-assistant/actions/{action_id}/confirm` and `POST /api/admin-assistant/actions/{action_id}/reject`, each with the JSON body `{conversation_id}`. The decision is the path, so a link or a form cannot carry one by accident. Any `action_id` text reaches the service and, when it is not the pending one, gets 409 `action_not_pending`.
      - **Confirm:** the write runs once in PHP, inside a DB transaction, after `validate` runs again, and the step is logged `confirmed`.
      - **Reject:** nothing is written, and the step is logged `rejected`.
      - Either way the tool message goes back to the model (`{"status":"applied", …}` or `{"status":"rejected_by_developer"}`), and the loop continues.
@@ -111,7 +111,7 @@ Every model call and every tool step is logged, and a question takes at most 4 t
    - `POST /api/admin-assistant/ask`:
      - takes JSON `{question, conversation_id?}`, with the question at most 500 characters;
      - replies with JSON `{conversation_id, answer, steps[], pending_action|null, limit_reached, run_ids[]}`.
-   - `POST /api/admin-assistant/actions/{action_id}`: the same reply shape.
+   - `POST /api/admin-assistant/actions/{action_id}/confirm` and `/reject`: the same reply shape, plus `code` (`model_unavailable` or `model_unsupported`) when the model failed after the decision was committed (C-7).
    - Both:
      - are JSON-only;
      - use the cross-site refusal (`RefuseCrossSiteRequests`);
@@ -161,7 +161,7 @@ Every model call and every tool step is logged, and a question takes at most 4 t
 - **AC-4 (BR-97):**
   - WHEN the developer confirms a pending action of the same conversation before it expires, THE SYSTEM SHALL validate it again, apply exactly that write once, log a `confirmed` step, send `applied` to the model and continue the loop.
   - WHEN the developer rejects it, THE SYSTEM SHALL write nothing, log `rejected` and continue.
-- **AC-5:** IF the action id is unknown, expired, already used or belongs to another conversation, THEN THE SYSTEM SHALL answer 409 `action_not_pending` and write nothing. IF a question arrives while an action is pending, THEN THE SYSTEM SHALL answer 409 `action_pending`.
+- **AC-5:** IF the action id is unknown, expired, already used or belongs to another conversation, THEN THE SYSTEM SHALL answer 409 `action_not_pending` and write nothing. IF a question arrives while an action is pending, THEN THE SYSTEM SHALL answer 409 `action_pending`. IF another request of the same conversation is still running after 5 s, THEN THE SYSTEM SHALL answer 409 `conversation_busy`.
 - **AC-6 (BR-94):** WHEN a question would need a 5th tool step, THE SYSTEM SHALL not run it, make one final call with `tool_choice: none`, and return `limit_reached: true`. No question makes more than 6 model calls.
 - **AC-7 (BR-90):** THE SYSTEM SHALL write one `ai_runs` row per model call (feature `admin-assistant`, provider, model, prompt version, tokens, latency) and one `ai_tool_steps` row per tool step and decision, linked to the run that proposed it.
 - **AC-8 (BR-91):** THE SYSTEM SHALL use the model resolved for `admin-assistant`, and refuse a non-Ollama provider with 422 `provider_not_supported` before any call.
@@ -260,7 +260,8 @@ All raised by the clarity gate on 2026-11-13; answered below as C-1..C-20 (self-
     - A missing id starts a conversation.
     - An unknown or expired UUID gets 404 `conversation_not_found`. The client starts again without it.
     - An id that is not a UUID gets 422.
-  - **Atomic claim:** a confirm takes `Cache::lock("admin-assistant:conv:{id}", 10)` around reading and clearing the pending action, so of two simultaneous confirms one applies and the other gets 409.
+  - **Lock:** every ask, confirm and reject takes `Cache::lock("admin-assistant:conversation:{id}:lock", 300)` and holds it for the whole request, model calls included, so one request at a time works on a conversation. The TTL (300 s) outlives the 150 s time limit; the lock is released when the request ends. A request waits at most 5 s (`ai.admin_assistant.lock_wait_seconds`); then it gets 409 `conversation_busy`. Of two simultaneous confirms one applies and the other gets 409 `action_not_pending` or `conversation_busy`.
+  - **Stored form:** the conversation is a serialised `AdminConversation` under the key `admin-assistant:conversation:{id}`. It is read back with `allowed_classes` limited to `AdminConversation`, `AdminPendingAction` and `CarbonImmutable`, and one that holds any other object counts as not found. Messages are cut at save to the last 80, pair-safe: the cut starts at a user message and the last user message always stays.
   - **Cache store:** the default cache store, Redis in dev and the array store in tests, where locks also work.
 - **C-6 Error at confirm:**
   - **Failed re-validation:** if `validate` fails again at confirm (the listing was deleted, or a tag became invalid), nothing is written. The step row has outcome `error` with error `invalid_at_confirm`, the model gets `{"status":"not_applied","error":"invalid_at_confirm","details":[…]}`, and the loop continues.
@@ -272,7 +273,11 @@ All raised by the clarity gate on 2026-11-13; answered below as C-1..C-20 (self-
   - **When a model call fails:** a timeout, a non-200, a body that is not JSON, or an answer with no `choices`.
     - The `ai_runs` row has status `failed` with the redacted message.
     - The request answers 503 `model_unavailable`, or 422 `model_unsupported` when Ollama says the model does not support tools.
-    - The conversation keeps every message up to the last complete exchange, so the question can be asked again.
+    - **Partial state (one rule, ask and resume):** the conversation keeps every message up to the last complete exchange (an assistant message and the tool messages that answer it), and the service saves it. A question that got no exchange at all is taken back, so it can be asked again. Nothing else is restored.
+    - **A decision is never undone:** when the model fails after a confirm or reject, the reply stays 200. It carries the decision step, the steps and `run_ids` of the calls that did happen (the failed run included) and `code`: `model_unavailable` or `model_unsupported`. The answer text says the decision was recorded.
+    - **Expired action at a new question:** the provider is checked first. Only then is the action dropped, the conversation saved, and the `expired` step put first in `steps[]` of that request, so a failing model call cannot log the expiry twice.
+    - **Tool calls per answer:** at most 8 (`MAX_STEPS + 4`) are looked at. Calls 5 to 8 are refused with `step_limit` as before; every call after the eighth gets one `not_run` tool message (the history stays valid) and no step row.
+    - **Model request:** `think` is always `false` for this feature, whatever `AI_THINK` says. A leading `...</think>` and a trailing unclosed `<think>...` are stripped from the answer like a closed block.
   - **Time:** each request stops making model calls once 90 s have passed since it started, and continues as if the cap were reached (C-3). This sits under the 120 s default timeout. For a long run the controller calls `set_time_limit(150)`.
 - **C-8 Listing page:**
   - **Classes:** the heading keeps its classes. The tag chips reuse only classes already used in the public views (`mt-1 text-sm` on a `<ul>` with `<li>` items, one line, comma-free), so the public CSS bundle and its fingerprint do not change.
@@ -298,13 +303,15 @@ All raised by the clarity gate on 2026-11-13; answered below as C-1..C-20 (self-
     - its arguments are the `ListingFilterRules` keys plus `limit` (validated by the tool, 1..10, default 5) and an optional `tag` (the same tag rule), which filters to listings with that tag.
 - **C-12 Title and tag rules:**
   - **Title:**
-    - **Trimming:** the stored title is the trimmed value.
+    - **Trimming:** the stored title is the trimmed value; trimming removes Unicode whitespace (`\p{Z}`, `\s`) and the invisible Hangul fillers (U+115F, U+1160, U+3164, U+FFA0).
+    - **Letter or digit:** the title needs at least one `\p{L}` or `\p{N}` once those blanks are ignored. U+2028 and U+2029 (`\p{Zl}`, `\p{Zp}`) are rejected like line breaks.
     - **Rejected:** any Unicode `Cc` or `Cf` character, newlines and tabs included.
     - **Same title:** the same title as now is a valid write that changes nothing, and `result.changed` is false.
     - **Clearing:** clearing a title is not a tool, so it is out of scope.
   - **Tag:**
     - the tag is lowercased and trimmed, then must match `^[a-z0-9]+(-[a-z0-9]+)*$`, 2 to 30 characters;
     - "Family-Car" becomes "family-car", and "-x" is rejected.
+  - **Tags shown to the model:** `getListing` and each `searchListings` row show the first 20 tags and `tags_total`.
   - **Tag preview:** listing id, make, model, year, the current title or null, the current tags, and the tag to add.
 - **C-13 Gate and routes:**
   - **When the feature is on:** `APP_ENV=local` and `config('ai.admin_assistant.enabled')` (env `AI_ADMIN_ASSISTANT`, default true).

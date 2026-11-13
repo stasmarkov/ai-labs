@@ -76,6 +76,11 @@ return [
             'provider' => env('AI_MODERATION_PROVIDER') ?: null,
             'model' => env('AI_MODERATION_MODEL') ?: null,
         ],
+        // Runs on Ollama's OpenAI-compatible API only; another provider is refused by the endpoints.
+        'admin-assistant' => [
+            'provider' => env('AI_ADMIN_ASSISTANT_PROVIDER') ?: 'ollama',
+            'model' => env('AI_ADMIN_ASSISTANT_MODEL') ?: null,
+        ],
         'photo-vision' => [
             'provider' => env('AI_PHOTO_VISION_PROVIDER') ?: 'ollama',
             // Empty means the provider's vision model (Ollama: gemma4:12b), or its text model when it names none.
@@ -263,6 +268,13 @@ return [
     'assistant' => [
         'per_minute' => filled(env('AI_ASSISTANT_PER_MINUTE')) ? (int) env('AI_ASSISTANT_PER_MINUTE') : 20,
     ],
+    // The admin assistant changes data, so its routes exist in the local environment only, and only while this is on.
+    'admin_assistant' => [
+        'enabled' => filter_var(env('AI_ADMIN_ASSISTANT', true), FILTER_VALIDATE_BOOLEAN),
+        'per_minute' => filled(env('AI_ADMIN_ASSISTANT_PER_MINUTE')) ? (int) env('AI_ADMIN_ASSISTANT_PER_MINUTE') : 20,
+        // Seconds a second request of one conversation waits for the first before it gets 409 conversation_busy.
+        'lock_wait_seconds' => 5,
+    ],
     // Risk at or above the threshold is "risky". "thresholds" maps a model id to its calibrated value; the rest use "threshold".
     'moderation' => [
         'threshold' => filled(env('AI_MODERATION_THRESHOLD')) ? (float) env('AI_MODERATION_THRESHOLD') : 0.5,
@@ -308,6 +320,7 @@ return [
         'photo_best_pick' => env('AI_PROMPT_PHOTO_BEST_PICK') ?: 'photo-best-pick.v1',
         'moderation' => env('AI_PROMPT_MODERATION') ?: 'moderation.v1',
         'buyer_assistant' => env('AI_PROMPT_BUYER_ASSISTANT') ?: 'buyer-assistant.v3',
+        'admin_assistant' => env('AI_PROMPT_ADMIN_ASSISTANT') ?: 'admin-assistant.v1',
     ],
     // guide:end prompts
 

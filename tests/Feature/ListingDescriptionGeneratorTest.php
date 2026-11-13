@@ -118,7 +118,7 @@ it('MNC-1 the listings table hash is identical before and after describe-all', f
 it('MNC-1 the listings table keeps its columns', function (): void {
     expect(DB::getSchemaBuilder()->getColumnListing('listings'))->toBe([
         'id', 'dealer_id', 'make', 'model', 'fuel', 'year', 'price_cents', 'currency',
-        'mileage_km', 'city', 'listed_at', 'created_at', 'updated_at',
+        'mileage_km', 'city', 'listed_at', 'created_at', 'updated_at', 'title',
     ]);
 });
 

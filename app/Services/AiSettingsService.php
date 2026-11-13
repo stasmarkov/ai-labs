@@ -12,6 +12,7 @@ use App\Contracts\ListingDocumentRepositoryInterface;
 use App\Contracts\ListingPhotoRepositoryInterface;
 use App\DTOs\AiSettingChoice;
 use App\DTOs\ModelOption;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * The rules of the settings page: which providers and models a feature may be saved with, and what a save does.
@@ -40,7 +41,7 @@ final readonly class AiSettingsService
         $saved = $this->settings->all();
         $rows = [];
 
-        foreach (AiProviders::features() as $feature => $kind) {
+        foreach ($this->providers->offeredFeatures() as $feature => $kind) {
             $effective = $this->providers->effective($feature);
             $savedChoice = $saved[$feature] ?? null;
 
@@ -140,10 +141,10 @@ final readonly class AiSettingsService
      */
     public function options(string $feature): array
     {
-        $kind = AiProviders::features()[$feature];
+        $kind = $this->kind($feature);
         $options = [];
 
-        foreach ($this->enabledFor($kind) as $name) {
+        foreach ($this->enabledFor($kind, $feature) as $name) {
             $options[] = ['name' => $name, ...$this->modelsFor($feature, $name, $kind)];
         }
 
@@ -155,9 +156,9 @@ final readonly class AiSettingsService
      */
     public function modelError(string $feature, string $provider, string $model): ?string
     {
-        $kind = AiProviders::features()[$feature];
+        $kind = $this->kind($feature);
 
-        if (! in_array($provider, $this->enabledFor($kind), true)) {
+        if (! in_array($provider, $this->enabledFor($kind, $feature), true)) {
             return "The provider {$provider} is not enabled for this feature.";
         }
 
@@ -181,7 +182,7 @@ final readonly class AiSettingsService
      */
     public function changesEmbeddingModel(string $feature, string $provider, string $model): bool
     {
-        if (AiProviders::features()[$feature] === 'text') {
+        if ($this->kind($feature) === 'text') {
             return false;
         }
 
@@ -195,6 +196,8 @@ final readonly class AiSettingsService
      */
     public function save(AiSettingChoice $choice): string
     {
+        $this->kind($choice->feature);
+
         $choice = new AiSettingChoice($choice->feature, $choice->provider, $this->canonicalFor($choice->provider, $choice->model));
         $configuration = $this->providers->withoutSettings($choice->feature)->choice;
 
@@ -211,9 +214,22 @@ final readonly class AiSettingsService
 
     public function reset(string $feature): string
     {
+        $this->kind($feature);
+
         $this->settings->reset($feature);
 
         return "{$feature} is back to configuration.";
+    }
+
+    /**
+     * The kind of a feature the settings page offers. A feature that is not offered, such as the admin assistant while
+     * it is switched off, is not found.
+     *
+     * @throws NotFoundHttpException
+     */
+    private function kind(string $feature): string
+    {
+        return $this->providers->offeredFeatures()[$feature] ?? throw new NotFoundHttpException;
     }
 
     /**
@@ -244,13 +260,19 @@ final readonly class AiSettingsService
     /**
      * @return list<string>
      */
-    private function enabledFor(string $kind): array
+    private function enabledFor(string $kind, string $feature): array
     {
-        return match ($kind) {
+        $enabled = match ($kind) {
             'embeddings' => $this->providers->enabledEmbeddingProviders(),
             'image-embeddings' => $this->providers->enabledImageEmbeddingProviders(),
             default => $this->providers->enabledTextProviders(),
         };
+
+        if ($feature !== AiProviders::ADMIN_ASSISTANT) {
+            return $enabled;
+        }
+
+        return array_values(array_filter($enabled, fn (string $name): bool => config("ai.providers.{$name}.driver") === 'ollama'));
     }
 
     /**

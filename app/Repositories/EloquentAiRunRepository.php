@@ -45,7 +45,7 @@ final readonly class EloquentAiRunRepository implements AiRunRepositoryInterface
                 'stopped_after_ms' => $record->stoppedAfterMs,
                 'validation_failed' => $record->validationFailed,
                 'tool_steps' => $record->toolSteps === [] ? null : count($record->toolSteps),
-                'tool_errors' => $record->toolSteps === [] ? null : count(array_filter($record->toolSteps, fn (AiToolStepRecord $step): bool => $step->outcome !== 'ok')),
+                'tool_errors' => $record->toolSteps === [] ? null : count(array_filter($record->toolSteps, fn (AiToolStepRecord $step): bool => ! in_array($step->outcome, ['ok', 'pending', 'confirmed', 'rejected'], true))),
             ]);
 
             foreach ($record->toolSteps as $step) {

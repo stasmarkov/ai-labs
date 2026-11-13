@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Responses;
 
+use App\Exceptions\AdminAssistantConflictException;
+use App\Exceptions\AdminAssistantModelException;
+use App\Exceptions\AdminAssistantProviderException;
 use App\Exceptions\DocsAnswerUnavailableException;
 use App\Exceptions\DocsSearchUnavailableException;
 use App\Exceptions\ExportNotFoundException;
@@ -49,6 +52,9 @@ final class JsonErrorRenderer
             $e instanceof NlSearchRefusedException => ApiResponse::error(422, $e->getMessage(), extra: ['refused' => true, 'pattern' => $e->pattern, 'invocation_id' => $e->invocationId]),
             $e instanceof NlSearchInvalidException => ApiResponse::error(422, 'Validation failed', $e->errors, ['extracted' => $e->extracted, 'unsupported' => $e->unsupported, 'invocation_id' => $e->invocationId]),
             $e instanceof ModerationUnavailableException => ApiResponse::error(503, $e->getMessage(), extra: ['code' => ModerationUnavailableException::CODE, 'attempts' => $e->attempts, 'invocation_ids' => $e->invocationIds]),
+            $e instanceof AdminAssistantConflictException => ApiResponse::error($e->status(), $e->getMessage(), extra: ['code' => $e->reason]),
+            $e instanceof AdminAssistantProviderException => ApiResponse::error(422, $e->getMessage(), extra: ['code' => AdminAssistantProviderException::CODE]),
+            $e instanceof AdminAssistantModelException => ApiResponse::error($e->status(), $e->getMessage(), extra: ['code' => $e->reason]),
             $e instanceof ProviderNotEnabledException => ApiResponse::error(422, $e->getMessage(), extra: ['code' => ProviderNotEnabledException::CODE]),
             $e instanceof ProviderNotConfiguredException => ApiResponse::error(503, $e->getMessage(), extra: ['code' => ProviderNotConfiguredException::CODE]),
             $e instanceof IndexNotBuiltException => ApiResponse::error(409, $e->getMessage(), extra: ['code' => IndexNotBuiltException::CODE]),

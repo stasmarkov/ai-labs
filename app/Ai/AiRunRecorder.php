@@ -200,6 +200,7 @@ final class AiRunRecorder
      *
      * @param  list<int>|null  $retrieved
      * @param  list<int>|null  $cited
+     * @param  list<AiToolStepRecord>|null  $toolSteps  the steps of a run that numbers them itself; null takes the ones kept with toolStep()
      */
     public function recordRun(
         string $status,
@@ -218,6 +219,7 @@ final class AiRunRecorder
         ?bool $validationFailed = null,
         ?string $origin = null,
         ?int $inputs = null,
+        ?array $toolSteps = null,
     ): string {
         $invocationId ??= (string) Str::uuid();
 
@@ -240,7 +242,7 @@ final class AiRunRecorder
             refusalReason: $refusalReason === null ? null : mb_substr($refusalReason, 0, self::MAX_REASON_LENGTH),
             origin: $origin,
             validationFailed: $validationFailed,
-            toolSteps: $this->takeToolSteps($invocationId),
+            toolSteps: $toolSteps ?? $this->takeToolSteps($invocationId),
         )));
 
         return $invocationId;

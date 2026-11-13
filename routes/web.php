@@ -5,6 +5,7 @@ use App\Http\Controllers\ExtractLabPhotoController;
 use App\Http\Controllers\KeepDuplicatePhotoController;
 use App\Http\Controllers\ResetLabSettingController;
 use App\Http\Controllers\SaveLabSettingController;
+use App\Http\Controllers\ShowLabAdminAssistantController;
 use App\Http\Controllers\ShowLabAssistantController;
 use App\Http\Controllers\ShowLabChatController;
 use App\Http\Controllers\ShowLabDescribeController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\ShowLabRunController;
 use App\Http\Controllers\ShowLabSemanticController;
 use App\Http\Controllers\ShowLabSettingsController;
 use App\Http\Controllers\UndoDuplicateReviewController;
+use App\Http\Middleware\EnsureAdminAssistant;
 use App\Http\Middleware\EnsureLocalSettings;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\LimitCloudAi;
@@ -40,6 +42,7 @@ Route::middleware(HandleInertiaRequests::class)->prefix('ai')->group(function ()
     Route::get('/docs', ShowLabDocsController::class)->name('ai.docs');
     Route::get('/chat', ShowLabChatController::class)->name('ai.chat');
     Route::get('/assistant', ShowLabAssistantController::class)->name('ai.assistant');
+    Route::get('/admin-assistant', ShowLabAdminAssistantController::class)->middleware(EnsureAdminAssistant::class)->name('ai.admin-assistant');
     Route::get('/moderation', ShowLabModerationController::class)->name('ai.moderation');
     Route::get('/nl-search', ShowLabNlSearchController::class)->name('ai.nl-search');
     Route::get('/photo-search', ShowLabPhotoSearchController::class)->name('ai.photo-search');
@@ -54,7 +57,7 @@ Route::middleware(HandleInertiaRequests::class)->prefix('ai')->group(function ()
     Route::get('/guides/{key}', ShowLabGuideController::class)->name('ai.guides.show');
     Route::get('/runs/{invocationId}', ShowLabRunController::class)->name('ai.runs.show');
 
-    Route::middleware(EnsureLocalSettings::class)->prefix('settings')->where(['feature' => implode('|', array_keys(AiProviders::features()))])->group(function (): void {
+    Route::middleware(EnsureLocalSettings::class)->prefix('settings')->where(['feature' => implode('|', array_keys([...AiProviders::features(), AiProviders::ADMIN_ASSISTANT => 'text']))])->group(function (): void {
         Route::get('/', ShowLabSettingsController::class)->name('ai.settings');
         Route::put('/{feature}', SaveLabSettingController::class)->name('ai.settings.save');
         Route::delete('/{feature}', ResetLabSettingController::class)->name('ai.settings.reset');

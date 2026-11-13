@@ -11,6 +11,9 @@ final readonly class ListingDetail
         public DealerSummary $dealer,
         public string $heroImagePath,
         public ?int $photoId = null,
+        public ?string $title = null,
+        /** @var list<string> */
+        public array $tags = [],
     ) {}
 
     /**

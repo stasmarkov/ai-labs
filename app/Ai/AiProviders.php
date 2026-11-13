@@ -33,6 +33,9 @@ final readonly class AiProviders
 
     private const TEXT_FEATURES = ['describe', 'nl-search', 'docs-answer', 'rag-grader', 'photo-vision', 'assistant', 'moderation'];
 
+    /** A text feature that resolves like the others but is on the settings page only while offeredFeatures() adds it. */
+    public const ADMIN_ASSISTANT = 'admin-assistant';
+
     /** Text features whose default model is the provider's vision model, when its entry names one. */
     private const VISION_FEATURES = ['photo-vision'];
 
@@ -152,6 +155,27 @@ final readonly class AiProviders
     public function settingsAvailable(): bool
     {
         return app()->environment('local') && (bool) config('ai.settings_ui', true);
+    }
+
+    /**
+     * Whether the admin assistant is offered: the local environment with the admin assistant switch on.
+     */
+    public function adminAssistantAvailable(): bool
+    {
+        return app()->environment('local') && (bool) config('ai.admin_assistant.enabled', true);
+    }
+
+    /**
+     * The features the settings page offers: every listed feature, plus the admin assistant while it is available.
+     *
+     * @return array<string, string>
+     */
+    public function offeredFeatures(): array
+    {
+        return [
+            ...self::features(),
+            ...($this->adminAssistantAvailable() ? [self::ADMIN_ASSISTANT => 'text'] : []),
+        ];
     }
 
     /**
@@ -367,7 +391,7 @@ final readonly class AiProviders
     private function kindOf(string $feature): string
     {
         return match (true) {
-            in_array($feature, self::TEXT_FEATURES, true) => 'text',
+            in_array($feature, self::TEXT_FEATURES, true), $feature === self::ADMIN_ASSISTANT => 'text',
             in_array($feature, self::EMBEDDING_FEATURES, true) => 'embeddings',
             in_array($feature, self::IMAGE_EMBEDDING_FEATURES, true) => 'image-embeddings',
             default => throw new InvalidArgumentException("Unknown AI feature \"{$feature}\"."),

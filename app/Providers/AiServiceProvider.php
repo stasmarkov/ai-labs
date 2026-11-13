@@ -113,6 +113,7 @@ class AiServiceProvider extends ServiceProvider
         RateLimiter::for('cloud-ai-global', fn (Request $request): Limit => Limit::perMinute((int) config('ai.cloud_global_per_minute'))->by('all'));
         RateLimiter::for('slow', fn (Request $request): Limit => Limit::perMinute((int) config('services.vinstub.per_minute'))->by((string) $request->ip()));
         RateLimiter::for('assistant-ask', fn (Request $request): Limit => Limit::perMinute((int) config('ai.assistant.per_minute'))->by((string) $request->ip()));
+        RateLimiter::for('admin-assistant', fn (Request $request): Limit => Limit::perMinute((int) config('ai.admin_assistant.per_minute'))->by((string) $request->ip()));
         RateLimiter::for('moderation', fn (Request $request): Limit => Limit::perMinute((int) config('ai.moderation.per_minute'))->by((string) $request->ip()));
         RateLimiter::for('semantic-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.semantic_per_minute'))->by((string) $request->ip()));
         RateLimiter::for('nl-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.nl_search.per_minute'))->by((string) $request->ip()));

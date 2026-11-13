@@ -1,4 +1,4 @@
-<x-layouts.app :title="$listing->listing->make.' '.$listing->listing->model">
+<x-layouts.app :title="$listing->title ?? $listing->listing->make.' '.$listing->listing->model">
     <img src="{{ asset($listing->heroImagePath) }}" alt="{{ $listing->listing->make }} {{ $listing->listing->model }}" class="mb-6 w-full rounded-lg">@if ($similarCars !== [])
         <section id="similar-cars" class="mb-6" aria-labelledby="similar-cars-heading">
             <h2 id="similar-cars-heading" class="text-xl font-semibold">Similar cars</h2>
@@ -16,7 +16,15 @@
     @endif
 
 
-    <h1 class="text-3xl font-semibold">{{ $listing->listing->make }} {{ $listing->listing->model }}</h1>
+    <h1 class="text-3xl font-semibold">@if ($listing->title !== null){{ $listing->title }}@else{{ $listing->listing->make }} {{ $listing->listing->model }}@endif</h1>@if ($listing->tags !== [])
+
+    <ul id="listing-tags" class="mt-4" aria-label="Tags">
+        @foreach ($listing->tags as $tag)
+            <li class="inline-block rounded-full border border-[#e3e3e0] px-5 py-1 text-sm">{{ $tag }}</li>
+        @endforeach
+    </ul>
+@endif
+
     <p id="listing-price" class="mt-1 text-lg" data-price-topic="{{ $watch->topic }}" data-price-rendered-ms="{{ $renderedAtMs }}"@if ($watch->privateTopic !== null) data-price-topic-private="{{ $watch->privateTopic }}"@endif>{{ \App\Support\PriceFormatter::format($listing->listing->priceCents, $listing->listing->currency) }}</p>
     <p id="listing-price-status" class="sr-only" aria-live="polite"></p>
 

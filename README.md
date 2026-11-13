@@ -137,6 +137,12 @@ ddev artisan assistant:eval --models=qwen3.5:9b   # 30 questions: tool precision
 
 The provider and model come from the `assistant` feature on `/ai/settings`. How it works: `/ai/guides/assistant`.
 
+## Admin assistant
+
+`/ai/admin-assistant` is a chat where the developer reads and edits listings through a tool loop written by hand. It talks to Ollama's `/v1/chat/completions` with a plain HTTP client and has five tools: `searchListings`, `getListing` and `countByTag` read; `updateTitle` and `addTag` write. A write is never run by the model: the loop stops, the page shows a card with the exact change, and only `POST /api/admin-assistant/actions/{id}/confirm` applies it. A question uses at most 4 tool steps and 6 model calls, and every call and step is logged.
+
+The routes exist only when the app runs locally with `AI_ADMIN_ASSISTANT=true` (the default); otherwise they answer 404 and the settings row is hidden. The endpoints take JSON only, refuse cross-site requests and allow `AI_ADMIN_ASSISTANT_PER_MINUTE` requests a minute per IP. The provider and model come from the `admin-assistant` feature on `/ai/settings` (Ollama only, a model with tool calling). How it works: `/ai/guides/admin-assistant`.
+
 ## Listing moderation
 
 `/ai/moderation` rates how risky a listing is for a buyer: a risk from 0 to 1, reasons from a closed list of seven, and a short explanation. The app computes what the model cannot know (the market median for the make, model and year, the price ratio, the VINs in the text and whether one is reported) and passes it as facts. PHP checks the answer; a rejected or unparsable one is asked for once more, then ends as `invalid`. A description that matches the input guard is classified, not refused. The endpoint is `POST /api/moderation` (JSON only, 30 requests a minute per IP, `AI_MODERATION_PER_MINUTE`).

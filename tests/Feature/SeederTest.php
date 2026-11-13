@@ -77,6 +77,6 @@ it('MNC-1 a full seed gives the known listings hash', function (): void {
 
     $hash = DB::selectOne("SELECT md5(string_agg(listings::text, ',' ORDER BY id)) AS hash FROM listings")->hash;
 
-    expect($hash)->toBe('6a0f96d2c7139919cc215a520072d3f7')
+    expect($hash)->toBe('0d5bf661d8bd08e72cad5a7bf4fd5454')
         ->and(DB::table('listing_documents')->count())->toBe(50_000);
 });

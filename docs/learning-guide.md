@@ -629,6 +629,10 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`AiRunRecorder`](../app/Ai/AiRunRecorder.php) | Times each run (start, first token, end) and writes the `ai_runs` row; also writes rows for refused and `no_context` outcomes | SL-20, SL-45 |
 | [`RecordAiRun`](../app/Ai/RecordAiRun.php) | Listens to the SDK's streaming events and drives the recorder | SL-20 |
 | [`RecordToolStep`](../app/Ai/RecordToolStep.php) | Listens to the SDK's tool events and gives the recorder one step per tool call, the arguments and a result summary | SL-25 |
+| [`AdminAssistantLoop`](../app/Ai/AdminAssistantLoop.php) | The admin assistant's hand-written agent loop: sends the OpenAI-shaped request, parses `tool_calls`, checks each call in PHP, runs read tools, stops at a write, caps a question at 4 tool steps and 6 model calls; prompt `admin-assistant.v1.md`, feature `admin-assistant`, Ollama only | SL-34 |
+| [`OllamaChatClient`](../app/Ai/OllamaChatClient.php) | One plain-HTTP call to Ollama's `/v1/chat/completions`, mapped to a completion with its `tool_calls` and token usage | SL-34 |
+| [`AdminConversation`](../app/Ai/AdminConversation.php) | The server-side state of one admin-assistant conversation: messages, step and call counters, the pending write | SL-34 |
+| [`AdminConversationStore`](../app/Ai/AdminConversationStore.php) | Keeps admin-assistant conversations in the cache as snapshots (60 minutes) and gives one request at a time a lock per conversation | SL-34 |
 | [`RecordEmbeddingsRun`](../app/Ai/RecordEmbeddingsRun.php) | The same for embeddings calls, so query and indexing embeddings are logged | SL-24 |
 | [`OutputGuard`](../app/Ai/OutputGuard.php) | Detects a leaked prompt: the canary or 12 copied prompt words not found in the context | SL-45 |
 | [`CanaryGenerator`](../app/Ai/CanaryGenerator.php) | Makes the random `ap-canary-…` string; tests pass a fixed one | SL-45 |
@@ -717,6 +721,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`similar-photos.php`](../resources/guides/similar-photos.php) | The capability guide behind `/ai/guides/similar-photos` | SL-36 |
 | [`photo-search.php`](../resources/guides/photo-search.php) | The capability guide behind `/ai/guides/photo-search` | SL-37 |
 | [`photo-duplicates.php`](../resources/guides/photo-duplicates.php) | The capability guide behind `/ai/guides/photo-duplicates` | SL-39 |
+| [`admin-assistant.php`](../resources/guides/admin-assistant.php) | The capability guide behind `/ai/guides/admin-assistant` | SL-34 |
 | [`assistant.php`](../resources/guides/assistant.php) | The capability guide behind `/ai/guides/assistant` | SL-25 |
 | [`moderation.php`](../resources/guides/moderation.php) | The capability guide behind `/ai/guides/moderation` | SL-26 |
 | [`ModerationService`](../app/Services/ModerationService.php), [`ModerationFacts`](../app/Services/ModerationFacts.php), [`ModerationRules`](../app/Rules/ModerationRules.php), [`ModerationInput`](../app/DTOs/ModerationInput.php), [`ModerationResult`](../app/DTOs/ModerationResult.php), [`ModerationFactsResult`](../app/DTOs/ModerationFactsResult.php) | Moderation: compute the facts (median, ratio, VINs, injection pattern), ask the model, check the answer in PHP, retry once, apply the PHP floor for an injection pattern or a reported VIN, and apply the per-model threshold | SL-26 |
@@ -834,6 +839,18 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 
 **Run it.** `ddev artisan llm:bench`, `bench/llm-load.sh concurrency`, `bench/llm-load.sh search-under-load`, and the opt-in smoke group: `ddev exec env LOCAL_LLM_SMOKE=1 php artisan test --group=local-llm` after `ollama pull qwen3:0.6b` on the host. Results are in [`bench/results/llm/`](../bench/results/llm/) and [BENCHMARKS.md](../BENCHMARKS.md).
 
+### Admin assistant: a hand-written tool loop
+
+**What it is.** The buyer assistant lets the SDK run its tool loop; `/ai/admin-assistant` writes that loop in plain PHP so each turn can be read. It is local only (the routes answer 404 elsewhere or with `AI_ADMIN_ASSISTANT=false`) and uses Ollama's OpenAI-shaped `/v1/chat/completions`.
+
+1. [`AdminAssistantLoop`](../app/Ai/AdminAssistantLoop.php) guards the question, then [`OllamaChatClient`](../app/Ai/OllamaChatClient.php) sends the system prompt, the last 40 messages, the tool definitions, `tool_choice` and `temperature: 0`.
+2. `tool_calls` come back with `arguments` as a string. The loop decodes it only when it handles the call; invalid JSON, an unknown tool or a failed `validate` go back to the model as an error.
+3. A valid read call runs through [`AdminToolRegistry::runRead`](../app/Ai/AdminTools/AdminToolRegistry.php), which refuses write tools. Results are capped (4000 characters, 10 rows, descriptions cut at 500) and sent back wrapped in `<tool_result>` with `<` and `>` escaped.
+4. The first valid write becomes a pending action (random id, preview, 10 minutes) and the loop returns. Only [`AdminAssistantConfirmation`](../app/Services/AdminAssistantConfirmation.php), reached from the confirm endpoint, runs a write: it validates again, writes in a transaction and resumes the loop.
+5. At most 4 tool steps and 6 model calls run per question; the last call is sent with `tool_choice: none`. Every model call is an `ai_runs` row and every step an `ai_tool_steps` row (`ok`, `error`, `failed`, `pending`, `confirmed`, `rejected`).
+
+**To add a tool**, write a class in [`app/Ai/AdminTools/`](../app/Ai/AdminTools/) with `name`, `description`, `parameters`, `isWrite`, `validate` and `run`, give a write a `preview`, and list it in the registry. **Tests:** [`AdminToolsTest`](../tests/Feature/AdminToolsTest.php), [`AdminAssistantLoopTest`](../tests/Feature/AdminAssistantLoopTest.php), [`AdminAssistantConfirmTest`](../tests/Feature/AdminAssistantConfirmTest.php), [`AdminAssistantEndpointTest`](../tests/Feature/AdminAssistantEndpointTest.php), [`AdminAssistantPageTest`](../tests/Feature/AdminAssistantPageTest.php). The page is [`AdminAssistant.vue`](../resources/js/ai/Pages/Lab/AdminAssistant.vue); the in-app guide is `/ai/guides/admin-assistant`.
+
 ### Four requests, end to end
 
 **Describe a listing** (`GET /listings/1/describe`):
@@ -907,6 +924,7 @@ Every lab page has a guide at `/ai/guides/{key}`, and the live pages show its st
 
 The guide files:
 
+- [`admin-assistant.php`](../resources/guides/admin-assistant.php): the hand-written tool loop with confirmed writes
 - [`chat.php`](../resources/guides/chat.php): answering with citations
 - [`describe.php`](../resources/guides/describe.php): streaming a description
 - [`docs.php`](../resources/guides/docs.php): docs search

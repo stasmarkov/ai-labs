@@ -29,6 +29,9 @@ final readonly class LabOverviewService
         ['moderation', 'Moderation', 'ai.moderation', 'ready'],
     ];
 
+    /** The lab page that exists only while the admin assistant is available (local environment, switch on). */
+    private const ADMIN_PAGE = ['admin-assistant', 'Admin assistant', 'ai.admin-assistant', 'ready'];
+
     public function __construct(
         private AiRunRepositoryInterface $runs,
         private OllamaServerInfo $ollama,
@@ -87,7 +90,7 @@ final readonly class LabOverviewService
             $page[3],
             $this->guides->find($page[0])->summary,
             $page[0],
-        ), self::PAGES);
+        ), $this->pages());
     }
 
     public function capability(string $key): LabCapability
@@ -102,6 +105,14 @@ final readonly class LabOverviewService
     }
 
     /**
+     * @return list<array{0: string, 1: string, 2: string, 3: string}>
+     */
+    private function pages(): array
+    {
+        return [...self::PAGES, ...($this->providers->adminAssistantAvailable() ? [self::ADMIN_PAGE] : [])];
+    }
+
+    /**
      * @return list<array{href: string, label: string}>
      */
     private function navigation(): array
@@ -109,7 +120,7 @@ final readonly class LabOverviewService
         return [
             ['href' => route('ai.overview', absolute: false), 'label' => 'Overview'],
             ['href' => route('ai.guides.index', absolute: false), 'label' => 'Guides'],
-            ...array_map(fn (array $page): array => ['href' => route($page[2], absolute: false), 'label' => $page[1]], self::PAGES),
+            ...array_map(fn (array $page): array => ['href' => route($page[2], absolute: false), 'label' => $page[1]], $this->pages()),
             ...($this->providers->settingsAvailable() ? [['href' => route('ai.settings', absolute: false), 'label' => 'Settings']] : []),
         ];
     }

@@ -76,6 +76,10 @@ final readonly class EloquentListingRepository implements ListingRepositoryInter
                 DB::table('listing_photos')->select('id')->whereColumn('listing_id', 'listings.id')->orderBy('id')->limit(1),
                 'first_photo_id',
             )
+            ->selectSub(
+                DB::table('listing_tags')->selectRaw("coalesce(json_agg(tag order by id), '[]'::json)")->whereColumn('listing_id', 'listings.id'),
+                'tag_list',
+            )
             ->with('dealer')
             ->findOrFail($id);
 
@@ -84,6 +88,8 @@ final readonly class EloquentListingRepository implements ListingRepositoryInter
             new DealerSummary($listing->dealer->id, $listing->dealer->name, $listing->dealer->city),
             '/images/heroes/hero-'.($listing->id % self::HERO_VARIANTS).'.webp',
             $listing->getAttribute('first_photo_id') === null ? null : (int) $listing->getAttribute('first_photo_id'),
+            $listing->title,
+            array_values(array_map('strval', (array) json_decode((string) $listing->getAttribute('tag_list'), true))),
         );
     }
 
@@ -103,13 +109,7 @@ final readonly class EloquentListingRepository implements ListingRepositoryInter
      */
     private function filtered(ListingFilter $filter): Builder
     {
-        return Listing::query()
-            ->when($filter->make !== null, fn (Builder $query) => $query->whereRaw('lower(make) = lower(?)', [$filter->make]))
-            ->when($filter->model !== null, fn (Builder $query) => $query->whereRaw('lower(model) = lower(?)', [$filter->model]))
-            ->when($filter->city !== null, fn (Builder $query) => $query->whereRaw('lower(city) = lower(?)', [$filter->city]))
-            ->when($filter->fuel !== null, fn (Builder $query) => $query->where('fuel', $filter->fuel?->value))
-            ->when($filter->minYear !== null, fn (Builder $query) => $query->where('year', '>=', $filter->minYear))
-            ->when($filter->maxPriceCents !== null, fn (Builder $query) => $query->where('price_cents', '<=', $filter->maxPriceCents));
+        return Listing::query()->matching($filter);
     }
 
     private function toSummary(Listing $listing): ListingSummary

@@ -55,7 +55,7 @@ it('AC-4 the page lists every feature with enabled providers and the right model
 
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('Lab/Settings', false)
-        ->has('rows', 10)
+        ->has('rows', 11)
         ->where('rows.0.feature', 'describe')
         ->where('rows.0.effective.source', 'default')
         ->where('rows.0.providers', fn ($providers) => collect($providers)->pluck('name')->contains('ollama')
@@ -68,6 +68,20 @@ it('AC-4 the page lists every feature with enabled providers and the right model
             && collect($providers)->firstWhere('name', 'ollama')['models'] === ['bge-m3']));
 
     expect($response->getContent())->not->toContain('sk-secret-anthropic-value');
+});
+
+it('MNC-4 the admin-assistant row shows only while the admin assistant is available', function (): void {
+    config(['ai.admin_assistant.enabled' => true]);
+    $this->get('/ai/settings')->assertInertia(fn (Assert $page) => $page
+        ->has('rows', 11)
+        ->where('rows.10.feature', 'admin-assistant')
+        ->where('rows.10.kind', 'text')
+        ->where('rows.10.effective.provider', 'ollama'));
+
+    config(['ai.admin_assistant.enabled' => false]);
+    $this->get('/ai/settings')->assertInertia(fn (Assert $page) => $page
+        ->has('rows', 10)
+        ->where('rows', fn ($rows) => ! collect($rows)->pluck('feature')->contains('admin-assistant')));
 });
 
 it('NFR-2 the page and the props carry no key value', function (): void {

@@ -108,7 +108,9 @@ it('AC-6 every experiment preset URL uses only parameters its target page reads'
         'ai.photos.duplicates' => [],
         'ai.assistant' => ['q'],
         'ai.moderation' => [],
+        'ai.admin-assistant' => ['q'],
     ];
+    app()->detectEnvironment(fn (): string => 'local');
     $repository = app(GuideRepository::class);
 
     foreach ($repository->keys() as $key) {

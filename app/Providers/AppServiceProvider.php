@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Contracts\AdminListingRepositoryInterface;
 use App\Contracts\AiSettingsRepositoryInterface;
+use App\Contracts\AiToolStepRepositoryInterface;
 use App\Contracts\CaptionSimilarityRepositoryInterface;
 use App\Contracts\DocsAnswerCacheRepositoryInterface;
 use App\Contracts\DocsBenchRepositoryInterface;
@@ -33,7 +35,9 @@ use App\Contracts\SimilarPhotosRepositoryInterface;
 use App\Guides\GuideFacts;
 use App\Guides\GuideRepository;
 use App\Guides\SnippetResolver;
+use App\Repositories\EloquentAdminListingRepository;
 use App\Repositories\EloquentAiSettingsRepository;
+use App\Repositories\EloquentAiToolStepRepository;
 use App\Repositories\EloquentDocsAnswerCacheRepository;
 use App\Repositories\EloquentDocsBenchRepository;
 use App\Repositories\EloquentDocsIndexRepository;
@@ -83,6 +87,8 @@ class AppServiceProvider extends ServiceProvider
         ));
         $this->app->scoped(AiSettingsRepositoryInterface::class, EloquentAiSettingsRepository::class);
         $this->app->bind(ListingRepositoryInterface::class, EloquentListingRepository::class);
+        $this->app->bind(AdminListingRepositoryInterface::class, EloquentAdminListingRepository::class);
+        $this->app->bind(AiToolStepRepositoryInterface::class, EloquentAiToolStepRepository::class);
         $this->app->bind(ListingDocumentRepositoryInterface::class, EloquentListingDocumentRepository::class);
         $this->app->bind(ListingPhotoRepositoryInterface::class, EloquentListingPhotoRepository::class);
         $this->app->bind(PhotoEvalRepositoryInterface::class, EloquentPhotoEvalRepository::class);

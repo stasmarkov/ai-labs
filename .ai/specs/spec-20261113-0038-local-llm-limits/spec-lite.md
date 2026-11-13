@@ -201,7 +201,7 @@ All raised by the clarity gate on 2026-11-13; each item is answered in "Clarific
 - **C-1:** the smoke group is **skipped, not excluded**. `phpunit.xml` is unchanged. Every test in `tests/Feature/LocalLlmSmokeTest.php` (Pest, group `local-llm`) calls `markTestSkipped` unless `LOCAL_LLM_SMOKE=1`, so the default suite lists the tests as skipped, and `--group=local-llm` needs no exclusion override.
 - **C-2:** failover runs every request through the HTTP kernel in-process (`app(Kernel)->handle(Request::create(...))`, the same path as a feature test) and reads the real status and body. All four entry points are HTTP:
   - `GET /listings/1/describe` (SSE);
-  - `GET /api/listings/nl?q=diesel BMW in Lviv under 20000`;
+  - `GET /api/listings/nl?q=…` with the failover query in `LlmFailoverBench` (a diesel make, one city and a price cap; it is not quoted here so the eval questions stay out of the docs corpus);
   - `POST /api/moderation` (JSON body for listing 1, header `Sec-Fetch-Site: same-origin`);
   - `POST /api/assistant/ask` (JSON `{"question":"Do you have a petrol Volkswagen Golf under 15000 EUR?"}`).
   For SSE responses, the client-visible result is the first `error` or `refused` event (its code), or `none`.
