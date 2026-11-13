@@ -477,8 +477,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-97, BR-94, BR-90, BR-27
 - **Depends on:** SL-25
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261113-0950-admin-assistant
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-34: admin assistant with a hand-written tool-calling loop over the local model's OpenAI-compatible API — tools searchListings, getListing, updateTitle, addTag, countByTag; confirmation before writes, BR-94 step limit, every step logged (BR-97, BR-94, BR-90, BR-27). Rules in product-brief.md."`
 
