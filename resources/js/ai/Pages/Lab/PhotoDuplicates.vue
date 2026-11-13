@@ -12,6 +12,7 @@ import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabSimilarityBar from '../../components/LabSimilarityBar.vue';
 import LabTag from '../../components/LabTag.vue';
+import { csrfToken } from '../../composables/csrfToken';
 import type { GuideStep } from '../../composables/useGuideSteps';
 
 interface GroupPhoto {
@@ -94,12 +95,6 @@ function urlFor(template: string, id: number): string {
 
 function pageHref(page: number): string {
     return `${props.pageUrl}?${new URLSearchParams({ page: String(page) }).toString()}`;
-}
-
-function csrfToken(): string {
-    const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
-
-    return match ? decodeURIComponent(match[1]) : '';
 }
 
 function removeCount(group: Group): number {

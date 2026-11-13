@@ -4,7 +4,7 @@ title: MCP server for the listing tools
 type: feature
 size: M
 priority: P2
-status: approved
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-13; standing approval)
@@ -59,7 +59,7 @@ The MCP server only groups and describes the tools. The tools reuse the SL-34 to
 
    - **Proposing:** the two `propose_*` tools validate the change, never write the listing, and create a pending change.
      - They return text with the change id, the preview (old and new title; or the listing and the tag), the status `pending`, and the confirm URL `{APP_URL}/ai/changes/{id}`.
-     - The text tells the model: "The developer must confirm this in the browser; you cannot confirm it."
+     - The text tells the model: "The confirmation needs the developer in the browser" (C-17 replaces "you cannot confirm it").
    - **`change_status`:** takes `id` and returns `pending`, `confirmed` (with the applied result), `rejected` or `expired`.
    - **No confirm tool:** no tool can confirm, reject or apply anything.
    - **Errors:** invalid arguments return an MCP error response (`Response::error`) with the validation messages, and nothing is stored.
@@ -259,7 +259,7 @@ All 30 items raised by the clarity gate on 2026-11-13 are answered below as C-1.
   - **No `client` column:** `laravel/mcp` 1.1.2 does not expose the client's initialize info to tools, so it is dropped from Scope 5.
 - **C-10 Edge inputs and the URL:**
   - **`change_status` ids:** an id that is not a UUID, or an unknown one, returns an MCP error "No change with this id." and is logged as `error`.
-  - **Confirm URL:** built with `url('/ai/changes/'.$id)`, so `APP_URL` without a trailing slash, which is `https://ai-lab.ddev.site` in `.env.example` and in the container.
+  - **Confirm URL:** built with `route('ai.changes.show', $id)`, so `APP_URL` without a trailing slash, which is `https://ai-lab.ddev.site` in `.env.example` and in the container.
 - **C-11 Page details:**
   - **A decided id:** `/ai/changes/{id}` shows the change read-only, with its outcome.
   - **An unknown id** gets 404.
@@ -275,15 +275,23 @@ All 30 items raised by the clarity gate on 2026-11-13 are answered below as C-1.
     - **Tag:** `{listing_id, make, model, year, title, tags, tag, already_tagged}`.
   - **Server attributes:**
     - `#[Version('1.0.0')]`;
-    - `#[Instructions]`: "Listing tools of the ai-lab car marketplace. Read tools return capped results. Changes are only proposed: give the developer the link to confirm in the browser; you cannot confirm or apply a change."
+    - `#[Instructions]`: "Listing tools of the ai-lab car marketplace. Read tools return capped results. Changes are only proposed. Give the developer the link; confirming a change needs the developer in the browser."
   - **`source`:** always `mcp` for now. The column exists so the admin assistant could share the table later.
 - **C-14 Retention, cross-site and fingerprint:**
   - **Retention:** no pruning in this slice (local lab data). The guide mentions it.
-  - **Cross-site:** `RefuseCrossSiteRequests` refuses only requests a browser marks `Sec-Fetch-Site: cross-site`. A request with no such header, such as curl, passes, which matches the other lab endpoints. The test sends the header to prove the 403.
+  - **Cross-site (replaced by C-17 for confirm and reject):** `RefuseCrossSiteRequests` refuses only requests a browser marks `Sec-Fetch-Site: cross-site`. A request with no such header, such as curl, passes, which matches the other lab endpoints. The test sends the header to prove the 403.
   - **Fingerprint:** it covers the public `app.css` and `app.js` only, and the lab bundle is separate (as in SL-34). A new lab page does not change it.
 - **C-15 Claude Code command:**
   - **What the build checks:** that `ddev exec -T php artisan mcp:start listings` answers a JSON-RPC `initialize` and `tools/list` over stdin and stdout, with nothing but JSON on stdout.
   - **If DDEV adds noise:** use `docker exec -i ddev-ai-lab-web php /var/www/html/artisan mcp:start listings` and document it.
   - **If neither works:** record it, and document only the MCP Inspector and the in-process tests.
 - **C-16 Test placement:** tool behaviour, including `change_status` (AC-6) and the `mcp:start` gate (AC-7), goes in `tests/Feature/McpListingsServerTest.php`. Page, endpoint and applier behaviour go in `tests/Feature/McpChangesTest.php`.
-
+- **C-17 Confirmation hardening (review fix pass):**
+  - **Why:** a client that can run curl on the machine could fetch the page for cookies and a CSRF token and POST the confirm without a `Sec-Fetch-Site` header, so C-14's "no header passes" let a model confirm its own proposal.
+  - **Same-origin required:** confirm and reject need `Sec-Fetch-Site: same-origin`; a missing header, `cross-site`, `same-site` or `none` gets 403. When an `Origin` header is sent it must equal the origin of `APP_URL`. This replaces `RefuseCrossSiteRequests` on these two routes.
+  - **Nonce:** a random 32 character nonce per change, made when a page renders the change and kept only in that browser session (`mcp_change_nonces`, at most 100). The POST body must carry it: missing gives 422, wrong or from another session gives 403, checked with `hash_equals`, used once. A change that is no longer pending still answers 409 first.
+  - **Never sent over MCP:** no tool result and no confirm response carries a nonce.
+  - **Residual risk (documented in the guide and the manual test):** the checks are request headers and a session value, not proof of a person. A client with a shell can fetch the page with curl, read the nonce and forge `Sec-Fetch-Site` and `Origin`; a client that drives a full headless browser can click. Both defeat C-17. It stops a client that only speaks MCP, or one that does not set out to imitate a browser.
+  - **Tool text:** "you cannot confirm it" is replaced by "the confirmation needs the developer in the browser", which is true of the mechanism and does not overclaim.
+  - **Stuck changes:** a confirm whose write throws ends `failed`; a change in `applying` for over 2 minutes is stored as `failed` when it is read. A failed change from an unexpected exception shows "the change could not be applied", never the exception class.
+  - **Page:** a pending change shows the listing's current title and tags next to the preview; list rows carry only the fields rendered and have Confirm and Reject.

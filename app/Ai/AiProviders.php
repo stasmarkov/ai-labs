@@ -166,6 +166,14 @@ final readonly class AiProviders
     }
 
     /**
+     * Whether the MCP server and its change pages are offered: the local environment with the MCP switch on.
+     */
+    public function mcpServerAvailable(): bool
+    {
+        return app()->environment('local') && (bool) config('ai.mcp.enabled', true);
+    }
+
+    /**
      * The features the settings page offers: every listed feature, plus the admin assistant while it is available.
      *
      * @return array<string, string>

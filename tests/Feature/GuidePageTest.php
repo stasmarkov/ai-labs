@@ -109,6 +109,7 @@ it('AC-6 every experiment preset URL uses only parameters its target page reads'
         'ai.assistant' => ['q'],
         'ai.moderation' => [],
         'ai.admin-assistant' => ['q'],
+        'ai.changes' => [],
     ];
     app()->detectEnvironment(fn (): string => 'local');
     $repository = app(GuideRepository::class);

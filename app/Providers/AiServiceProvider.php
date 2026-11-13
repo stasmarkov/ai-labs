@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Ai\AbortWatcher;
+use App\Ai\AiProviders;
 use App\Ai\AiRunRecorder;
 use App\Ai\ConnectionAbortWatcher;
 use App\Ai\FakeStreamProvider;
@@ -22,6 +23,7 @@ use App\Services\ModerationFacts;
 use App\Services\ModerationSetBuilder;
 use App\Services\PromptInjectionGuard;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
@@ -37,6 +39,8 @@ use Laravel\Ai\Events\GeneratingEmbeddings;
 use Laravel\Ai\Events\StreamingAgent;
 use Laravel\Ai\Events\ToolFailed;
 use Laravel\Ai\Events\ToolInvoked;
+use RuntimeException;
+use Symfony\Component\Console\Input\ArgvInput;
 
 class AiServiceProvider extends ServiceProvider
 {
@@ -106,6 +110,13 @@ class AiServiceProvider extends ServiceProvider
         Event::listen(EmbeddingsGenerated::class, [RecordEmbeddingsRun::class, 'onGenerated']);
         Event::listen(EmbeddingsFailed::class, [RecordEmbeddingsRun::class, 'onFailed']);
 
+        // The listings MCP server changes nothing by itself, but it hands the lab's data to outside clients, so it starts only locally.
+        Event::listen(CommandStarting::class, function (CommandStarting $event): void {
+            if ($event->command === 'mcp:start' && $event->input instanceof ArgvInput && in_array('listings', $event->input->getRawTokens(), true) && ! $this->app->make(AiProviders::class)->mcpServerAvailable()) {
+                throw new RuntimeException('The ai-lab MCP server runs only locally with AI_MCP_SERVER on.');
+            }
+        });
+
         // Each describe call holds a PHP worker and the GPU for seconds, so callers are limited per IP.
         RateLimiter::for('describe', fn (Request $request): Limit => Limit::perMinute((int) config('ai.describe_per_minute'))->by((string) $request->ip()));
         // Cloud calls cost money, so any request that resolves to a cloud provider also counts against this per-IP limit.
@@ -114,6 +125,7 @@ class AiServiceProvider extends ServiceProvider
         RateLimiter::for('slow', fn (Request $request): Limit => Limit::perMinute((int) config('services.vinstub.per_minute'))->by((string) $request->ip()));
         RateLimiter::for('assistant-ask', fn (Request $request): Limit => Limit::perMinute((int) config('ai.assistant.per_minute'))->by((string) $request->ip()));
         RateLimiter::for('admin-assistant', fn (Request $request): Limit => Limit::perMinute((int) config('ai.admin_assistant.per_minute'))->by((string) $request->ip()));
+        RateLimiter::for('mcp-changes', fn (Request $request): Limit => Limit::perMinute((int) config('ai.mcp.per_minute'))->by((string) $request->ip()));
         RateLimiter::for('moderation', fn (Request $request): Limit => Limit::perMinute((int) config('ai.moderation.per_minute'))->by((string) $request->ip()));
         RateLimiter::for('semantic-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.semantic_per_minute'))->by((string) $request->ip()));
         RateLimiter::for('nl-search', fn (Request $request): Limit => Limit::perMinute((int) config('ai.nl_search.per_minute'))->by((string) $request->ip()));

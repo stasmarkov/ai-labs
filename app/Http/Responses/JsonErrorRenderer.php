@@ -15,6 +15,7 @@ use App\Exceptions\ModerationUnavailableException;
 use App\Exceptions\NlSearchInvalidException;
 use App\Exceptions\NlSearchRefusedException;
 use App\Exceptions\NlSearchUnavailableException;
+use App\Exceptions\PendingChangeConflictException;
 use App\Exceptions\PhotoSearchRefusedException;
 use App\Exceptions\PhotoSearchUnavailableException;
 use App\Exceptions\ProviderNotConfiguredException;
@@ -53,6 +54,7 @@ final class JsonErrorRenderer
             $e instanceof NlSearchInvalidException => ApiResponse::error(422, 'Validation failed', $e->errors, ['extracted' => $e->extracted, 'unsupported' => $e->unsupported, 'invocation_id' => $e->invocationId]),
             $e instanceof ModerationUnavailableException => ApiResponse::error(503, $e->getMessage(), extra: ['code' => ModerationUnavailableException::CODE, 'attempts' => $e->attempts, 'invocation_ids' => $e->invocationIds]),
             $e instanceof AdminAssistantConflictException => ApiResponse::error($e->status(), $e->getMessage(), extra: ['code' => $e->reason]),
+            $e instanceof PendingChangeConflictException => ApiResponse::error($e->status(), $e->getMessage(), extra: ['code' => $e->reason]),
             $e instanceof AdminAssistantProviderException => ApiResponse::error(422, $e->getMessage(), extra: ['code' => AdminAssistantProviderException::CODE]),
             $e instanceof AdminAssistantModelException => ApiResponse::error($e->status(), $e->getMessage(), extra: ['code' => $e->reason]),
             $e instanceof ProviderNotEnabledException => ApiResponse::error(422, $e->getMessage(), extra: ['code' => ProviderNotEnabledException::CODE]),

@@ -6,6 +6,7 @@ namespace App\Contracts;
 
 use App\DTOs\AdminListingDetail;
 use App\DTOs\AdminListingPage;
+use App\DTOs\AdminListingRow;
 use App\DTOs\AdminTagChange;
 use App\DTOs\AdminTitleChange;
 use App\DTOs\ListingFilter;
@@ -20,6 +21,14 @@ interface AdminListingRepositoryInterface
     public function search(ListingFilter $filter, ?string $tag, int $limit): AdminListingPage;
 
     public function find(int $id): ?AdminListingDetail;
+
+    /**
+     * The listings with these ids in one query, keyed by id. An unknown id is simply absent.
+     *
+     * @param  list<int>  $ids
+     * @return array<int, AdminListingRow>
+     */
+    public function findMany(array $ids): array;
 
     public function countByTag(string $tag): int;
 

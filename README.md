@@ -143,6 +143,37 @@ The provider and model come from the `assistant` feature on `/ai/settings`. How 
 
 The routes exist only when the app runs locally with `AI_ADMIN_ASSISTANT=true` (the default); otherwise they answer 404 and the settings row is hidden. The endpoints take JSON only, refuse cross-site requests and allow `AI_ADMIN_ASSISTANT_PER_MINUTE` requests a minute per IP. The provider and model come from the `admin-assistant` feature on `/ai/settings` (Ollama only, a model with tool calling). How it works: `/ai/guides/admin-assistant`.
 
+## MCP server for the listing tools
+
+`php artisan mcp:start listings` runs an MCP server over stdio with six tools: `search_listings`, `get_listing`, `count_by_tag` and `change_status` read; `propose_title_change` and `propose_tag` only store a pending change and return a link. A change is applied only when the developer clicks Confirm on `/ai/changes`, in a browser: the endpoint needs `Sec-Fetch-Site: same-origin` and the one-time nonce the page was rendered with, so no MCP tool can confirm. This is not a barrier against a client with a shell (it could fetch the page and forge the headers) or a headless browser, so treat such a client as trusted. The server starts only when the app runs locally with `AI_MCP_SERVER=true` (the default), and the Changes page and `POST /ai/changes/{id}/confirm|reject` answer 404 otherwise. A proposal expires after 30 minutes.
+
+Claude Code (run in this folder, with DDEV started):
+
+```sh
+claude mcp add ai-lab -- ddev exec php artisan mcp:start listings
+```
+
+Claude Desktop (`claude_desktop_config.json`, then restart the app):
+
+```json
+{
+  "mcpServers": {
+    "ai-lab": {
+      "command": "sh",
+      "args": ["-c", "cd /path/to/ai-lab && ddev exec php artisan mcp:start listings"]
+    }
+  }
+}
+```
+
+Look at the tools without a client or a model:
+
+```sh
+ddev artisan mcp:inspector listings
+```
+
+How it works: `/ai/guides/mcp`.
+
 ## Listing moderation
 
 `/ai/moderation` rates how risky a listing is for a buyer: a risk from 0 to 1, reasons from a closed list of seven, and a short explanation. The app computes what the model cannot know (the market median for the make, model and year, the price ratio, the VINs in the text and whether one is reported) and passes it as facts. PHP checks the answer; a rejected or unparsable one is asked for once more, then ends as `invalid`. A description that matches the input guard is classified, not refused. The endpoint is `POST /api/moderation` (JSON only, 30 requests a minute per IP, `AI_MODERATION_PER_MINUTE`).

@@ -722,6 +722,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`photo-search.php`](../resources/guides/photo-search.php) | The capability guide behind `/ai/guides/photo-search` | SL-37 |
 | [`photo-duplicates.php`](../resources/guides/photo-duplicates.php) | The capability guide behind `/ai/guides/photo-duplicates` | SL-39 |
 | [`admin-assistant.php`](../resources/guides/admin-assistant.php) | The capability guide behind `/ai/guides/admin-assistant` | SL-34 |
+| [`mcp.php`](../resources/guides/mcp.php) | The foundation guide behind `/ai/guides/mcp` | SL-35 |
 | [`assistant.php`](../resources/guides/assistant.php) | The capability guide behind `/ai/guides/assistant` | SL-25 |
 | [`moderation.php`](../resources/guides/moderation.php) | The capability guide behind `/ai/guides/moderation` | SL-26 |
 | [`ModerationService`](../app/Services/ModerationService.php), [`ModerationFacts`](../app/Services/ModerationFacts.php), [`ModerationRules`](../app/Rules/ModerationRules.php), [`ModerationInput`](../app/DTOs/ModerationInput.php), [`ModerationResult`](../app/DTOs/ModerationResult.php), [`ModerationFactsResult`](../app/DTOs/ModerationFactsResult.php) | Moderation: compute the facts (median, ratio, VINs, injection pattern), ask the model, check the answer in PHP, retry once, apply the PHP floor for an injection pattern or a reported VIN, and apply the per-model threshold | SL-26 |
@@ -851,6 +852,19 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 
 **To add a tool**, write a class in [`app/Ai/AdminTools/`](../app/Ai/AdminTools/) with `name`, `description`, `parameters`, `isWrite`, `validate` and `run`, give a write a `preview`, and list it in the registry. **Tests:** [`AdminToolsTest`](../tests/Feature/AdminToolsTest.php), [`AdminAssistantLoopTest`](../tests/Feature/AdminAssistantLoopTest.php), [`AdminAssistantConfirmTest`](../tests/Feature/AdminAssistantConfirmTest.php), [`AdminAssistantEndpointTest`](../tests/Feature/AdminAssistantEndpointTest.php), [`AdminAssistantPageTest`](../tests/Feature/AdminAssistantPageTest.php). The page is [`AdminAssistant.vue`](../resources/js/ai/Pages/Lab/AdminAssistant.vue); the in-app guide is `/ai/guides/admin-assistant`.
 
+### MCP server for the listing tools
+
+**What it is.** The same listing tools as the admin assistant, published to outside clients (Claude Code, Claude Desktop) through a Laravel MCP server over stdio. It runs on the local machine only (`APP_ENV=local` and `AI_MCP_SERVER` on; otherwise `mcp:start listings` exits 1 and the Changes routes answer 404). No model runs on this side, so it has no settings row.
+
+1. [`ListingsServer`](../app/Mcp/Servers/ListingsServer.php) lists six tools and carries instructions for the client's model; [`routes/ai.php`](../routes/ai.php) registers it as `listings`, and a client starts it with `php artisan mcp:start listings`.
+2. The read tools ([`AdminToolWrapper`](../app/Mcp/Tools/AdminToolWrapper.php)) take their schema, validation and caps from the admin tools, so the two entry points cannot drift. Each call is a row in `mcp_tool_calls`.
+3. The write tools ([`ProposeChangeTool`](../app/Mcp/Tools/ProposeChangeTool.php), named `propose_*`) never write a listing. They store a `pending_changes` row (30 minute expiry) and return the id, the preview and a link to `/ai/changes/{id}`.
+4. Only a click on that page applies a change: `POST /ai/changes/{id}/confirm` (local, JSON, `Sec-Fetch-Site: same-origin` required, one-time per-session nonce, rate limited) claims the row with one conditional update, validates again and writes in a transaction through [`AdminWriteApplier`](../app/Ai/AdminTools/AdminWriteApplier.php). The outcome is `confirmed`, or `failed` when the change no longer fits; a decided or expired change answers 409 `change_not_pending`. `change_status` lets the model read the outcome.
+
+**Why out of band.** The library has no elicitation, a client's permission prompt can be set to always allow, and a confirm tool could be called by the model itself. A human click on a local page is the one confirmation a model cannot give by itself: the endpoint needs a browser's same-origin header and a nonce that exists only in the developer's session. The residual risk is a client with a shell, which could fetch the page and forge the two headers, or one that drives a headless browser; the guide says so.
+
+**Connect.** `claude mcp add ai-lab -- ddev exec php artisan mcp:start listings` for Claude Code, a `claude_desktop_config.json` entry for Claude Desktop, and `ddev artisan mcp:inspector listings` to look at the tools without a model (README has the snippets). **Tests:** [`McpListingsServerTest`](../tests/Feature/McpListingsServerTest.php) and [`McpChangesTest`](../tests/Feature/McpChangesTest.php). The page is [`Changes.vue`](../resources/js/ai/Pages/Lab/Changes.vue); the in-app guide is `/ai/guides/mcp`.
+
 ### Four requests, end to end
 
 **Describe a listing** (`GET /listings/1/describe`):
@@ -929,6 +943,7 @@ The guide files:
 - [`describe.php`](../resources/guides/describe.php): streaming a description
 - [`docs.php`](../resources/guides/docs.php): docs search
 - [`guards.php`](../resources/guides/guards.php): the guards around a model call
+- [`mcp.php`](../resources/guides/mcp.php): the listing tools as an MCP server with a browser confirmation
 - [`nl-search.php`](../resources/guides/nl-search.php): words to filters
 - [`photos.php`](../resources/guides/photos.php): reading a car photo with a vision model
 - [`prompts.php`](../resources/guides/prompts.php): versioned prompts

@@ -275,6 +275,14 @@ return [
         // Seconds a second request of one conversation waits for the first before it gets 409 conversation_busy.
         'lock_wait_seconds' => 5,
     ],
+    // The MCP server publishes the listing tools to outside clients over stdio. It runs in the local environment only,
+    // and only while this is on. A proposed change expires after the given minutes; confirm and reject calls are
+    // limited per minute and IP.
+    'mcp' => [
+        'enabled' => filter_var(env('AI_MCP_SERVER', true), FILTER_VALIDATE_BOOLEAN),
+        'change_ttl_minutes' => 30,
+        'per_minute' => 30,
+    ],
     // Risk at or above the threshold is "risky". "thresholds" maps a model id to its calibrated value; the rest use "threshold".
     'moderation' => [
         'threshold' => filled(env('AI_MODERATION_THRESHOLD')) ? (float) env('AI_MODERATION_THRESHOLD') : 0.5,

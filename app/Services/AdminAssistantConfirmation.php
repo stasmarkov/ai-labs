@@ -6,15 +6,11 @@ namespace App\Services;
 
 use App\Ai\AdminAssistantLoop;
 use App\Ai\AdminConversation;
-use App\Ai\AdminTools\AdminToolFailed;
-use App\Ai\AdminTools\AdminToolRegistry;
-use App\Ai\AdminTools\AdminWriteTool;
-use App\Contracts\AdminListingRepositoryInterface;
+use App\Ai\AdminTools\AdminWriteApplier;
 use App\Contracts\AiToolStepRepositoryInterface;
 use App\DTOs\AdminPendingAction;
 use App\DTOs\AdminStepReport;
 use App\DTOs\AiToolStepRecord;
-use Throwable;
 
 /**
  * The only place a write tool is run: after the developer decided on a pending action. It validates the arguments
@@ -27,9 +23,8 @@ final readonly class AdminAssistantConfirmation
     private const SUMMARY_KEYS = ['total', 'id', 'tag', 'count', 'old_title', 'new_title', 'changed', 'already_tagged', 'status', 'error'];
 
     public function __construct(
-        private AdminToolRegistry $tools,
+        private AdminWriteApplier $applier,
         private AiToolStepRepositoryInterface $steps,
-        private AdminListingRepositoryInterface $listings,
     ) {}
 
     /**
@@ -39,34 +34,9 @@ final readonly class AdminAssistantConfirmation
     public function apply(AdminConversation $conversation, AdminPendingAction $pending): AdminStepReport
     {
         $startedAt = hrtime(true);
-        $tool = $this->tools->find($pending->tool);
-        $outcome = 'confirmed';
-        $error = null;
+        $applied = $this->applier->apply($pending->tool, $pending->arguments);
 
-        if (! $tool instanceof AdminWriteTool) {
-            $outcome = 'error';
-            $error = 'unknown_tool';
-            $reply = ['error' => 'unknown_tool', 'details' => ['The tool '.$pending->tool.' is not a write tool.']];
-        } elseif (($errors = $tool->validate($pending->arguments)) !== []) {
-            $outcome = 'error';
-            $error = 'invalid_at_confirm';
-            $reply = ['status' => 'not_applied', 'error' => 'invalid_at_confirm', 'details' => array_slice($errors, 0, 10)];
-        } else {
-            try {
-                $reply = $this->listings->transaction(fn (): array => ['status' => 'applied', ...$tool->run($pending->arguments)]);
-            } catch (AdminToolFailed $exception) {
-                $outcome = 'error';
-                $error = 'tool_failed';
-                $reply = ['error' => 'tool_failed', 'details' => [mb_substr($exception->getMessage(), 0, 200)]];
-            } catch (Throwable $exception) {
-                report($exception);
-                $outcome = 'failed';
-                $error = $exception::class;
-                $reply = ['status' => 'failed'];
-            }
-        }
-
-        return $this->settle($conversation, $pending, $outcome, $error, $reply, $startedAt);
+        return $this->settle($conversation, $pending, $applied->outcome, $applied->error, $applied->reply, $startedAt);
     }
 
     public function reject(AdminConversation $conversation, AdminPendingAction $pending): AdminStepReport

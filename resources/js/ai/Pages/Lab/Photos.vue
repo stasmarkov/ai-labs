@@ -12,6 +12,7 @@ import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabSimilarityBar from '../../components/LabSimilarityBar.vue';
 import LabTag from '../../components/LabTag.vue';
+import { csrfToken } from '../../composables/csrfToken';
 import type { GuideRunState, GuideStep } from '../../composables/useGuideSteps';
 
 interface PhotoItem {
@@ -163,12 +164,6 @@ function pageHref(page: number): string {
 
 function urlFor(template: string, id: number): string {
     return template.replace(props.idPlaceholder, String(id));
-}
-
-function csrfToken(): string {
-    const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
-
-    return match ? decodeURIComponent(match[1]) : '';
 }
 
 /** The newest slider position wins: an older answer that arrives late is dropped. */

@@ -74,6 +74,29 @@ final readonly class EloquentAdminListingRepository implements AdminListingRepos
         );
     }
 
+    public function findMany(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        return Listing::query()
+            ->with('tags:id,listing_id,tag')
+            ->whereKey($ids)
+            ->get()
+            ->mapWithKeys(fn (Listing $listing): array => [$listing->id => new AdminListingRow(
+                $listing->id,
+                $listing->make,
+                $listing->model,
+                $listing->year,
+                $listing->price_cents,
+                $listing->city,
+                $listing->title,
+                $this->tagNames($listing),
+            )])
+            ->all();
+    }
+
     public function countByTag(string $tag): int
     {
         return ListingTag::query()->where('tag', $tag)->count();

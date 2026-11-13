@@ -1,12 +1,16 @@
 <?php
 
 use App\Ai\AiProviders;
+use App\Http\Controllers\ConfirmPendingChangeController;
 use App\Http\Controllers\ExtractLabPhotoController;
 use App\Http\Controllers\KeepDuplicatePhotoController;
+use App\Http\Controllers\RejectPendingChangeController;
 use App\Http\Controllers\ResetLabSettingController;
 use App\Http\Controllers\SaveLabSettingController;
 use App\Http\Controllers\ShowLabAdminAssistantController;
 use App\Http\Controllers\ShowLabAssistantController;
+use App\Http\Controllers\ShowLabChangeController;
+use App\Http\Controllers\ShowLabChangesController;
 use App\Http\Controllers\ShowLabChatController;
 use App\Http\Controllers\ShowLabDescribeController;
 use App\Http\Controllers\ShowLabDocsController;
@@ -27,8 +31,10 @@ use App\Http\Controllers\ShowLabSettingsController;
 use App\Http\Controllers\UndoDuplicateReviewController;
 use App\Http\Middleware\EnsureAdminAssistant;
 use App\Http\Middleware\EnsureLocalSettings;
+use App\Http\Middleware\EnsureMcpServer;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\LimitCloudAi;
+use App\Http\Middleware\RequireSameOriginDecision;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(HandleInertiaRequests::class)->group(function (): void {
@@ -43,6 +49,12 @@ Route::middleware(HandleInertiaRequests::class)->prefix('ai')->group(function ()
     Route::get('/chat', ShowLabChatController::class)->name('ai.chat');
     Route::get('/assistant', ShowLabAssistantController::class)->name('ai.assistant');
     Route::get('/admin-assistant', ShowLabAdminAssistantController::class)->middleware(EnsureAdminAssistant::class)->name('ai.admin-assistant');
+    Route::get('/changes', ShowLabChangesController::class)->middleware(EnsureMcpServer::class)->name('ai.changes');
+    Route::get('/changes/{id}', ShowLabChangeController::class)->whereUuid('id')->middleware(EnsureMcpServer::class)->name('ai.changes.show');
+    Route::middleware([EnsureMcpServer::class, RequireSameOriginDecision::class, 'throttle:mcp-changes'])->prefix('changes/{id}')->whereUuid('id')->group(function (): void {
+        Route::post('/confirm', ConfirmPendingChangeController::class)->name('changes.confirm');
+        Route::post('/reject', RejectPendingChangeController::class)->name('changes.reject');
+    });
     Route::get('/moderation', ShowLabModerationController::class)->name('ai.moderation');
     Route::get('/nl-search', ShowLabNlSearchController::class)->name('ai.nl-search');
     Route::get('/photo-search', ShowLabPhotoSearchController::class)->name('ai.photo-search');

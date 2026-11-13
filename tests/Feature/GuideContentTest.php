@@ -11,11 +11,11 @@ use App\Guides\SnippetResolver;
 
 const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation', 'admin-assistant'];
 
-const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards', 'local-models'];
+const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards', 'local-models', 'mcp'];
 
 const ALL_FILLED_GUIDES = [...CAPABILITY_GUIDES, ...FOUNDATION_GUIDES];
 
-const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat', 'ai.photos', 'ai.photo-search', 'ai.photos.duplicates', 'ai.assistant', 'ai.moderation', 'ai.admin-assistant'];
+const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat', 'ai.photos', 'ai.photo-search', 'ai.photos.duplicates', 'ai.assistant', 'ai.moderation', 'ai.admin-assistant', 'ai.changes'];
 
 /**
  * @return list<string>
@@ -392,4 +392,34 @@ it('AC-8 the local-models guide Numbers tab shows the search p95 figures per ser
     foreach ($deltas as $index => $number) {
         expect((float) $number['value'])->toBe((float) $data['servers'][$index]['p95_delta_ms']);
     }
+});
+
+it('AC-8 the mcp guide has six non-empty tabs, no references, answers 200 and the docs show how to connect', function (): void {
+    $guide = app(GuideRepository::class)->find('mcp');
+    $rendered = app(GuideRenderer::class)->render('mcp');
+    $text = mb_strtolower(implode("\n", guideTexts($guide)));
+
+    expect($guide->kind)->toBe('foundation')
+        ->and($guide->planned)->toBeFalse()
+        ->and($rendered['works'])->not->toBeEmpty()
+        ->and($rendered['failures'])->not->toBeEmpty()
+        ->and($rendered['recipes'])->not->toBeEmpty()
+        ->and($rendered['support'])->not->toBeEmpty()
+        ->and($rendered['numbers'])->not->toBeEmpty()
+        ->and($rendered['experiments'])->not->toBeEmpty();
+
+    foreach (['stdio', 'annotation', 'mcp:start listings', 'claude mcp add', 'claude desktop', 'mcp:inspector', 'propose_title_change', 'change_status', 'confirm'] as $needle) {
+        expect($text)->toContain($needle);
+    }
+
+    $this->withoutVite();
+    $this->get('/ai/guides/mcp')->assertOk();
+
+    $learning = file_get_contents(base_path('docs/learning-guide.md'));
+    $readme = file_get_contents(base_path('README.md'));
+    $env = file_get_contents(base_path('.env.example'));
+
+    expect($learning)->toContain('### MCP server for the listing tools')->toContain('/ai/guides/mcp')
+        ->and($readme)->toContain('claude mcp add ai-lab')->toContain('claude_desktop_config.json')->toContain('mcp:inspector listings')
+        ->and($env)->toContain('AI_MCP_SERVER');
 });
