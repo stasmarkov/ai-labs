@@ -1,0 +1,115 @@
+{
+  "mode": "search-under-load",
+  "date": "2026-11-13",
+  "starting_server": "frankenphp",
+  "quick": false,
+  "describe_model": "qwen3.5:9b",
+  "k6_image": "grafana/k6:1.0.0",
+  "k6_image_digest": "grafana/k6@sha256:f21270290d702cbf0a7d6ba5d7ed100b63bcb233b558b885ed787547b3488279",
+  "method": "run.sh search without and with a k6 loop of real describe streams started before the warm-up and stopped after the last repeat; median of the repeats",
+  "describes_note": "completed describes cover the whole loop period, warm-up and repeats; a stream cut by a server restart or the final stop counts as incomplete",
+  "servers": [
+    {
+      "server": "frankenphp",
+      "without_load": {
+        "rps": 458.24,
+        "p50_ms": 106.16,
+        "p95_ms": 132.3,
+        "p99_ms": 172.77,
+        "error_percent": 0,
+        "repeats": 3,
+        "warmup_s": 30,
+        "measure_s": 60
+      },
+      "with_load": {
+        "rps": 286.03,
+        "p50_ms": 165.65,
+        "p95_ms": 237.37,
+        "p99_ms": 319.66,
+        "error_percent": 0,
+        "repeats": 3,
+        "warmup_s": 30,
+        "measure_s": 60
+      },
+      "p95_delta_ms": 105.07,
+      "p95_delta_percent": 79.42,
+      "describes": {
+        "streams_held": 4,
+        "completed": 227,
+        "incomplete": 0,
+        "unreachable_attempts": 200,
+        "rate_limited": 0,
+        "elapsed_s": 656,
+        "completed_per_minute": 20.76
+      }
+    },
+    {
+      "server": "frankenphp-worker",
+      "without_load": {
+        "rps": 954.38,
+        "p50_ms": 51.19,
+        "p95_ms": 63.91,
+        "p99_ms": 73.8,
+        "error_percent": 0,
+        "repeats": 3,
+        "warmup_s": 30,
+        "measure_s": 60
+      },
+      "with_load": {
+        "rps": 23.28,
+        "p50_ms": 2121.59,
+        "p95_ms": 2723.57,
+        "p99_ms": 2828.38,
+        "error_percent": 0,
+        "repeats": 3,
+        "warmup_s": 30,
+        "measure_s": 60
+      },
+      "p95_delta_ms": 2659.66,
+      "p95_delta_percent": 4161.57,
+      "describes": {
+        "streams_held": 4,
+        "completed": 267,
+        "incomplete": 0,
+        "unreachable_attempts": 424,
+        "rate_limited": 0,
+        "elapsed_s": 746,
+        "completed_per_minute": 21.47
+      }
+    },
+    {
+      "server": "frankenphp-octane",
+      "without_load": {
+        "rps": 947.74,
+        "p50_ms": 51.78,
+        "p95_ms": 63.39,
+        "p99_ms": 69.31,
+        "error_percent": 0,
+        "repeats": 3,
+        "warmup_s": 30,
+        "measure_s": 60
+      },
+      "with_load": {
+        "rps": 22.94,
+        "p50_ms": 2106.34,
+        "p95_ms": 2793.06,
+        "p99_ms": 3272.71,
+        "error_percent": 0,
+        "repeats": 3,
+        "warmup_s": 30,
+        "measure_s": 60
+      },
+      "p95_delta_ms": 2729.67,
+      "p95_delta_percent": 4306.15,
+      "describes": {
+        "streams_held": 4,
+        "completed": 270,
+        "incomplete": 0,
+        "unreachable_attempts": 409,
+        "rate_limited": 0,
+        "elapsed_s": 744,
+        "completed_per_minute": 21.77
+      }
+    }
+  ]
+}

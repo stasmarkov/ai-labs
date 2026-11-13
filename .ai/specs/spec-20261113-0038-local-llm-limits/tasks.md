@@ -129,7 +129,7 @@
   - The spec (Scope 4) says the Numbers tab of `resources/guides/local-models.php` reads from `bench/results/llm` and `bench/results/llm-load`. Today all six `numbers` entries point at `llm/2026-11-12/run.json`, so none of the concurrency or search-under-load figures appear. Add entries for `llm-load/<date>/concurrency.json` (for example the level-16 TTFT p50 and the aggregate chunks/s per model) and, after the task 6 run, for `llm-load/<date>/search-under-load.json` (the p95 delta per server mode).
   - [x] **Verify**: `ddev artisan test --compact tests/Feature/GuideContentTest.php` passes, including "AC-3 renders a guide with every number and snippet resolved" for `local-models`, and the Numbers tab at `/ai/guides/local-models` shows at least one `llm-load` figure.
 
-- [ ] 8. BENCHMARKS.md fifth table and search conclusions (docs)
+- [x] 8. BENCHMARKS.md fifth table and search conclusions (docs)
   Covers: AC-6, AC-8
   - The "Local models and limits" section in `BENCHMARKS.md` (line 1292) has the speed, eval, context, failover and concurrency tables. Of the spec's five tables, the search p95 per server mode without and with AI load is missing, because `bench/results/llm-load/<date>/search-under-load.json` does not exist yet. The heading says `(2026-11-13)`, but the run files it cites are dated 2026-11-12. "What the numbers say" has no line on the search p95 delta.
   - After the task 6 `search-under-load` run, add the table (RPS, p50, p95, p99 and error % per server, without and with load, the p95 delta and the completed describes per minute), a conclusion that cites it, and a heading date that matches the run files.
@@ -188,3 +188,17 @@ Findings fixed, each with tests in `LlmBenchCommandTest`, `BenchLlmLoadTest` or 
 - [x] Context: effective window from `/api/ps`, `over_window`, `truncated` null with `context_shift_suspected`, `num_ctx_applied`.
 - [x] `k6-sse.js` per-stream chunk rate from the first byte to `[DONE]`; `llm-load.sh` warm-up id 50000, `--models` validated and quoted, loop by container name, loop verification.
 - [x] `LlmBenchRedactor` patterns (bearer, Authorization, key headers and query parameters, user info, sk-, sk-ant-, AIza); `llm:bench` refuses outside `APP_ENV=local` (exit 2).
+
+## Search-under-load run record (2026-11-13)
+
+- Run 1 refused frankenphp-worker: attempts made while `run.sh` restarted DDEV (status 0) were counted as incomplete. Fixed in acc3f27: they are counted as `unreachable_attempts` and left out of the share.
+- Run 2 refused frankenphp-octane: the loop aimed at port 80, but octane serves on 8000 inside the container. Fixed in bc0315b.
+- Run 3, full BR-21 method on all three servers, describe model qwen3.5:9b, `bench/results/llm-load/2026-11-13/search-under-load.json`:
+
+| Server | Search p95 | Search RPS | Describes completed |
+|---|---|---|---|
+| frankenphp | 132 → 237 ms | 458 → 286 | 227 |
+| frankenphp-worker | 64 → 2724 ms | 954 → 23 | 267 |
+| frankenphp-octane | 63 → 2793 ms | 948 → 23 | 270 |
+
+  No describe was incomplete. The tables in `BENCHMARKS.md`, the learning guide and the guide runbook are filled in, and the guide Numbers read the file.

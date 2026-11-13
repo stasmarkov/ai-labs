@@ -1347,7 +1347,16 @@ Concurrency, describe streams on qwen3.5:9b and gemma4:12b (Ollama's own `OLLAMA
 
 Search p95 per server mode without and with 4 open describe streams (BR-21: warm-up 30 s, measure 60 s, median of 3):
 
-> **Not measured yet.** `bench/llm-load.sh search-under-load` needs a clean committed tree (`bench/run.sh` refuses an uncommitted one), so it runs after the commit of this slice. This table is filled from `bench/results/llm-load/<date>/search-under-load.json` and holds no figure until then: RPS, p50, p95, p99 and error % per server mode without and with the streams, the p95 delta and the describes completed per minute.
+| Server | Load | RPS | p50 | p95 | p99 | Error % | p95 delta | Describes per minute |
+|--------|------|-----|-----|-----|-----|---------|-----------|----------------------|
+| frankenphp | none | 458 | 106 ms | 132 ms | 173 ms | 0 | | |
+| frankenphp | 4 describes | 286 | 166 ms | 237 ms | 320 ms | 0 | +105 ms (+79 %) | 20.8 |
+| frankenphp-worker | none | 954 | 51 ms | 64 ms | 74 ms | 0 | | |
+| frankenphp-worker | 4 describes | 23 | 2122 ms | 2724 ms | 2828 ms | 0 | +2660 ms (+4162 %) | 21.5 |
+| frankenphp-octane | none | 948 | 52 ms | 63 ms | 69 ms | 0 | | |
+| frankenphp-octane | 4 describes | 23 | 2106 ms | 2793 ms | 3273 ms | 0 | +2730 ms (+4306 %) | 21.8 |
+
+The describe loop used qwen3.5:9b, ran through warm-up and all repeats, and completed 227 to 270 describes per server with none incomplete; attempts made while `run.sh` restarted DDEV got no answer and are counted apart (200 to 424 per server). Source: `bench/results/llm-load/2026-11-13/search-under-load.json`.
 
 ### What the numbers say
 
@@ -1355,6 +1364,7 @@ Search p95 per server mode without and with 4 open describe streams (BR-21: warm
 - **Both fit in memory entirely.** Both report the whole 8.4 GB on the GPU, so neither spills to the CPU on this machine.
 - **The server handles one stream at a time, and a queued stream waits at full price.** The aggregate chunk rate stays at about 43 to 49 per second at levels 1, 4 and 16 for both models. A stream that has started writes at 49 to 56 chunks per second whatever the level; what grows with the level is the wait before the first byte: 0.2 s at level 1, 6.6 s at 4 and 31 to 34 s at 16 (median), with a done p95 of 38 s (qwen3.5:9b) and 37 s (gemma4:12b) at 16. No stream failed or was refused. Waiting in the queue costs time, not errors.
 - **The context check cannot say "not truncated".** The prompt counted 10 688 (qwen3.5:9b) and 10 969 (gemma4:12b) tokens, above the 8192 window the server held, with the same count when `num_ctx` was doubled; and the doubled request did not change the window (still 8192). That is a suspected context shift, or a `num_ctx` the runner did not apply, and the count alone does not say which text was cut. The code from the first sentence was recalled in every run. On a 0.6 billion model used for a quick check outside the bench, the same kind of prompt at 2048 did lose the code, so whether a longer prompt is cut depends on the model and the runner.
+- **Four AI streams stall the worker servers, not the classic one.** With 4 describe streams open, search p95 went from 64 to 2724 ms on frankenphp-worker and from 63 to 2793 ms on frankenphp-octane, and RPS fell from about 950 to 23. Both run 4 PHP workers, and each open stream holds one worker for its whole 2 to 10 s, so search waits for a worker to come free. Classic frankenphp has 2 threads per CPU: search slowed by 79 % (132 to 237 ms p95) and kept going. The fix is a capacity rule, not a faster model: keep long streams off the request workers (a queue with Mercure, or more workers than open streams), or cap the streams below the worker count.
 - **A stopped server is cheap to detect, a slow one is not.** An unreachable server fails within 134 ms (the first call is the slowest) and a missing model within 32 ms. A server that accepts the connection and does not answer holds the request for the whole timeout, 1.0 to 1.1 s here, for all four entry points.
 
 ### Surprises
@@ -1362,11 +1372,12 @@ Search p95 per server mode without and with 4 open describe streams (BR-21: warm
 - **The first version of the speed number measured the cache.** Warm requests reported a first token in 46 ms and a prompt rate of 16 million tokens per second, because Ollama skipped evaluating a prompt it had just seen. The figures above are the ones with a different start for every request: about six times slower, and the ones a real visitor with a new listing gets.
 - **The first concurrency rate measured the queue.** Dividing the chunks of a stream by its whole duration gave 3.3 chunks per second per stream at level 16, "each stream gets a share". Counted from the first chunk, the stream writes at 52. Nothing is shared: the streams wait in line.
 - **The context count did not move when the window did.** Twice the window gave the same count and the same effective window, so "no truncation" was not a safe reading of the first run.
+- **The fast servers were the fragile ones.** Without AI load, worker and octane served twice the RPS of classic at half the p95; with only 4 AI streams they were 10 times slower than classic. The worker count, not the request speed, decides what an AI stream costs.
 - **Describe and assistant answer 200 on a dead server.** The stream opens, then carries an `error` event, so a client must read the event and not only the status; search and moderation answer 503.
 
 ### Interview story
 
-I measured two local models the way a user feels them: time to first token, writing speed and what happens under load. A first run reported a first token in 46 ms; the number was wrong because the server cached the repeated prompt, and a unique start per request gave 286 ms for qwen3.5:9b and 429 ms for gemma4:12b, both writing about 52 tokens per second. Then I opened 16 streams at once: no stream failed, but the median one waited 31 seconds for its first byte and then wrote at full speed, because the server answers one request at a time. The answer to "how many users can it carry" is "one at a time, and the queue is the cost". I also had to correct two of my own readings: a per-stream rate that measured the queue, and a context check that said "not truncated" when the count was above the window.
+I measured two local models the way a user feels them: time to first token, writing speed and what happens under load. A first run reported a first token in 46 ms; the number was wrong because the server cached the repeated prompt, and a unique start per request gave 286 ms for qwen3.5:9b and 429 ms for gemma4:12b, both writing about 52 tokens per second. Then I opened 16 streams at once: no stream failed, but the median one waited 31 seconds for its first byte and then wrote at full speed, because the server answers one request at a time. The answer to "how many users can it carry" is "one at a time, and the queue is the cost". The bigger surprise was the rest of the site: with only 4 describe streams open, search p95 on the worker servers went from 64 ms to 2.7 s, because the 4 streams held all 4 PHP workers, while classic FrankenPHP with more threads only slowed from 132 to 237 ms. I also had to correct two of my own readings: a per-stream rate that measured the queue, and a context check that said "not truncated" when the count was above the window.
 
 ## Response parity
 
