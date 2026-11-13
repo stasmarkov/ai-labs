@@ -62,6 +62,7 @@ case "$1" in
  "stream_events_per_s":{"med":12.5},
  "stream_text_events_total":{"count":$events},
  "stream_rate_limited":{"count":0},
+ "stream_unreachable":{"count":${STUB_UNREACHABLE-0}},
  "stream_started_at_ms":{"min":1000},
  "stream_ended_at_ms":{"max":11000}
 }}
@@ -412,4 +413,15 @@ it('AC-5 k6-sse.js counts the per-stream rate from the first byte to [DONE] and 
         ->and($script)->toContain('HOST_HEADER')
         ->and($script)->toContain("dns: { ttl: '1s' }")
         ->and($script)->not->toContain('events / (response.timings.duration / 1000)');
+});
+
+it('AC-6 search-under-load leaves attempts made while the server restarts out of the incomplete share', function (): void {
+    $refused = ($this->load)(['BENCH_RUN_SCRIPT' => $this->root.'/bin/run-stub', 'STUB_FAILED' => '600000', 'STUB_UNREACHABLE' => '50000'], 'search-under-load', '--quick');
+    $ok = ($this->load)(['BENCH_RUN_SCRIPT' => $this->root.'/bin/run-stub', 'STUB_FAILED' => '600000', 'STUB_UNREACHABLE' => '300000'], 'search-under-load', '--quick');
+    $describes = json_decode((string) file_get_contents($this->searchFile), true)['servers'][0]['describes'];
+
+    expect($refused->getExitCode())->toBe(1)
+        ->and($ok->getExitCode())->toBe(0, $ok->getErrorOutput())
+        ->and($describes['incomplete'])->toBe(300000)
+        ->and($describes['unreachable_attempts'])->toBe(300000);
 });

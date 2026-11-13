@@ -317,12 +317,14 @@ start_describe_loop() {
 
 # Refuses to go on when the loop did not really load the measured window: no describe completed, or half or more of the
 # streams were incomplete. $1 is the server, $2 the k6 summary of the loop.
+# Attempts that got no answer (status 0, while run.sh restarts DDEV) are left out: they measure the restart, not the load.
 verify_describe_loop() {
-  local completed incomplete
+  local completed incomplete unreachable
   completed="$(jq -r '(.metrics.stream_failed.fails // 0)' "$2")"
-  incomplete="$(jq -r '(.metrics.stream_failed.passes // 0)' "$2")"
+  unreachable="$(jq -r '(.metrics.stream_unreachable.count // 0)' "$2")"
+  incomplete=$(($(jq -r '(.metrics.stream_failed.passes // 0)' "$2") - unreachable))
   if [[ "$completed" -le 0 ]] || [[ $((incomplete * 2)) -ge $((completed + incomplete)) ]]; then
-    echo "The describe loop did not load $1: $completed describes completed, $incomplete incomplete. Refusing to write search-under-load.json." >&2
+    echo "The describe loop did not load $1: $completed describes completed, $incomplete incomplete ($unreachable attempts while the server was not answering left out). Refusing to write search-under-load.json." >&2
     exit 1
   fi
 }
@@ -417,7 +419,8 @@ run_search_under_load() {
           describes: {
             streams_held: $streams,
             completed: $completed,
-            incomplete: ($f.passes // 0),
+            incomplete: (($f.passes // 0) - ($k6[0].metrics.stream_unreachable.count // 0)),
+            unreachable_attempts: ($k6[0].metrics.stream_unreachable.count // 0),
             rate_limited: ($k6[0].metrics.stream_rate_limited.count // 0),
             elapsed_s: $elapsed,
             completed_per_minute: (if $elapsed > 0 then ($completed / ($elapsed / 60) | round2) else null end)

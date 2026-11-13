@@ -42,6 +42,9 @@ const streamTextEvents = new Counter('stream_text_events_total');
 const streamEventsPerSecond = new Trend('stream_events_per_s');
 const streamGeneration = new Trend('stream_generation_ms', true);
 const streamRateLimited = new Counter('stream_rate_limited');
+// Real mode: attempts that got no answer at all (status 0, the server was restarting). They are also in stream_failed;
+// a caller that wants the load share leaves them out.
+const streamUnreachable = new Counter('stream_unreachable');
 // Wall-clock epoch milliseconds of the first request and the last end, to turn the event total into events per second.
 const streamStartedAt = new Trend('stream_started_at_ms');
 const streamEndedAt = new Trend('stream_ended_at_ms');
@@ -73,6 +76,7 @@ export default function () {
   streamFailed.add(failed);
   if (real && response.status === 0) {
     // The server is not answering (a restart): wait instead of counting thousands of instant failures.
+    streamUnreachable.add(1);
     sleep(1);
   }
   if (!failed) {
