@@ -193,3 +193,4 @@
 
 - Residual risk (C-17): a client with a shell can read the page and forge the browser headers, and that is accepted (self-decided, standing approval). A local process with a shell can already write the database through `artisan tinker`, so no in-app check can stop it. BR-97 protects against the model writing through its tools: no MCP tool can confirm, and an MCP-only client cannot.
 - Review fix pass: the 12 findings are fixed. Gates: suite 2677 passed and 3 skipped; Pint, PHPStan, typecheck and build clean; the fingerprint is unchanged; parity differs only in `captured=`. Live steps 1 to 10 were walked, and listing 1 ends clean.
+- Clean-tree bench: after commit c5f9c80, `bench/run.sh ping --quick` exited 0 on frankenphp.
