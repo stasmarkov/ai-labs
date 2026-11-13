@@ -70,9 +70,9 @@
     - the default suite shows the smoke tests skipped and passes with Ollama stopped;
     - `ollama pull qwen3:0.6b` then `ddev exec env LOCAL_LLM_SMOKE=1 php artisan test --group=local-llm` gives 3 passed.
 
-- [ ] 6. Live runs and checks (checks)
+- [x] 6. Live runs and checks (checks)
   Covers: AC-1..AC-8, MNC-4, MNC-5
-  - [ ] 6.1 Orchestrator:
+  - [x] 6.1 Orchestrator:
     - live `ddev artisan llm:bench`;
     - `bench/llm-load.sh concurrency` on both models;
     - `bench/llm-load.sh search-under-load` (full BR-21 method);
@@ -80,7 +80,7 @@
     - full suite, Pint, PHPStan, typecheck and build;
     - fingerprint and parity;
     - commit; bench ping on the clean tree; push.
-  - [ ] 6.2 **Verify**: the outputs are recorded here.
+  - [x] 6.2 **Verify**: the outputs are recorded here.
     - Recorded 2026-11-12 UTC: `llm:bench` live on qwen3.5:9b and gemma4:12b (`bench/results/llm/2026-11-12/run.json`), no key or `Authorization` string in it; `llm-load.sh concurrency` (`bench/results/llm-load/2026-11-12/concurrency.json`, 0 failed, `.env` identical, `.ddev/config.yaml` unchanged, no backup or k6 container left); the `BENCHMARKS.md` section and the guide numbers filled from them.
     - Gates: suite 2365 passed and 3 skipped, Pint, PHPStan, `typecheck` and `build` clean; fingerprint unchanged, parity differs only in `captured=`.
     - Interrupt check 2026-11-13: `concurrency --quick` got SIGINT about 10 s in (exit 130); `.env` identical to `/tmp/env.before`, `.ddev/config.yaml` unchanged, no `.env.bench-backup` or `.env.llm-load-backup`, no `llm-load-k6-*` container, server `frankenphp` as at the start. The stale-backup run exited 2 before any load, with `.env` and the config unchanged. The `search-under-load --quick` interrupt is not done: `bench/run.sh` refused the dirty tree before the describe loop ran (no interrupt happened), so it needs the commit first.
@@ -118,9 +118,9 @@
 
 ## Done when
 
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
 
 ## Phase: Gaps (converge round 1)
 
@@ -135,7 +135,7 @@
   - After the task 6 `search-under-load` run, add the table (RPS, p50, p95, p99 and error % per server, without and with load, the p95 delta and the completed describes per minute), a conclusion that cites it, and a heading date that matches the run files.
   - **Verify**: `search-under-load.json` is committed with all three servers in `SUPPORTED_SERVERS` (`quick: false`, 3 repeats, warm-up 30 s, measure 60 s), and every figure in the new table matches it.
 
-- [ ] 9. Live interrupt check of llm-load.sh (checks)
+- [x] 9. Live interrupt check of llm-load.sh (checks)
   Covers: NFR-1, MNC-4
   - NFR-1 is to be proven by manual-test step 4, a Ctrl-C during `bench/llm-load.sh concurrency --quick`. Only the stubbed SIGINT test in `tests/Feature/BenchLlmLoadTest.php` covers it. The task 3 report says the live Ctrl-C attempt probably came after the run had finished, and task 6.2 records only an uninterrupted run. There is no live run of `search-under-load` that is interrupted while the k6 loop and a server switch are active.
   - Run manual-test step 4 for real: interrupt about 10 s into a `concurrency --quick` run, and interrupt a `search-under-load --quick` run while the describe loop is running. Record the results under task 6.2.
@@ -202,3 +202,7 @@ Findings fixed, each with tests in `LlmBenchCommandTest`, `BenchLlmLoadTest` or 
 | frankenphp-octane | 63 → 2793 ms | 948 → 23 | 270 |
 
   No describe was incomplete. The tables in `BENCHMARKS.md`, the learning guide and the guide runbook are filled in, and the guide Numbers read the file.
+- Interrupt check: `search-under-load --quick` got SIGINT 8 s after the describe loop started (exit 130).
+  - Afterwards `.env` was identical to `/tmp/env.before`, `.ddev/config.yaml` was unchanged, and no `.env.bench-backup`, `.env.llm-load-backup` or `llm-load-k6-*` container was left.
+  - The server was `frankenphp`, as at the start, and the committed `search-under-load.json` was unchanged.
+  - The check has to run with job control (`set -m`): a job started with `&` in a non-interactive shell ignores SIGINT. A first attempt without it ran to the end and overwrote the result, and that file was restored from git.

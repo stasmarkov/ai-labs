@@ -368,7 +368,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-91, BR-26
 - **Depends on:** SL-23, SL-24, SL-25, SL-26, SL-27
 - **Blocked by:** none (Q-04 answered 2026-11-05: second model in Ollama)
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261113-0038-local-llm-limits
 - **Source:** brief (Phase 11)
 - **Run:** `/sdd "SL-28: compare local models (tokens/s, TTFT, JSON-valid %, eval accuracy, RAM), concurrency at 1/4/16, context truncation, failover, and search p95 per server mode under local AI load; add an optional local-llm smoke test group on a tiny model (BR-91, BR-26). Rules in product-brief.md."`
