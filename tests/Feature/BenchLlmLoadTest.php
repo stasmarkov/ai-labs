@@ -425,3 +425,15 @@ it('AC-6 search-under-load leaves attempts made while the server restarts out of
         ->and($describes['incomplete'])->toBe(300000)
         ->and($describes['unreachable_attempts'])->toBe(300000);
 });
+
+it('AC-6 the describe loop reaches octane on its own port 8000 and the other servers on port 80', function (): void {
+    ($this->load)(['BENCH_RUN_SCRIPT' => $this->root.'/bin/run-stub'], 'search-under-load');
+    $loops = collect(explode("\n", ($this->calls)()))
+        ->filter(fn (string $line): bool => str_starts_with($line, 'docker run') && str_contains($line, 'VUS=4'))
+        ->values();
+
+    expect($loops)->toHaveCount(3)
+        ->and($loops[0])->toContain('BASE_URL=http://ddev-ai-lab-web ')
+        ->and($loops[1])->toContain('BASE_URL=http://ddev-ai-lab-web ')
+        ->and($loops[2])->toContain('BASE_URL=http://ddev-ai-lab-web:8000 ');
+});

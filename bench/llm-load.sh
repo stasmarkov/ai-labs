@@ -303,13 +303,23 @@ switch_server() {
   fi
 }
 
+# The web container's own HTTP origin for a server: frankenphp-octane serves plain HTTP on 8000 (see early-hints.sh),
+# the Caddy-based servers on 80.
+web_origin() {
+  if [[ "$1" == "frankenphp-octane" ]]; then
+    echo "http://$WEB_HOST:8000"
+  else
+    echo "http://$WEB_HOST"
+  fi
+}
+
 # Starts the describe loop: 4 virtual users, real mode, far more streams than a run can finish. The loop reaches the web
 # container by name (k6 looks the name up again every second), so a restart of DDEV does not strand it.
 start_describe_loop() {
   load_dir="$WORK/load-$1"
   mkdir -p "$load_dir"
   docker run -d --rm --name "$K6_NAME" --network ddev_default --cpus=2 -v "$SCRIPT_DIR:/bench:ro" -v "$load_dir:/out" \
-    -e "BASE_URL=http://$WEB_HOST" -e "HOST_HEADER=$HOST_NAME" -e "VUS=$LOAD_STREAMS" \
+    -e "BASE_URL=$(web_origin "$3")" -e "HOST_HEADER=$HOST_NAME" -e "VUS=$LOAD_STREAMS" \
     -e "ITERATIONS=1000000" -e "ID_OFFSET=$2" -e "REQUEST_TIMEOUT=$REQUEST_TIMEOUT" \
     "$K6_IMAGE" run --quiet --summary-export /out/k6.json /bench/k6-sse.js >/dev/null
   loop_started_at=$SECONDS
@@ -397,7 +407,7 @@ run_search_under_load() {
     median_of_runs "${files[@]}" > "$WORK/noload-$index.json"
 
     echo "server=$mode_server with $LOAD_STREAMS describe streams" >&2
-    start_describe_loop "$index" "$offset"
+    start_describe_loop "$index" "$offset" "$mode_server"
     collect_files llm-load
     stop_describe_loop
     [[ ${#files[@]} -gt 0 ]] || exit 1
