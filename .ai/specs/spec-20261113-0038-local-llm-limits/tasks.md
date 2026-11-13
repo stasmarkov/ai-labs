@@ -206,3 +206,4 @@ Findings fixed, each with tests in `LlmBenchCommandTest`, `BenchLlmLoadTest` or 
   - Afterwards `.env` was identical to `/tmp/env.before`, `.ddev/config.yaml` was unchanged, and no `.env.bench-backup`, `.env.llm-load-backup` or `llm-load-k6-*` container was left.
   - The server was `frankenphp`, as at the start, and the committed `search-under-load.json` was unchanged.
   - The check has to run with job control (`set -m`): a job started with `&` in a non-interactive shell ignores SIGINT. A first attempt without it ran to the end and overwrote the result, and that file was restored from git.
+- Clean-tree bench: after commit 99ad8ac, `bench/run.sh ping --quick` exited 0 on frankenphp.
