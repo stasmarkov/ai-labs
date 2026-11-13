@@ -62,7 +62,7 @@ it('AC-2 a capability guide has the six tabs, each with content', function (stri
             ->where('guide.experiments', fn ($experiments): bool => count($experiments) >= 1
                 && collect($experiments)->every(fn (array $experiment): bool => str_starts_with($experiment['href'], '/ai/')))
         );
-})->with(['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos']);
+})->with(['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'local-models']);
 
 it('AC-2 the guide page resolves related keys to titles', function (): void {
     $this->get('/ai/guides/describe')

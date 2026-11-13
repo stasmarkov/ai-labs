@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 use App\DTOs\Guide;
 use App\Guides\GuideEventTypes;
+use App\Guides\GuideFacts;
 use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
 use App\Guides\SnippetResolver;
 
 const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation'];
 
-const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards'];
+const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards', 'local-models'];
 
 const ALL_FILLED_GUIDES = [...CAPABILITY_GUIDES, ...FOUNDATION_GUIDES];
 
@@ -332,4 +333,63 @@ it('AC-8 the moderation guide has six non-empty tabs, no references, and its lab
     $this->withoutVite();
     $this->get('/ai/guides/moderation')->assertOk();
     $this->get('/ai/moderation')->assertOk();
+});
+
+it('AC-8 the local-models guide has six non-empty tabs, teaches the local model limits, has no references and answers 200', function (): void {
+    $guide = app(GuideRepository::class)->find('local-models');
+    $rendered = app(GuideRenderer::class)->render('local-models');
+    $text = mb_strtolower(implode("\n", guideTexts($guide)));
+
+    expect($guide->kind)->toBe('foundation')
+        ->and($guide->planned)->toBeFalse()
+        ->and($rendered['works'])->not->toBeEmpty()
+        ->and($rendered['failures'])->not->toBeEmpty()
+        ->and($rendered['recipes'])->not->toBeEmpty()
+        ->and($rendered['support'])->not->toBeEmpty()
+        ->and($rendered['numbers'])->not->toBeEmpty()
+        ->and($rendered['experiments'])->not->toBeEmpty();
+
+    foreach (['tokens per second', 'time to first token', 'num_ctx', 'ollama_num_parallel', 'keep_alive', 'cold', 'fallback chain', 'slows'] as $needle) {
+        expect($text)->toContain($needle);
+    }
+
+    $this->withoutVite();
+    $this->get('/ai/guides/local-models')->assertOk();
+});
+
+it('AC-8 the local-models guide Numbers tab shows the concurrency load figures', function (): void {
+    $rendered = app(GuideRenderer::class)->render('local-models');
+    $load = array_values(array_filter($rendered['numbers'], fn (array $number): bool => str_contains($number['label'], 'parallel')));
+
+    expect($load)->not->toBeEmpty();
+    foreach ($load as $number) {
+        expect((float) $number['value'])->toBeGreaterThan(0);
+    }
+});
+
+it('AC-8 the local-models guide Numbers tab shows the search p95 figures per server, or the pending note until the run exists', function (): void {
+    $rendered = app(GuideRenderer::class)->render('local-models');
+    $search = array_values(array_filter($rendered['numbers'], fn (array $number): bool => str_starts_with($number['label'], 'Search p95')));
+    $files = glob(base_path('bench/results/llm-load/*/search-under-load.json')) ?: [];
+    rsort($files);
+
+    if ($files === []) {
+        expect($search)->toHaveCount(3);
+
+        foreach ($search as $number) {
+            expect($number['value'])->toBe(GuideFacts::PENDING_TEXT);
+        }
+
+        return;
+    }
+
+    $data = json_decode((string) file_get_contents($files[0]), true);
+    $deltas = array_values(array_filter($search, fn (array $number): bool => str_contains($number['label'], 'change')));
+
+    expect($search)->toHaveCount(3 * count($data['servers']))
+        ->and($deltas)->toHaveCount(count($data['servers']));
+
+    foreach ($deltas as $index => $number) {
+        expect((float) $number['value'])->toBe((float) $data['servers'][$index]['p95_delta_ms']);
+    }
 });

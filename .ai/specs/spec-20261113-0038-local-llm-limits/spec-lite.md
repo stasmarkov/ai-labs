@@ -4,7 +4,7 @@ title: Local LLM comparison and limits
 type: feature
 size: M
 priority: P2
-status: approved
+status: in-progress
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-13; standing approval)

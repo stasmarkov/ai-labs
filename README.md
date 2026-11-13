@@ -58,6 +58,20 @@ ddev artisan nl:eval                        # natural-language search turned int
 
 Both evals need Ollama running with the models above.
 
+## Local models
+
+How fast the local models are, what they cost in memory, what a too-long prompt or a stopped server does, and what happens to the site under AI load. How to read the numbers: `/ai/guides/local-models` and section 16 of the learning guide.
+
+```sh
+ddev artisan llm:bench                         # speed, context window, failover and eval figures per model (--models, --runs, --only=speed,context,failover, --force)
+bench/llm-load.sh concurrency [--quick]        # 1, 4 and 16 real describe streams per model
+bench/llm-load.sh search-under-load [--quick]  # search latency per server mode without and with 4 open streams
+ollama pull qwen3:0.6b                         # on the host, once: the small model of the smoke tests
+ddev exec env LOCAL_LLM_SMOKE=1 php artisan test --group=local-llm   # describe, natural-language search and moderation against it
+```
+
+The smoke tests are skipped unless `LOCAL_LLM_SMOKE=1`, so `ddev artisan test` never calls a model. `OLLAMA_SMOKE_MODEL` picks another model.
+
 ## Photos
 
 The photos lab sends a car photo to a vision model and stores a checked caption, tags, colours, body type, damage and people count. The photos come from the Stanford Cars dataset, which you download yourself and never commit; terms and source are in [docs/datasets/stanford-cars.md](docs/datasets/stanford-cars.md).

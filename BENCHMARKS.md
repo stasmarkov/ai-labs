@@ -1289,6 +1289,85 @@ Threshold curve, the rows that matter (false positives out of 50 safe, false neg
 
 I built a listing moderator where code computes the facts (the market median for the car, whether a VIN is on the stolen register) and the model only rates the text against them and names reasons from a closed list. On 100 labelled listings both local models gave valid JSON every time and found every expected reason, but they disagreed on how risky is risky: one needed a threshold of 0.2 and the other 0.5. The lesson was that the accuracy at a default threshold hid a model that was right about the reasons and timid about the score, and only the threshold curve showed it.
 
+## Local models and limits (2026-11-13)
+
+`ddev artisan llm:bench` (SL-28) measures the two local text models on the describe feature's own prompt (system instructions plus the prompt for listing 1), reads the committed eval figures, checks what a prompt longer than the window does, and breaks the model on purpose. `bench/llm-load.sh concurrency` holds real describe streams open against each model. Ollama 0.40.16 on the host (runner `mlx`), `num_ctx` 8192, FrankenPHP, 2026-11-13 (UTC). Results: `bench/results/llm/2026-11-13/run.json` and `bench/results/llm-load/2026-11-13/concurrency.json`.
+
+Method:
+- **Cold and warm:** the bench unloads every loaded model (`keep_alive: 0`), sends one cold request (its load time is `load_duration`), then 5 warm requests with `keep_alive` 5m set by the bench itself, whatever `OLLAMA_KEEP_ALIVE` says, so a warm run is warm and `/api/ps` still lists the model for the memory reading. The cold run is left out of the medians. A stream that never carries a content chunk is a failed sample, counted in `failed_runs` and left out of the statistics (0 here).
+- **Time to first token:** measured in the client, from sending the request to the first chunk with text. Every request starts with its own marker line, because Ollama reuses the evaluated prefix of the previous prompt: without the marker a repeated prompt showed a time to first token of 46 ms and a prompt rate of millions of tokens per second, which only measured the cache. With the marker the model is warm and the prompt is not.
+- **Tokens per second:** the counters and durations Ollama reports in the last chunk. Prompt rate is prompt tokens over prompt evaluation time; generation rate is output tokens over generation time.
+- **Concurrency:** levels 1, 4 and 16; `max(8, 2 x level)` streams per level, with `level` of them open at once; k6 in a one-off container, ids rotated over 1 to 50000, one stream (listing 50000, outside the measured ids) before level 1 so the load does not count. "First byte" is the time from the request to the first chunk of the stream: it is the queue wait plus prompt evaluation. "Chunks/s per stream" is counted from that first chunk to the end of the stream, so it is the writing rate and does not include the wait.
+
+Speed and memory, median of 5 warm runs:
+
+| Model | Cold load | Cold first token | Warm first token | Prompt tokens/s | Generation tokens/s | Output tokens | Memory (all on GPU) |
+|-------|-----------|------------------|------------------|-----------------|---------------------|---------------|---------------------|
+| qwen3.5:9b | 4130 ms | 4448 ms | 286 ms (278-305) | 550 | 51.6 (46.4-57.8) | 94 | 8.4 GB |
+| gemma4:12b | 4311 ms | 4765 ms | 429 ms (426-445) | 364 | 51.9 (49.9-53.6) | 94 | 8.4 GB |
+
+Eval figures per model, copied from the latest committed run that holds the model (`models.<name>.evals` in `run.json` carries the source path and date of each):
+
+| Feature | Figure | qwen3.5:9b | gemma4:12b | Source |
+|---------|--------|------------|------------|--------|
+| nl-search | valid / exact match | 1.000 / 0.950 | 1.000 / 0.975 | 2026-11-09 |
+| assistant | valid / filter accuracy | 1.000 / 0.958 | 1.000 / 0.917 | 2026-11-12 |
+| moderation | valid / accuracy at best F1 | 1.000 / 0.960 | 1.000 / 0.990 | 2026-11-12 |
+| photo-vision | valid / body type agreement | 0.860 / 0.820 | 1.000 / 0.740 | 2026-11-11 |
+
+nl-search "valid" is (queries - validation 422 - failed - refused) / queries, because that run has no first-try valid rate: failed and refused calls are not valid answers. It is 1.000 for both models (no failed, refused or rejected query in the run). The photo-vision accuracy is the body type agreement of the eval.
+
+Context window: one prompt of about 12 300 estimated tokens (1.5 x `num_ctx`), starting with a marker code, sent at `num_ctx` 8192 and at 16384. After each request the bench reads the window the server really loaded (`context_length` in `/api/ps`):
+
+| Model | Counted at 8192 | Counted at 16384 | Window the server held (8192 / 16384 request) | Context shift suspected | Code recalled |
+|-------|-----------------|------------------|-----------------------------------------------|-------------------------|---------------|
+| qwen3.5:9b | 10 688 | 10 688 | 8192 / 8192 | yes | yes, both |
+| gemma4:12b | 10 969 | 10 969 | 8192 / 8192 | yes | yes, both |
+
+`over_window` is true when the doubled run's count is above the effective window; `truncated` is null (not "no") when the counts are equal while over the window, and a request at twice `num_ctx` that did not change the window is marked `num_ctx_applied: false`.
+
+Failover, each model, three faults, four entry points (12 rows per model, in-process, a failed `ai_runs` row written in every row). The timeout fault unloads the model before every entry point and sends the longest inputs the validators accept, so each entry waits for a load that cannot finish in 1 s; no entry answered:
+
+| Fault | describe | natural-language search | moderation | assistant | Time to fail |
+|-------|----------|-------------------------|------------|-----------|--------------|
+| Server unreachable | 200, SSE `error` event | 503, "unavailable right now" | 503, `moderation_unavailable` | 200, SSE `error` event | 5-134 ms |
+| Model missing | 200, SSE `error` event | 503 | 503 | 200, SSE `error` event | 8-32 ms |
+| 1 s timeout | 200, SSE `error` event | 503 | 503 | 200, SSE `error` event | 1013-1063 ms |
+
+Concurrency, describe streams on qwen3.5:9b and gemma4:12b (Ollama's own `OLLAMA_NUM_PARALLEL` is not readable from the app; recorded as default):
+
+| Model | Level | Streams | First byte p50 | First byte p95 | Done p50 | Done p95 | Chunks/s per stream | Chunks/s total | Failed |
+|-------|-------|---------|----------------|----------------|----------|----------|---------------------|----------------|--------|
+| qwen3.5:9b | 1 | 8 | 196 ms | 296 ms | 1.8 s | 2.4 s | 55.9 | 49.2 | 0 |
+| qwen3.5:9b | 4 | 8 | 6.6 s | 7.8 s | 8.9 s | 10.2 s | 51.0 | 45.1 | 0 |
+| qwen3.5:9b | 16 | 32 | 31.2 s | 35.9 s | 33.1 s | 38.0 s | 52.5 | 46.5 | 0 |
+| gemma4:12b | 1 | 8 | 263 ms | 305 ms | 2.3 s | 2.4 s | 49.5 | 43.6 | 0 |
+| gemma4:12b | 4 | 8 | 6.6 s | 6.9 s | 8.5 s | 8.8 s | 51.7 | 45.0 | 0 |
+| gemma4:12b | 16 | 32 | 33.8 s | 34.5 s | 35.7 s | 36.6 s | 49.1 | 43.4 | 0 |
+
+Search p95 per server mode without and with 4 open describe streams (BR-21: warm-up 30 s, measure 60 s, median of 3):
+
+> **Not measured yet.** `bench/llm-load.sh search-under-load` needs a clean committed tree (`bench/run.sh` refuses an uncommitted one), so it runs after the commit of this slice. This table is filled from `bench/results/llm-load/<date>/search-under-load.json` and holds no figure until then: RPS, p50, p95, p99 and error % per server mode without and with the streams, the p95 delta and the describes completed per minute.
+
+### What the numbers say
+
+- **The two models write at the same speed.** 51.6 against 51.9 tokens per second. gemma4:12b starts later (429 ms against 286 ms warm), because it reads the prompt at 364 tokens per second against 550; the cold load is 4.1 and 4.3 s.
+- **Both fit in memory entirely.** Both report the whole 8.4 GB on the GPU, so neither spills to the CPU on this machine.
+- **The server handles one stream at a time, and a queued stream waits at full price.** The aggregate chunk rate stays at about 43 to 49 per second at levels 1, 4 and 16 for both models. A stream that has started writes at 49 to 56 chunks per second whatever the level; what grows with the level is the wait before the first byte: 0.2 s at level 1, 6.6 s at 4 and 31 to 34 s at 16 (median), with a done p95 of 38 s (qwen3.5:9b) and 37 s (gemma4:12b) at 16. No stream failed or was refused. Waiting in the queue costs time, not errors.
+- **The context check cannot say "not truncated".** The prompt counted 10 688 (qwen3.5:9b) and 10 969 (gemma4:12b) tokens, above the 8192 window the server held, with the same count when `num_ctx` was doubled; and the doubled request did not change the window (still 8192). That is a suspected context shift, or a `num_ctx` the runner did not apply, and the count alone does not say which text was cut. The code from the first sentence was recalled in every run. On a 0.6 billion model used for a quick check outside the bench, the same kind of prompt at 2048 did lose the code, so whether a longer prompt is cut depends on the model and the runner.
+- **A stopped server is cheap to detect, a slow one is not.** An unreachable server fails within 134 ms (the first call is the slowest) and a missing model within 32 ms. A server that accepts the connection and does not answer holds the request for the whole timeout, 1.0 to 1.1 s here, for all four entry points.
+
+### Surprises
+
+- **The first version of the speed number measured the cache.** Warm requests reported a first token in 46 ms and a prompt rate of 16 million tokens per second, because Ollama skipped evaluating a prompt it had just seen. The figures above are the ones with a different start for every request: about six times slower, and the ones a real visitor with a new listing gets.
+- **The first concurrency rate measured the queue.** Dividing the chunks of a stream by its whole duration gave 3.3 chunks per second per stream at level 16, "each stream gets a share". Counted from the first chunk, the stream writes at 52. Nothing is shared: the streams wait in line.
+- **The context count did not move when the window did.** Twice the window gave the same count and the same effective window, so "no truncation" was not a safe reading of the first run.
+- **Describe and assistant answer 200 on a dead server.** The stream opens, then carries an `error` event, so a client must read the event and not only the status; search and moderation answer 503.
+
+### Interview story
+
+I measured two local models the way a user feels them: time to first token, writing speed and what happens under load. A first run reported a first token in 46 ms; the number was wrong because the server cached the repeated prompt, and a unique start per request gave 286 ms for qwen3.5:9b and 429 ms for gemma4:12b, both writing about 52 tokens per second. Then I opened 16 streams at once: no stream failed, but the median one waited 31 seconds for its first byte and then wrote at full speed, because the server answers one request at a time. The answer to "how many users can it carry" is "one at a time, and the queue is the cost". I also had to correct two of my own readings: a per-stream rate that measured the queue, and a context check that said "not truncated" when the count was above the window.
+
 ## Response parity
 
 `bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.

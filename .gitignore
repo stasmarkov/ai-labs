@@ -37,6 +37,7 @@ Thumbs.db
 /frankenphp
 
 .env.bench-backup
+.env.llm-load-backup
 /bench/results/raw/
 .ddev/php/zz-bench-timeouts.ini
 .ddev/web-entrypoint.d/zz-bench-fpm.sh

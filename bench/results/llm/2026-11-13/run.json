@@ -1,0 +1,660 @@
+{
+    "metadata": {
+        "generated_at": "2026-11-13T00:38:56+00:00",
+        "provider": "ollama",
+        "ollama_version": "0.40.16",
+        "num_ctx": 8192,
+        "runs": 5,
+        "sections": [
+            "speed",
+            "context",
+            "failover"
+        ],
+        "models": [
+            "qwen3.5:9b",
+            "gemma4:12b"
+        ]
+    },
+    "models": {
+        "qwen3.5:9b": {
+            "speed": {
+                "runs": 5,
+                "failed_runs": 0,
+                "cold_failed": false,
+                "errors": [],
+                "num_ctx": 8192,
+                "keep_alive": "5m",
+                "load_ms": 4129.6,
+                "cold_ttft_ms": 4447.6,
+                "ttft_ms": {
+                    "median": 286.1,
+                    "min": 278.1,
+                    "max": 304.9
+                },
+                "prompt_eval_tokens_per_s": {
+                    "median": 550.3,
+                    "min": 548.9,
+                    "max": 557.4
+                },
+                "generation_tokens_per_s": {
+                    "median": 51.6,
+                    "min": 46.4,
+                    "max": 57.8
+                },
+                "output_tokens": {
+                    "median": 94,
+                    "min": 84,
+                    "max": 103
+                },
+                "size": 8396061416,
+                "size_vram": 8396061416
+            },
+            "context": {
+                "num_ctx": 8192,
+                "effective_context_length": 8192,
+                "estimated_prompt_tokens": 12287,
+                "over_window": true,
+                "configured": {
+                    "num_ctx": 8192,
+                    "prompt_eval_count": 10688,
+                    "truncated": null,
+                    "recalled": true,
+                    "error": null,
+                    "effective_context_length": 8192,
+                    "num_ctx_applied": true,
+                    "context_shift_suspected": true
+                },
+                "doubled": {
+                    "num_ctx": 16384,
+                    "prompt_eval_count": 10688,
+                    "truncated": null,
+                    "recalled": true,
+                    "error": null,
+                    "effective_context_length": 8192,
+                    "num_ctx_applied": false,
+                    "context_shift_suspected": true
+                }
+            },
+            "failover": {
+                "unreachable": {
+                    "describe": {
+                        "status": 200,
+                        "client": {
+                            "kind": "sse",
+                            "event": "error",
+                            "code": null,
+                            "message": "The description could not be generated."
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 134,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "01a1d258-70ae-70f3-a703-c1eab6a69ed4"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    },
+                    "nl-search": {
+                        "status": 503,
+                        "client": {
+                            "kind": "json",
+                            "message": "Natural-language search is unavailable right now.",
+                            "code": null
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 28,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "76b91b25-62d9-4901-91ee-f53c0616ac23"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    },
+                    "moderation": {
+                        "status": 503,
+                        "client": {
+                            "kind": "json",
+                            "message": "The moderation model could not be reached.",
+                            "code": "moderation_unavailable"
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 9,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "b44281c3-746e-4b95-b684-b192067a470a"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    },
+                    "assistant": {
+                        "status": 200,
+                        "client": {
+                            "kind": "sse",
+                            "event": "error",
+                            "code": null,
+                            "message": "The answer could not be generated."
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 10,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "01a1d258-713f-7236-bcfe-281a5aa3b8ec"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    }
+                },
+                "model_missing": {
+                    "describe": {
+                        "status": 200,
+                        "client": {
+                            "kind": "sse",
+                            "event": "error",
+                            "code": null,
+                            "message": "The description could not be generated."
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 9,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "01a1d258-7152-722e-aff6-b452f73ddc1f"
+                        ],
+                        "run_error_messages": [
+                            "HTTP request returned status code 404"
+                        ],
+                        "message_redacted": false
+                    },
+                    "nl-search": {
+                        "status": 503,
+                        "client": {
+                            "kind": "json",
+                            "message": "Natural-language search is unavailable right now.",
+                            "code": null
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 32,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "d5a83ba2-c1aa-401f-9faf-585840d6173a"
+                        ],
+                        "run_error_messages": [
+                            "HTTP request returned status code 404:\n{\"error\":\"model 'llm-bench-missing:0' not found\"}\n"
+                        ],
+                        "message_redacted": false
+                    },
+                    "moderation": {
+                        "status": 503,
+                        "client": {
+                            "kind": "json",
+                            "message": "The moderation model could not be reached.",
+                            "code": "moderation_unavailable"
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 28,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "410886c7-53f6-4c8b-bda3-a14c3ca04e58"
+                        ],
+                        "run_error_messages": [
+                            "HTTP request returned status code 404:\n{\"error\":\"model 'llm-bench-missing:0' not found\"}\n"
+                        ],
+                        "message_redacted": false
+                    },
+                    "assistant": {
+                        "status": 200,
+                        "client": {
+                            "kind": "sse",
+                            "event": "error",
+                            "code": null,
+                            "message": "The answer could not be generated."
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 8,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "01a1d258-71be-72ac-9bf7-89fd4d1a412a"
+                        ],
+                        "run_error_messages": [
+                            "HTTP request returned status code 404"
+                        ],
+                        "message_redacted": false
+                    }
+                },
+                "timeout": {
+                    "describe": {
+                        "status": 200,
+                        "client": {
+                            "kind": "sse",
+                            "event": "error",
+                            "code": null,
+                            "message": "The description could not be generated."
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 1031,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "01a1d258-71ea-73de-a5e7-8f2479425b38"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    },
+                    "nl-search": {
+                        "status": 503,
+                        "client": {
+                            "kind": "json",
+                            "message": "Natural-language search is unavailable right now.",
+                            "code": null
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 1063,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "6ac34ad4-25d6-444d-9f14-2c923134ebe4"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    },
+                    "moderation": {
+                        "status": 503,
+                        "client": {
+                            "kind": "json",
+                            "message": "The moderation model could not be reached.",
+                            "code": "moderation_unavailable"
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 1024,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "e8de7227-af33-4992-9549-882276b3a881"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    },
+                    "assistant": {
+                        "status": 200,
+                        "client": {
+                            "kind": "sse",
+                            "event": "error",
+                            "code": null,
+                            "message": "The answer could not be generated."
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 1021,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "01a1d258-7eff-72cc-86d4-dc95fe852a5f"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    }
+                }
+            },
+            "evals": {
+                "nl-search": {
+                    "json_valid": 1,
+                    "accuracy": 0.95,
+                    "accuracy_metric": "exact_match",
+                    "source": "bench/results/nl-search/2026-11-09/run.json",
+                    "date": "2026-11-09"
+                },
+                "assistant": {
+                    "json_valid": 1,
+                    "accuracy": 0.958,
+                    "accuracy_metric": "filter_accuracy",
+                    "source": "bench/results/assistant/2026-11-12/run.json",
+                    "date": "2026-11-12"
+                },
+                "moderation": {
+                    "json_valid": 1,
+                    "accuracy": 0.96,
+                    "accuracy_metric": "accuracy_at_best_f1",
+                    "source": "bench/results/moderation/2026-11-12/run.json",
+                    "date": "2026-11-12"
+                },
+                "photo-vision": {
+                    "json_valid": 0.86,
+                    "accuracy": 0.82,
+                    "accuracy_metric": "body_type_agreement",
+                    "source": "bench/results/photo-vision/2026-11-11/run.json",
+                    "date": "2026-11-11"
+                }
+            }
+        },
+        "gemma4:12b": {
+            "speed": {
+                "runs": 5,
+                "failed_runs": 0,
+                "cold_failed": false,
+                "errors": [],
+                "num_ctx": 8192,
+                "keep_alive": "5m",
+                "load_ms": 4310.6,
+                "cold_ttft_ms": 4765.1,
+                "ttft_ms": {
+                    "median": 429,
+                    "min": 425.5,
+                    "max": 444.6
+                },
+                "prompt_eval_tokens_per_s": {
+                    "median": 364.4,
+                    "min": 359.4,
+                    "max": 365
+                },
+                "generation_tokens_per_s": {
+                    "median": 51.9,
+                    "min": 49.9,
+                    "max": 53.6
+                },
+                "output_tokens": {
+                    "median": 94,
+                    "min": 92,
+                    "max": 96
+                },
+                "size": 8356200388,
+                "size_vram": 8356200388
+            },
+            "context": {
+                "num_ctx": 8192,
+                "effective_context_length": 8192,
+                "estimated_prompt_tokens": 12287,
+                "over_window": true,
+                "configured": {
+                    "num_ctx": 8192,
+                    "prompt_eval_count": 10969,
+                    "truncated": null,
+                    "recalled": true,
+                    "error": null,
+                    "effective_context_length": 8192,
+                    "num_ctx_applied": true,
+                    "context_shift_suspected": true
+                },
+                "doubled": {
+                    "num_ctx": 16384,
+                    "prompt_eval_count": 10969,
+                    "truncated": null,
+                    "recalled": true,
+                    "error": null,
+                    "effective_context_length": 8192,
+                    "num_ctx_applied": false,
+                    "context_shift_suspected": true
+                }
+            },
+            "failover": {
+                "unreachable": {
+                    "describe": {
+                        "status": 200,
+                        "client": {
+                            "kind": "sse",
+                            "event": "error",
+                            "code": null,
+                            "message": "The description could not be generated."
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 22,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "01a1d259-4bdc-7028-a81f-249be75060ce"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    },
+                    "nl-search": {
+                        "status": 503,
+                        "client": {
+                            "kind": "json",
+                            "message": "Natural-language search is unavailable right now.",
+                            "code": null
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 13,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "a5e1b8cd-4e72-411f-afa3-2d251b635b57"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    },
+                    "moderation": {
+                        "status": 503,
+                        "client": {
+                            "kind": "json",
+                            "message": "The moderation model could not be reached.",
+                            "code": "moderation_unavailable"
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 5,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "676cb51c-0e27-4368-ae07-9b02a3245e3c"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    },
+                    "assistant": {
+                        "status": 200,
+                        "client": {
+                            "kind": "sse",
+                            "event": "error",
+                            "code": null,
+                            "message": "The answer could not be generated."
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 5,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "01a1d259-4c27-7273-8cba-34f0f0223e9d"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    }
+                },
+                "model_missing": {
+                    "describe": {
+                        "status": 200,
+                        "client": {
+                            "kind": "sse",
+                            "event": "error",
+                            "code": null,
+                            "message": "The description could not be generated."
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 9,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "01a1d259-4c3c-7105-bc33-8b0a918e2c2e"
+                        ],
+                        "run_error_messages": [
+                            "HTTP request returned status code 404"
+                        ],
+                        "message_redacted": false
+                    },
+                    "nl-search": {
+                        "status": 503,
+                        "client": {
+                            "kind": "json",
+                            "message": "Natural-language search is unavailable right now.",
+                            "code": null
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 21,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "1ae96cbf-84e1-4e33-97fc-2841ff71b3f7"
+                        ],
+                        "run_error_messages": [
+                            "HTTP request returned status code 404:\n{\"error\":\"model 'llm-bench-missing:0' not found\"}\n"
+                        ],
+                        "message_redacted": false
+                    },
+                    "moderation": {
+                        "status": 503,
+                        "client": {
+                            "kind": "json",
+                            "message": "The moderation model could not be reached.",
+                            "code": "moderation_unavailable"
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 27,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "1f0f52b4-17f6-4d6c-a90f-c375e8d99ac1"
+                        ],
+                        "run_error_messages": [
+                            "HTTP request returned status code 404:\n{\"error\":\"model 'llm-bench-missing:0' not found\"}\n"
+                        ],
+                        "message_redacted": false
+                    },
+                    "assistant": {
+                        "status": 200,
+                        "client": {
+                            "kind": "sse",
+                            "event": "error",
+                            "code": null,
+                            "message": "The answer could not be generated."
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 11,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "01a1d259-4c99-71bb-917e-5158706b5eb8"
+                        ],
+                        "run_error_messages": [
+                            "HTTP request returned status code 404"
+                        ],
+                        "message_redacted": false
+                    }
+                },
+                "timeout": {
+                    "describe": {
+                        "status": 200,
+                        "client": {
+                            "kind": "sse",
+                            "event": "error",
+                            "code": null,
+                            "message": "The description could not be generated."
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 1013,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "01a1d259-4cc8-732c-a73b-048d71bb0448"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    },
+                    "nl-search": {
+                        "status": 503,
+                        "client": {
+                            "kind": "json",
+                            "message": "Natural-language search is unavailable right now.",
+                            "code": null
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 1042,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "098cc4ce-3cf3-4cc6-98ce-3a4eab36a22a"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    },
+                    "moderation": {
+                        "status": 503,
+                        "client": {
+                            "kind": "json",
+                            "message": "The moderation model could not be reached.",
+                            "code": "moderation_unavailable"
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 1025,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "f7bbc3ae-027c-4bbb-98e5-e3a8cedc7c94"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    },
+                    "assistant": {
+                        "status": 200,
+                        "client": {
+                            "kind": "sse",
+                            "event": "error",
+                            "code": null,
+                            "message": "The answer could not be generated."
+                        },
+                        "answered": false,
+                        "time_to_fail_ms": 1053,
+                        "failed_run_written": true,
+                        "invocation_ids": [
+                            "01a1d259-5944-7378-a0da-034d508c97d7"
+                        ],
+                        "run_error_messages": [
+                            "Could not connect to AI provider [ollama]."
+                        ],
+                        "message_redacted": false
+                    }
+                }
+            },
+            "evals": {
+                "nl-search": {
+                    "json_valid": 1,
+                    "accuracy": 0.975,
+                    "accuracy_metric": "exact_match",
+                    "source": "bench/results/nl-search/2026-11-09/run.json",
+                    "date": "2026-11-09"
+                },
+                "assistant": {
+                    "json_valid": 1,
+                    "accuracy": 0.917,
+                    "accuracy_metric": "filter_accuracy",
+                    "source": "bench/results/assistant/2026-11-12/run.json",
+                    "date": "2026-11-12"
+                },
+                "moderation": {
+                    "json_valid": 1,
+                    "accuracy": 0.99,
+                    "accuracy_metric": "accuracy_at_best_f1",
+                    "source": "bench/results/moderation/2026-11-12/run.json",
+                    "date": "2026-11-12"
+                },
+                "photo-vision": {
+                    "json_valid": 1,
+                    "accuracy": 0.74,
+                    "accuracy_metric": "body_type_agreement",
+                    "source": "bench/results/photo-vision/2026-11-11/run.json",
+                    "date": "2026-11-11"
+                }
+            }
+        }
+    }
+}

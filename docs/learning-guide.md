@@ -814,8 +814,25 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`LabOverviewService`](../app/Services/LabOverviewService.php), [`LabDescribeService`](../app/Services/LabDescribeService.php), `ShowLab*Controller` | Props for the lab pages: capabilities, navigation, recent runs, one run's detail | SL-46 |
 | [`useEventStream.ts`](../resources/js/ai/composables/useEventStream.ts) | Reads SSE with `fetch` + `ReadableStream`, Stop via `AbortController`, TTFT and tokens/s | SL-46 |
 | [`Pages/Lab/`](../resources/js/ai/Pages/Lab/) | Overview, Describe, Semantic, Docs, Chat, NlSearch, Photos | SL-46, SL-45, SL-23 |
+| [`LlmBenchCommand`](../app/Console/Commands/LlmBenchCommand.php), [`LlmSpeedBench`](../app/Support/LlmSpeedBench.php), [`LlmContextBench`](../app/Support/LlmContextBench.php), [`LlmFailoverBench`](../app/Support/LlmFailoverBench.php), [`LlmBenchRedactor`](../app/Support/LlmBenchRedactor.php), [`LlmEvalFigures`](../app/Services/LlmEvalFigures.php), [`LlmSpeedSample`](../app/DTOs/LlmSpeedSample.php), [`LlmBenchException`](../app/Exceptions/LlmBenchException.php) | `llm:bench`: load time, TTFT, tokens/s and memory straight from Ollama, the context-window check, the failover matrix through the HTTP kernel, and the eval figures copied from the latest committed runs; secrets are stripped from everything written | SL-28 |
+| [`llm-load.sh`](../bench/llm-load.sh), [`k6-sse.js`](../bench/k6-sse.js) | `concurrency` (1, 4 and 16 real describe streams) and `search-under-load` (search latency per server mode with and without 4 open streams); `.env` and the active server are restored on any exit | SL-28 |
+| [`LocalLlmSmokeTest`](../tests/Feature/LocalLlmSmokeTest.php), [`LlmBenchCommandTest`](../tests/Feature/LlmBenchCommandTest.php), [`BenchLlmLoadTest`](../tests/Feature/BenchLlmLoadTest.php) | The opt-in `local-llm` group against a tiny real model (skipped unless `LOCAL_LLM_SMOKE=1`), and offline tests of the bench with scripted Ollama streams | SL-28 |
+| [`local-models.php`](../resources/guides/local-models.php) | The foundation guide behind `/ai/guides/local-models` | SL-28 |
 
 **Schema.** [`docs_answer_cache`](../database/migrations/2026_11_03_170000_create_docs_answer_cache_table.php) (question, vector with HNSW, answer, sources, the four versions; SL-40) and [cache columns on `ai_runs`](../database/migrations/2026_11_03_170100_add_cache_columns_to_ai_runs_table.php) (`cache_kind`, `cache_similarity`, `cache_entry_id`, `saved_latency_ms`, `origin`), then [`ai_runs`](../database/migrations/2026_11_02_160000_create_ai_runs_table.php) (one row per call; [chunk ids and refusals](../database/migrations/2026_11_03_110000_add_answer_columns_to_ai_runs_table.php) added in SL-45), [`docs_documents`](../database/migrations/2026_11_03_090000_create_docs_documents_table.php) and [`docs_chunks`](../database/migrations/2026_11_03_090100_create_docs_chunks_table.php) (vector, `tsvector`, HNSW and GIN indexes), [chunk settings](../database/migrations/2026_11_03_120000_add_chunk_settings_to_docs_documents_table.php) (SL-33), and [pgvector](../database/migrations/2026_10_28_193241_enable_pgvector_extension.php).
+
+### Local models and their limits
+
+**What it is.** A model that runs on your machine has limits a hosted one hides: how fast it writes, how much memory it holds, what a prompt longer than its window does, what the app shows when the server is down, and what a running model does to the rest of the site. `llm:bench` and `bench/llm-load.sh` measure them; the in-app guide `/ai/guides/local-models` explains how to read the numbers.
+
+- **Tokens per second and TTFT.** Time to first token is the wait for the prompt to be read (and the model to load, if it was not in memory); tokens per second is the writing speed after that. `llm:bench` measures TTFT in the client and takes the rates from the counts Ollama reports ([`LlmSpeedBench`](../app/Support/LlmSpeedBench.php)).
+- **`num_ctx` and truncation.** Ollama answers a prompt that does not fit instead of refusing it. [`LlmContextBench`](../app/Support/LlmContextBench.php) hides a code in the first sentence of a prompt 1.5 times the window, sends it at the configured size and at twice that, and reads the window the server really loaded (`context_length` in `/api/ps`). The same token count at both sizes with a count above that window is reported as a suspected context shift, not as "not truncated".
+- **`OLLAMA_NUM_PARALLEL`.** A setting of the host server. The concurrency run records what the app sees and shows how the wait grows at 1, 4 and 16 streams: on qwen3.5:9b the first byte comes after 0.2 s, 6.6 s and 31 s (median), while a stream that has started writes at about 52 chunks per second at every level. The streams queue; they do not share the speed.
+- **`keep_alive` and cold load.** The first request after the keep-alive time pays the load; the bench reports it apart and keeps it out of the warm statistics.
+- **Failover.** [`LlmFailoverBench`](../app/Support/LlmFailoverBench.php) records the status and the client-visible error of four entry points with the server unreachable (5-134 ms to fail), the model missing (8-32 ms) and a 1 s timeout (1013-1063 ms; the model is unloaded before each entry so none can answer in time). A fallback chain is not built: it would hide the fault and could reach a paid provider; the guide lists how to add one (try the next entry only on a transport error or timeout, log every attempt, keep the cloud limiter).
+- **Why the site slows.** A stream holds a PHP thread for its whole length, and the model competes for memory and cores with the database and the web server. `search-under-load` measures the p95 delta per server mode.
+
+**Run it.** `ddev artisan llm:bench`, `bench/llm-load.sh concurrency`, `bench/llm-load.sh search-under-load`, and the opt-in smoke group: `ddev exec env LOCAL_LLM_SMOKE=1 php artisan test --group=local-llm` after `ollama pull qwen3:0.6b` on the host. Results are in [`bench/results/llm/`](../bench/results/llm/) and [BENCHMARKS.md](../BENCHMARKS.md).
 
 ### Four requests, end to end
 
@@ -899,6 +916,7 @@ The guide files:
 - [`prompts.php`](../resources/guides/prompts.php): versioned prompts
 - [`providers.php`](../resources/guides/providers.php): providers and models
 - [`run-log.php`](../resources/guides/run-log.php): the `ai_runs` log
+- [`local-models.php`](../resources/guides/local-models.php): speed, memory and limits of a local model
 - [`moderation.php`](../resources/guides/moderation.php): rating a listing for scam risk
 - [`semantic.php`](../resources/guides/semantic.php): semantic search
 - [`similar-photos.php`](../resources/guides/similar-photos.php): finding similar car photos with an image encoder
