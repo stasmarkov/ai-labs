@@ -9,13 +9,13 @@ use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
 use App\Guides\SnippetResolver;
 
-const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation', 'admin-assistant'];
+const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation', 'admin-assistant', 'research'];
 
 const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards', 'local-models', 'mcp'];
 
 const ALL_FILLED_GUIDES = [...CAPABILITY_GUIDES, ...FOUNDATION_GUIDES];
 
-const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat', 'ai.photos', 'ai.photo-search', 'ai.photos.duplicates', 'ai.assistant', 'ai.moderation', 'ai.admin-assistant', 'ai.changes'];
+const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat', 'ai.photos', 'ai.photo-search', 'ai.photos.duplicates', 'ai.assistant', 'ai.moderation', 'ai.admin-assistant', 'ai.research', 'ai.changes'];
 
 /**
  * @return list<string>
@@ -422,4 +422,33 @@ it('AC-8 the mcp guide has six non-empty tabs, no references, answers 200 and th
     expect($learning)->toContain('### MCP server for the listing tools')->toContain('/ai/guides/mcp')
         ->and($readme)->toContain('claude mcp add ai-lab')->toContain('claude_desktop_config.json')->toContain('mcp:inspector listings')
         ->and($env)->toContain('AI_MCP_SERVER');
+});
+
+it('AC-11 the research guide has six non-empty tabs, no references, answers 200 and the docs describe the agent', function (): void {
+    $guide = app(GuideRepository::class)->find('research');
+    $rendered = app(GuideRenderer::class)->render('research');
+    $text = mb_strtolower(implode("\n", guideTexts($guide)));
+
+    expect($guide->kind)->toBe('capability')
+        ->and($guide->planned)->toBeFalse()
+        ->and($rendered['works'])->not->toBeEmpty()
+        ->and($rendered['failures'])->not->toBeEmpty()
+        ->and($rendered['recipes'])->not->toBeEmpty()
+        ->and($rendered['support'])->not->toBeEmpty()
+        ->and($rendered['numbers'])->not->toBeEmpty()
+        ->and($rendered['experiments'])->not->toBeEmpty();
+
+    foreach (['agent:research', '--replay', 'cap_reached', 'sub-question', 'redis', 'refused', 'chunk'] as $needle) {
+        expect($text)->toContain($needle);
+    }
+
+    $this->withoutVite();
+    $this->get('/ai/guides/research')->assertOk();
+    $this->get('/ai/research')->assertOk();
+
+    $learning = file_get_contents(base_path('docs/learning-guide.md'));
+    $readme = file_get_contents(base_path('README.md'));
+
+    expect($learning)->toContain('### Multi-step research agent')->toContain('/ai/guides/research')
+        ->and($readme)->toContain('## Multi-step research agent')->toContain('agent:research')->toContain('--replay')->toContain('AI_RESEARCH_PER_MINUTE');
 });

@@ -27,6 +27,7 @@ final readonly class LabOverviewService
         ['photo-duplicates', 'Duplicate photos', 'ai.photos.duplicates', 'ready'],
         ['assistant', 'Assistant', 'ai.assistant', 'ready'],
         ['moderation', 'Moderation', 'ai.moderation', 'ready'],
+        ['research', 'Research', 'ai.research', 'ready'],
     ];
 
     /** The lab page that exists only while the admin assistant is available (local environment, switch on). */

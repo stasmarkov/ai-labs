@@ -1,0 +1,21 @@
+{
+    "metadata": {
+        "generated_at": "2026-11-14T14:38:08+00:00",
+        "models": [
+            "qwen3.5:9b"
+        ],
+        "averages_over": "runs that ended done or failed"
+    },
+    "summary": {
+        "runs": 15,
+        "done": 11,
+        "failed": 0,
+        "refused": 4,
+        "running": 0,
+        "done_percent": 100,
+        "average_model_calls": 3.9,
+        "max_model_calls": 5,
+        "average_steps": 7.8,
+        "average_duration_s": 20
+    }
+}

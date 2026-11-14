@@ -15,6 +15,7 @@ use App\Ai\RecordToolStep;
 use App\Contracts\AiRunRepositoryInterface;
 use App\Contracts\AssistantTurnRunnerInterface;
 use App\Contracts\ListingRepositoryInterface;
+use App\Contracts\ResearchNotesStore;
 use App\Repositories\EloquentAiRunRepository;
 use App\Services\AssistantEvalRunner;
 use App\Services\LabModerationService;
@@ -22,6 +23,7 @@ use App\Services\ListingDocumentGenerator;
 use App\Services\ModerationFacts;
 use App\Services\ModerationSetBuilder;
 use App\Services\PromptInjectionGuard;
+use App\Support\RedisResearchNotesStore;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -52,6 +54,7 @@ class AiServiceProvider extends ServiceProvider
         $this->app->bind(AiRunRepositoryInterface::class, EloquentAiRunRepository::class);
         $this->app->bind(AssistantTurnRunnerInterface::class, AssistantEvalRunner::class);
         $this->app->scoped(AiRunRecorder::class);
+        $this->app->bind(ResearchNotesStore::class, RedisResearchNotesStore::class);
         $this->app->bind(AbortWatcher::class, ConnectionAbortWatcher::class);
         $this->app->singleton(PromptInjectionGuard::class, fn (): PromptInjectionGuard => PromptInjectionGuard::fromFile((string) config('ai.docs.answer.guard')));
 
@@ -137,6 +140,10 @@ class AiServiceProvider extends ServiceProvider
         RateLimiter::for('photo-similar', fn (Request $request): Limit => Limit::perMinute((int) config('ai.similar_photos.per_minute'))->by((string) $request->ip()));
         // The review only writes marks, but each click is a write, so the lab endpoints are limited per IP.
         RateLimiter::for('duplicate-review', fn (Request $request): Limit => Limit::perMinute(60)->by((string) $request->ip()));
+        // A run makes up to eight model calls, so starting one is limited per IP.
+        RateLimiter::for('research', fn (Request $request): Limit => Limit::perMinute((int) config('ai.research.per_minute'))->by((string) $request->ip()));
+        // The page reads a running run every 1.5 seconds, so reading is limited far above starting.
+        RateLimiter::for('research-read', fn (Request $request): Limit => Limit::perMinute((int) config('ai.research.read_per_minute'))->by((string) $request->ip()));
         RateLimiter::for('docs-ask', fn (Request $request): Limit => Limit::perMinute((int) config('ai.docs.answer.per_minute'))->by((string) $request->ip()));
     }
 }

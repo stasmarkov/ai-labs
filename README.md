@@ -174,6 +174,17 @@ ddev artisan mcp:inspector listings
 
 How it works: `/ai/guides/mcp`.
 
+## Multi-step research agent
+
+`/ai/research` turns a topic into a cited report from the docs in fixed phases: a planner splits it into 2 to 5 sub-questions, each one is searched with the docs hybrid search and noted by a second agent (facts with the chunk ids they rely on), and a report agent writes markdown from the notes. PHP drops chunk ids the search did not return and report markers that point at no source; a topic the docs do not cover gets a fixed sentence and no report call. Every phase is stored as a step, so a run can be shown again without a model call.
+
+```sh
+ddev artisan agent:research "How does the docs answer cache work?"
+ddev artisan agent:research --replay=<run id>
+```
+
+`--json` prints the run as JSON and `--provider` picks the text provider. Exit codes: 0 done, 1 failed, 3 refused, 2 bad input or an unknown replay id. The endpoints are `POST /api/research` (202, JSON only, queued: a run from the page or the API needs `ddev artisan queue:work`, otherwise it stays `running`) and `GET /api/research/{id}`. Starting refuses cross-site requests and allows `AI_RESEARCH_PER_MINUTE` runs a minute per IP (5); reading allows `AI_RESEARCH_READ_PER_MINUTE` (120), so the page can poll every 1.5 seconds. On a cloud provider a run counts as as many hits on the cloud limit as it may make model calls (8), so 20 hits a minute per IP allow two runs a minute. A run makes at most 8 model calls, stores at most 13 steps and must end inside `AI_RESEARCH_MAX_SECONDS` (600; a call starts only when it can finish inside that, otherwise the run ends `failed` with `deadline_reached`). The provider and model are fixed when the run starts and used for every call of it. `ddev artisan research:stats` writes the run counts and averages the guide's numbers tab reads. The provider and model come from the `research` feature on `/ai/settings`. How it works: `/ai/guides/research`.
+
 ## Listing moderation
 
 `/ai/moderation` rates how risky a listing is for a buyer: a risk from 0 to 1, reasons from a closed list of seven, and a short explanation. The app computes what the model cannot know (the market median for the make, model and year, the price ratio, the VINs in the text and whether one is reported) and passes it as facts. PHP checks the answer; a rejected or unparsable one is asked for once more, then ends as `invalid`. A description that matches the input guard is classified, not refused. The endpoint is `POST /api/moderation` (JSON only, 30 requests a minute per IP, `AI_MODERATION_PER_MINUTE`).

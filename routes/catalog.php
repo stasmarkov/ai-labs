@@ -14,7 +14,9 @@ use App\Http\Controllers\SearchDocsController;
 use App\Http\Controllers\SemanticSearchController;
 use App\Http\Controllers\ServeExportController;
 use App\Http\Controllers\ShowListingController;
+use App\Http\Controllers\ShowResearchRunController;
 use App\Http\Controllers\ShowSlowListingController;
+use App\Http\Controllers\StartResearchRunController;
 use App\Http\Middleware\AddServerTimingHeader;
 use App\Http\Middleware\EnsureAdminAssistant;
 use App\Http\Middleware\EnsureDebugRoutes;
@@ -64,6 +66,13 @@ Route::post('/api/assistant/ask', AskAssistantController::class)
 Route::post('/api/moderation', ModerateListingController::class)
     ->middleware([RefuseCrossSiteRequests::class, 'throttle:moderation', LimitCloudAi::class.':moderation', AddServerTimingHeader::class])
     ->name('moderation.moderate');
+Route::post('/api/research', StartResearchRunController::class)
+    ->middleware([RefuseCrossSiteRequests::class, 'throttle:research', LimitCloudAi::class.':research'])
+    ->name('research.start');
+Route::get('/api/research/{id}', ShowResearchRunController::class)
+    ->whereUuid('id')
+    ->middleware('throttle:research-read')
+    ->name('research.show');
 Route::get('/exports/{id}', ServeExportController::class)
     ->where('id', ExportFileService::ID_PATTERN)
     ->middleware([EnsureDebugRoutes::class, 'throttle:exports'])

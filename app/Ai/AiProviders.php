@@ -31,7 +31,7 @@ final readonly class AiProviders
 
     public const SOURCE_DEFAULT = 'default';
 
-    private const TEXT_FEATURES = ['describe', 'nl-search', 'docs-answer', 'rag-grader', 'photo-vision', 'assistant', 'moderation'];
+    private const TEXT_FEATURES = ['describe', 'nl-search', 'docs-answer', 'rag-grader', 'photo-vision', 'assistant', 'moderation', 'research'];
 
     /** A text feature that resolves like the others but is on the settings page only while offeredFeatures() adds it. */
     public const ADMIN_ASSISTANT = 'admin-assistant';
@@ -40,7 +40,7 @@ final readonly class AiProviders
     private const VISION_FEATURES = ['photo-vision'];
 
     /** Features whose model may be chosen per request by the lab selector; the rest always run as configured. */
-    public const OVERRIDABLE_FEATURES = ['describe', 'nl-search', 'docs-answer', 'assistant', 'moderation'];
+    public const OVERRIDABLE_FEATURES = ['describe', 'nl-search', 'docs-answer', 'assistant', 'moderation', 'research'];
 
     private const EMBEDDING_FEATURES = ['embeddings-listings', 'embeddings-docs'];
 

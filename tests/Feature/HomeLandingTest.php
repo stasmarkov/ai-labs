@@ -28,7 +28,7 @@ it('AC-3 the home page renders the landing page through the lab entry', function
             ->where('labHref', '/ai')
             ->has('lab.navigation')
             ->has('lab.textModel')
-            ->has('capabilities', 10)
+            ->has('capabilities', 11)
             ->has('capabilities.0', fn (Assert $card) => $card
                 ->where('key', 'describe')
                 ->where('route', '/ai/describe')

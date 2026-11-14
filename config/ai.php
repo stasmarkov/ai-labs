@@ -76,6 +76,10 @@ return [
             'provider' => env('AI_MODERATION_PROVIDER') ?: null,
             'model' => env('AI_MODERATION_MODEL') ?: null,
         ],
+        'research' => [
+            'provider' => env('AI_RESEARCH_PROVIDER') ?: null,
+            'model' => env('AI_RESEARCH_MODEL') ?: null,
+        ],
         // Runs on Ollama's OpenAI-compatible API only; another provider is refused by the endpoints.
         'admin-assistant' => [
             'provider' => env('AI_ADMIN_ASSISTANT_PROVIDER') ?: 'ollama',
@@ -292,6 +296,21 @@ return [
         ],
         'per_minute' => filled(env('AI_MODERATION_PER_MINUTE')) ? (int) env('AI_MODERATION_PER_MINUTE') : 30,
     ],
+    'research' => [
+        // Caps of one run: model calls (2 plan attempts, 5 notes, 1 report), stored steps, sub-questions, chunks read per
+        // note and the characters of each chunk the model sees. A run is started at most "per_minute" times per IP.
+        'max_model_calls' => max(1, (int) (env('AI_RESEARCH_MAX_MODEL_CALLS') ?: 8)),
+        'max_steps' => max(1, (int) (env('AI_RESEARCH_MAX_STEPS') ?: 13)),
+        // The time budget of one run in seconds: a model call starts only when it can finish inside it, and the queue job
+        // is allowed this long plus a minute.
+        'max_seconds' => max(60, (int) (env('AI_RESEARCH_MAX_SECONDS') ?: 600)),
+        'max_sub_questions' => max(2, (int) (env('AI_RESEARCH_MAX_SUB_QUESTIONS') ?: 5)),
+        'chunks_per_note' => max(1, (int) (env('AI_RESEARCH_CHUNKS_PER_NOTE') ?: 5)),
+        'chunk_characters' => max(100, (int) (env('AI_RESEARCH_CHUNK_CHARACTERS') ?: 1200)),
+        'notes_ttl_hours' => max(1, (int) (env('AI_RESEARCH_NOTES_TTL_HOURS') ?: 24)),
+        'per_minute' => filled(env('AI_RESEARCH_PER_MINUTE')) ? (int) env('AI_RESEARCH_PER_MINUTE') : 5,
+        'read_per_minute' => filled(env('AI_RESEARCH_READ_PER_MINUTE')) ? (int) env('AI_RESEARCH_READ_PER_MINUTE') : 120,
+    ],
     'semantic_per_minute' => filled(env('AI_SEMANTIC_PER_MINUTE')) ? (int) env('AI_SEMANTIC_PER_MINUTE') : 60,
 
     /*
@@ -329,6 +348,9 @@ return [
         'moderation' => env('AI_PROMPT_MODERATION') ?: 'moderation.v1',
         'buyer_assistant' => env('AI_PROMPT_BUYER_ASSISTANT') ?: 'buyer-assistant.v3',
         'admin_assistant' => env('AI_PROMPT_ADMIN_ASSISTANT') ?: 'admin-assistant.v1',
+        'research_planner' => env('AI_PROMPT_RESEARCH_PLANNER') ?: 'research-planner.v1',
+        'research_note' => env('AI_PROMPT_RESEARCH_NOTE') ?: 'research-note.v1',
+        'research_report' => env('AI_PROMPT_RESEARCH_REPORT') ?: 'research-report.v1',
     ],
     // guide:end prompts
 

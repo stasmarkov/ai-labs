@@ -49,6 +49,7 @@ function labUiPaths(): array
         '/ai/chat',
         '/ai/assistant',
         '/ai/moderation',
+        '/ai/research',
         '/ai/admin-assistant',
         '/ai/photos',
         '/ai/photo-search',

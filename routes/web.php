@@ -25,6 +25,7 @@ use App\Http\Controllers\ShowLabPhotosController;
 use App\Http\Controllers\ShowLabPhotoSearchController;
 use App\Http\Controllers\ShowLabPhotoSimilarController;
 use App\Http\Controllers\ShowLabPhotoStatusController;
+use App\Http\Controllers\ShowLabResearchController;
 use App\Http\Controllers\ShowLabRunController;
 use App\Http\Controllers\ShowLabSemanticController;
 use App\Http\Controllers\ShowLabSettingsController;
@@ -65,6 +66,8 @@ Route::middleware(HandleInertiaRequests::class)->prefix('ai')->group(function ()
     Route::post('/photos/{photo}/extract', ExtractLabPhotoController::class)->whereNumber('photo')->middleware(['throttle:photo-extract', LimitCloudAi::class.':photo-vision'])->name('ai.photos.extract');
     Route::get('/photos/{photo}/status', ShowLabPhotoStatusController::class)->whereNumber('photo')->name('ai.photos.status');
     Route::get('/photos/{photo}/similar', ShowLabPhotoSimilarController::class)->whereNumber('photo')->middleware('throttle:photo-similar')->name('ai.photos.similar');
+    Route::get('/research', ShowLabResearchController::class)->name('ai.research');
+    Route::get('/research/{id}', ShowLabResearchController::class)->whereUuid('id')->name('ai.research.show');
     Route::get('/guides', ShowLabGuidesController::class)->name('ai.guides.index');
     Route::get('/guides/{key}', ShowLabGuideController::class)->name('ai.guides.show');
     Route::get('/runs/{invocationId}', ShowLabRunController::class)->name('ai.runs.show');
