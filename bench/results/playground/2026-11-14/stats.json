@@ -1,0 +1,14 @@
+{
+    "metadata": {
+        "generated_at": "2026-11-14T21:15:13+00:00",
+        "two_model_local": "runs of exactly two targets, both ok, both on a local provider; the sum of the two call times"
+    },
+    "summary": {
+        "runs": 9,
+        "average_models_per_run": 2,
+        "prompts": 3,
+        "versions": 7,
+        "two_model_local_runs": 7,
+        "average_two_model_local_duration_s": 10.3
+    }
+}

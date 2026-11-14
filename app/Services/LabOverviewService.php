@@ -30,6 +30,9 @@ final readonly class LabOverviewService
         ['research', 'Research', 'ai.research', 'ready'],
     ];
 
+    /** The lab page that exists only in the local environment: a free-form model call with a stored history. */
+    private const PLAYGROUND_PAGE = ['playground', 'Playground', 'ai.playground', 'ready'];
+
     /** The lab page that exists only while the admin assistant is available (local environment, switch on). */
     private const ADMIN_PAGE = ['admin-assistant', 'Admin assistant', 'ai.admin-assistant', 'ready'];
 
@@ -110,7 +113,11 @@ final readonly class LabOverviewService
      */
     private function pages(): array
     {
-        return [...self::PAGES, ...($this->providers->adminAssistantAvailable() ? [self::ADMIN_PAGE] : [])];
+        return [
+            ...self::PAGES,
+            ...($this->providers->playgroundAvailable() ? [self::PLAYGROUND_PAGE] : []),
+            ...($this->providers->adminAssistantAvailable() ? [self::ADMIN_PAGE] : []),
+        ];
     }
 
     /**

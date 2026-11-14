@@ -166,6 +166,15 @@ final readonly class AiProviders
     }
 
     /**
+     * Whether the prompt playground is offered: the local environment only. It is a free-form model call with a stored
+     * history, so a public deploy has neither its page nor its endpoints.
+     */
+    public function playgroundAvailable(): bool
+    {
+        return app()->environment('local');
+    }
+
+    /**
      * Whether the MCP server and its change pages are offered: the local environment with the MCP switch on.
      */
     public function mcpServerAvailable(): bool

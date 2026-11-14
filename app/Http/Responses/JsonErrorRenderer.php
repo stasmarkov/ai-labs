@@ -18,6 +18,8 @@ use App\Exceptions\NlSearchUnavailableException;
 use App\Exceptions\PendingChangeConflictException;
 use App\Exceptions\PhotoSearchRefusedException;
 use App\Exceptions\PhotoSearchUnavailableException;
+use App\Exceptions\PlaygroundPromptException;
+use App\Exceptions\PlaygroundRunException;
 use App\Exceptions\ProviderNotConfiguredException;
 use App\Exceptions\ProviderNotEnabledException;
 use App\Exceptions\SemanticSearchUnavailableException;
@@ -57,6 +59,8 @@ final class JsonErrorRenderer
             $e instanceof PendingChangeConflictException => ApiResponse::error($e->status(), $e->getMessage(), extra: ['code' => $e->reason]),
             $e instanceof AdminAssistantProviderException => ApiResponse::error(422, $e->getMessage(), extra: ['code' => AdminAssistantProviderException::CODE]),
             $e instanceof AdminAssistantModelException => ApiResponse::error($e->status(), $e->getMessage(), extra: ['code' => $e->reason]),
+            $e instanceof PlaygroundPromptException => ApiResponse::error($e->status(), $e->getMessage(), extra: ['code' => $e->reason]),
+            $e instanceof PlaygroundRunException => ApiResponse::error(422, $e->getMessage(), [$e->field => [$e->getMessage()]], ['code' => $e->reason]),
             $e instanceof ProviderNotEnabledException => ApiResponse::error(422, $e->getMessage(), extra: ['code' => ProviderNotEnabledException::CODE]),
             $e instanceof ProviderNotConfiguredException => ApiResponse::error(503, $e->getMessage(), extra: ['code' => ProviderNotConfiguredException::CODE]),
             $e instanceof IndexNotBuiltException => ApiResponse::error(409, $e->getMessage(), extra: ['code' => IndexNotBuiltException::CODE]),

@@ -25,12 +25,14 @@ use App\Http\Controllers\ShowLabPhotosController;
 use App\Http\Controllers\ShowLabPhotoSearchController;
 use App\Http\Controllers\ShowLabPhotoSimilarController;
 use App\Http\Controllers\ShowLabPhotoStatusController;
+use App\Http\Controllers\ShowLabPlaygroundController;
 use App\Http\Controllers\ShowLabResearchController;
 use App\Http\Controllers\ShowLabRunController;
 use App\Http\Controllers\ShowLabSemanticController;
 use App\Http\Controllers\ShowLabSettingsController;
 use App\Http\Controllers\UndoDuplicateReviewController;
 use App\Http\Middleware\EnsureAdminAssistant;
+use App\Http\Middleware\EnsureLocalLab;
 use App\Http\Middleware\EnsureLocalSettings;
 use App\Http\Middleware\EnsureMcpServer;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -68,6 +70,10 @@ Route::middleware(HandleInertiaRequests::class)->prefix('ai')->group(function ()
     Route::get('/photos/{photo}/similar', ShowLabPhotoSimilarController::class)->whereNumber('photo')->middleware('throttle:photo-similar')->name('ai.photos.similar');
     Route::get('/research', ShowLabResearchController::class)->name('ai.research');
     Route::get('/research/{id}', ShowLabResearchController::class)->whereUuid('id')->name('ai.research.show');
+    Route::middleware(EnsureLocalLab::class)->group(function (): void {
+        Route::get('/playground', ShowLabPlaygroundController::class)->name('ai.playground');
+        Route::get('/playground/{id}', ShowLabPlaygroundController::class)->whereUuid('id')->name('ai.playground.show');
+    });
     Route::get('/guides', ShowLabGuidesController::class)->name('ai.guides.index');
     Route::get('/guides/{key}', ShowLabGuideController::class)->name('ai.guides.show');
     Route::get('/runs/{invocationId}', ShowLabRunController::class)->name('ai.runs.show');

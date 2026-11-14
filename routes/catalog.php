@@ -1,25 +1,34 @@
 <?php
 
+use App\Http\Controllers\AddPlaygroundVersionController;
 use App\Http\Controllers\AskAdminAssistantController;
 use App\Http\Controllers\AskAssistantController;
 use App\Http\Controllers\AskDocsController;
 use App\Http\Controllers\ConfirmAdminActionController;
+use App\Http\Controllers\CreatePlaygroundPromptController;
+use App\Http\Controllers\DeletePlaygroundPromptController;
 use App\Http\Controllers\DescribeListingController;
 use App\Http\Controllers\ListListingsController;
+use App\Http\Controllers\ListPlaygroundPromptsController;
+use App\Http\Controllers\ListPlaygroundRunsController;
 use App\Http\Controllers\ModerateListingController;
 use App\Http\Controllers\NlSearchController;
 use App\Http\Controllers\PhotoTextSearchController;
 use App\Http\Controllers\RejectAdminActionController;
+use App\Http\Controllers\RunPlaygroundController;
 use App\Http\Controllers\SearchDocsController;
 use App\Http\Controllers\SemanticSearchController;
 use App\Http\Controllers\ServeExportController;
 use App\Http\Controllers\ShowListingController;
+use App\Http\Controllers\ShowPlaygroundPromptController;
+use App\Http\Controllers\ShowPlaygroundRunController;
 use App\Http\Controllers\ShowResearchRunController;
 use App\Http\Controllers\ShowSlowListingController;
 use App\Http\Controllers\StartResearchRunController;
 use App\Http\Middleware\AddServerTimingHeader;
 use App\Http\Middleware\EnsureAdminAssistant;
 use App\Http\Middleware\EnsureDebugRoutes;
+use App\Http\Middleware\EnsureLocalLab;
 use App\Http\Middleware\LimitCloudAi;
 use App\Http\Middleware\RefuseCrossSiteRequests;
 use App\Http\Middleware\SendEarlyHints;
@@ -73,6 +82,20 @@ Route::get('/api/research/{id}', ShowResearchRunController::class)
     ->whereUuid('id')
     ->middleware('throttle:research-read')
     ->name('research.show');
+Route::prefix('api/playground')->middleware(EnsureLocalLab::class)->group(function (): void {
+    Route::get('/prompts', ListPlaygroundPromptsController::class)->name('playground.prompts.index');
+    Route::get('/prompts/{id}', ShowPlaygroundPromptController::class)->whereNumber('id')->name('playground.prompts.show');
+    Route::middleware(RefuseCrossSiteRequests::class)->group(function (): void {
+        Route::post('/prompts', CreatePlaygroundPromptController::class)->name('playground.prompts.store');
+        Route::post('/prompts/{id}/versions', AddPlaygroundVersionController::class)->whereNumber('id')->name('playground.versions.store');
+        Route::delete('/prompts/{id}', DeletePlaygroundPromptController::class)->whereNumber('id')->name('playground.prompts.destroy');
+    });
+    Route::post('/runs', RunPlaygroundController::class)
+        ->middleware([RefuseCrossSiteRequests::class, 'throttle:playground-run', LimitCloudAi::class.':playground'])
+        ->name('playground.runs.store');
+    Route::get('/runs', ListPlaygroundRunsController::class)->name('playground.runs.index');
+    Route::get('/runs/{id}', ShowPlaygroundRunController::class)->whereUuid('id')->name('playground.runs.show');
+});
 Route::get('/exports/{id}', ServeExportController::class)
     ->where('id', ExportFileService::ID_PATTERN)
     ->middleware([EnsureDebugRoutes::class, 'throttle:exports'])

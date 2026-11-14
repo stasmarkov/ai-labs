@@ -50,6 +50,7 @@ function labUiPaths(): array
         '/ai/assistant',
         '/ai/moderation',
         '/ai/research',
+        '/ai/playground',
         '/ai/admin-assistant',
         '/ai/photos',
         '/ai/photo-search',

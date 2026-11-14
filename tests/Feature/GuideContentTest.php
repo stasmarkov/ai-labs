@@ -9,13 +9,13 @@ use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
 use App\Guides\SnippetResolver;
 
-const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation', 'admin-assistant', 'research'];
+const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation', 'admin-assistant', 'research', 'playground'];
 
 const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards', 'local-models', 'mcp'];
 
 const ALL_FILLED_GUIDES = [...CAPABILITY_GUIDES, ...FOUNDATION_GUIDES];
 
-const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat', 'ai.photos', 'ai.photo-search', 'ai.photos.duplicates', 'ai.assistant', 'ai.moderation', 'ai.admin-assistant', 'ai.research', 'ai.changes'];
+const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat', 'ai.photos', 'ai.photo-search', 'ai.photos.duplicates', 'ai.assistant', 'ai.moderation', 'ai.admin-assistant', 'ai.research', 'ai.playground', 'ai.changes'];
 
 /**
  * @return list<string>
@@ -451,4 +451,36 @@ it('AC-11 the research guide has six non-empty tabs, no references, answers 200 
 
     expect($learning)->toContain('### Multi-step research agent')->toContain('/ai/guides/research')
         ->and($readme)->toContain('## Multi-step research agent')->toContain('agent:research')->toContain('--replay')->toContain('AI_RESEARCH_PER_MINUTE');
+});
+
+it('AC-9 the playground guide has six non-empty tabs, no references, answers 200 and the docs describe the playground', function (): void {
+    $guide = app(GuideRepository::class)->find('playground');
+    $rendered = app(GuideRenderer::class)->render('playground');
+    $text = mb_strtolower(implode("\n", guideTexts($guide)));
+
+    expect($guide->kind)->toBe('capability')
+        ->and($guide->planned)->toBeFalse()
+        ->and($rendered['works'])->not->toBeEmpty()
+        ->and($rendered['failures'])->not->toBeEmpty()
+        ->and($rendered['recipes'])->not->toBeEmpty()
+        ->and($rendered['support'])->not->toBeEmpty()
+        ->and($rendered['numbers'])->not->toBeEmpty()
+        ->and($rendered['experiments'])->not->toBeEmpty();
+
+    foreach (['immutable', 'unchanged', 'temperature', 'one after another', 'tokens', 'flagged', 'prompt file', 'timeout'] as $needle) {
+        expect($text)->toContain($needle);
+    }
+
+    $this->withoutVite();
+    $this->get('/ai/guides/playground')->assertOk();
+    $this->get('/ai/playground')->assertNotFound();
+
+    app()->detectEnvironment(fn (): string => 'local');
+    $this->get('/ai/playground')->assertOk();
+
+    $learning = file_get_contents(base_path('docs/learning-guide.md'));
+    $readme = file_get_contents(base_path('README.md'));
+
+    expect($learning)->toContain('### Prompt playground with versions')->toContain('/ai/guides/playground')
+        ->and($readme)->toContain('## Prompt playground')->toContain('AI_PLAYGROUND_TARGETS')->toContain('AI_PLAYGROUND_PER_MINUTE');
 });

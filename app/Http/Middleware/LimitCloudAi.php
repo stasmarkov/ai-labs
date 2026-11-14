@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Ai\AiProviders;
+use App\DTOs\PlaygroundTarget;
+use App\Services\PlaygroundCloudWeight;
 use Closure;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
@@ -17,7 +19,8 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * A request counts as one hit, except a feature that makes many model calls for one request: a research run counts as
  * many hits as it may make model calls (`ai.research.max_model_calls`, 8 by default), so with 20 hits a minute per IP a
- * run needs 8 free hits to start and an IP can start two runs a minute on a cloud provider.
+ * run needs 8 free hits to start and an IP can start two runs a minute on a cloud provider. A playground run counts as
+ * many hits as it has targets on a cloud provider, and its providers come from the request's targets.
  */
 final class LimitCloudAi
 {
@@ -37,6 +40,14 @@ final class LimitCloudAi
         $weight = 1;
 
         foreach ($features as $feature) {
+            if ($feature === 'playground') {
+                $count = app(PlaygroundCloudWeight::class)->cloudTargets($this->playgroundTargets($request));
+                $cloud = $cloud || $count > 0;
+                $weight = max($weight, $count);
+
+                continue;
+            }
+
             // Only text features take the lab override; embeddings always run on their configured provider.
             // Only the lab-selectable text features take the override; the others always run on their configured provider.
             $provider = $this->providers->configured($feature, in_array($feature, AiProviders::OVERRIDABLE_FEATURES, true) ? $override : null)->provider;
@@ -67,5 +78,21 @@ final class LimitCloudAi
         }
 
         return $next($request);
+    }
+
+    /**
+     * @return list<PlaygroundTarget>
+     */
+    private function playgroundTargets(Request $request): array
+    {
+        $targets = [];
+
+        foreach (array_slice((array) $request->input('targets', []), 0, 10) as $target) {
+            if (is_array($target) && is_string($target['provider'] ?? null) && is_string($target['model'] ?? null)) {
+                $targets[] = new PlaygroundTarget($target['provider'], $target['model']);
+            }
+        }
+
+        return $targets;
     }
 }

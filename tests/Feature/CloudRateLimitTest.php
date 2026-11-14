@@ -6,6 +6,7 @@ use App\Ai\ListingFilterAgent;
 use App\Models\AiRun;
 use App\Models\Dealer;
 use App\Models\Listing;
+use App\Services\PlaygroundRunner;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function (): void {
@@ -119,4 +120,14 @@ it('AC-7 NFR-3 defaults the cloud limit to 20 per minute when AI_CLOUD_PER_MINUT
 
     expect($config['cloud_per_minute'])->toBe(20)
         ->and(file_get_contents(base_path('.env.example')))->toContain('# AI_CLOUD_PER_MINUTE=20');
+});
+
+it('AC-7 limits other AI routes as before without building the playground runner', function (): void {
+    $this->app->bind(PlaygroundRunner::class, fn () => throw new LogicException('The playground runner must not be built for other routes.'));
+    ListingFilterAgent::fake([nlEmptyFilter(), nlEmptyFilter(), nlEmptyFilter()]);
+
+    $this->getJson('/api/listings/nl?q=a&provider=anthropic')->assertOk();
+    $this->getJson('/api/listings/nl?q=b&provider=anthropic')->assertOk();
+    $this->getJson('/api/listings/nl?q=c&provider=anthropic')->assertStatus(429);
+    $this->getJson('/api/listings/nl?q=d')->assertOk();
 });

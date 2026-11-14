@@ -15,8 +15,12 @@ use App\Ai\RecordToolStep;
 use App\Contracts\AiRunRepositoryInterface;
 use App\Contracts\AssistantTurnRunnerInterface;
 use App\Contracts\ListingRepositoryInterface;
+use App\Contracts\PlaygroundPromptRepositoryInterface;
+use App\Contracts\PlaygroundRunRepositoryInterface;
 use App\Contracts\ResearchNotesStore;
 use App\Repositories\EloquentAiRunRepository;
+use App\Repositories\EloquentPlaygroundPromptRepository;
+use App\Repositories\EloquentPlaygroundRunRepository;
 use App\Services\AssistantEvalRunner;
 use App\Services\LabModerationService;
 use App\Services\ListingDocumentGenerator;
@@ -55,6 +59,8 @@ class AiServiceProvider extends ServiceProvider
         $this->app->bind(AssistantTurnRunnerInterface::class, AssistantEvalRunner::class);
         $this->app->scoped(AiRunRecorder::class);
         $this->app->bind(ResearchNotesStore::class, RedisResearchNotesStore::class);
+        $this->app->bind(PlaygroundPromptRepositoryInterface::class, EloquentPlaygroundPromptRepository::class);
+        $this->app->bind(PlaygroundRunRepositoryInterface::class, EloquentPlaygroundRunRepository::class);
         $this->app->bind(AbortWatcher::class, ConnectionAbortWatcher::class);
         $this->app->singleton(PromptInjectionGuard::class, fn (): PromptInjectionGuard => PromptInjectionGuard::fromFile((string) config('ai.docs.answer.guard')));
 
@@ -144,6 +150,8 @@ class AiServiceProvider extends ServiceProvider
         RateLimiter::for('research', fn (Request $request): Limit => Limit::perMinute((int) config('ai.research.per_minute'))->by((string) $request->ip()));
         // The page reads a running run every 1.5 seconds, so reading is limited far above starting.
         RateLimiter::for('research-read', fn (Request $request): Limit => Limit::perMinute((int) config('ai.research.read_per_minute'))->by((string) $request->ip()));
+        // A run calls up to three models one after another, so starting one is limited per IP.
+        RateLimiter::for('playground-run', fn (Request $request): Limit => Limit::perMinute((int) config('ai.playground.per_minute'))->by((string) $request->ip()));
         RateLimiter::for('docs-ask', fn (Request $request): Limit => Limit::perMinute((int) config('ai.docs.answer.per_minute'))->by((string) $request->ip()));
     }
 }

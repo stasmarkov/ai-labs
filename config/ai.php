@@ -311,6 +311,13 @@ return [
         'per_minute' => filled(env('AI_RESEARCH_PER_MINUTE')) ? (int) env('AI_RESEARCH_PER_MINUTE') : 5,
         'read_per_minute' => filled(env('AI_RESEARCH_READ_PER_MINUTE')) ? (int) env('AI_RESEARCH_READ_PER_MINUTE') : 120,
     ],
+    'playground' => [
+        // Seconds one target's call may take, kept between 5 and 60; the request limit is set from it (3 targets plus a margin).
+        'target_timeout' => min(60, max(5, (int) (env('AI_PLAYGROUND_TIMEOUT') ?: 60))),
+        'per_minute' => filled(env('AI_PLAYGROUND_PER_MINUTE')) ? max(1, (int) env('AI_PLAYGROUND_PER_MINUTE')) : 6,
+        // "provider:model" entries; the model is everything after the first colon.
+        'default_targets' => array_values(array_filter(array_map(trim(...), explode(',', (string) (env('AI_PLAYGROUND_TARGETS') ?: 'ollama:qwen3.5:9b,ollama:gemma4:12b'))), filled(...))),
+    ],
     'semantic_per_minute' => filled(env('AI_SEMANTIC_PER_MINUTE')) ? (int) env('AI_SEMANTIC_PER_MINUTE') : 60,
 
     /*

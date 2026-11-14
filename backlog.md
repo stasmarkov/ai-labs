@@ -597,7 +597,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-90, BR-91, BR-27
 - **Depends on:** SL-22
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261114-2142-prompt-playground
 - **Source:** intake 2026-10-30 (AI integration ideas, Stanislav Markov)
 - **Run:** `/sdd "SL-43: prompt playground — versioned prompts, the same input run across 2–3 local models side by side, output, tokens and latency logged per run (BR-90, BR-91, BR-27). Rules in product-brief.md."`
