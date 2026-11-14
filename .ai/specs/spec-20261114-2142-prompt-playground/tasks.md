@@ -164,3 +164,4 @@
 - The other 9 findings, gaps 9 and 10, and the AC-3 long-name run-log bug are fixed, each test red first.
 - Suite 2894 passed and 3 skipped. Pint, PHPStan, typecheck and build clean. The fingerprint is unchanged, and parity differs only in `captured=`.
 - Live: qwen3.5:9b against gemma4:12b on two versions, through curl and Chrome. A forced timeout was not run live; the AC-5 tests cover it.
+- Clean-tree bench: after commit 8b3120b, `bench/run.sh ping --quick` exited 0 on frankenphp.
