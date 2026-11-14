@@ -187,3 +187,4 @@
 
 - Review fix pass: 18 findings fixed and both gaps closed. Suite 2774 passed and 3 skipped, run twice. Pint, PHPStan, typecheck and build clean. The fingerprint is unchanged, and parity differs only in `captured=`.
 - One full run had 4 `DocsSearchTest` failures that did not reproduce: the file passed 3 times in a row alone, and the next full run passed. This is recorded as a possible flake to watch.
+- Clean-tree bench: after commit a437272, `bench/run.sh ping --quick` exited 0 on frankenphp.
