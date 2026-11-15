@@ -610,8 +610,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-27
 - **Depends on:** SL-43
 - **Blocked by:** none
-- **Status:** proposed
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261115-1539-learning-guide-final
 - **Source:** intake 2026-10-30 (Stanislav Markov: "a guide with links that teaches me how everything we implemented works", after all planned slices)
 - **Run:** `/sdd "SL-44: finish docs/learning-guide.md — check every link, fill missing sections, put sections in learning order, add a closing summary (BR-27). Rules in product-brief.md."`
 
