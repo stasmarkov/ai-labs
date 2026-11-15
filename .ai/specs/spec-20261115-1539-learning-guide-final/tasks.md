@@ -150,3 +150,4 @@
   - [x] 12.2 **Verify**: full suite, Pint, PHPStan, `git status --short -- app routes resources config database bench` empty.
     - Recorded (2026-11-15): full suite 2919 passed, 3 skipped, 0 failed (30713 assertions); Pint passed; PHPStan no errors; the `git status` command printed nothing.
 
+- Clean-tree bench: after commit ece3d20, `bench/run.sh ping --quick` exited 0 on frankenphp.
