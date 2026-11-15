@@ -2,7 +2,9 @@
 
 These are the measurements of ai-lab, a study lab for AI features in Laravel (see [README.md](README.md)). The project was called AutoPulse until 2026-11-10 and the sections below that compare web servers date from that phase; they keep the URL and server names recorded at the time.
 
-The default server is now `frankenphp`. Run `ddev setup` once on a fresh clone; `ddev server default` returns to it. The nginx-fpm, apache-fpm and openlitespeed servers were removed after commit `719c0a5`, the last commit that can switch to them; their rows are history and stay as measured. Results below were measured on the server named in each section; earlier sections that restored nginx-fpm after a run are unchanged history.
+The default server is now `frankenphp`. Run `ddev setup` once on a fresh clone; `ddev server default` returns to it. <!-- history -->The nginx-fpm, apache-fpm and openlitespeed servers were removed after commit `719c0a5`, the last commit that can switch to them; their rows are history and stay as measured. Results below were measured on the server named in each section; earlier sections that restored nginx-fpm after a run are unchanged history.<!-- /history -->
+
+<!-- history -->
 
 ## Versions
 
@@ -27,6 +29,10 @@ Worker rows: laravel/octane v2.22.0, FrankenPHP worker mode with 4 workers and m
 
 The FrankenPHP row runs classic mode (no worker) on thread-safe PHP, so its PHP patch version differs from the FPM rows.
 
+<!-- /history -->
+
+<!-- history -->
+
 ## Expectations
 
 Written before any full run and committed first, so the results can be judged against a prediction made without them. After the runs, a "Surprises" section explains every result that differs from what is written here.
@@ -38,6 +44,8 @@ Written before any full run and committed first, so the results can be judged ag
 - **timeout behaviour.** `max_execution_time` counts CPU time under PHP-FPM on Linux, so `/debug/sleep` should not be stopped by it there. Under thread-safe PHP (FrankenPHP) it uses wall-clock timers and should stop the request. With 10 s limits, a sleep above the limit should fail on the servers whose own timeout applies and succeed elsewhere.
 - **noise.** Runs with spread above 5 percent are rerun once and marked noisy if they stay above it. Anything within 5 percent of the baseline is reported as `~`, not as a win.
 
+<!-- /history -->
+
 ## Expectations (classic vs worker)
 
 Written before any classic-vs-worker run and committed first, so the results can be judged against a prediction made without them. Compared servers: frankenphp (classic), frankenphp-octane and frankenphp-worker, with frankenphp classic as the baseline.
@@ -48,12 +56,18 @@ Written before any classic-vs-worker run and committed first, so the results can
 - **memory, case B (fixed, no recycling) and both classic cases.** Growth should stay within 5 KiB per 1 000 requests: the fixed route keeps nothing, and classic mode throws everything away after each request.
 - **memory, case C (leak, max-requests 500).** `memory_bytes` should drop at every worker restart, about every 500 requests, giving a sawtooth instead of a straight line.
 
+<!-- history -->
+
 ## How the numbers work
 
 - **RPS** is completed requests per second during the 60 s measure window, after a 30 s warm-up. **p50, p95 and p99** are the latencies under which 50, 95 and 99 percent of requests finished; p95 and p99 show the slow tail that an average hides. **Error %** (the error rate) is the share of requests that failed: a status outside 2xx and 3xx, a transport error or a generator timeout. **Spread** is the run-to-run spread: (max - min) / median RPS over the 3 repeats; above 5 percent the set is rerun once and the row is marked `noisy` if it stays above.
 - **Traffic path.** The load container (oha for ping, k6 for search, limited to 2 CPUs) sends HTTPS to the DDEV router, which forwards to the serving container, where a PHP worker handles the request and queries the `db` container. OpenLiteSpeed and FrankenPHP run in their own containers behind the same router. All containers, the load generator included, share the 7 CPUs of the OrbStack VM, and the load container is capped at 2 CPUs of them, so the generator and the server compete for the same cores.
 - **Where a request waits when every worker is busy.** PHP-FPM: in the socket listen backlog until a child is free. OpenLiteSpeed: in the LSAPI connection queue (`maxConns`) in front of the lsphp children. FrankenPHP: in its request queue until a PHP thread is free. In all three models extra load raises latency first and RPS stays flat.
 - **Why only ratios are compared.** Absolute numbers depend on this laptop, Docker's VM and what else is running, so they are not portable. Every row is shown as a ratio to the nginx-fpm row of the same table, measured in the same session, and the ratio is shown as `~` only when the nginx-fpm baseline of that table is marked `noisy`, because then no difference can be trusted.
+
+<!-- /history -->
+
+<!-- history -->
 
 ## Results (2026-11-01)
 
@@ -109,6 +123,10 @@ All throughput runs used commit `b29c1ff`, 50 concurrent connections (closed mod
 
 The memory table comes from the ping run, which never touches the database, so `db` CPU is 0 there by design; on search the serving container's CPU (310–404 %) is what grows.
 
+<!-- /history -->
+
+<!-- history -->
+
 ## Surprises
 
 - **The fair ping baseline is noisy.** nginx-fpm's fair ping run spread 27 % and still 15.7 % after the automatic rerun, so every fair ping ratio carries `~`. It was the very first run of the suite, right after DDEV started; the tuned nginx-fpm run an hour later had 1.0 % spread and 6205 RPS, about 29 % above that noisy median. The fair ping ranking (frankenphp 1.30x, openlitespeed 1.21x, apache-fpm 1.17x) is therefore not trustworthy; the tuned ping table, where all four land within 7 % (0.93x–1.01x), is. That matches the expectation and DDEV's own benchmark.
@@ -119,9 +137,17 @@ The memory table comes from the ping run, which never touches the database, so `
 - **Worker mode was not measured here.** The Expectations predicted 2–5x for the worker-mode servers; that comparison is SL-08.
 - **Tooling note.** The first draft of "How the numbers work" said a difference within 5 % is reported as `~`. The harness does not do that: `~` replaces the ratio only when the nginx-fpm baseline is `noisy`.
 
+<!-- /history -->
+
+<!-- history -->
+
 ## Interview story
 
 I ran the same Laravel app behind nginx-fpm, Apache, OpenLiteSpeed and FrankenPHP on DDEV and measured them with a harness that warms up, repeats each run three times and refuses to run unless OPcache is on and debug mode is off. Once each server was tuned, `/api/ping` landed within 7 % across all four (nginx-fpm 6205 RPS, FrankenPHP 6254), and on the database-bound search FrankenPHP classic was actually 14 % slower (537 vs 625 RPS). So swapping the web server alone does not buy speed; the gains, if any, come from worker mode. The most useful lesson was timeouts: with `max_execution_time=10`, a 30-second `sleep()` was not stopped under PHP-FPM, because on Linux that limit counts CPU time, while FrankenPHP's thread-safe PHP stopped it at 10 s. Under FPM, the real guard is the web server's timeout or `request_terminate_timeout`.
+
+<!-- /history -->
+
+<!-- history -->
 
 ## State leaks
 
@@ -141,6 +167,8 @@ I ran the same Laravel app behind nginx-fpm, Apache, OpenLiteSpeed and FrankenPH
 - **Matches the expectation.** Every `fixed` row and every nginx-fpm cell is `0/20`. Every `leak` row is `20/20` on both worker servers at max-requests 500. frankenphp-worker runs Octane's own worker script, so it behaves like frankenphp-octane.
 - **max-requests 1 hides three leaks, not the fourth.** With a restart after every request no worker serves A and then B, so dealer-scope, price-cache and number-locale drop to `0/20`. The leak is hidden, not fixed: the code is unchanged, and the cost is a full boot per request. request-at-boot stays `20/20` because it does not need an earlier request: every freshly booted worker captures the boot-time request, which carries no dealer, so B always sees a stale request instead of its own. A restart cannot hide that.
 - **`/debug/worker` and the lab are off by default.** With `DEBUG_ROUTES` unset the routes answer 404, and the script restores `.env` on exit.
+
+<!-- /history -->
 
 ## Classic vs worker (2026-11-02)
 
@@ -294,6 +322,8 @@ recall@10 = mean over the 20 queries of |HNSW top 10 ∩ exact top 10| / 10. The
 
 I embedded 50 000 car listings with a local bge-m3 model into pgvector at about 49 vectors per second, and semantic search answered in about 30 ms, two thirds of it spent embedding the question. The first recall check said the HNSW index was perfect, and it was lying twice: once because my two-key sort made PostgreSQL skip the index, and once because at `ef_search` 200 the planner decided a 260 ms full scan was cheaper than the index. Forcing the index showed the real trade-off, recall 0.41 at `ef_search` 40 up to 0.80 at 400 for 11 ms, low because template descriptions crowd 30 neighbours into a cosine distance of 0.008. Lesson: a perfect recall or a 100x slowdown means read the plan.
 
+<!-- history -->
+
 ## Docs index and hybrid retrieval (2026-11-02)
 
 Two corpora cut into structure-aware chunks, embedded with bge-m3 and searched by vector similarity, by PostgreSQL full text and by both fused with Reciprocal Rank Fusion (SL-32). Raw files: [`bench/results/2026-11-02-docs-index/`](bench/results/2026-11-02-docs-index/) (`index.json`, `search-bench.json`). Queries: [`bench/docs-queries.txt`](bench/docs-queries.txt), fixed before the first run and not changed after it. Reproduce with `ddev artisan docs:fetch-laravel`, `ddev artisan docs:index`, one `queue:work --queue=embeddings --stop-when-empty`, then `ddev artisan docs:search-bench`.
@@ -375,6 +405,8 @@ AC-7 asks hybrid for at least 4 of 5 in each group: met, 5 of 5 and 5 of 5.
 ### Interview story (docs index)
 
 I indexed 121 markdown files into 2 706 chunks of about 400 tokens and searched them three ways. I expected exact identifiers to need full text and meaning questions to need vectors, so I wrote ten queries before running anything and promised hybrid at least 4 of 5 in each group. The result was less tidy: bge-m3 alone found all 10, full text found 7 of 10 and failed three questions worded differently from the docs (8 of 10 on the re-run, but only because this file now quotes the queries), and hybrid found 10 of 10, losing one place on a question where full text was confidently wrong. My own `characters / 4` token estimate was 18 % low on real text, so the "500 token" chunks are about 600 in the model's eyes. And my first write-up said the biggest chunk was a code block; a query of the rows showed a base64 screenshot of 8 780 tokens, more than the model reads. Lessons: measure the estimate you build on, describe the data from the data, not from the rule, and do not assume the textbook weakness of vector search shows up on a small corpus. It needs the larger set in SL-33 to show.
+
+<!-- /history -->
 
 ## RAG evaluation (2026-11-03)
 
@@ -463,6 +495,8 @@ Re-indexed at 300/180 (`answers-qwen-300-180`, answers with `--repeat=1`), then 
 
 I built a harness that measures a RAG chatbot instead of eyeballing it: 30 labelled questions, recall@k and MRR for retrieval, a second model that grades correctness and groundedness from 0 to 2, and a guard test that fails if any question or answer leaks into the indexed files. The measured result changed what I believed. Hybrid search scored 0.676 MRR at k 6 against 0.694 for vector alone, because full-text search returned nothing for whole-sentence questions (0 of 24). Calibrating the relevance threshold on the same questions gave a best cut of 0.58 with the same 100 % TPR and 16.7 % FPR as the existing 0.5, so I left it alone: with 6 off-topic questions one question moves FPR by 17 points. Splitting the chunks smaller (300 instead of 500 tokens) raised recall@3 from 0.75 to 0.79 without changing recall@6. The lesson is that a small eval set is for catching regressions and comparing settings, not for tuning a threshold to the second decimal.
 
+<!-- history -->
+
 ## Answer cache (2026-11-03)
 
 An exact and a semantic cache in front of `POST /api/docs/ask` (SL-40): a stored answer is served only for the current prompt version, answer model, embedding model and docs index version. Two runs measured it. Raw files: [`bench/results/docs-cache/2026-11-03/`](bench/results/docs-cache/2026-11-03/) with `run/calibration.json` (pair similarities and thresholds) and `hit-miss/hit-miss.json` (latency per path). The pair set is `bench/rag-eval/cache-pairs.v1.jsonl` (24 paraphrase and 24 near-miss pairs) and the paraphrases for the hit/miss run are in `bench/rag-eval/cache-hitmiss-paraphrases.v1.jsonl`; this section names questions by id only. Reproduce with `ddev artisan docs:cache-calibrate --label=run` and `bench/docs-cache.sh --label=hit-miss`.
@@ -535,6 +569,10 @@ Both budgets hold on at least 10 samples each. `docs:cache --stats` after this r
 
 I put an exact and a semantic cache in front of a RAG chatbot and measured the threshold before choosing it. Questions with a different intent ("retry" against "delete") scored up to 0.930 while true paraphrases topped out at 0.906, so no threshold gave a hit without a wrong answer, and I set the default to 0.94, the zero-false-hit side. An exact repeat then took 46.5 ms against 6071 ms for a fresh answer, and a semantic hit 126 ms. I also checked whether someone could plant an answer: a question with an injected instruction scored at most 0.881 against the clean one, under the threshold, so the threshold is the security boundary as well as the quality one. The review found two bugs I would not have seen in a demo: answers computed during re-indexing would have been cached as current, and the first hit-rate figure (2.6%) counted the evaluation runs.
 
+<!-- /history -->
+
+<!-- history -->
+
 ## Stop and cancel per server mode (2026-11-03)
 
 What the server does when the client presses Stop in the docs chat (SL-41), on all six server modes. Raw files: [`bench/results/chat-stop/2026-11-03/`](bench/results/chat-stop/2026-11-03/), one JSON per mode; the follow-up retrieval examples are in `followups.md` and `followups.json` next to them. Reproduce with `bench/chat-stop.sh --modes nginx-fpm,apache-fpm,openlitespeed,frankenphp,frankenphp-octane,frankenphp-worker --runs 5`.
@@ -590,6 +628,10 @@ NFR-1 (reported, not a gate): median probe after Stop at most 1.5 times the idle
 
 A Stop button only hides the answer unless the server also stops, so I measured what each server did when the client left. On nginx-fpm the run left no row at all and on Octane the model kept generating 320 tokens for nobody, 22 s after the client had gone. I made the stream ignore the abort for its own duration, check `connection_aborted()` after every flush and release the model stream, which closes the connection to Ollama. On all six server modes 30 of 30 runs then wrote a `stopped` row, the delta lag was at most 4 tokens, a 1-token probe to Ollama answered in 75 to 144 ms against 40 to 65 ms idle, and Ollama's own log showed 30 of 30 requests cancelled. The same work found that my first version never ran on php-fpm, because the framework's wrapper flushes the stream itself.
 
+<!-- /history -->
+
+<!-- history -->
+
 ## Slow I/O and the health check (2026-11-03)
 
 What happens to a health check while every PHP worker is waiting on something slow (SL-09). Two workloads, four worker configurations, each cell the median of 3 repeats (BR-21: warm-up 30 s, measure 60 s). Raw files: [`bench/results/slow-load/2026-11-03/`](bench/results/slow-load/2026-11-03/) and [`bench/results/slow-load/2026-11-04/`](bench/results/slow-load/2026-11-04/) (the run crossed midnight UTC; the two autoscale cells are in the second folder). Reproduce with `bench/slow-load-matrix.sh` on a clean tree.
@@ -636,7 +678,7 @@ The first bar of each pair is the http workload, the second the sse workload.
 
 - **Throughput is workers divided by the time each request holds one.** With 300 ms per request the ceiling is 8 ÷ 0.3 = 26.7 rps for 8 FPM children, 107 for 32, 46.7 for 14 threads and 213 for 64. Measured: 23.9, 93.5, 41.2 and 197.8. This is Little's law, and it held within 13% in every cell.
 - **The health check waits in the same queue.** `/healthz` does no work at all, yet with 8 children it took 4003 ms at p95, the same as the slow requests in front of it. A load balancer with a 2 s health timeout would have marked a perfectly healthy server dead. No PHP pool has a separate lane for cheap requests.
-- **An AI answer stream is slow I/O that lasts 20 times longer.** 30 streams of about 6 s need about 30 workers. With 8 children each stream waited behind three others (24.8 s instead of 6.1 s) and 299 of 300 health probes got no answer within 10 s. With 32 children, or with threads allowed to grow to 64, the same load left the health check at 15–16 ms. This is the cost of answering over direct SSE (section 9) in numbers: one worker per open answer, for the whole answer.
+- **An AI answer stream is slow I/O that lasts 20 times longer.** 30 streams of about 6 s need about 30 workers. With 8 children each stream waited behind three others (24.8 s instead of 6.1 s) and 299 of 300 health probes got no answer within 10 s. With 32 children, or with threads allowed to grow to 64, the same load left the health check at 15–16 ms. This is the cost of answering over direct SSE ([II-2 of the learning guide](docs/learning-guide.md#ii-2-streaming-an-ai-answer)) in numbers: one worker per open answer, for the whole answer.
 - **Autoscaling fixed both workloads without a bigger fixed pool.** frankenphp started at the same 14 threads as the fixed cell and grew under load: the health p95 went from 2369 ms to 276 ms (http) and from 10 000 ms to 16 ms (sse).
 
 ### Surprises
@@ -648,6 +690,10 @@ The first bar of each pair is the http workload, the second the sse workload.
 ### Interview story
 
 I wanted to know what a health check sees while a PHP server is busy waiting on slow calls. With 100 users each holding a worker for 300 ms, throughput was exactly workers divided by 0.3 s, and the health endpoint, which does nothing, took 4 s at p95 on 8 FPM children because it waited in the same queue. Then I replaced the slow calls with 30 open AI answer streams of 6 s each: on 8 children 299 of 300 health checks timed out, while FrankenPHP with autoscaling threads (14 growing to 64) answered them in 16 ms. That turned "SSE holds a worker per answer" from an argument into a number, and it is why a long-running AI feature on FPM needs either a pool sized for it or a queued variant.
+
+<!-- /history -->
+
+<!-- history -->
 
 ## File downloads: offload vs PHP streaming (2026-11-04)
 
@@ -696,6 +742,10 @@ The first bar of each pair is offload, the second is stream.
 ### Interview story
 
 A 50 MB export is not heavy for PHP's memory, it is heavy for its workers: a phone on a slow connection takes 25 s to receive it, and a PHP process streaming it is busy for that whole time. I measured 20 such clients on four servers. With PHP streaming, the health check timed out on 170 to 181 of 300 probes on nginx, Apache and FrankenPHP; with `X-Accel-Redirect`, `X-Sendfile` or `X-LiteSpeed-Location`, PHP held each request for 20 to 70 ms at p95 and the health check stayed under 20 ms. The bytes were identical in both modes, so the only change is who does the waiting. The catch is that each server needs its own hand-off configuration and must be told exactly which directory it may serve, and the review found an encoded-path bypass in my first OpenLiteSpeed rule, so that part is a security setting, not a performance one.
+
+<!-- /history -->
+
+<!-- history -->
 
 ## Early Hints and compression (2026-11-05)
 
@@ -826,6 +876,10 @@ CPU seconds the web container spent on one export download (cgroup `cpu.stat`, m
 
 A 103 Early Hints lets the server tell the browser to fetch CSS and JS while PHP is still building the page. My first measurement said it halved first paint, which was too good to be true: DevTools throttling did not delay the 103. Measured again behind a network-level throttle (150 ms RTT, 1.6 Mbit/s), it saved 54 ms of first paint and 27 ms of LCP, because this page's server time is only about 15 ms; Early Hints pay off when the server thinks for hundreds of milliseconds. It also only works where the whole path forwards the 103 (Traefik does) and where the server can send one (classic FrankenPHP, not nginx-fpm or Octane). On compression FrankenPHP offers `zstd`, `br` and `gzip` while nginx-fpm offers `gzip`; `br` made the 50 MiB export 6.5 MB against 8.0 MB for `gzip` but cost about 2.4 times the CPU.
 
+<!-- /history -->
+
+<!-- history -->
+
 ## HTTP/3 vs HTTP/2 (2026-11-05)
 
 Does the same page load faster over HTTP/3 than over HTTP/2 when both see the same slow, lossy link? Two parts, both on frankenphp (the only server with a UDP listener): one verified HTTP/3 request with the `Alt-Svc` advertisement, and four cold-browser variants of `GET /listings/1`, {h2, h3} x {loss 0 %, loss 2 %}. Raw files: [`bench/results/http3/2026-11-05/`](bench/results/http3/2026-11-05/) (`lcp-<variant>.json` for the page timings, `frankenphp.json` and `nginx-fpm.json` for the curl proof). Reproduce with `bench/http3.sh` (and `bench/http3.sh --server nginx-fpm`) and `bench/http3-matrix.sh`, which switches to frankenphp, runs the four variants of `node bench/lcp.mjs --net netem --protocol <h2|h3> --loss <0|2>` and puts nginx-fpm back. All four variant files and the curl files come from one session with the same scripts, the same digest-pinned netem sidecar and the same offload state.
@@ -888,6 +942,8 @@ Measured drops, per variant and per direction (egress is client to server, ingre
 ### Interview story
 
 HTTP/3 runs over QUIC on UDP and the DDEV router cannot carry it, so I measured it by connecting a browser container straight to FrankenPHP and shaping both protocols with the same kernel netem profile (150 ms RTT, 1.6 Mbit/s down, 750 kbit/s up) instead of a TCP-only proxy. The first attempt looked as if loss did not matter, until I saw that netem was dropping whole offload aggregates; after turning TSO, GSO, GRO and UDP GSO off on both ends so that 2 % meant 2 % of wire packets, h2 slowed by 387 ms (1454 ms to 1841 ms) while h3 slowed by 24 ms (1233 ms to 1257 ms). On a clean link h3 was still 221 ms faster, one saved handshake round trip. The h3 numbers model a repeat visitor, because I forced QUIC, and with 5 runs and 6 to 12 drops per direction I would claim the direction of the effect, not its exact size.
+
+<!-- /history -->
 
 ## Mercure subscribers and the health check (2026-11-05)
 
@@ -1381,13 +1437,15 @@ I measured two local models the way a user feels them: time to first token, writ
 
 ## Response parity
 
-`bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`.
+`bench/parity/` holds one snapshot per remaining server: `frankenphp.txt`, `frankenphp-octane.txt` and `frankenphp-worker.txt`. `bench/parity.sh compare frankenphp <server>` compares a worker mode with classic FrankenPHP; the paragraphs below record how the snapshots were taken and re-baselined.
 
-`bench/parity/frankenphp-octane.txt` and `bench/parity/frankenphp-worker.txt` were captured on 2026-10-30 from the same seeded database. `bench/parity.sh compare nginx-fpm frankenphp-octane` and `bench/parity.sh compare nginx-fpm frankenphp-worker` both report `identical`. Getting there needed two things that only matter in a long-lived worker. The worker must know the client used HTTPS, or asset URLs come out as `http://`: frankenphp-worker sets `HTTPS=on` from `X-Forwarded-Proto` in its Caddyfile and frankenphp-octane uses `OCTANE_HTTPS=true`, with no proxy trust in app code. And `public/frankenphp-worker.php` defines `LARAVEL_START` so `/up` has the same shape; in worker mode that number is the worker's uptime, not the request time, and parity masks it. Octane runs with `--log-level=warn` and the worker Caddyfile has no access log, so neither way logs each request.
+<!-- history -->`bench/parity/nginx-fpm.txt`, `bench/parity/apache-fpm.txt`, `bench/parity/frankenphp.txt` and `bench/parity/openlitespeed.txt` hold the status, media type and body SHA-256 of a fixed request set of 7 requests, captured on 2026-10-29 (openlitespeed on 2026-10-30) from the same seeded database on stock DDEV server configs (FrankenPHP and OpenLiteSpeed from their stashes). `bench/parity.sh compare nginx-fpm apache-fpm`, `bench/parity.sh compare nginx-fpm frankenphp` and `bench/parity.sh compare apache-fpm frankenphp` all report `identical`, and so does `bench/parity.sh compare nginx-fpm openlitespeed`. The nginx-fpm, apache-fpm and openlitespeed snapshots were deleted with those servers.<!-- /history -->
+
+`bench/parity/frankenphp-octane.txt` and `bench/parity/frankenphp-worker.txt` were captured on 2026-10-30 from the same seeded database. <!-- history -->`bench/parity.sh compare nginx-fpm frankenphp-octane` and `bench/parity.sh compare nginx-fpm frankenphp-worker` both reported `identical`.<!-- /history --> Getting there needed two things that only matter in a long-lived worker. The worker must know the client used HTTPS, or asset URLs come out as `http://`: frankenphp-worker sets `HTTPS=on` from `X-Forwarded-Proto` in its Caddyfile and frankenphp-octane uses `OCTANE_HTTPS=true`, with no proxy trust in app code. And `public/frankenphp-worker.php` defines `LARAVEL_START` so `/up` has the same shape; in worker mode that number is the worker's uptime, not the request time, and parity masks it. Octane runs with `--log-level=warn` and the worker Caddyfile has no access log, so neither way logs each request.
 
 All six snapshots were re-baselined on 2026-11-03 (commit 580fbac) because `/listings/1` links the Vite assets and `app.css` stopped using Tailwind's automatic source detection, which changed its hashed file name. Automatic detection also scanned the markdown docs, so any docs edit could change the build; `app.css` now lists its sources explicitly (`source(none)` plus `@source` lines), and a rebuild after a markdown change gives the same file. After that re-baseline `bench/asset-fingerprint.sh` printed `app-CjRfEL-0.css` and the empty `app-BvRk9kiK.js` (the SHA-256 of an empty file), and still did after the AI lab entries were added, so the old pages loaded byte-identical assets.
 
-They were re-baselined a second time on 2026-11-05 (SL-13), once, because the listing detail page gained the live-price markup: a `mercure-hub` meta tag, a `data-price-topic` attribute on the price and a polite live region. `resources/js/app.js` is no longer empty (it opens one `EventSource` for the price topic), and the extra `sr-only` class changes `app.css`, so both fingerprinted assets have new hashed names. Only the `/listings/1` line of each snapshot changed, and it is the same hash on all six servers, so the page is still byte-identical everywhere. In the review fix pass the page gained one more attribute, `data-price-rendered-ms` (server time at render, used by the script to ignore history it already shows). It differs on every request, so `bench/parity.sh` masks it to `N` before hashing, like the `/up` render time, and the six snapshots were captured again on 2026-11-05 for that reason (`compare nginx-fpm <server>` prints `identical` for the other five; only the `/listings/1` hash and the timestamp line changed, to `097d5a85…`). The script also changed (the history replay and the render-time filter, now in a second small module that Vite inlines), which gives a new JS asset name: the markup and script are the same on servers without a hub, where the script gives up after one failed request. `bench/asset-fingerprint.sh` now prints exactly these lines, and later slices compare against them:
+They were re-baselined a second time on 2026-11-05 (SL-13), once, because the listing detail page gained the live-price markup: a `mercure-hub` meta tag, a `data-price-topic` attribute on the price and a polite live region. `resources/js/app.js` is no longer empty (it opens one `EventSource` for the price topic), and the extra `sr-only` class changes `app.css`, so both fingerprinted assets have new hashed names. Only the `/listings/1` line of each snapshot changed, and it is the same hash on all six servers, so the page is still byte-identical everywhere. In the review fix pass the page gained one more attribute, `data-price-rendered-ms` (server time at render, used by the script to ignore history it already shows). It differs on every request, so `bench/parity.sh` masks it to `N` before hashing, like the `/up` render time, and the six snapshots were captured again on 2026-11-05 for that reason (<!-- history -->`compare nginx-fpm <server>` printed `identical` for the other five<!-- /history -->; only the `/listings/1` hash and the timestamp line changed, to `097d5a85…`). The script also changed (the history replay and the render-time filter, now in a second small module that Vite inlines), which gives a new JS asset name: the markup and script are the same on servers without a hub, where the script gives up after one failed request. `bench/asset-fingerprint.sh` now prints exactly these lines, and later slices compare against them:
 
 ```
 resources/css/app.css assets/app-DNob7CFE.css 176bae5b51e4d3fd8f839b7effee51f6ae6bd5fa1c1f29e44a77e35553f1d444
@@ -1400,7 +1458,7 @@ They were captured a third time on 2026-11-10 (SL-49), on all six servers after 
 
 The snapshots were re-baselined a third time on 2026-11-10 (rename to ai-lab), once, and only the `/listings/1` line changed, to `f840ff18…` on all six servers. The page did not change: parity rewrites the base URL in bodies to `https://ai-lab.ddev.site` before hashing, and that page carries absolute asset and image URLs, so the old hashes (taken with the old project host in the body) no longer match. A capture on frankenphp before the project rename showed the other six lines identical and the raw, unnormalized body of `/listings/1` still hashing to the old `097d5a85…`. The `/` page is now an Inertia landing page and is not in the fixed request set. The fingerprint lines above are unchanged: `resources/views/welcome.blade.php` stays in place (unused) because Tailwind reads the Blade views and deleting it changes the hashed name of `app.css`.
 
-OpenLiteSpeed answers on its own port, `https://ai-lab.ddev.site:8091`, while the `web` container stays idle on nginx-fpm. `capture` rewrites that base URL to the plain site URL before hashing, so the snapshot compares directly with the others.
+<!-- history -->OpenLiteSpeed answered on its own port, `https://ai-lab.ddev.site:8091`, while the `web` container stayed idle on nginx-fpm. `capture` rewrote that base URL to the plain site URL before hashing, so its snapshot compared directly with the others.<!-- /history -->
 
 ### PHP settings per server (what differs and why)
 
@@ -1412,13 +1470,13 @@ OpenLiteSpeed answers on its own port, `https://ai-lab.ddev.site:8091`, while th
 | `opcache.revalidate_freq` | 2 | from FPM `php.ini` | 2 | 2 |
 | `date.timezone` | host timezone | host timezone | unset | UTC |
 
-- **Why OPcache matters for fairness.** OPcache keeps compiled PHP in shared memory. With 10 000 slots and about 10 600 PHP files in this app, the lsphp default would fill up and keep evicting or skipping files, which makes OpenLiteSpeed look slower for a reason that has nothing to do with the server. `.ddev/servers/openlitespeed/conf/zz-opcache.ini` sets the same values as the FPM pool. `revalidate_freq=2` (check file timestamps at most every 2 s) is already the same everywhere.
-- **Timezone.** PHP's `date.timezone` only affects PHP's own messages; every date in a response comes from Laravel's `config('app.timezone')` (UTC). lsphp uses UTC instead of copying the host timezone.
-- **`X-Forwarded-Proto`.** The OLS vhost sets `HTTPS=on` when the request carries `X-Forwarded-Proto: https`, which is how the DDEV router tells the backend that the client used TLS. It trusts the header from any sender, exactly like DDEV's own nginx config does; that is fine on a dev network, but in production only the proxy's address should be trusted (Laravel `trustProxies`).
-- **`.htaccess`.** OpenLiteSpeed applies only the rewrite rules from `public/.htaccess`, reads them at start-up, and needs `ddev restart` after a change. With the routing left entirely to `.htaccess`, the trailing-slash redirect behaves as on Apache (`/listings/` → 301).
+- **Why OPcache matters for fairness.** OPcache keeps compiled PHP in shared memory. <!-- history -->With 10 000 slots and about 10 600 PHP files in this app, the lsphp default would have filled up and kept evicting or skipping files, which would have made OpenLiteSpeed look slower for a reason that has nothing to do with the server. `.ddev/servers/openlitespeed/conf/zz-opcache.ini` (deleted with the server) set the same values as the FPM pool.<!-- /history --> `revalidate_freq=2` (check file timestamps at most every 2 s) is the same everywhere.
+- **Timezone.** PHP's `date.timezone` only affects PHP's own messages; every date in a response comes from Laravel's `config('app.timezone')` (UTC). <!-- history -->lsphp used UTC instead of copying the host timezone.<!-- /history -->
+- <!-- history -->**`X-Forwarded-Proto`.** The OLS vhost set `HTTPS=on` when the request carries `X-Forwarded-Proto: https`, which is how the DDEV router tells the backend that the client used TLS. It trusted the header from any sender, exactly like DDEV's own nginx config does; that is fine on a dev network, but in production only the proxy's address should be trusted (Laravel `trustProxies`).<!-- /history -->
+- <!-- history -->**`.htaccess`.** OpenLiteSpeed applied only the rewrite rules from `public/.htaccess`, read them at start-up, and needed `ddev restart` after a change. With the routing left entirely to `.htaccess`, the trailing-slash redirect behaved as on Apache (`/listings/` → 301).<!-- /history -->
 
 Known differences that the comparison deliberately ignores:
 
-- **Content-Type charset.** nginx serves JSON as `application/json; charset=utf-8`; Apache serves `application/json`. The app sends the same body; the parameter is added by nginx's `charset_types`. Parity compares the media type only.
+- **Content-Type charset.** Parity compares the media type only. <!-- history -->nginx served JSON as `application/json; charset=utf-8` and Apache as `application/json`; the app sent the same body, and the parameter was added by nginx's `charset_types`.<!-- /history -->
 - **`/up` render time.** Laravel's health page prints `rendered in <n>ms`, which changes on every request; it is masked before hashing, for `/up` only.
 - **Headers** such as `Server` and `Date` differ by design and are not compared.

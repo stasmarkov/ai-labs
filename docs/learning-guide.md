@@ -1,29 +1,95 @@
 # ai-lab learning guide
 
-This guide explains how everything in this project works, in the order it was built. Each section says what the mechanism is, walks through what happens for one request, links to the code and specs in this repo, quotes what was measured, and ends with official docs to read next.
+This guide explains how everything in this project works. It reads from top to bottom: Part I is the server (how PHP runs behind a web server, how that was measured, and the tricks a server can do for the app), and Part II is the AI features (one model call, then structured output, retrieval, images, agents and the lab itself). Each section says what the mechanism is, walks through what happens for one request, links to the code and specs in this repo, quotes what was measured, and ends with official docs to read next.
 
-It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan and its order are in [`backlog.md`](../backlog.md).
+It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan is in [`backlog.md`](../backlog.md); the slice id (`SL-nn`) in a section's spec link shows when it was built.
 
-**Status (2026-11-03):** sections 1–15 cover the shipped slices SL-01 to SL-08, SL-20, SL-22, SL-24, SL-32, SL-33, SL-45 and SL-46. Section 16 is a map of all the AI code: every file and its purpose, four requests traced end to end, and how to handle common feature requests. Section 17 (SL-40) explains the exact and semantic answer cache. Section 18 (SL-41) explains how Stop cancels generation on every server mode and how the chat sends history. Section 19 (SL-09) measures slow I/O, worker pools and the health check. Section 20 (SL-11) explains how a large download is handed to the web server so a PHP worker is not held. Section 21 (SL-10) covers Early Hints and compression. Section 22 (SL-12) explains HTTP/3 and QUIC and measures h2 against h3 under the same network-layer throttle. Section 23 (SL-13) explains live updates through the built-in Mercure hub and measures subscribers against the health check. Section 24 (SL-23) explains turning a plain-language search into validated filters with structured output, and what the 40-query eval found. Planned sections are listed at the end.
+**Status (2026-11-15):** the guide is in learning order. Part I (I-1 to I-10) covers the shipped server slices SL-01 to SL-13, SL-47 and SL-50; I-11 holds the places for SL-15 to SL-17, which are not built yet. Part II (II-1 to II-24) covers the shipped AI slices from SL-20 on, including SL-48, SL-49, SL-51 and SL-52, and II-24 maps every AI file.
 
----
+## How to read this guide
 
-## 1. The app and one request on nginx-fpm
+- **Order.** Read Part I first if you want to know how a PHP request is served; Part II assumes you have seen one request (I-1) and then builds the AI features on it. A section may point forward or back to another one by its id, such as [I-6](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast).
+- **Shape.** Every section has the same parts: what it is, one request or job step by step, what is in this repo (code and spec links), the numbers that were measured, and official docs to read next. A section with no committed measurement says "Not measured" and why.
+- **Numbers.** Every number comes from [`BENCHMARKS.md`](../BENCHMARKS.md) or the committed result files under [`bench/results/`](../bench/results/), and is linked to its source.
+- **History.** The lab once ran on more web servers than it does now ([I-2](#i-2-four-ways-to-run-php-behind-a-web-server-and-the-one-that-stayed) tells the story). Text and tables about those servers are kept as measured, as history, and say so.
+- **Code map.** [II-24](#ii-24-how-the-ai-features-are-built-a-map-of-the-code) is a reference chapter: every AI file and its purpose, four requests traced end to end, and where common feature requests land. Use it to find code; use the other sections to learn the idea.
 
-*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.*
+## Prerequisites
 
-> This section describes the request as it ran on nginx-fpm, a server that has since been removed (commit `719c0a5` is the last one that can switch to it); the servers that remain are set out in section 2.
+- **DDEV and the project.** Run `ddev setup` once on a fresh clone: it creates `.env`, installs the Composer and npm dependencies, generates the app key, switches the server to `frankenphp`, creates the Mercure keys and migrates. The app is then at https://ai-lab.ddev.site and the lab at `/ai`. Details: [`README.md`](../README.md).
+- **Ollama on the host** (0.40 or newer; the embeddings and docs-index numbers were measured on 0.40.13 on 2026-11-02, the local model numbers on 0.40.16 on 2026-11-13, as recorded in [`BENCHMARKS.md`](../BENCHMARKS.md)), with `qwen3.5:9b` (about 7 GB), `gemma4:12b` (about 7 GB, the second model for comparisons) and `bge-m3` (about 1 GB, embeddings). Optional: `qwen3:0.6b` for the opt-in smoke group. See [II-3](#ii-3-running-the-model-locally) for how the container reaches Ollama.
+- **The photo encoder** is a sidecar container that starts with DDEV; nothing to install ([II-15](#ii-15-similar-photos-and-searching-photos-by-text)).
+- **Cloud providers** are optional ([II-4](#ii-4-providers-the-cloud-option-and-the-settings-page)). With no key nothing changes and nothing leaves the machine.
+
+## Contents
+
+- [How to read this guide](#how-to-read-this-guide)
+- [Prerequisites](#prerequisites)
+
+**Part I — The server**
+
+- [I-1. The app and one request](#i-1-the-app-and-one-request)
+- [I-2. Four ways to run PHP behind a web server, and the one that stayed](#i-2-four-ways-to-run-php-behind-a-web-server-and-the-one-that-stayed)
+- [I-3. Switching servers and proving they answer the same](#i-3-switching-servers-and-proving-they-answer-the-same)
+- [I-4. Worker mode: boot once, serve many, and the state leaks](#i-4-worker-mode-boot-once-serve-many-and-the-state-leaks)
+- [I-5. Measuring fairly, and what the numbers say](#i-5-measuring-fairly-and-what-the-numbers-say)
+- [I-6. Slow I/O, worker pools and a health check that stays fast](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast)
+- [I-7. Letting the web server send the file](#i-7-letting-the-web-server-send-the-file)
+- [I-8. Early Hints and compression](#i-8-early-hints-and-compression)
+- [I-9. HTTP/3 and QUIC](#i-9-http3-and-quic)
+- [I-10. Live updates with Mercure](#i-10-live-updates-with-mercure)
+- [I-11. Coming next: metrics, logs and developer experience](#i-11-coming-next-metrics-logs-and-developer-experience)
+
+**Part II — AI**
+
+- [II-1. How an LLM call works end to end](#ii-1-how-an-llm-call-works-end-to-end)
+- [II-2. Streaming an AI answer](#ii-2-streaming-an-ai-answer)
+- [II-3. Running the model locally](#ii-3-running-the-model-locally)
+- [II-4. Providers, the cloud option and the settings page](#ii-4-providers-the-cloud-option-and-the-settings-page)
+- [II-5. Local models and their limits](#ii-5-local-models-and-their-limits)
+- [II-6. From words to filters: structured output with a validation boundary](#ii-6-from-words-to-filters-structured-output-with-a-validation-boundary)
+- [II-7. Rating a listing: a closed label set, computed facts and a threshold](#ii-7-rating-a-listing-a-closed-label-set-computed-facts-and-a-threshold)
+- [II-8. Reading a car photo: vision extraction](#ii-8-reading-a-car-photo-vision-extraction)
+- [II-9. Embeddings and vector search](#ii-9-embeddings-and-vector-search)
+- [II-10. Chunking and hybrid retrieval](#ii-10-chunking-and-hybrid-retrieval)
+- [II-11. Answering with citations: RAG, guards and the trace row](#ii-11-answering-with-citations-rag-guards-and-the-trace-row)
+- [II-12. Measuring RAG: recall@k, calibration and LLM grading](#ii-12-measuring-rag-recallk-calibration-and-llm-grading)
+- [II-13. Caching answers: exact keys, semantic neighbours and invalidation](#ii-13-caching-answers-exact-keys-semantic-neighbours-and-invalidation)
+- [II-14. Stop that really stops, and conversations](#ii-14-stop-that-really-stops-and-conversations)
+- [II-15. Similar photos and searching photos by text](#ii-15-similar-photos-and-searching-photos-by-text)
+- [II-16. Hybrid similarity and duplicate photos](#ii-16-hybrid-similarity-and-duplicate-photos)
+- [II-17. A model that decides when to search: tool calling](#ii-17-a-model-that-decides-when-to-search-tool-calling)
+- [II-18. Admin assistant: a hand-written tool loop](#ii-18-admin-assistant-a-hand-written-tool-loop)
+- [II-19. MCP server for the listing tools](#ii-19-mcp-server-for-the-listing-tools)
+- [II-20. Multi-step research agent](#ii-20-multi-step-research-agent)
+- [II-21. Prompt playground with versions](#ii-21-prompt-playground-with-versions)
+- [II-22. The AI lab UI: Inertia, Vue and streams in the browser](#ii-22-the-ai-lab-ui-inertia-vue-and-streams-in-the-browser)
+- [II-23. In-app guides and the homescreen](#ii-23-in-app-guides-and-the-homescreen)
+- [II-24. How the AI features are built: a map of the code](#ii-24-how-the-ai-features-are-built-a-map-of-the-code)
+- [Closing summary](#closing-summary)
+
+# Part I — The server
+
+Part I follows one request through the server. It starts with the app and the ways PHP can be run behind a web server, then how to switch between them and prove they answer the same, how worker mode changes what a request costs, how to measure that fairly, and then what a server can do for you: wait on slow I/O without going down, hand a download to the web server, send hints early, speak HTTP/3 and push live updates.
+
+## I-1. The app and one request
+
+*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.* <!-- history -->
+
+> This section was first written for nginx-fpm, a server that has since been removed (commit `719c0a5` is the last one that can switch to it). The steps below follow the default server; where nginx-fpm differed, the text says so. The servers that remain are set out in section [I-3](#i-3-switching-servers-and-proving-they-answer-the-same).<!-- /history -->
 
 **What it is.** A small car marketplace on Laravel 13 and PHP 8.4: 500 dealers and 50 000 listings in PostgreSQL 16, with Redis for cache and sessions. It runs in DDEV, which starts a `web` container (nginx + PHP-FPM until `ddev setup` switches it to the default server), a `db` container and a `redis` container behind a shared router.
 
 **One request, step by step** (`GET /listings?make=BMW`):
 
 1. The browser connects to `https://ai-lab.ddev.site`. The DDEV router (Traefik) ends TLS and forwards plain HTTP to the `web` container.
-2. nginx sees a path that is not a file and passes it over FastCGI to a free PHP-FPM child process.
-3. That child boots Laravel from scratch: autoloader, service providers, config, routes. With OPcache, the compiled PHP is already in shared memory, so "boot" means running code, not parsing it.
+2. Caddy sees a path that is not a file and hands it to a free FrankenPHP PHP thread inside the same process. <!-- history -->On nginx-fpm, nginx passed it over FastCGI to a free PHP-FPM child process instead.<!-- /history -->
+3. That thread boots Laravel from scratch: autoloader, service providers, config, routes. With OPcache, the compiled PHP is already in shared memory, so "boot" means running code, not parsing it.
 4. The router matches `ListListingsController`. A form request validates the filters (422 on bad input). `ListingSearchService` asks `EloquentListingRepository` for one page, ordered newest first.
 5. PostgreSQL answers using the indexes from the migrations. The controller wraps the result in the `ApiResponse` envelope.
-6. The child sends the response back through nginx and then throws away everything it built. The next request boots Laravel again.
+6. The thread sends the response back through Caddy and then throws away everything it built. The next request boots Laravel again.
+
+**On the default server.** `frankenphp` in classic mode embeds PHP in the web server's own threads instead of a separate pool of processes ([I-2](#i-2-four-ways-to-run-php-behind-a-web-server-and-the-one-that-stayed)). Each request still boots Laravel from scratch; removing that cost is what worker mode does ([I-4](#i-4-worker-mode-boot-once-serve-many-and-the-state-leaks)).
 
 **In this repo.**
 - Routes: [`routes/catalog.php`](../routes/catalog.php) and [`routes/api.php`](../routes/api.php).
@@ -32,37 +98,15 @@ It is a living document: every slice adds or updates its section when it ships (
 
 **Read next.** [Laravel request lifecycle](https://laravel.com/docs/13.x/lifecycle) · [DDEV architecture](https://docs.ddev.com/en/stable/users/usage/architecture/) · [PHP OPcache](https://www.php.net/manual/en/book.opcache.php)
 
-## 2. Switching servers and proving they answer the same
+## I-2. Four ways to run PHP behind a web server, and the one that stayed
 
-*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.*
+*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.* <!-- history -->
 
-> The default server is now `frankenphp` (`ddev setup` on a fresh clone switches to it; `ddev server default` returns to it). Only the FrankenPHP family is left: `frankenphp-worker` and `frankenphp-octane` are one `ddev server <name>` away. nginx-fpm, apache-fpm and OpenLiteSpeed were removed after commit `719c0a5`; the text below keeps how they worked.
-
-**What it is.** One command, `ddev server <name>`, swaps the web server without touching `.ddev/config.yaml`. It writes a gitignored overlay `.ddev/config.zz-server.yaml`. DDEV merges every `config.*.yaml` over `config.yaml` in name order, so `zz` wins. Then it restarts the project. A parity script then proves the three remaining modes return the same responses.
-
-**How parity works.** `bench/parity.sh capture` sends 7 fixed requests and stores, per request, the status, the media type and a SHA-256 of the body. `compare` diffs two snapshots line by line. A few differences are expected and normalised:
-- the `/up` page prints its own render time, which is masked;
-- the media type is compared without its charset, because some servers added `; charset=utf-8` to JSON (nginx did);
-- a server on its own port gets its base URL rewritten before hashing (OpenLiteSpeed did).
-
-The `Server` header must match the active server, so a snapshot can never be filed under the wrong name.
-
-**In this repo.**
-- The switch command: [`.ddev/commands/host/server`](../.ddev/commands/host/server).
-- The scripts: [`bench/parity.sh`](../bench/parity.sh) and [`bench/versions.sh`](../bench/versions.sh); snapshots in [`bench/parity/`](../bench/parity/).
-- Versions and parity results: [`BENCHMARKS.md`](../BENCHMARKS.md).
-- How to switch: the "Switching servers" section of the [README](../README.md).
-- Spec: [`.ai/specs/spec-20261029-1013-apache-fpm-parity/`](../.ai/specs/spec-20261029-1013-apache-fpm-parity/).
-
-**Read next.** [DDEV config overrides](https://docs.ddev.com/en/stable/users/extend/customization-extendibility/) · [DDEV custom commands](https://docs.ddev.com/en/stable/users/extend/custom-commands/)
-
-## 3. Four ways to run PHP behind a web server
-
-*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.*
-
-> The first three rows describe servers that were removed after commit `719c0a5`; only the FrankenPHP family remains, and section 4 covers its worker modes.
+> The first three rows describe servers that were removed after commit `719c0a5`; only the FrankenPHP family remains, and section [I-4](#i-4-worker-mode-boot-once-serve-many-and-the-state-leaks) covers its worker modes.<!-- /history -->
 
 **What it is.** The servers differ less as HTTP servers than in *how PHP is executed*:
+
+<!-- history -->
 
 | Server | How PHP runs | Concurrency unit | PHP build |
 |---|---|---|---|
@@ -71,20 +115,50 @@ The `Server` header must match the active server, so a snapshot can never be fil
 | openlitespeed | OpenLiteSpeed talks LSAPI to its own `lsphp` processes, in a separate container on port 8091 | lsphp process | NTS |
 | frankenphp | PHP is embedded in one Go process (Caddy + FrankenPHP); each request runs on a thread | PHP thread | **ZTS** |
 
-**Why FrankenPHP needs ZTS PHP.** With processes, each request has its own memory, so PHP's globals are safe. With threads, many requests share one process, so PHP must keep per-request state in thread-local storage. That is the "Zend Thread Safety" (ZTS) build, and every extension must be built for it, hence the `php-zts-*` packages. ZTS costs a little on every access to global state. That is one possible reason FrankenPHP classic measured slower on the database-bound search (section 6).
+<!-- /history -->
 
-**How the extra servers are wired.** FrankenPHP and OpenLiteSpeed are not DDEV web server types. Their files live in committed "stashes" under [`.ddev/servers/`](../.ddev/servers/), and `ddev server` copies them into `.ddev/` on switch and removes them when you leave.
-- **FrankenPHP:** the stash is the `ddev/ddev-frankenphp` add-on v1.3.0. Its Dockerfile switches the container's PHP to ZTS, which is why it must never stay active on the FPM servers.
-- **OpenLiteSpeed:** runs as an extra container. Its OPcache settings were matched to the FPM pool, because lsphp's defaults (128 MB, 10 000 files) would overflow on this app's ~10 600 PHP files.
+**Why FrankenPHP needs ZTS PHP.** With processes, each request has its own memory, so PHP's globals are safe. With threads, many requests share one process, so PHP must keep per-request state in thread-local storage. That is the "Zend Thread Safety" (ZTS) build, and every extension must be built for it, hence the `php-zts-*` packages. ZTS costs a little on every access to global state. That is one possible reason FrankenPHP classic measured slower on the database-bound search (section [I-5](#i-5-measuring-fairly-and-what-the-numbers-say)).
+
+**How the FrankenPHP servers are wired.** FrankenPHP is not a DDEV web server type. Its files live in committed "stashes" under [`.ddev/servers/`](../.ddev/servers/), and `ddev server` copies them into `.ddev/` on switch and removes them when you leave.
+- **FrankenPHP:** the stash is the `ddev/ddev-frankenphp` add-on v1.3.0. Its Dockerfile switches the container's PHP to ZTS. <!-- history -->While the FPM servers existed, that was why the stash must never stay active on them.<!-- /history -->
+- <!-- history -->**OpenLiteSpeed (removed):** was not a DDEV web server type either and ran as an extra container. Its OPcache settings were matched to the FPM pool, because lsphp's defaults (128 MB, 10 000 files) would overflow on this app's ~10 600 PHP files.<!-- /history -->
+
+**How the server set came down to one family.** <!-- history -->The lab started as a comparison of four ways to run PHP: nginx with PHP-FPM, Apache with PHP-FPM, OpenLiteSpeed and FrankenPHP. SL-47 (spec [`spec-20261109-1040-frankenphp-default`](../.ai/specs/spec-20261109-1040-frankenphp-default/)) made FrankenPHP with Mercure the default server. SL-50 (spec [`spec-20261110-1617-frankenphp-only`](../.ai/specs/spec-20261110-1617-frankenphp-only/)) then removed nginx-fpm, apache-fpm and OpenLiteSpeed on 2026-11-10, because the lab became a study lab for AI features and only the FrankenPHP family is worth carrying. Commit `719c0a5` is the last one that can switch to the removed servers.<!-- /history --> What stayed is `frankenphp` (classic), `frankenphp-worker` and `frankenphp-octane`. The measurements taken on the removed servers stay in this guide and in [`BENCHMARKS.md`](../BENCHMARKS.md), marked as history.
 
 **In this repo.**
-- Stash: [`.ddev/servers/frankenphp/`](../.ddev/servers/frankenphp/); the OpenLiteSpeed stash was deleted with the server.
+- Stash: [`.ddev/servers/frankenphp/`](../.ddev/servers/frankenphp/);<!-- history --> the OpenLiteSpeed stash was deleted with the server<!-- /history -->.
 - The PHP settings table per server: [`BENCHMARKS.md`](../BENCHMARKS.md).
-- Specs: [FrankenPHP](../.ai/specs/spec-20261029-1221-frankenphp-classic/) and [OpenLiteSpeed](../.ai/specs/spec-20261029-2027-openlitespeed/).
+- Specs: [FrankenPHP](../.ai/specs/spec-20261029-1221-frankenphp-classic/)<!-- history --> and [OpenLiteSpeed](../.ai/specs/spec-20261029-2027-openlitespeed/)<!-- /history -->.
 
-**Read next.** [PHP-FPM configuration](https://www.php.net/manual/en/install.fpm.configuration.php) · [nginx FastCGI module](https://nginx.org/en/docs/http/ngx_http_fastcgi_module.html) · [Apache mod_proxy_fcgi](https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html) · [OpenLiteSpeed docs](https://docs.openlitespeed.org/) · [FrankenPHP docs](https://frankenphp.dev/docs/) · [FrankenPHP known issues](https://frankenphp.dev/docs/known-issues/) · [DDEV FrankenPHP add-on](https://github.com/ddev/ddev-frankenphp)
+Not measured: this section says which servers existed and how each one runs PHP; the numbers for the FrankenPHP family are in [I-5](#i-5-measuring-fairly-and-what-the-numbers-say).
 
-## 4. Worker mode: boot once, serve many
+**Read next.** [PHP-FPM configuration](https://www.php.net/manual/en/install.fpm.configuration.php) · [nginx FastCGI module](https://nginx.org/en/docs/http/ngx_http_fastcgi_module.html)<!-- history --> · [Apache mod_proxy_fcgi](https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html) · [OpenLiteSpeed docs](https://docs.openlitespeed.org/)<!-- /history --> · [FrankenPHP docs](https://frankenphp.dev/docs/) · [FrankenPHP known issues](https://frankenphp.dev/docs/known-issues/) · [DDEV FrankenPHP add-on](https://github.com/ddev/ddev-frankenphp)
+
+## I-3. Switching servers and proving they answer the same
+
+*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.* <!-- history -->Rows for the removed servers are kept for comparison.<!-- /history -->
+
+> The default server is now `frankenphp` (`ddev setup` on a fresh clone switches to it; `ddev server default` returns to it). Only the FrankenPHP family is left: `frankenphp-worker` and `frankenphp-octane` are one `ddev server <name>` away. The other servers were removed after commit `719c0a5` ([I-2](#i-2-four-ways-to-run-php-behind-a-web-server-and-the-one-that-stayed)); the text below keeps how they worked.
+
+**What it is.** One command, `ddev server <name>`, swaps the web server without touching `.ddev/config.yaml`. It writes a gitignored overlay `.ddev/config.zz-server.yaml`. DDEV merges every `config.*.yaml` over `config.yaml` in name order, so `zz` wins. Then it restarts the project. A parity script then proves the three remaining modes return the same responses.
+
+**How parity works.** `bench/parity.sh capture` sends 7 fixed requests and stores, per request, the status, the media type and a SHA-256 of the body. `compare` diffs two snapshots line by line. A few differences are expected and normalised:
+- the `/up` page prints its own render time, which is masked;
+- the media type is compared without its charset, because some servers added `; charset=utf-8` to JSON (nginx did);
+- a server on its own port gets its base URL rewritten before hashing (<!-- history -->OpenLiteSpeed did<!-- /history -->).
+
+The `Server` header must match the active server, so a snapshot can never be filed under the wrong name.
+
+**In this repo.**
+- The switch command: [`.ddev/commands/host/server`](../.ddev/commands/host/server).
+- The scripts: [`bench/parity.sh`](../bench/parity.sh) and [`bench/versions.sh`](../bench/versions.sh); snapshots in [`bench/parity/`](../bench/parity/).
+- Versions and parity results: [`BENCHMARKS.md`](../BENCHMARKS.md).
+- How to switch: the "Switching servers" section of the [README](../README.md).
+- <!-- history -->Spec: [`.ai/specs/spec-20261029-1013-apache-fpm-parity/`](../.ai/specs/spec-20261029-1013-apache-fpm-parity/).<!-- /history -->
+
+**Read next.** [DDEV config overrides](https://docs.ddev.com/en/stable/users/extend/customization-extendibility/) · [DDEV custom commands](https://docs.ddev.com/en/stable/users/extend/custom-commands/)
+
+## I-4. Worker mode: boot once, serve many, and the state leaks
 
 **What it is.** In worker mode, PHP threads boot Laravel once and then loop, waiting for requests. Bootstrap cost disappears from every request after the first. The price is that anything kept in memory survives into the next request.
 
@@ -116,51 +190,7 @@ The `Server` header must match the active server, so a snapshot can never be fil
 
 **Read next.** [Laravel Octane](https://laravel.com/docs/13.x/octane) · [FrankenPHP worker mode](https://frankenphp.dev/docs/worker/) · [FrankenPHP configuration](https://frankenphp.dev/docs/config/)
 
-## 5. Measuring fairly
-
-*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.*
-
-**What it is.** A benchmark is only worth something if you can defend it. The harness enforces the rules instead of trusting you to remember them:
-- It refuses to run unless `APP_ENV=production`, `APP_DEBUG=false`, caches are built, OPcache is on, Xdebug is off and the git tree is clean (so every result has one commit).
-- Each run is a 30 s warm-up, then a 60 s measurement, repeated 3 times. The median by RPS is reported.
-- If the 3 runs differ by more than 5 % (spread = (max − min) / median), it reruns once, then marks the row `noisy`.
-- The load generator (oha for ping, k6 for search) runs in its own container capped at 2 CPUs and goes through the router like a browser.
-- "Fair" means 8 PHP workers everywhere with no recycling; "tuned" means the best of 8/16/32 per server.
-- Only ratios against nginx-fpm are compared, never absolute numbers from a laptop.
-
-**What the numbers mean.**
-- **RPS** is completed requests per second.
-- **p50/p95/p99** are the latencies that 50/95/99 % of requests stayed under. p95 and p99 show the slow tail an average hides.
-- **Spread** shows whether a result is repeatable.
-- **Where requests wait** when every worker is busy:
-  - FPM: in the socket's listen backlog;
-  - OpenLiteSpeed: in the LSAPI connection queue;
-  - FrankenPHP: in its request queue.
-
-  Latency rises before RPS falls.
-
-**In this repo.**
-- The scripts: [`bench/run.sh`](../bench/run.sh) (one scenario), [`bench/suite.sh`](../bench/suite.sh) (the whole matrix), [`bench/concurrency.sh`](../bench/concurrency.sh), [`bench/timeouts.sh`](../bench/timeouts.sh), [`bench/summary.php`](../bench/summary.php) and the k6 script [`bench/k6-search.js`](../bench/k6-search.js).
-- oha has no public image, so [`bench/oha/Dockerfile`](../bench/oha/Dockerfile) builds it from a checksum-pinned release.
-- Spec: [`.ai/specs/spec-20261030-1806-bench-harness/`](../.ai/specs/spec-20261030-1806-bench-harness/).
-
-**Read next.** [k6 docs](https://grafana.com/docs/k6/latest/) · [oha](https://github.com/hatoo/oha) · [Brendan Gregg on latency percentiles and methodology](https://www.brendangregg.com/methodology.html)
-
-## 6. What was measured (SL-06)
-
-*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.*
-
-Full tables, the Expectations written before the runs and the Surprises are in [`BENCHMARKS.md`](../BENCHMARKS.md). The short version:
-
-- **Swapping the web server alone buys almost nothing.** Tuned, `/api/ping` landed within 7 % across all four servers (nginx-fpm 6205 RPS, FrankenPHP classic 6254).
-- **FrankenPHP classic was 14 % slower on the database-bound search** (537 vs 625 RPS), with the highest CPU of the four.
-- **16 workers beat 8 on search for every server, and 32 never won.** At 8, workers were waiting on PostgreSQL while CPU sat idle.
-- **Timeouts are not what they seem.** With every limit at 10 s, a 30 s `sleep()` was *not* stopped by PHP's `max_execution_time` under PHP-FPM or lsphp: on Linux, the NTS build counts CPU time, and sleeping uses none. The web server's own timeout ended the request (504 from nginx and Apache, 500 from OpenLiteSpeed). Only FrankenPHP's thread-safe PHP, which uses wall-clock timers, stopped it itself.
-- **Noise is real.** The very first run of the suite was so noisy (15.7 % spread after a rerun) that the fair ping comparison is marked untrustworthy. That is the reason for the spread rule.
-
-**Read next.** [PHP `max_execution_time`](https://www.php.net/manual/en/info.configuration.php#ini.max-execution-time) · [FPM `request_terminate_timeout`](https://www.php.net/manual/en/install.fpm.configuration.php) · [nginx `fastcgi_read_timeout`](https://nginx.org/en/docs/http/ngx_http_fastcgi_module.html#fastcgi_read_timeout) · [Apache `ProxyTimeout`](https://httpd.apache.org/docs/2.4/mod/mod_proxy.html#proxytimeout)
-
-## 7. State leaks in worker mode
+### State leaks in worker mode
 
 **What it is.** A classic server boots the app for every request and throws everything away afterwards. A worker boots once and serves many requests, so whatever outlives a request can be seen by the next one, possibly from another user. The lab in this repo makes each kind of leak visible and shows its fix.
 
@@ -196,7 +226,51 @@ Each response has `requested`, `observed` and `leaked` (true when they differ). 
 
 **Read next.** [Laravel Octane: dependency injection and Octane](https://laravel.com/docs/13.x/octane#dependency-injection-and-octane) · [Laravel Octane](https://laravel.com/docs/13.x/octane) · [FrankenPHP worker mode](https://frankenphp.dev/docs/worker/)
 
-## 8. Classic vs worker mode: what the numbers say
+## I-5. Measuring fairly, and what the numbers say
+
+*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.* <!-- history -->Figures for the removed servers are kept for comparison.<!-- /history -->
+
+**What it is.** A benchmark is only worth something if you can defend it. The harness enforces the rules instead of trusting you to remember them:
+- It refuses to run unless `APP_ENV=production`, `APP_DEBUG=false`, caches are built, OPcache is on, Xdebug is off and the git tree is clean (so every result has one commit).
+- Each run is a 30 s warm-up, then a 60 s measurement, repeated 3 times. The median by RPS is reported.
+- If the 3 runs differ by more than 5 % (spread = (max − min) / median), it reruns once, then marks the row `noisy`.
+- The load generator (oha for ping, k6 for search) runs in its own container capped at 2 CPUs and goes through the router like a browser.
+- "Fair" means 8 PHP workers everywhere with no recycling; "tuned" means the best of 8/16/32 per server.
+- Only ratios against a baseline are compared, never absolute numbers from a laptop (<!-- history -->in the first runs the baseline was nginx-fpm, the first server in the suite, since removed<!-- /history -->).
+
+**What the numbers mean.**
+- **RPS** is completed requests per second.
+- **p50/p95/p99** are the latencies that 50/95/99 % of requests stayed under. p95 and p99 show the slow tail an average hides.
+- **Spread** shows whether a result is repeatable.
+- **Where requests wait** when every worker is busy:
+  - <!-- history -->PHP-FPM (removed): requests waited in the socket's listen backlog;<!-- /history -->
+  - <!-- history -->OpenLiteSpeed (removed): requests waited in the LSAPI connection queue;<!-- /history -->
+  - FrankenPHP: in its request queue.
+
+  Latency rises before RPS falls.
+
+**In this repo.**
+- The scripts: [`bench/run.sh`](../bench/run.sh) (one scenario), [`bench/suite.sh`](../bench/suite.sh) (the whole matrix), [`bench/concurrency.sh`](../bench/concurrency.sh), [`bench/timeouts.sh`](../bench/timeouts.sh), [`bench/summary.php`](../bench/summary.php) and the k6 script [`bench/k6-search.js`](../bench/k6-search.js).
+- oha has no public image, so [`bench/oha/Dockerfile`](../bench/oha/Dockerfile) builds it from a checksum-pinned release.
+- Spec: [`.ai/specs/spec-20261030-1806-bench-harness/`](../.ai/specs/spec-20261030-1806-bench-harness/).
+
+**Read next.** [k6 docs](https://grafana.com/docs/k6/latest/) · [oha](https://github.com/hatoo/oha) · [Brendan Gregg on latency percentiles and methodology](https://www.brendangregg.com/methodology.html)
+
+### What was measured (SL-06)
+
+*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.* <!-- history -->
+
+Full tables, the Expectations written before the runs and the Surprises are in [`BENCHMARKS.md`](../BENCHMARKS.md). The short version:
+
+- **Swapping the web server alone buys almost nothing.** Tuned, `/api/ping` landed within 7 % across all four servers (nginx-fpm 6205 RPS, FrankenPHP classic 6254).
+- **FrankenPHP classic was 14 % slower on the database-bound search** (537 vs 625 RPS), with the highest CPU of the four.
+- **16 workers beat 8 on search for every server, and 32 never won.** At 8, workers were waiting on PostgreSQL while CPU sat idle.
+- **Timeouts are not what they seem.** With every limit at 10 s, a 30 s `sleep()` was *not* stopped by PHP's `max_execution_time` under PHP-FPM or lsphp: on Linux, the NTS build counts CPU time, and sleeping uses none. The web server's own timeout ended the request (504 from nginx and Apache, 500 from OpenLiteSpeed). Only FrankenPHP's thread-safe PHP, which uses wall-clock timers, stopped it itself.
+- **Noise is real.** The very first run of the suite was so noisy (15.7 % spread after a rerun) that the fair ping comparison is marked untrustworthy. That is the reason for the spread rule.
+
+**Read next.** [PHP `max_execution_time`](https://www.php.net/manual/en/info.configuration.php#ini.max-execution-time) · [FPM `request_terminate_timeout`](https://www.php.net/manual/en/install.fpm.configuration.php) · [nginx `fastcgi_read_timeout`](https://nginx.org/en/docs/http/ngx_http_fastcgi_module.html#fastcgi_read_timeout) · [Apache `ProxyTimeout`](https://httpd.apache.org/docs/2.4/mod/mod_proxy.html#proxytimeout)<!-- /history -->
+
+### Classic vs worker mode: what the numbers say
 
 **What it is.** The same app on the same FrankenPHP binary, run two ways. Classic: every request boots Laravel, handles the request, and throws everything away. Worker: a long-running PHP script boots Laravel once, then loops, handing each incoming request to the booted app (Octane's daemon and the add-on worker both run Octane's loop: `vendor/laravel/octane/bin/frankenphp-worker.php`, which the add-on worker loads through [`public/frankenphp-worker.php`](../public/frankenphp-worker.php)). Full tables are in [`BENCHMARKS.md`](../BENCHMARKS.md#classic-vs-worker-2026-11-02).
 
@@ -215,7 +289,7 @@ After both fixes: the static-array leak grows a steady 0.5 KB per request (11.3 
 
 **`MAX_REQUESTS=0` does not mean unlimited.** Octane's worker loop is `while ($requestCount < $maxRequests && frankenphp_handle_request(...))`. With 0 the condition is false before the first request, so the worker exits at once and FrankenPHP keeps restarting it. "No recycling" in this repo is a large number (1 000 000). The default when the variable is unset is 1 000; the add-on worker here uses 500.
 
-**When recycling is a fix and when it hides a leak.** With max-requests 500 the leaking worker restarted 20 times and peaked at 6.3 MB instead of 11.3 MB. That is a fix for memory you cannot control (a library that grows slowly, fragmentation). For your own leak it only hides the symptom: inside each stretch the slope is unchanged, and wrong answers caused by leaked state (section 7) still happen until the restart. Find the leak with the curve, fix it, and keep recycling as a safety net.
+**When recycling is a fix and when it hides a leak.** With max-requests 500 the leaking worker restarted 20 times and peaked at 6.3 MB instead of 11.3 MB. That is a fix for memory you cannot control (a library that grows slowly, fragmentation). For your own leak it only hides the symptom: inside each stretch the slope is unchanged, and wrong answers caused by leaked state (section [I-4](#i-4-worker-mode-boot-once-serve-many-and-the-state-leaks)) still happen until the restart. Find the leak with the curve, fix it, and keep recycling as a safety net.
 
 **Noise.** Most rows were marked noisy, worst on classic ping, which keeps almost every CPU busy and so feels any other app on the host. The same Octane setting measured twice gave 10 604 and 7 817 RPS. Trust a ratio only when it is clearly bigger than the spread.
 
@@ -227,9 +301,279 @@ After both fixes: the static-array leak grows a steady 0.5 KB per request (11.3 
 
 **Read next.** [Laravel Octane](https://laravel.com/docs/13.x/octane) · [FrankenPHP worker mode](https://frankenphp.dev/docs/worker/) · [PHP garbage collection: collecting cycles](https://www.php.net/manual/en/features.gc.collecting-cycles.php) · [`gc_collect_cycles()`](https://www.php.net/manual/en/function.gc-collect-cycles.php) · [PostgreSQL: `pg_stat_database`](https://www.postgresql.org/docs/16/monitoring-stats.html#MONITORING-PG-STAT-DATABASE-VIEW)
 
----
+## I-6. Slow I/O, worker pools and a health check that stays fast
 
-## 9. Streaming an AI answer
+**What it is.** A PHP request keeps its worker for as long as it waits: on a database, on another API, or on a model writing an answer. A server has a fixed or bounded number of workers, so enough slow requests fill them all, and everything else, the cheap health check included, waits in the same queue. This section measures that, with a slow HTTP call and with open AI answer streams, on FrankenPHP<!-- history --> and, before it was removed, on PHP-FPM<!-- /history -->.
+
+**The pieces.**
+- [`ShowSlowListingController`](../app/Http/Controllers/ShowSlowListingController.php) and [`VinReportService`](../app/Services/VinReportService.php): `GET /listings/{id}/slow` loads the listing, then calls a stub VIN API through [`VinStubClient`](../app/Support/VinStubClient.php) and waits for it. It is a lab endpoint: behind the debug-routes gate and its own throttle, because holding a worker on purpose is exactly what a public endpoint must not allow.
+- The stub, [`.ddev/vinstub/server.mjs`](../.ddev/vinstub/server.mjs), runs in its own Node container ([`docker-compose.vinstub.yaml`](../.ddev/docker-compose.vinstub.yaml)) and answers after 300 ms. If it were a Laravel route, the wait would take a second PHP worker and double the effect being measured; Node's event loop holds many sleeping requests at once, like a real external API.
+- [`HealthzController`](../app/Http/Controllers/HealthzController.php) on `GET /healthz`, loaded from [`routes/health.php`](../routes/health.php) with no middleware group: no session (no Redis write, no cookie), no database, no outbound call. It answers 503 in maintenance mode, because the global maintenance middleware still runs, and a server in maintenance should not get traffic.
+
+**One slow request, step by step.**
+1. <!-- history -->On **nginx-fpm** (removed), nginx passed the request to the FPM pool. A free child took it; with `pm=static` and 8 children, at most 8 requests ran at once and the rest waited in the pool's listen queue. The child ran Laravel, which called the stub and blocked for 300 ms. Only when it answered was the child free for the next request in the queue.<!-- /history -->
+2. On **frankenphp** Caddy hands the request to one of FrankenPHP's PHP threads. With a fixed `num_threads 14`, at most 14 run at once. With `max_threads 64`, FrankenPHP starts more threads while requests are waiting, up to 64; `max_wait_time 5s` makes a request that waited 5 s for a thread fail instead of waiting forever.
+3. `/healthz` arrives in the same queue. It has nothing to do, but it cannot start until a worker is free.
+
+**What was measured** ([`bench/slow-load.sh`](../bench/slow-load.sh), run 8 times by [`bench/slow-load-matrix.sh`](../bench/slow-load-matrix.sh); full tables and the chart in the "Slow I/O and the health check (2026-11-03)" section of [`BENCHMARKS.md`](../BENCHMARKS.md)). 100 users on the slow endpoint, or 30 users holding describe streams of about 6 s each ([`bench/k6-sse.js`](../bench/k6-sse.js), fake provider, no GPU), while a separate probe sends 5 requests per second to `/healthz`:
+
+<!-- history -->
+
+| Configuration | Health p95, slow HTTP | Health p95, AI streams |
+|---|---|---|
+| nginx-fpm static 8 | 4003 ms | 10 000 ms, 299 of 300 timed out |
+| nginx-fpm static 32 | 998 ms | 15 ms |
+| frankenphp fixed 14 | 2369 ms | 10 000 ms, 118 of 300 timed out |
+| frankenphp autoscale 14→64 | 276 ms | 16 ms |
+
+<!-- /history -->
+
+- **Throughput = workers ÷ time held.** 8 children at 300 ms each can serve at most 26.7 requests per second; measured 23.9. 32 children: 107, measured 93.5. 14 threads: 46.7, measured 41.2. 64 threads: 213, measured 197.8. That is Little's law; once you know how long a request holds a worker, you know the ceiling.
+- **`pm.max_children` vs threads.** An FPM child is a whole process (its own memory, its own opcache view); a FrankenPHP thread shares one process. For waiting, that difference does not matter: 14 threads did worse than 32 children because 14 is less than 32. What mattered was that FrankenPHP could grow the pool under load.
+- **An AI answer is slow I/O that lasts 6 s.** With direct SSE (section [II-2](#ii-2-streaming-an-ai-answer)) each open answer holds a worker until `[DONE]`. 30 open answers on 8 children made each one wait behind three others (24.8 s instead of 6.1 s) and starved the health check completely. That is the price of the direct variant. The way around it is to take the answer off the web request: a short request queues a job and returns, and the answer reaches the browser through a hub, so a long answer holds a queue worker, not a web worker. The lab does not build that variant: SL-14 (Reverb) and SL-21 (queued streaming via Mercure) were dropped.
+- **No 502 or 504 appeared.** Every layer in front of PHP waited longer than the probe's 10 s, so the failure showed up as health checks that never answered. A real load balancer with a 2–5 s health timeout would have taken this server out of rotation while it was working correctly.
+
+**When to choose what.**
+- Size the pool for the slow part: workers ≥ concurrent slow requests (Little's law), within memory.
+- Prefer a pool that can grow (FrankenPHP `max_threads`, FPM `pm=dynamic` up to a high `max_children`) when load comes in bursts.
+- Move long work off the request: a queued job plus a broadcast (for example through the Mercure hub) for AI answers that many people stream at once, or for anything longer than a few seconds.
+- Keep the health check on the cheapest path and give it its own lane where the server supports it (a separate small FPM pool or port), because no setting here gives it priority inside the shared queue.
+
+**In this repo.** Tests: [`HealthzTest`](../tests/Feature/HealthzTest.php), [`SlowListingTest`](../tests/Feature/SlowListingTest.php), `BenchSlowLoadTest`, `BenchConcurrencyTest`, `VinStubTest`. Results: [`bench/results/slow-load/`](../bench/results/slow-load/). Spec: [`.ai/specs/spec-20261104-0001-slow-io-healthz/`](../.ai/specs/spec-20261104-0001-slow-io-healthz/).
+
+**Read next.** [PHP-FPM configuration](https://www.php.net/manual/en/install.fpm.configuration.php) · [FrankenPHP: performance and `max_threads`](https://frankenphp.dev/docs/performance/) · [FrankenPHP configuration](https://frankenphp.dev/docs/config/) · [Little's law](https://en.wikipedia.org/wiki/Little%27s_law) · [oha](https://github.com/hatoo/oha)
+
+## I-7. Letting the web server send the file
+
+**What it is.** A 50 MiB CSV export can be sent two ways. In **stream** mode PHP reads the file and writes it to the client in chunks, so a PHP worker is busy until the last byte has left, however slowly the client reads. In **offload** mode PHP only decides that the download is allowed, then answers with an empty body and a header that names the file; the web server reads the file from disk and sends it itself, and the PHP worker is free again after a few milliseconds. This is section [I-6](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast)'s lesson (a worker that waits is a worker lost) applied to a download.
+
+**The pieces.**
+- `php artisan exports:generate` ([`ExportsGenerateCommand`](../app/Console/Commands/ExportsGenerateCommand.php), [`ExportFileService`](../app/Services/ExportFileService.php)) writes `listings.csv` to a temp file, renames it into place and records its size and sha256 in the `exports` table, so a reader never sees a half-written file.
+- `GET /exports/{id}?mode=offload|stream` ([`ServeExportController`](../app/Http/Controllers/ServeExportController.php), [`ExportDeliveryService`](../app/Services/ExportDeliveryService.php)) is a lab route behind the debug-routes gate and its own `exports` throttle, because every download holds bandwidth.
+- [`OffloadHeader`](../app/Enums/OffloadHeader.php) holds the header spellings. [`ExportStreamer`](../app/Support/ExportStreamer.php) is the 64 KiB-chunk stream with a flush after each chunk, stopping if the client has gone (the abort watcher from section [II-14](#ii-14-stop-that-really-stops-and-conversations)).
+- [`ExportDownloadLog`](../app/Support/ExportDownloadLog.php) appends one JSON line per download to `storage/logs/exports.jsonl` from a shutdown callback: `php_held_ms`, peak memory, CPU and `bytes_sent_by_php`. For an offload download `bytes_sent_by_php` is 0, which is how the bench proves PHP did not send the file.
+
+**One offload download, step by step.**
+1. The client asks for `/exports/listings?mode=offload`. The web server passes it to PHP like any request.
+2. Laravel checks the debug gate and the throttle, finds the export record and answers 200 with no body, `Content-Length`, `Content-Disposition: attachment`, `X-Export-Mode: offload` and one hand-off header. The PHP worker finishes and goes back to the pool.
+3. The web server sees the hand-off header in PHP's response, drops the empty body and sends the named file to the client by itself. It can do this for 25 s, or for a client that stops and restarts with a `Range` request, without a PHP worker involved.
+
+**The four header spellings.** If the header is unknown or the server cannot offload, the controller answers with `X-Export-Mode: stream-fallback` and streams the same bytes.
+
+<!-- history -->
+
+| Server | Header PHP sends | What the server config does |
+|---|---|---|
+| nginx-fpm | `X-Accel-Redirect: /_protected_exports/listings.csv` | An `internal` location `/_protected_exports/` aliased to `storage/app/exports/`. `internal` means a client asking for that URL directly gets 404. |
+| apache-fpm | `X-Sendfile: /var/www/html/storage/app/exports/listings.csv` | `mod_xsendfile` enabled, with the path allowed only under the exports directory. A direct request to `/storage/app/exports/` gets 403. |
+| frankenphp | `X-Sendfile` (same absolute path) | A Caddy `intercept` rule in the `export_offload` snippet matches `X-Sendfile` for the exports directory only and serves the file with a `file_server` rooted there. |
+| openlitespeed | `X-LiteSpeed-Location: /_protected_exports/listings.csv` | A `/_protected_exports/` context mapped to the exports directory, with its own `rewrite { enable 0 }` (otherwise the Laravel front-controller rewrite swallows the redirected URI) and a rewrite rule that answers 403 to direct requests, because OpenLiteSpeed has no "internal" flag. |
+
+<!-- /history -->
+
+**One offload per server.** The same request, `/exports/listings?mode=offload`, on each server it ran on: who reads the file, and when the PHP worker is free. <!-- history -->
+- **nginx-fpm** (removed): PHP-FPM returned the empty response with `X-Accel-Redirect` to nginx, and the FPM worker was free as soon as that response was written. nginx itself read the file from the internal `/_protected_exports/` location and sent it, with `Range` support.
+- **apache-fpm** (removed): PHP-FPM returned `X-Sendfile`. The FPM worker was free once the response was written; Apache's `mod_xsendfile` output filter then replaced the empty body with the file and Apache read it from disk.<!-- /history -->
+- **frankenphp**: the PHP thread runs inside the Caddy process and is free once the handler returns the response with `X-Sendfile`. The `intercept` handler then sees the header and a `file_server` reads the file, so the slow client occupies a Caddy connection, not a PHP thread.
+- **openlitespeed** (removed): <!-- history -->the LSAPI PHP process returned `X-LiteSpeed-Location` and was free at once. OpenLiteSpeed re-routed the request internally to the `/_protected_exports/` context and served the file from there.<!-- /history -->
+
+**Not covered.** Laravel Octane and the FrankenPHP worker mode are out of scope. In a long-lived worker the process does not end between requests, so shutdown functions do not run per request and the `ExportDownloadLog` line (written from a shutdown callback) would be missing or misattributed. The offload path also differs there, since the worker hands responses to its host server in a different way than classic FPM or the per-request FrankenPHP mode measured here.
+
+<!-- history -->**Image rebuild cost.** apache-fpm needs `mod_xsendfile`, which `.ddev/web-build/Dockerfile` installs with `apt-get` as an extra step of the web image build. The first `ddev start` or `ddev restart` after adding or editing that file rebuilds the web image, which takes noticeably longer than a normal restart and needs network access; later restarts reuse the cached image. The extra layer is in the image for every server, not only apache-fpm.<!-- /history -->
+
+**Why the path must be restricted.** The hand-off header is a request from PHP to the web server: "read this file for me". If the application ever lets a user influence that path, or the server accepts any path, the header turns into a file-disclosure hole. So every config serves only the exports directory, the exports directory is not reachable by URL, and the checks in `manual-test.md#step-3` ask each server for the internal location and for the storage path directly.
+
+**What was measured** ([`bench/export-load.sh`](../bench/export-load.sh), run 8 times by [`bench/export-load-matrix.sh`](../bench/export-load-matrix.sh); full table and chart in the "File downloads: offload vs PHP streaming (2026-11-04)" section of [`BENCHMARKS.md`](../BENCHMARKS.md)). 20 clients downloading the 50 MiB file at 2 MiB/s each (about 25 s per file) while a probe asks `/healthz` 5 times per second:
+
+<!-- history -->
+
+| Server | Mode | Health p95 | PHP held p95 |
+|---|---|---|---|
+| nginx-fpm | offload | 15 ms | 20 ms |
+| nginx-fpm | stream | 10 000 ms | 22 994 ms |
+| apache-fpm | offload | 16 ms | 23 ms |
+| apache-fpm | stream | 10 000 ms | 22 483 ms |
+| frankenphp | offload | 18 ms | 70 ms |
+| frankenphp | stream | 10 000 ms | 22 505 ms |
+| openlitespeed | offload | 19 ms | 42 ms |
+| openlitespeed | stream | 5189 ms | 15 704 ms |
+
+<!-- /history -->
+
+- **Streaming holds a worker for the whole download.** On FrankenPHP, PHP held the request for 22 505 ms at p95 when streaming and 70 ms with offload, and the health check p95 went from 10 000 ms to 18 ms. <!-- history -->In the same run on nginx-fpm and apache-fpm (removed), PHP held the request for 22.5 to 23.0 s at p95 and the health check timed out on 170 to 181 of 300 probes across the three servers; offload cut the hold to 20 to 70 ms and the health check answered in 15 to 19 ms with no timeouts.<!-- /history -->
+- <!-- history -->**OpenLiteSpeed (removed) was the exception, for a reason that is not a virtue.** It took PHP's output faster than the client read and buffered it, so PHP finished sooner (15.7 s at p95) and no health probe timed out, though the repeats varied by 44 %. The same buffering hid a disconnected client: PHP sent the whole 50 MiB even when the client left after 3 s.<!-- /history -->
+- **Memory was not the problem.** PHP's peak memory stayed at 2 MiB in stream mode too, because it reads 64 KiB at a time. A whole request cost about 6 ms of CPU with offload and 20 to 43 ms streamed, framework boot included. On FrankenPHP the CPU of one download cannot be read at all: `getrusage` counts the whole process, which holds every PHP thread and Caddy itself, so the bench reports n/a there.
+- **The client sees no difference.** Download p95 was 25.0 s in all 8 cells and every download had the right size; the first per client had the right sha256. Offload does not speed up a slow client, it stops that client from owning a worker.
+- **FrankenPHP worker and Octane modes stream.** Their Caddyfile has no `intercept`, so an `X-Sendfile` header would reach the client with the file's absolute path. The app sends the header only when the classic FrankenPHP config marks that it intercepts it (`EXPORTS_SENDFILE_INTERCEPT`), and falls back to streaming otherwise.
+
+**When to choose what.**
+- Offload any large file that PHP only has to authorise: exports, reports, invoices, media. Keep the authorisation in PHP and the sending in the server.
+- Stream from PHP only when the bytes must be produced or transformed on the way (an on-the-fly archive, a generated report too big to keep), and size the pool for it as in section [I-6](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast).
+- Treat the directory the server may serve as a security boundary: one directory, no user-controlled path, no direct URL.
+
+**In this repo.** Tests: `ExportGenerateTest`, `ServeExportTest`, `ExportOffloadConfigTest`, `BenchExportLoadTest`, `ExportLoadResultsTest`. Configs: [`.ddev/nginx_full/nginx-site.conf`](../.ddev/nginx_full/nginx-site.conf), the apache site config (removed in commit `719c0a5`), [`.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp`](../.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp). Results: [`bench/results/export-load/`](../bench/results/export-load/). Spec: [`.ai/specs/spec-20261104-1944-export-offload/`](../.ai/specs/spec-20261104-1944-export-offload/).
+
+**Read next.** [nginx: X-Accel-Redirect and `internal`](https://nginx.org/en/docs/http/ngx_http_core_module.html#internal) · [mod_xsendfile](https://tn123.org/mod_xsendfile/) · [Caddy `intercept`](https://caddyserver.com/docs/caddyfile/directives/intercept)<!-- history --> · [OpenLiteSpeed: X-LiteSpeed-Location](https://docs.openlitespeed.org/config/advanced/)<!-- /history --> · [FrankenPHP: X-Sendfile](https://frankenphp.dev/docs/x-sendfile/)
+
+## I-8. Early Hints and compression
+
+**What it is.** Two ways to make the same page arrive sooner without changing its HTML. A **`103 Early Hints`** is an interim response the server sends before the real one, carrying `Link` headers that name the CSS and JS the page will need. **Compression** shrinks the response body on the wire, and the client says what it can decode in `Accept-Encoding`.
+
+**What a 103 is.** HTTP allows several responses to one request: any number of 1xx responses, then the final one. The 103 has no body, only `Link: <url>; rel=preload` headers, and the browser starts fetching those files while the server is still working. Browsers use it only over HTTP/2 or HTTP/3 (HTTP/1.1 clients ignore or mishandle 1xx responses), and only on a connection they trust: Chrome drops hints on a connection with a certificate error.
+
+**Why before the slow work.** The hint is worth the time PHP spends between receiving the request and sending the first byte of the page. It must therefore be sent at the start of the request, before the database and rendering; a hint sent when the page is ready arrives with the page and saves nothing. In this repo [`SendEarlyHints`](../app/Http/Middleware/SendEarlyHints.php) runs first on the listing detail route and asks [`PhpEarlyHintSender`](../app/Support/PhpEarlyHintSender.php) to call `headers_send(103)`. That function exists only on FrankenPHP. On other servers, and in FrankenPHP's worker and Octane modes (detected from `FRANKENPHP_WORKER` or `LARAVEL_OCTANE` in the request or the process environment), the sender reports itself unavailable and the middleware does nothing, and it never throws. The links come from Laravel's own Vite resolution (`Vite::preloadedAssets()` for the page's entries), so the 103 and the final `Link` header name the same files ([`config/performance.php`](../config/performance.php) has the `EARLY_HINTS` switch). The final response carries the same `Link` headers from Laravel's `AddLinkHeadersForPreloadedAssets`, so a client that ignored the 103 still gets them.
+
+**Why proxies may drop it.** A 103 is a hop-by-hop interim response. A proxy that does not understand 1xx responses, or an HTTP/1.1 hop in the chain, may discard it, buffer it until the final response (which defeats it) or fail. So the bench measures it on the path a user takes: `bench/early-hints.sh` found a 103 on classic frankenphp both through the router (Traefik 3.7 forwards it) and straight at the container, and none on <!-- history -->nginx-fpm (a removed server)<!-- /history -->, frankenphp-worker or frankenphp-octane.
+
+**preload vs modulepreload.** Both ask the browser to fetch early. `rel=preload as=style` fetches a stylesheet; `rel=modulepreload` fetches a JavaScript module, parses it and its imports into the module map, so the later `<script type="module">` runs without a second fetch. Using `preload as=script` for a module would fetch the file but the module loader would not reuse it. The middleware sends `preload` for the CSS entry and `modulepreload` for the JS entry.
+
+**How an encoding is picked.** The client sends `Accept-Encoding: zstd, br, gzip`; the server picks one it supports, compresses the body, sets `Content-Encoding` and adds `Vary: Accept-Encoding` so a cache keeps one copy per encoding. If the client lists nothing the server supports, the body goes out as is. Caddy on FrankenPHP is set to `encode zstd br gzip` ([`Caddyfile.frankenphp`](../.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp), and the same in the [worker Caddyfile](../.ddev/servers/frankenphp-worker/web-build/Caddyfile.frankenphp)) and answered all three, preferring `zstd` for the combined header; <!-- history -->nginx-fpm (a removed server, [`nginx-site.conf`](../.ddev/nginx_full/nginx-site.conf), DDEV's defaults) answered `gzip` or nothing.<!-- /history --> A response must carry a single `Content-Encoding` value: a second compression layer on top of a compressed body would not decode.
+
+**What was measured** ([`bench/lcp.sh`](../bench/lcp.sh) and [`bench/lcp.mjs`](../bench/lcp.mjs), [`bench/compression.sh`](../bench/compression.sh), [`bench/early-hints.sh`](../bench/early-hints.sh); tables and chart in the "Early Hints and compression (2026-11-05)" section of [`BENCHMARKS.md`](../BENCHMARKS.md)). Cold Chromium behind a network-level throttle (a toxiproxy container: 150 ms RTT, 1.6 Mbit/s down, 750 kbit/s up) with 4x CPU slowdown, median of 5:
+
+<!-- history -->
+
+| Variant | LCP | FCP |
+|---|---|---|
+| frankenphp-hints | 1211 ms | 609 ms |
+| frankenphp-no-hints | 1238 ms | 663 ms |
+| nginx-fpm | 1223 ms | 612 ms |
+
+<!-- /history -->
+
+- **The hint is worth the server's think time, no more.** FCP fell by 54 ms and LCP by 27 ms (about 2 %). This page's HTML is ready in about 15 ms, so there is little time for the browser to use; a page that spends hundreds of milliseconds in the database would gain far more.
+- **Throttle at the network, not in DevTools.** The first run used DevTools network emulation, which delays the final response but not the 103 and the fetches it starts. It reported FCP falling from 452 ms to 201 ms, an impossible gain under a 150 ms round trip. A TCP proxy delays every byte alike; the flawed run is kept in `bench/results/lcp/2026-11-05/cdp-throttle/` as a lesson.
+
+**The CPU and bytes trade-off.** Compression spends CPU to save bytes, and the best ratio costs the most. The 50 MiB export on FrankenPHP, web container CPU for one download:
+
+| Encoding | Wire bytes | CPU |
+|---|---|---|
+| gzip | 8 018 572 | 0.292 s |
+| br | 6 463 974 | 0.698 s |
+| zstd | 8 442 896 | 0.249 s |
+
+Uncompressed it cost 0.048 s (median of 5 downloads per encoding). `br` saved 19 % more bytes than `gzip` and cost 2.4 times the CPU; `zstd` was cheapest but sent the most bytes. The detail page's own script is empty (0 bytes), so the script rows in `BENCHMARKS.md` use the largest built bundle, the AI lab's, labelled `lab-bundle`.
+
+**Why compressing an offloaded large file can cost more than it saves.** As in section [I-7](#i-7-letting-the-web-server-send-the-file), the web server, not PHP, sends the file. If that server then compresses 52 428 832 bytes on the fly, the cost moves from PHP to the server's CPU, per download, and the wait on a slow client is the same. An uncompressed file also has a known `Content-Length`; an on-the-fly compressed stream does not. <!-- history -->On nginx-fpm (a removed server) the export was sent uncompressed for every encoding<!-- /history -->, and on FrankenPHP it was compressed once per request (single `Content-Encoding`, sha256 equal to the record). Measure before turning it on for a big file.
+
+**In this repo.** Tests: `EarlyHintsTest`, `PreloadLinksTest`, `BenchEarlyHintsTest`, `BenchLcpTest`, `BenchCompressionTest`, `BenchCommittedRunsTest`. Results: [`bench/results/early-hints/`](../bench/results/early-hints/), [`bench/results/lcp/`](../bench/results/lcp/), [`bench/results/compression/`](../bench/results/compression/). Spec: [`.ai/specs/spec-20261104-2340-early-hints-compression/`](../.ai/specs/spec-20261104-2340-early-hints-compression/).
+
+**Read next.** [MDN: 103 Early Hints](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/103) · [Chrome: Early Hints](https://developer.chrome.com/docs/web-platform/early-hints) · [MDN: modulepreload](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/rel/modulepreload) · [MDN: Accept-Encoding](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding) · [FrankenPHP: early hints](https://frankenphp.dev/docs/early-hints/)
+
+## I-9. HTTP/3 and QUIC
+
+**What it is.** HTTP/3 is HTTP carried over **QUIC**, a transport built on **UDP** instead of TCP. QUIC does the connection setup, TLS 1.3 encryption, loss recovery and multiplexing of streams itself, in user space. The HTTP semantics (methods, status codes, headers such as `Link` and `Alt-Svc`) are the same as in HTTP/2; what changes is how the bytes are moved.
+
+**Why the router path never used it.** FrankenPHP's Caddy listens on TCP 443 (h1 and h2) and UDP 443 (h3) inside the web container. The DDEV router (Traefik) sits in front: it ends TLS from the browser and talks plain HTTP to the container, and no UDP port is published. So `curl -I https://ai-lab.ddev.site/` shows no `Alt-Svc`, and no browser reaches the h3 listener. The bench therefore puts its clients on the `ddev_default` network and resolves the site host to the web container's address, skipping the router. Nothing in `.ddev/` changes ([`bench/http3.sh`](../bench/http3.sh), [`bench/lcp.mjs`](../bench/lcp.mjs)).
+
+**What `Alt-Svc` advertises, and how a browser upgrades.** A server tells a client that the same origin is also reachable over another protocol with `Alt-Svc: h3=":443"; ma=2592000` (HTTP/3 on UDP 443, valid for 30 days). A browser cannot know in advance whether UDP works, so its first visit uses h2 over TCP; it reads the header and tries QUIC on later requests, falling back to TCP if that fails. A cold run would therefore never see h3, and the bench forces it with Chromium's `--origin-to-force-quic-on` (h2 is forced with `--disable-quic`). Each run then reads `PerformanceNavigationTiming.nextHopProtocol` and counts only if it equals the protocol asked for. `bench/http3.sh` checks the advertisement separately: frankenphp answers the h2 request with `Alt-Svc: h3=":443"; ma=2592000` and the h3 request with status 200 and the same body hash; <!-- history -->nginx-fpm (a removed server) had no UDP listener, so `h3_ok` was false there with the reason recorded.<!-- /history -->
+
+**Head-of-line blocking.** HTTP/2 multiplexes many streams over one TCP connection, but TCP delivers bytes in order: one lost segment holds back every stream behind it until it is retransmitted (head-of-line blocking at the transport level). QUIC recovers loss per stream, so only the stream that lost a packet waits. That is why a lossy link is where h2 and h3 should differ most, and why the bench has a 2 % loss variant. QUIC also sets up faster: the TCP handshake plus the TLS 1.3 handshake need two round trips before a request is sent, QUIC one.
+
+**Why the throttle must sit on the network layer.** Toxiproxy, used in [section I-8](#i-8-early-hints-and-compression), proxies TCP only, so it cannot carry QUIC. DevTools network emulation delays only what the page fetches, not everything alike. [`bench/lib/netem.sh`](../bench/lib/netem.sh) instead shapes the browser container's own interface with the kernel's `netem`: a `NET_ADMIN` sidecar that shares the container's network namespace adds 75 ms of delay each way and the rate limit on outgoing traffic, and redirects incoming traffic through an `ifb` device that gets the same treatment. TCP and UDP both cross it, so h2 and h3 see the same link, and the script measures the RTT (median of 20 TCP connects, probed with HEAD so no page is downloaded; 140 to 170 ms accepted) before anything is recorded.
+
+**Why loss must be per packet.** `netem` drops one kernel buffer (skb) at a time, and with TCP segmentation offload, generic segmentation and receive offload, and UDP GSO (QUIC sends several datagrams in one call) one skb can hold dozens of wire packets. A "2 %" drop then removes whole bursts, and differently for TCP and QUIC, which makes the comparison unfair. The first version of this comparison did exactly that, and it found no loss effect. The scripts now turn `tso`, `gso`, `gro` and `tx-udp-segmentation` off on the browser container and, for the length of a variant, on the web container's `eth0` (values before: tso on, gso on, gro off, udp_gso on; restored on every exit path and recorded in the result files). That is runtime state of a shared container, so it is always put back. The qdisc counters are reset after the RTT check and read after the runs, giving the measured drop rate per direction in packets for that variant.
+
+**What was measured.** Frankenphp, `GET /listings/1`, 150 ms RTT, 1600kbit down, 750kbit up, 5 cold runs per variant (medians; the full table with ranges and the measured drop rates is in the "HTTP/3 vs HTTP/2 (2026-11-05)" section of [`BENCHMARKS.md`](../BENCHMARKS.md)):
+
+| Variant | Load time | LCP | TTFB |
+|---|---|---|---|
+| h2-loss0 | 1454 ms | 1477 ms | 582 ms |
+| h3-loss0 | 1233 ms | 1253 ms | 402 ms |
+| h2-loss2 | 1841 ms | 1868 ms | 725 ms |
+| h3-loss2 | 1257 ms | 1297 ms | 406 ms |
+
+On the clean link HTTP/3 saved about 180 ms of TTFB, roughly one round trip, and 221 ms of load time. With 2 % loss per packet (measured 2.01 % and 2.13 % on h2, 1.67 % and 1.86 % on h3, egress and ingress) h2 got 387 ms slower while h3 got 24 ms slower, so the gap grew to 584 ms: this is where TCP's in-order delivery and QUIC's per-stream recovery differ. Two caveats. QUIC was forced with `origin-to-force-quic-on`, so the h3 rows are a repeat visitor who already learned `Alt-Svc`; a first visit goes over h2. And each lossy variant saw only 18 to 21 drops, so the direction of the effect is solid and its exact size is not. The comparison is only valid inside this table; the router and toxiproxy numbers in section [I-8](#i-8-early-hints-and-compression) used a different path and throttle.
+
+**Two practical limits.** The curl image is `alpine/curl-http3` (curl with quiche) because `curlimages/curl` has no HTTP/3 and the other common HTTP/3 curl images have no arm64 build. That curl cannot parse a `103 Early Hints` interim response over h3, so `bench/http3.sh` sets `EARLY_HINTS=false` for its two requests and records it; Chromium handles the 103 over QUIC, so the page timings keep the hints on.
+
+**In this repo.** Tests: [`BenchHttp3Test`](../tests/Feature/BenchHttp3Test.php), [`BenchNetemTest`](../tests/Feature/BenchNetemTest.php), `BenchLcpTest`, `BenchCommittedRunsTest` (including the privacy grep over the committed traces). Results: [`bench/results/http3/`](../bench/results/http3/). Spec: [`.ai/specs/spec-20261105-1109-http3/`](../.ai/specs/spec-20261105-1109-http3/).
+
+**Read next.** [RFC 9000: QUIC](https://www.rfc-editor.org/rfc/rfc9000) · [RFC 9114: HTTP/3](https://www.rfc-editor.org/rfc/rfc9114) · [MDN: Alt-Svc](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Alt-Svc) · [Linux netem](https://man7.org/linux/man-pages/man8/tc-netem.8.html) · [Caddy: HTTP/3](https://caddyserver.com/docs/caddyfile/options#protocols)
+
+## I-10. Live updates with Mercure
+
+**What it is.** Mercure is a protocol for pushing updates to browsers over a long-lived HTTP response, in the `text/event-stream` format of section [II-2](#ii-2-streaming-an-ai-answer) and read in the browser with `EventSource`. The difference from section [II-2](#ii-2-streaming-an-ai-answer) is who holds the connection. Here a **hub** holds it: in FrankenPHP the hub is a module of the same Caddy that serves the site, written in Go. PHP never keeps a subscriber; it only makes one short `POST` to the hub when something changes, and the hub fans the update out to every open connection that asked for that **topic**.
+
+**The flow for a price change.**
+1. `ddev artisan listings:reprice 1 19990` calls `ListingPriceService::reprice`, which saves the price through the repository (one `UPDATE`, one DTO describing the change). There is no model hook or event: the model only saves, and the service decides what else happens.
+2. Once the update has committed, the service calls `MercurePublisher`, which sends a form `POST` to the hub with an `id`, the topic `<app url>/listings/1/price`, the JSON data and a short-lived publisher JWT. The service returns whether each publish (public, and private with `--private`) succeeded; the command prints a warning for one that failed. If the hub is down the failure is reported, never thrown, and the price change still stands. The publish is synchronous, which is fine for a CLI command. A web request that changes prices should queue the publish (a job holding the DTO) so a slow hub cannot hold the request; `ListingPriceService` says so in its docblock.
+3. The hub writes an SSE message to every connection subscribed to that topic. The detail page of listing 1 opened an `EventSource` on `/.well-known/mercure?topic=…` when it loaded, so it updates the price text and an `aria-live="polite"` region ("Price updated to …") without a reload. Listing 2's page subscribed to a different topic and does not change.
+
+**Topics and the page.** The layout carries a `mercure-hub` meta tag with the hub URL and the price element carries `data-price-topic`. `resources/js/app.js` reads them and opens one `EventSource`. The live region is a separate, visually hidden element: a polite announcement waits for the screen reader to finish, an alert would interrupt it.
+
+**Not losing an update between render and connect.** A page is rendered, then the browser loads the script, then the `EventSource` connects; a price published in that gap would never reach the page. The hub therefore keeps a short history (`transport bolt`, the last 100 updates, in a file under the container's `/tmp`; the default `local` transport keeps none), each publish carries an `id`, and the page subscribes with `lastEventID=earliest` so the hub replays that history on connect. History also holds changes the page already shows, so the controller renders the server time at render in `data-price-rendered-ms` (read before the listing is loaded) and the script applies a message only when its `published_at_ms` is not older than that time and not older than the last message it applied (`shouldApply` in [`price-updates.js`](../resources/js/price-updates.js); equal times are applied because the same price twice is harmless and a skipped newer price is not). Both times come from PHP on the same server, never from the browser clock. When the connection drops after it has worked, `EventSource` reconnects and sends the `Last-Event-ID` header itself, so the hub replays only what the page missed.
+
+**Give up without a hub.** An `EventSource` reconnects by itself, which is right when a hub restarts and wrong when there is no hub at all: on a server with no hub the path answers 404 (as it did on <!-- history -->nginx-fpm, a removed server<!-- /history -->) and the browser would retry forever. The script therefore closes the connection and stops if it errors before the connection has opened or any message has arrived. A connection that opened once and then dropped is allowed to reconnect. On such a server the page makes one failed request and no retries; its body is the same as on every server, so response parity holds.
+
+**Private updates and the subscriber JWT.** A public topic needs no token. A private update (published with `private=on`) goes only to a subscriber whose JWT has a `mercure.subscribe` claim naming that topic. `MercureTokens` signs and verifies these HS256 tokens with the keys in `.env`. For the demo, `/listings/1?watch=private` (only with the debug gate on) sets the `mercureAuthorization` cookie, and the hub accepts a subscriber token from that cookie. The cookie is `HttpOnly` (the script cannot read it), `Secure`, `SameSite=Strict`, scoped to the path `/.well-known/mercure`, and its `Max-Age` is the token's `exp` minus now, both taken from one `time()` read, so it dies with the token. A token for listing 2 does not open listing 1's private topic.
+
+**Why a plain page clears the cookie.** The browser attaches that cookie to every request to `/.well-known/mercure`, not only the private page's. `withCredentials` is not what sends it: for a same-origin `EventSource` (the hub is on the same origin as the page) cookies are sent whatever `withCredentials` says; the flag matters only cross-origin. So a leftover cookie, once its token is stale or the key has been rotated, would be sent with the public subscription of every listing page and the hub would answer 401, which stops live prices everywhere. A detail page without a valid private watch therefore sends an expired `Set-Cookie` for `mercureAuthorization` with the same name, path and flags (a cookie is only replaced or removed by a header that matches those), and the script's `withCredentials` is set only when the private topic is present.
+
+**Keys and the config.** Two secrets, one to publish and one to subscribe, are generated by `ddev artisan mercure:keys` into `.env` and `.ddev/.env.web`, both git-ignored. The hub reads them from the environment through the `mercure` directive in the frankenphp Caddyfile. There are two paths because two programs read them: Caddy sees only process environment variables, which DDEV fills from `.ddev/.env.web` when the web container starts, while Laravel reads `.env` to sign tokens and publish. Both files must hold the same keys, so `mercure:keys` writes both; after changing `.ddev/.env.web`, run `ddev restart`. Three details of that Caddyfile: the history transport must be written as a `transport bolt { path … size … }` block (a `transport_url` line parses without an error and is silently ignored, leaving the history-less default); the module needs `protocol_version_compatibility 8` to accept `publisher_jwt` and `subscriber_jwt`, and it allows one hub, so the hub sits in the `:80` block and the `:443` block proxies `/.well-known/mercure*` to it with `flush_interval -1`.
+
+**What a page costs on a server without a hub.** The markup and script are the same on all three servers (parity), so a detail page on the two worker modes (and, <!-- history -->before they were removed, on nginx-fpm, Apache and OpenLiteSpeed<!-- /history -->) still asks for `/.well-known/mercure` once per view and gets the server's 404 path: one extra request per page view that boots the application to render a 404, after which the script gives up. That cost is accepted to keep the bodies byte-identical; rendering the hub tag only where a hub exists would remove the request and break parity.
+
+**Caddy metrics.** The busy-thread numbers come from Caddy's metrics. FrankenPHP's thread gauges only exist when the global `servers { metrics }` option is on (checked: without it `frankenphp_busy_threads` is absent), and that option adds work to every request, so every frankenphp cell measured from SL-13 on runs with Caddy metrics on, a condition earlier frankenphp cells did not have; `BENCHMARKS.md` records the difference.
+
+**What was measured.** Frankenphp, 14 PHP threads, listing 1's public topic, 5 publishes plus one private, with the section [I-6](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast) health probe running at the same time (the full table and the method limits are in the "Mercure subscribers and the health check (2026-11-05)" section of [`BENCHMARKS.md`](../BENCHMARKS.md); the raw JSON per run is in [`bench/results/mercure-load/2026-11-05/`](../bench/results/mercure-load/2026-11-05/)):
+
+| Subscribers | Latency p50 | Latency p95 | Health p95 | Max busy PHP threads |
+|---|---|---|---|---|
+| 100 | 33 ms | 45 ms | 15 ms | 1 |
+| 1000 | 70 ms | 344 ms | 16 ms | 1 |
+
+Compare that with section [I-6](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast): 30 open direct SSE answers on the same 14 threads left the health check at 10 000 ms with 118 of 300 probes unanswered, because each answer held a PHP thread for its whole length. 1000 subscribers held by the hub left at most 1 of 14 threads busy (the health probe's own requests). That is the reason to move a long or many-viewer stream behind a hub (section [II-2](#ii-2-streaming-an-ai-answer)'s direct variant is the simple one; this is the one that scales). The latency is from the publish in PHP to the receive in a Node container, through the DDEV router. The committed cells are full runs (90 s, 20 publishes, every one of 2100 and 21 000 deliveries arrived) with the bolt history on.
+
+**In this repo.** Code: [`config/mercure.php`](../config/mercure.php), [`MercurePublisher`](../app/Support/MercurePublisher.php), [`MercureTokens`](../app/Support/MercureTokens.php), [`ListingPriceService`](../app/Services/ListingPriceService.php), [`ListingsRepriceCommand`](../app/Console/Commands/ListingsRepriceCommand.php), [`ShowListingController`](../app/Http/Controllers/ShowListingController.php), [`app.js`](../resources/js/app.js), [`price-updates.js`](../resources/js/price-updates.js), the hub in [`Caddyfile.frankenphp`](../.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp). Tests: [`MercureTokensTest`](../tests/Feature/MercureTokensTest.php), [`MercurePublisherTest`](../tests/Feature/MercurePublisherTest.php), [`ListingLivePriceTest`](../tests/Feature/ListingLivePriceTest.php), [`BenchMercureLoadTest`](../tests/Feature/BenchMercureLoadTest.php). Bench: [`bench/mercure-load.sh`](../bench/mercure-load.sh). Spec: [`.ai/specs/spec-20261105-1709-mercure-live-price/`](../.ai/specs/spec-20261105-1709-mercure-live-price/).
+
+**Read next.** [Mercure protocol](https://mercure.rocks/spec) · [FrankenPHP: real-time with Mercure](https://frankenphp.dev/docs/mercure/) · [MDN: EventSource](https://developer.mozilla.org/en-US/docs/Web/API/EventSource)
+
+## I-11. Coming next: metrics, logs and developer experience
+
+These places are reserved. Each slice replaces its bullet with its own numbered section when it ships (rule BR-27); none of them is built yet.
+
+- **SL-15, metrics.** What FrankenPHP and PHP report about themselves (busy and total threads, busy workers, queue depth, durations) in Grafana, read next to the health check of [I-6](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast).
+- **SL-16, structured logs and worker restart.** Logs written from PHP as structured JSON with request fields in the server log stream, and one Artisan command that restarts the workers through the admin API, compared with Octane's reload ([I-4](#i-4-worker-mode-boot-once-serve-many-and-the-state-leaks)).
+- **SL-17, worker-mode developer experience.** How fast a code edit takes effect in worker mode (watch or hot reload) and how an Xdebug breakpoint works inside a worker request.
+
+The order and the rules are in [`backlog.md`](../backlog.md).
+
+# Part II — AI
+
+Part II is the AI features. It starts with what one model call is and how its answer reaches the browser, then runs through structured output, retrieval and measuring it, images, agents and tools, and the lab that shows them. The code map at the end is the reference chapter.
+
+## II-1. How an LLM call works end to end
+
+**What it is.** A model is a file of numbers (its weights). Everything else is software around that file, and a call to it crosses five layers:
+
+1. **Weights.** The model file, for example `qwen3.5:9b`, stored in a quantised format to fit in memory.
+2. **Inference engine.** Code that reads the prompt, turns it into tokens (word pieces), computes the next token again and again, and picks one each time. It keeps a KV cache of what it has already read, so each new token does not re-read the prompt.
+3. **Model server.** Ollama runs the engine, loads and unloads models, and exposes it over HTTP (`/api/chat`, `/v1/chat/completions`, `/api/embed`).
+4. **SDK.** The Laravel AI SDK gives the app an `Agent` with instructions and a schema, a gateway per provider that builds the request and turns the reply into events, and the same code for a cloud provider.
+5. **The app.** Agents, versioned prompts under `resources/prompts/`, guards before and after the call, and one `ai_runs` row per call.
+
+**One call, step by step** (`GET /listings/{id}/describe`):
+
+1. [`DescribeListingController`](../app/Http/Controllers/DescribeListingController.php) asks `ListingDescriptionService` for a description; the service loads the listing and builds the prompt from its attributes.
+2. `CarDescriptionAgent` supplies the instructions from a versioned prompt file, and the SDK picks the provider and model from `config/ai.php` (`AI_PROVIDER`, `AI_MODEL`).
+3. The gateway POSTs to the model server (`OLLAMA_URL`, from the container `http://host.docker.internal:11434`). If the model is not in memory, the server loads it first (`load_duration`).
+4. The engine reads the prompt (this wait is the time to first token), then writes one token at a time until it stops or reaches `num_predict` (`AI_MAX_TOKENS`).
+5. Each piece comes back as a stream event; the SDK yields it to the app, which writes it to the browser as a server-sent event ([II-2](#ii-2-streaming-an-ai-answer)).
+6. `RecordAiRun` listens to the SDK's events and writes the `ai_runs` row: provider, model, prompt version, tokens in and out, time to first token, total time and status.
+
+Memory, speed and what a prompt longer than the window does are in [II-3](#ii-3-running-the-model-locally) and [II-5](#ii-5-local-models-and-their-limits); why a model is called once and its reply treated as data is in [II-6](#ii-6-from-words-to-filters-structured-output-with-a-validation-boundary).
+
+**In this repo.**
+- The agents and the run log: [`app/Ai/`](../app/Ai/); the provider settings: [`config/ai.php`](../config/ai.php).
+- The decision to run a local model server and call it from PHP: [`docs/adr/0001-local-model-server-models-php-client.md`](adr/0001-local-model-server-models-php-client.md).
+- Spec: [`.ai/specs/spec-20261102-1812-local-model-wiring/`](../.ai/specs/spec-20261102-1812-local-model-wiring/).
+
+Not measured: this section describes the path of a call; the timings of each step are in [II-2](#ii-2-streaming-an-ai-answer) and [II-3](#ii-3-running-the-model-locally).
+
+**Read next.** [Ollama docs](https://docs.ollama.com/) · [Laravel AI SDK](https://laravel.com/docs/13.x/ai-sdk) · [llama.cpp](https://github.com/ggml-org/llama.cpp)
+
+## II-2. Streaming an AI answer
 
 **What it is.** `GET /listings/{id}/describe` returns a short description of one car and sends it while it is generated, as server-sent events (SSE): a normal HTTP response that stays open, with `Content-Type: text/event-stream`, where the server writes lines of the form `data: <payload>` followed by a blank line. The browser or `curl -N` sees each line as soon as it is written. Until a local model is chosen, the text comes from a fake provider that sends one word every 50 ms for 10 seconds, so the stream is visible, testable and load-testable without a model.
 
@@ -240,9 +584,11 @@ After both fixes: the static-array leak grows a steady 0.5 KB per request (11.3 
 4. **Events to SSE lines.** `SseProtocol` turns every event into one `data: {json}` line (`"type":"text_delta"` for text) and ends with `data: [DONE]`. If the run fails midway, the client gets an `error` event, then `data: [DONE]`.
 5. **Server, router, client.** The response leaves PHP, passes the web server, then the DDEV router, then reaches the client. Any of those can hold bytes back until a buffer fills, which turns a 10-second stream into one late burst.
 
-**How `ai_runs` is filled.** `RecordAiRun` listens to the SDK's lifecycle events and `AiRunRecorder` writes one row per run: provider, model, prompt version, tokens in and out, time to first token, total latency and status (`completed` or `failed`). A live run on nginx-fpm wrote provider `fake-stream`, model `fake-slow-1`, prompt `car-description@v1`, 53 tokens in (instructions plus prompt), 200 out, first token after 1 ms, 10 399 ms in total. Time to first token is measured inside PHP, from the start of the run to the first text delta; `bench/sse.sh` measures it from the client and also counts TLS, the router and the server (126 ms in the same check).
+**How `ai_runs` is filled.** `RecordAiRun` listens to the SDK's lifecycle events and `AiRunRecorder` writes one row per run: provider, model, prompt version, tokens in and out, time to first token, total latency and status (`completed` or `failed`). A live run on <!-- history -->nginx-fpm (a removed server)<!-- /history --> wrote provider `fake-stream`, model `fake-slow-1`, prompt `car-description@v1`, 53 tokens in (instructions plus prompt), 200 out, first token after 1 ms, 10 399 ms in total. Time to first token is measured inside PHP, from the start of the run to the first text delta; `bench/sse.sh` measures it from the client and also counts TLS, the router and the server (126 ms in the same check).
 
 **What each server needed.** `bench/sse.sh` streams the endpoint with `curl --no-buffer`, timestamps every line, and passes when the first text event comes within 1 s, the last at 9.5 s or later, there are exactly 200 text events and at least 150 distinct arrival times (the last run per server):
+
+<!-- history -->
 
 | Server | first_text_ms | last_text_ms | text_events | distinct_ms | Needed |
 |---|---|---|---|---|---|
@@ -253,9 +599,11 @@ After both fixes: the static-array leak grows a steady 0.5 KB per request (11.3 
 | frankenphp-octane | 119 | 10676 | 200 | 199 | `SseProtocol::response()` drains the generator and flushes per chunk |
 | frankenphp-worker | 166 | 10811 | 200 | 200 | same fix as Octane |
 
-- **Apache** delivered about 13 chunks, the first at roughly 1.3 s: `mod_proxy_fcgi` waits for a buffer to fill. `proxy-flushall` had no effect; `flushpackets=on` on the proxy worker did.
+<!-- /history -->
+
+- <!-- history -->**Apache** delivered about 13 chunks, the first at roughly 1.3 s: `mod_proxy_fcgi` waits for a buffer to fill. `proxy-flushall` had no effect; `flushpackets=on` on the proxy worker did.<!-- /history -->
 - **Octane and the FrankenPHP worker** returned an empty body. Laravel's `response()->stream()` hands the server client an un-iterated generator callback when `LARAVEL_OCTANE` is set, and Octane's FrankenPHP client calls it without draining it.
-- The first nginx-fpm run after a server switch showed `first_text_ms=1071` (fail); two reruns gave 216 and 84. Treat the first request after a switch as a cold start.
+- <!-- history -->The first nginx-fpm run after a server switch showed `first_text_ms=1071` (fail); two reruns gave 216 and 84. Treat the first request after a switch as a cold start.<!-- /history -->
 
 **What the fake provider hides.** A real model streams *tokens* from its tokenizer, which are word pieces, not words: "Defender" may arrive as two or three pieces, and spaces and punctuation are part of the pieces. Real latency is not a flat 50 ms: there is a wait before the first token (queueing, reading the prompt), a pace that varies with load, and token counts that come from the provider rather than a word count. Here the first token arrives at once and the pace is perfectly even, so a buffering bug is easy to see, but timing-based tuning must be redone with a real model (SL-22).
 
@@ -265,18 +613,16 @@ After both fixes: the static-array leak grows a steady 0.5 KB per request (11.3 
 - Tests: [`ListingDescribeTest`](../tests/Feature/ListingDescribeTest.php), [`AiRunLogTest`](../tests/Feature/AiRunLogTest.php), [`FakeStreamProviderTest`](../tests/Feature/FakeStreamProviderTest.php), [`BenchSseTest`](../tests/Feature/BenchSseTest.php).
 - Spec: [`.ai/specs/spec-20261102-1552-streamed-car-description/`](../.ai/specs/spec-20261102-1552-streamed-car-description/).
 
-**Read next.** [Laravel AI SDK](https://laravel.com/docs/13.x/ai-sdk) · [MDN: Using server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) · [Apache `ProxySet` (`flushpackets`)](https://httpd.apache.org/docs/2.4/mod/mod_proxy.html#proxyset) · [nginx `X-Accel-Buffering`](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffering)
+**Read next.** [Laravel AI SDK](https://laravel.com/docs/13.x/ai-sdk) · [MDN: Using server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events)<!-- history --> · [Apache `ProxySet` (`flushpackets`)](https://httpd.apache.org/docs/2.4/mod/mod_proxy.html#proxyset) · [nginx `X-Accel-Buffering`](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffering)<!-- /history -->
 
----
-
-## 10. Running the model locally
+## II-3. Running the model locally
 
 **What it is.** The same endpoint, `GET /listings/{id}/describe`, now streams text from a real model: `qwen3.5:9b` served by Ollama on the Mac. Nothing in the controller, the SSE protocol or `ai_runs` changed. Switching is configuration: `AI_PROVIDER=ollama` in `.env` (default `fake-stream`) selects the `ollama` entry in [`config/ai.php`](../config/ai.php), and `AI_PROVIDER=fake-stream` brings back the fake provider that the test suite and `bench/sse.sh` without `--real` rely on.
 
 **One call, end to end.**
 1. **Provider entry.** The app's `providers` array replaces the package's, so the `ollama` entry has to exist in `config/ai.php`: URL from `OLLAMA_URL` (default `http://host.docker.internal:11434`), model from `OLLAMA_MODEL` (`qwen3.5:9b`), `max_tokens` (`AI_MAX_TOKENS`, 400) and `timeout` (`AI_TIMEOUT`, 120 s).
 2. **Request options.** [`CarDescriptionAgent`](../app/Ai/CarDescriptionAgent.php) adds `think`, `keep_alive` and `options.num_ctx` to the body of `POST /api/chat`, and the SDK sends `num_predict` from `max_tokens`. `think: false` matters: a thinking model spends its token budget on reasoning that the client never sees.
-3. **Reaching the host.** Ollama runs on macOS, the PHP code in a container. `host.docker.internal` has to resolve inside the web container on every server, so the project adds `extra_hosts: host.docker.internal:host-gateway` in `.ddev/docker-compose.host-gateway.yaml`. OpenLiteSpeed runs in its own container and needed the same line in its overlay.
+3. **Reaching the host.** Ollama runs on macOS, the PHP code in a container. `host.docker.internal` has to resolve inside the web container on every server, so the project adds `extra_hosts: host.docker.internal:host-gateway` in `.ddev/docker-compose.host-gateway.yaml`. <!-- history -->OpenLiteSpeed ran in its own container and needed the same line in its overlay.<!-- /history -->
 4. **Stream to SSE.** Ollama answers with newline-delimited JSON, one object per chunk, the last one with `done: true` and the real `prompt_eval_count` and `eval_count`. The SDK turns them into the same events as the fake provider, so `SseProtocol` and `RecordAiRun` are unchanged and `ai_runs` now holds real token counts.
 
 **Cold versus warm.** Ollama loads the weights on the first request and unloads them after `keep_alive` (10 minutes here). Two requests with `curl` straight to Ollama, the first after `ollama stop`, read from its `load_duration`, `prompt_eval_duration` and `eval_duration` fields:
@@ -298,6 +644,8 @@ Loading cost five seconds once. The generation itself took about the same in bot
 
 **What each server showed.** `bench/sse.sh --real` streams the endpoint with the same prompt and checks the stream instead of fixed counts. Times are from the client; `ttft` and latency are `ai_runs.ttft_ms` and `latency_ms`, measured inside PHP. Tokens/s is tokens out divided by ((latency - ttft) / 1000):
 
+<!-- history -->
+
 | Server | Tokens in | Tokens out | First text (ms) | Last text (ms) | Text events | ttft (ms) | Latency (ms) | tokens/s |
 |---|---|---|---|---|---|---|---|---|
 | nginx-fpm | 111 | 79 | 450 | 1762 | 76 | 140 | 1459 | 59.9 |
@@ -307,11 +655,13 @@ Loading cost five seconds once. The generation itself took about the same in bot
 | frankenphp-octane | 111 | 111 | 225 | 2079 | 108 | 118 | 1974 | 59.8 |
 | frankenphp-worker | 111 | 106 | 240 | 2121 | 104 | 107 | 2003 | 55.9 |
 
-- All six servers delivered the text as it was generated: first text between 225 and 635 ms, spread over one to three seconds. The model writes a different text each time, so token counts differ per row; the speeds of 49 to 66 tokens/s are within the run-to-run noise of one model on one laptop. This table shows the pipeline is not buffering, not which server is faster.
+<!-- /history -->
+
+- All six servers of that run (three since removed) delivered the text as it was generated: first text between 225 and 635 ms, spread over one to three seconds. The model writes a different text each time, so token counts differ per row; the speeds of 49 to 66 tokens/s are within the run-to-run noise of one model on one laptop. This table shows the pipeline is not buffering, not which server is faster.
 - **ttft on the Octane servers.** An earlier run showed an empty `ttft_ms` on `frankenphp-octane` and `frankenphp-worker`. Under Octane the event dispatcher keeps the container it was booted with, so the listener and the SSE protocol used different scoped `AiRunRecorder` instances; both now resolve the recorder from the current container, and the rows above have a value.
 - The number of text events is close to the number of output tokens, since each token is one SSE line.
 - **Arrival times are clumpier than the fake provider's, and the model server causes it.** `ollama show qwen3.5:9b` lists `draft_num_predict 3`: Ollama uses speculative decoding, where a small draft step proposes up to 3 tokens and the model accepts several at once, so they leave Ollama together. Called directly (no PHP, no web server), 112 chunks had only 55 % new millisecond timestamps, with up to 3 chunks in the same millisecond. `--real` therefore counts `new_ms` (text events whose timestamp differs from the previous one) and requires 40 %, not the 80 % first tried (the fake stream needs 150 distinct of 200). Speculative decoding also explains why generation here (49 to 66 tokens/s) is faster than the 39.8 tokens/s of the first smoke test with a 3-token answer.
-- **Thinking.** With `AI_THINK=true` the model reasons before it answers, and the reasoning counts against `num_predict`. At `AI_MAX_TOKENS=400` the run on nginx-fpm used all 400 tokens on reasoning, took 5904 ms and produced no visible text. With `AI_THINK=true AI_MAX_TOKENS=1200` the run still used all 1200 tokens (109 in), took 19216 ms (about 62 tokens/s over the whole latency) and showed no text, so `sse.sh --real` failed again and `ttft_ms` stayed empty, because it is set on the first visible text. For this prompt, thinking costs a multiple of the time of the non-thinking run (1459 ms) and needs a budget well above 1200 tokens; it was not worth raising further here.
+- **Thinking.** With `AI_THINK=true` the model reasons before it answers, and the reasoning counts against `num_predict`. At `AI_MAX_TOKENS=400` the run on <!-- history -->nginx-fpm (a removed server)<!-- /history --> used all 400 tokens on reasoning, took 5904 ms and produced no visible text. With `AI_THINK=true AI_MAX_TOKENS=1200` the run still used all 1200 tokens (109 in), took 19216 ms (about 62 tokens/s over the whole latency) and showed no text, so `sse.sh --real` failed again and `ttft_ms` stayed empty, because it is set on the first visible text. For this prompt, thinking costs a multiple of the time of the non-thinking run (1459 ms) and needs a budget well above 1200 tokens; it was not worth raising further here.
 
 **Network setting.** All the numbers above were taken with Ollama listening on every interface (`lsof` showed `*:11434`), because the macOS app's "Expose Ollama to the network" switch was on. The container does not need that. Tested on 2026-11-02: a throwaway HTTP server bound only to `127.0.0.1` on the Mac answered a container started with `--add-host=host.docker.internal:host-gateway`, because OrbStack relays the host's loopback. Recommendation: turn "Expose Ollama to the network" off, so that only this machine can use the model, and re-run `ddev exec curl -s http://host.docker.internal:11434/api/version` to confirm.
 
@@ -324,9 +674,142 @@ Loading cost five seconds once. The generation itself took about the same in bot
 
 **Read next.** [Ollama docs](https://docs.ollama.com/) · [Ollama usage fields](https://docs.ollama.com/api/usage) · [Ollama thinking](https://docs.ollama.com/capabilities/thinking) · [Laravel AI SDK](https://laravel.com/docs/13.x/ai-sdk)
 
----
+## II-4. Providers, the cloud option and the settings page
 
-## 11. Embeddings and vector search
+**What it is.** Every text feature runs on one provider and one model, and several things can choose them. [`AiProviders`](../app/Ai/AiProviders.php) answers which providers are enabled (a cloud provider is enabled by its key in `.env`: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` or `GEMINI_API_KEY`) and which provider and model a feature runs on. It never returns a key. With no key nothing changes and nothing leaves the machine. The settings page `/ai/settings` (SL-52) lets you save a choice per feature, so you can try a feature on another model without editing `.env`.
+
+**One choice, step by step** (a describe, NL search or docs question that names a `provider`):
+
+1. The request class ([`DescribeListingRequest`](../app/Http/Requests/DescribeListingRequest.php) through the [`NamesProvider`](../app/Http/Requests/Concerns/NamesProvider.php) concern) validates the optional `provider` field. A provider that is not enabled is a 422 `provider_not_enabled`; a cloud provider with no key is a server misconfiguration ([`ProviderNotConfiguredException`](../app/Exceptions/ProviderNotConfiguredException.php)).
+2. [`ResolvedChoice`](../app/DTOs/ResolvedChoice.php) records which level decided: the lab request, then a saved setting (only on the local machine, with `AI_SETTINGS_UI` on, and only if the provider is enabled), then configuration, then the default.
+3. [`LimitCloudAi`](../app/Http/Middleware/LimitCloudAi.php) counts the call against the per-IP `cloud-ai` limiter (`AI_CLOUD_PER_MINUTE`) when the resolved provider is a cloud one; local providers are never counted.
+4. The agent runs with that provider and model pinned, and the `ai_runs` row records both.
+
+**What stays local.** Embeddings stay on Ollama `bge-m3` unless you re-index: a search with an index that holds no vector from the configured model is a 409 `index_not_built`, and an embedding provider whose vectors are not 1024 numbers long is refused ([`EmbeddingDimensionsException`](../app/Exceptions/EmbeddingDimensionsException.php)). The settings page and its endpoints answer 404 outside the local environment or with `AI_SETTINGS_UI` off ([`EnsureLocalSettings`](../app/Http/Middleware/EnsureLocalSettings.php)). Saved settings live in `ai_settings`, read through a one-hour cache that every save and reset forgets, so a long-lived worker sees a save on its next request.
+
+**In this repo.**
+- Resolution: [`app/Ai/AiProviders.php`](../app/Ai/AiProviders.php), [`app/Ai/ProviderChoice.php`](../app/Ai/ProviderChoice.php), [`app/Services/LabProviderService.php`](../app/Services/LabProviderService.php) and [`app/Services/AiSettingsService.php`](../app/Services/AiSettingsService.php).
+- The settings page: [`ShowLabSettingsController`](../app/Http/Controllers/ShowLabSettingsController.php), [`Settings.vue`](../resources/js/ai/Pages/Lab/Settings.vue) and [`EloquentAiSettingsRepository`](../app/Repositories/EloquentAiSettingsRepository.php).
+- Every file of the two slices is in the code map, [II-24](#ii-24-how-the-ai-features-are-built-a-map-of-the-code).
+- Specs: [cloud providers (SL-51)](../.ai/specs/spec-20261110-2141-cloud-providers/) and [model settings page (SL-52)](../.ai/specs/spec-20261110-2155-model-settings-ui/).
+
+Not measured: the choice of a provider is configuration, not a speed; the per-model numbers are in [II-3](#ii-3-running-the-model-locally) and [II-5](#ii-5-local-models-and-their-limits).
+
+**Read next.** [Laravel AI SDK: providers](https://laravel.com/docs/13.x/ai-sdk) · [Anthropic API](https://docs.anthropic.com/) · [OpenAI API](https://platform.openai.com/docs) · [Gemini API](https://ai.google.dev/gemini-api/docs)
+
+## II-5. Local models and their limits
+
+**What it is.** A model that runs on your machine has limits a hosted one hides: how fast it writes, how much memory it holds, what a prompt longer than its window does, what the app shows when the server is down, and what a running model does to the rest of the site. `llm:bench` and `bench/llm-load.sh` measure them; the in-app guide `/ai/guides/local-models` explains how to read the numbers.
+
+- **Tokens per second and TTFT.** Time to first token is the wait for the prompt to be read (and the model to load, if it was not in memory); tokens per second is the writing speed after that. `llm:bench` measures TTFT in the client and takes the rates from the counts Ollama reports ([`LlmSpeedBench`](../app/Support/LlmSpeedBench.php)).
+- **`num_ctx` and truncation.** Ollama answers a prompt that does not fit instead of refusing it. [`LlmContextBench`](../app/Support/LlmContextBench.php) hides a code in the first sentence of a prompt 1.5 times the window, sends it at the configured size and at twice that, and reads the window the server really loaded (`context_length` in `/api/ps`). The same token count at both sizes with a count above that window is reported as a suspected context shift, not as "not truncated".
+- **`OLLAMA_NUM_PARALLEL`.** A setting of the host server. The concurrency run records what the app sees and shows how the wait grows at 1, 4 and 16 streams: on qwen3.5:9b the first byte comes after 0.2 s, 6.6 s and 31 s (median), while a stream that has started writes at about 52 chunks per second at every level. The streams queue; they do not share the speed.
+- **`keep_alive` and cold load.** The first request after the keep-alive time pays the load; the bench reports it apart and keeps it out of the warm statistics.
+- **Failover.** [`LlmFailoverBench`](../app/Support/LlmFailoverBench.php) records the status and the client-visible error of four entry points with the server unreachable (5-134 ms to fail), the model missing (8-32 ms) and a 1 s timeout (1013-1063 ms; the model is unloaded before each entry so none can answer in time). A fallback chain is not built: it would hide the fault and could reach a paid provider; the guide lists how to add one (try the next entry only on a transport error or timeout, log every attempt, keep the cloud limiter).
+- **Why the site slows.** A stream holds a PHP thread for its whole length, and the model competes for memory and cores with the database and the web server. `search-under-load` measures the p95 delta per server mode. With 4 describe streams open, search p95 went from 64 to 2724 ms on frankenphp-worker and from 63 to 2793 ms on frankenphp-octane (RPS about 950 to 23), because both run 4 PHP workers and each stream holds one; classic frankenphp, with 2 threads per CPU, slowed from 132 to 237 ms. The worker count, not the model, decides what an AI stream costs the rest of the site.
+
+**One bench run, step by step** (`ddev artisan llm:bench`):
+
+1. [`LlmSpeedBench`](../app/Support/LlmSpeedBench.php) unloads every loaded model with `keep_alive: 0`, so the first request starts cold.
+2. It sends one cold request with the describe feature's own prompt (system instructions plus the prompt for listing 1). The load time is Ollama's `load_duration`; the cold run stays out of the medians.
+3. It sends 5 warm requests with `keep_alive` 5m set by the bench itself, whatever `OLLAMA_KEEP_ALIVE` says, so `/api/ps` still lists the model for the memory reading. Each request starts with its own marker line, because Ollama reuses the evaluated prefix of the previous prompt and a repeated prompt would measure the cache.
+4. Time to first token is measured in the client, from sending the request to the first chunk with text; the rates come from the counts and durations in Ollama's last chunk. A stream with no content chunk is a failed sample, counted and left out of the statistics.
+5. [`LlmContextBench`](../app/Support/LlmContextBench.php) sends a prompt 1.5 times the window, with a code in its first sentence, at `num_ctx` and at twice that, and reads `context_length` from `/api/ps` after each request.
+6. [`LlmFailoverBench`](../app/Support/LlmFailoverBench.php) breaks the model on purpose (server unreachable, model missing, 1 s timeout) at four entry points and records the status and the visible error of each.
+7. The command writes `run.json` under [`bench/results/llm/`](../bench/results/llm/); `bench/llm-load.sh concurrency` is a separate run that holds real describe streams open.
+
+**Run it.** `ddev artisan llm:bench`, `bench/llm-load.sh concurrency`, `bench/llm-load.sh search-under-load`, and the opt-in smoke group: `ddev exec env LOCAL_LLM_SMOKE=1 php artisan test --group=local-llm` after `ollama pull qwen3:0.6b` on the host. Results are in [`bench/results/llm/`](../bench/results/llm/) and [BENCHMARKS.md](../BENCHMARKS.md).
+
+**Numbers.** The ones quoted above come from the 2026-11-13 run in the "Local models and limits" section of [`BENCHMARKS.md`](../BENCHMARKS.md#local-models-and-limits-2026-11-13) and the files in [`bench/results/llm/`](../bench/results/llm/). Spec: [local LLM comparison and limits (SL-28)](../.ai/specs/spec-20261113-0038-local-llm-limits/).
+
+**Read next.** [Ollama: context length](https://docs.ollama.com/context-length) · [Ollama FAQ](https://docs.ollama.com/faq) · [Laravel AI SDK](https://laravel.com/docs/13.x/ai-sdk)
+
+## II-6. From words to filters: structured output with a validation boundary
+
+**What it is.** Section [II-2](#ii-2-streaming-an-ai-answer) and [II-11](#ii-11-answering-with-citations-rag-guards-and-the-trace-row) stream free text. This one asks a model for a small JSON object instead: `GET /api/listings/nl?q=diesel BMW after 2018 under 20k in Munich` becomes `make`, `model`, `city`, `fuel`, `min_year` and `max_price_eur` plus a list called `unsupported`. The model's job ends there. Everything after it is ordinary code, and that is the point: **model output is data, never a command.** It is checked, bound as parameters and handed to the same search that `/listings` uses.
+
+**Structured output.** [`ListingFilterAgent`](../app/Ai/ListingFilterAgent.php) declares a schema (every key required and nullable; `fuel` is limited to the `Fuel` enum values **and `null`**, see "What the eval found") and the SDK asks the provider to answer in that shape, so the reply is already a decoded array and not text to parse. A schema narrows what the model may say; it does not make it right (see "What the eval found" below).
+
+**One request, step by step.**
+1. `NlSearchRequest` validates `q` (required, length-limited), an optional `model` and the paging. The model name must be in `NlSearchService::allowedModels()`: the active provider's text model plus `gemma4:12b`, or `ai.nl_search.models` when set. A name outside the list is a 422 at the request, before any model runs.
+2. `NlSearchService` runs the same `PromptInjectionGuard` as section [II-11](#ii-11-answering-with-citations-rag-guards-and-the-trace-row). A match answers 422 with `refused: true`, calls no model and writes a `refused` row.
+3. The agent returns the structured fields. A model failure becomes a masked 503 and a `failed` row.
+4. [`ListingFilterRules`](../app/Rules/ListingFilterRules.php) validates the fields. These are the same rules `ListListingsRequest` uses for `/listings` (they were extracted into one class so the two cannot drift apart). A failure is a 422 whose body carries `extracted`, `unsupported` and the field errors, and no listing query runs. The row is saved either way, with `validation_failed` set, so the lab and the eval can count how often the boundary fires.
+5. Valid fields go to `ListingSearchService`, the service behind `/listings`, so the same filters give the same listings and total. Values reach SQL only as bound parameters; nothing from the model is concatenated into a query.
+6. The 200 body carries the model name, the extracted filters, the `unsupported` list, the listings and the `invocation_id` of the `ai_runs` row. `Server-Timing` splits `model` from `db`.
+
+**`unsupported` is honesty.** The filters cannot say "estate", a colour, mileage or "cheap". Without a place to put them a model tends to bend them into some filter. The prompt asks it to list them instead, the service trims the list, and the lab shows them as chips so the user sees what was ignored. Matching is case-insensitive and exact, so "Merc" does not find Mercedes. An alias table or embeddings would be the next step; it is left out so that the eval stays easy to read.
+
+**The lab page.** `/ai/nl-search` ([`NlSearch.vue`](../resources/js/ai/Pages/Lab/NlSearch.vue)) shows the query, the model, the validation outcome, the extracted JSON, the errors, the `unsupported` chips, the listings and a link to the logged run. It handles the 200, both 422 kinds, 503 and 429, and the results region is `aria-live="polite"`.
+
+**How it is measured.** [`NlEvalCommand`](../app/Console/Commands/NlEvalCommand.php) (`nl:eval`) runs 40 labelled queries from [`bench/nl-search/queries.v1.jsonl`](../bench/nl-search/queries.v1.jsonl) through the same service, once per model, and [`NlEvalScorer`](../app/Services/NlEvalScorer.php) computes:
+- **exact match:** all six fields equal the label (an unmentioned field is labelled `null`);
+- **per-field accuracy**, to see which field breaks;
+- **unsupported recall:** counted per term: 12 expected terms over 10 queries, and a term is caught when a string the model returned in `unsupported` contains it (case-insensitive substring match);
+- **422 rate:** how often the boundary rejected the output;
+- **latency median and p95**, read from the `ai_runs` rows of calls that produced output.
+
+The eval queries are kept out of every prose document by the same contamination test as the RAG questions, so this section describes them and never quotes them.
+
+**What the eval found** (2026-11-09, prompt `listing-filters@v1`, 40 queries per model, local Ollama):
+
+| Model | Exact match | Unsupported recall | Latency median | Latency p95 |
+|---|---|---|---|---|
+| qwen3.5:9b | 0.950 | 9/12 | 906 ms | 1123 ms |
+| gemma4:12b | 0.975 | 12/12 | 1008 ms | 2263 ms |
+
+Neither model produced a 422 (0 of 40). The first run scored 0.400 for both models, and the cause was my schema, not the prompt: `fuel` was a nullable string whose `enum` listed the five fuels but not `null`. Ollama turns the schema into a grammar, so the decoder could only emit one of the five, and on the 24 queries that do not mention fuel both models answered with one (23 `petrol`, 1 `electric`). Fuel accuracy was 0.400. `petrol` is a legal value, so validation passed it and the search narrowed silently. Adding `null` to the enum, with the prompt unchanged, took fuel accuracy from 0.400 to 0.975 and exact match from 0.400 to 0.950 (qwen3.5:9b) and 0.975 (gemma4:12b). The two cells that still miss are one query where both models inferred `electric` from a make, and one model name from qwen3.5:9b. That is the lesson of the section: **validation makes output safe, an eval makes it correct, and a schema must let the model say "nothing".** Other hardening in the same pass: the model's integers must be real JSON integers (`true`, `2019.0` and `"2019"` are field errors), strings may not contain NUL bytes, the model call has its own 20 s timeout (`ai.nl_search.timeout`) instead of the 120 s streaming one, and `ListingFilter::fromValidated()` is the single place where validated input becomes a filter for both `/listings` and this endpoint. The full tables and the surprises are in the "Natural-language search" section of [`BENCHMARKS.md`](../BENCHMARKS.md).
+
+**In this repo.** Code: [`ListingFilterAgent`](../app/Ai/ListingFilterAgent.php), [`NlSearchService`](../app/Services/NlSearchService.php), [`NlSearchController`](../app/Http/Controllers/NlSearchController.php), [`ListingFilterRules`](../app/Rules/ListingFilterRules.php), [`NlEvalCommand`](../app/Console/Commands/NlEvalCommand.php), [`NlEvalScorer`](../app/Services/NlEvalScorer.php); prompt [`listing-filters.v1.md`](../resources/prompts/listing-filters.v1.md); eval set [`queries.v1.jsonl`](../bench/nl-search/queries.v1.jsonl); results [`bench/results/nl-search/2026-11-09/`](../bench/results/nl-search/2026-11-09/). Tests: [`NlSearchTest`](../tests/Feature/NlSearchTest.php) (one per criterion, with faked structured output), [`NlEvalCommandTest`](../tests/Feature/NlEvalCommandTest.php), [`AiLabNlSearchTest`](../tests/Feature/AiLabNlSearchTest.php). Spec: [`.ai/specs/spec-20261109-1213-nl-search/`](../.ai/specs/spec-20261109-1213-nl-search/).
+
+**Read next.** [Laravel AI SDK: structured output](https://laravel.com/docs/13.x/ai-sdk) · [Ollama: structured outputs](https://ollama.com/blog/structured-outputs) · [OWASP: LLM01 prompt injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/)
+
+## II-7. Rating a listing: a closed label set, computed facts and a threshold
+
+**What it is.** Section [II-6](#ii-6-from-words-to-filters-structured-output-with-a-validation-boundary) and [II-17](#ii-17-a-model-that-decides-when-to-search-tool-calling) turn words into filters and tool calls. Here the model gives a verdict: `/ai/moderation` rates how risky a listing is for a buyer, with a risk from 0 to 1, reasons from a closed list of seven, and a short explanation. Two of the signals cannot be read from the text. A price far below the market needs the market price, and a copied VIN needs a register of reported vehicles. A local model knows neither, so the app computes them and the model judges with the facts.
+
+**One listing, step by step.**
+1. `ModerateListingController` takes the form as JSON only, and the route refuses a request that the browser marks `Sec-Fetch-Site: cross-site` ([`RefuseCrossSiteRequests`](../app/Http/Middleware/RefuseCrossSiteRequests.php), the same check `LimitCloudAi` uses), because `api/*` answers CORS preflights with a wildcard origin and a JSON body alone does not keep another site out. [`ModerateListingRequest`](../app/Http/Requests/ModerateListingRequest.php) validates every field, so a bad price or a NUL byte is a 422 before any model call.
+2. [`ModerationFacts`](../app/Services/ModerationFacts.php) computes the median price of listings with the same make, model and year within one year (null under 5 listings, cached for an hour), the price ratio, the VINs in the text, whether one is reported, and the injection pattern from the input guard, run on the title, make, model, city and description.
+3. A description that matches the guard is **not** refused here. A listing that tries to steer its moderator is suspicious in itself, so it is classified with the pattern as a fact, and the prompt asks for the reason `other` and a high risk. The prompt is not the guarantee, though: see the floor below.
+4. [`ModerationAgent`](../app/Ai/ModerationAgent.php) sends the listing and the facts as two JSON blocks with `<` and `>` escaped, so listing text cannot close its block. The prompt is `moderation@v1`.
+5. [`ModerationRules`](../app/Rules/ModerationRules.php) checks the answer: the risk must be a JSON number from 0 to 1, at most four reasons, distinct and in the list, an explanation present (over 300 characters is cut). A rejected answer is asked for once more, and so is an empty or unparsable reply (logged as a `failed` row with `validation_failed`); two rejected answers end as `invalid`. A transport error is one attempt and ends as `failed`, a 503. Every attempt is an `ai_runs` row, and rejected ones are flagged `validation_failed`.
+6. A floor in PHP: an injection pattern or a reported VIN lifts the risk to at least 0.7 and adds the reason `other` or `reported_vin` (`ModerationService::FLOOR_RISK`), so a model that was talked into rating a listing 0 still ends above any calibrated threshold. The result keeps the model's own `model_risk` and the `floors` that fired, and the lab page says so. Rules the code can check do not rest on the model obeying its prompt.
+7. The verdict `risky` is the risk after the floor at or above the threshold of the model that answered (`ai.moderation.thresholds`, else `ai.moderation.threshold`).
+
+**Why facts beat knowledge.** Asking a model "is this price too low?" measures what it remembers. Computing the ratio in the app and asking "is the ratio 0.5 or lower?" measures whether it reads. The eval reports reason recall per reason, so a model that ignores a fact shows up as a low recall for that reason.
+
+**How it is measured.** `moderation:make-set` writes 100 labelled listings (`bench/moderation/listings.v1.jsonl`): 50 safe, of which 15 are hand-written hard negatives such as financing or a bank transfer at handover, and 50 risky, with 10 for each of four scam kinds and 10 mixed. The same seed writes the same file, and no item text may appear in the indexed corpus. `moderation:eval` classifies every item once per model (`--models`, default `qwen3.5:9b,gemma4:12b`; `--provider` replaces the moderation setting), writes one `run.json` with a `summary` and `results` entry per model id, and reports the JSON-valid rates, a threshold curve from 0.1 to 0.9, the best F1 and, at that threshold, accuracy, precision and recall for "risky" and the false positives on the hard negatives (the figures at the configured threshold are kept in their own fields), reason recall and latency. Each set item carries a `kind` (`safe`, `hard_negative`, `risky`, `mixed`), so the hard negatives are read from the file, not guessed from the id. An item that ends `invalid` or `failed` counts as wrong: a risky one as a false negative, a safe one as a false positive. The best F1 picks the per-model value in `ai.moderation.thresholds`; on a tie the higher threshold wins.
+
+**In this repo.** Code: [`ModerationService`](../app/Services/ModerationService.php), [`ModerationFacts`](../app/Services/ModerationFacts.php), [`ModerationAgent`](../app/Ai/ModerationAgent.php), [`ModerationRules`](../app/Rules/ModerationRules.php), [`ModerateListingController`](../app/Http/Controllers/ModerateListingController.php), [`ModerationEvalCommand`](../app/Console/Commands/ModerationEvalCommand.php), [`ModerationEvalScorer`](../app/Services/ModerationEvalScorer.php); prompt [`moderation.v1.md`](../resources/prompts/moderation.v1.md); eval set [`listings.v1.jsonl`](../bench/moderation/listings.v1.jsonl); results [`bench/results/moderation/2026-11-12/`](../bench/results/moderation/2026-11-12/). Tests: [`ModerationServiceTest`](../tests/Feature/ModerationServiceTest.php), [`ModerationFactsTest`](../tests/Feature/ModerationFactsTest.php), [`ModerationSetTest`](../tests/Feature/ModerationSetTest.php), [`ModerationEvalTest`](../tests/Feature/ModerationEvalTest.php), [`ModerationEndpointTest`](../tests/Feature/ModerationEndpointTest.php). Spec: [`.ai/specs/spec-20261112-2146-moderation/`](../.ai/specs/spec-20261112-2146-moderation/).
+
+**Read next.** [Laravel AI SDK: structured output](https://laravel.com/docs/13.x/ai-sdk) · [OWASP: LLM01 prompt injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/)
+
+## II-8. Reading a car photo: vision extraction
+
+**What it is.** A vision model reads one stored car photo and returns what it sees (body type, colour and similar) as structured output. As in [II-6](#ii-6-from-words-to-filters-structured-output-with-a-validation-boundary), the reply is data: [`PhotoExtractionRules`](../app/Rules/PhotoExtractionRules.php) checks the same limits again in PHP before anything is stored. The photos come from a public car dataset ([`docs/datasets/stanford-cars.md`](datasets/stanford-cars.md) records its source and terms), matched to listings by make and model.
+
+**One extraction, step by step** (`photos:extract`, or "Run extraction" on `/ai/photos`):
+
+1. [`ExtractPhotosCommand`](../app/Console/Commands/ExtractPhotosCommand.php) queues one [`ExtractPhotoJob`](../app/Jobs/ExtractPhotoJob.php) per pending photo on the `ai-vision` queue. The lab page queues one job for a photo id and never takes a path; a second click while one is queued or running is a 409.
+2. [`PhotoVisionAgent`](../app/Ai/PhotoVisionAgent.php) sends the photo and the versioned prompt to the vision model; [`OllamaVisionModels`](../app/Ai/OllamaVisionModels.php) first checks that the model is installed.
+3. The answer is validated; an invalid one is retried, up to three attempts, and every attempt is an `ai_runs` row.
+4. The accepted result is stored in `photo_extractions` (one row per photo, provider, model and prompt version), so another model's result sits next to it.
+5. `photos:eval` runs a fixed, sha256-ordered sample per model and writes validity, attempts, latency, body-type agreement and colour presence to `run.json`.
+
+**In this repo.**
+- Code: [`app/Ai/PhotoVisionAgent.php`](../app/Ai/PhotoVisionAgent.php), [`app/Services/PhotoExtractionService.php`](../app/Services/PhotoExtractionService.php) and [`app/Services/PhotoEvalService.php`](../app/Services/PhotoEvalService.php); the page is [`ShowLabPhotosController`](../app/Http/Controllers/ShowLabPhotosController.php).
+- Tests: [`PhotoVisionAgentTest`](../tests/Feature/PhotoVisionAgentTest.php), [`PhotoExtractTest`](../tests/Feature/PhotoExtractTest.php) and [`PhotoEvalTest`](../tests/Feature/PhotoEvalTest.php).
+- Numbers: the "Car photos and a local vision model" section of [`BENCHMARKS.md`](../BENCHMARKS.md#car-photos-and-a-local-vision-model-2026-11-11) and [`bench/results/photo-vision/`](../bench/results/photo-vision/).
+- Spec: [`.ai/specs/spec-20261111-0000-photo-vision/`](../.ai/specs/spec-20261111-0000-photo-vision/).
+
+**Numbers.** 50 photos, `photo-vision@v1`, two local models (source: [`BENCHMARKS.md`](../BENCHMARKS.md#car-photos-and-a-local-vision-model-2026-11-11), file `bench/results/photo-vision/2026-11-11/run.json`):
+- **gemma4:12b** passed the rules on all 50 photos on the first attempt, agreed with the photo's body type on 37 of 50 (0.74), and took 3697 ms at p50 and 5879 ms at p95.
+- **qwen3.5:9b** passed 43 of 50 (0.860), agreed on the body type on 41 of 50 (0.82), and took 2572 ms at p50 and 6523 ms at p95. The 7 photos it failed stayed failed after 3 attempts: a retry with the same prompt and photo repeats the same mistake.
+
+**Read next.** [Ollama: vision models](https://docs.ollama.com/capabilities/vision) · [Laravel AI SDK: structured output](https://laravel.com/docs/13.x/ai-sdk)
+
+## II-9. Embeddings and vector search
 
 **What it is.** An embedding turns a text into a list of numbers, a vector, so that texts with similar meaning end up close together. Here every listing has a generated description of 28 to 39 words; `bge-m3`, served by Ollama, turns each description into 1024 numbers, and `GET /api/listings/semantic?q=family car with a big boot` embeds the query the same way and returns the 10 listings whose vectors are nearest. No keyword has to match: the nearest ten for that query were 10 estates out of 10.
 
@@ -373,18 +856,16 @@ Throughput counts from the first model call of a run, not from dispatch: worker 
 
 **Read next.** [pgvector](https://github.com/pgvector/pgvector) · [bge-m3 model card](https://huggingface.co/BAAI/bge-m3) · [Ollama embeddings](https://docs.ollama.com/capabilities/embeddings) · [Laravel AI SDK](https://laravel.com/docs/13.x/ai-sdk)
 
----
+## II-10. Chunking and hybrid retrieval
 
-## 12. Chunking and hybrid retrieval
-
-**What it is.** Section 11 searched one short description per listing. A documentation set is different: a page can be thousands of words, and one vector for a whole page is a blur of everything in it. So each document is cut into chunks of about 300 to 500 tokens, each chunk is embedded on its own, and a search returns chunks, not files. This slice indexes two corpora, this repository's own markdown (19 files) and the Laravel 13 docs (102 files), into 2 706 chunks, and searches them three ways: `vector`, `text` and `hybrid`. It is the first half of a docs chatbot; answering from the chunks comes later.
+**What it is.** Section [II-9](#ii-9-embeddings-and-vector-search) searched one short description per listing. A documentation set is different: a page can be thousands of words, and one vector for a whole page is a blur of everything in it. So each document is cut into chunks of about 300 to 500 tokens, each chunk is embedded on its own, and a search returns chunks, not files. This slice indexes two corpora, this repository's own markdown (19 files) and the Laravel 13 docs (102 files), into 2 706 chunks, and searches them three ways: `vector`, `text` and `hybrid`. It is the first half of a docs chatbot; answering from the chunks comes later.
 
 **Chunking, step by step.** The chunker is plain PHP ([`MarkdownChunker`](../app/Services/MarkdownChunker.php)), with no model call.
 1. **Follow the structure.** Front matter, anchors, comments and HTML tags are dropped (autolinks like `<https://…>` and types like `Collection<int, User>` stay), inline `data:` images are shortened to `data:…`, the title comes from the first `#` or the file name, and the text is split by headings first, then paragraphs, then sentences. A paragraph with no sentence end (a link list) is cut at line breaks, and as a last resort at the last space before the limit.
 2. **Prefix.** Every chunk starts with `Document: <title> › Section: <heading>`, so a chunk that says only "set it to 400" still carries what it is about. `bge-m3` needs no instruction prefix, so this line is context, not a model convention.
 3. **Overlap.** When a long section needs several chunks, the next one starts with the last whole paragraphs or sentences of the previous one, enough to cover 50 to 80 estimated tokens, so a thought split across the boundary is found from either side. An overlap of fewer than 50 tokens is dropped, and there is none across sections.
 4. **Code and tables stay whole.** A code block or table is never split, because half a table answers nothing. A block above 500 estimated tokens becomes an oversize chunk on purpose: 7 of 2 706 (0.3 %), all tables, the largest 2 738 estimated tokens (the contracts table in `contracts.md`). The model reads up to 8 192 tokens, so none is cut, but such a chunk embeds as a blur of its whole content. The first run had 15 oversize chunks: 8 were link lists and a base64 screenshot of 8 780 tokens, which is more than the model reads. The write-up first called them code blocks; querying the rows showed otherwise.
-5. **Hash per document.** A file is chunked again only when its hash changed, so a second `docs:index` run changes nothing. The hash covers the chunker version as well as the text, so a change to the rules above re-chunks every file; chunks whose text did not change keep their vectors. Each chunk is stored with a `tsvector` (generated column, `english`) and a 1024-number embedding (HNSW, cosine), as in section 11.
+5. **Hash per document.** A file is chunked again only when its hash changed, so a second `docs:index` run changes nothing. The hash covers the chunker version as well as the text, so a change to the rules above re-chunks every file; chunks whose text did not change keep their vectors. Each chunk is stored with a `tsvector` (generated column, `english`) and a 1024-number embedding (HNSW, cosine), as in section [II-9](#ii-9-embeddings-and-vector-search).
 
 **What the token estimate gets wrong.** The chunker needs token counts but does not load a tokenizer; it estimates `ceil(characters / 4)`. Measured against Ollama's own count on 20 chunks, the estimate was lower than the real count in all 20: the mean estimate / real was 0.824 (18 % low), the worst chunk 397 estimated against 593 real. Code, tables and punctuation split into more tokens than prose. So the "500" limit is a limit on the estimate; a chunk at the limit is about 600 tokens to the model. Median chunk size was 390 to 400 estimated tokens in both corpora, inside the target.
 
@@ -417,48 +898,14 @@ Throughput counts from the first model call of a run, not from dispatch: worker 
 
 **Read next.** [PostgreSQL full text search](https://www.postgresql.org/docs/16/textsearch.html) · [pgvector](https://github.com/pgvector/pgvector) · [bge-m3 model card](https://huggingface.co/BAAI/bge-m3)
 
----
+## II-11. Answering with citations: RAG, guards and the trace row
 
-## 13. The AI lab UI: Inertia, Vue and streams in the browser
-
-**What it is.** `/ai` is a small single-page-style UI for the AI features: the streamed description with a Stop button, semantic listing search, docs search in three modes side by side, and the newest `ai_runs`. It is built with Inertia, Vue 3 and TypeScript, but there is no JSON API for the pages: Laravel controllers still pick the page and pass its data.
-
-**One page visit with Inertia.**
-1. The first visit to `/ai/docs` is a normal full-page request. [`ShowLabDocsController`](../app/Http/Controllers/ShowLabDocsController.php) returns `Inertia::render('Lab/Docs', [...])`. Laravel renders the `ai.app` Blade view once, and the page component name and its props go into a `data-page` attribute as JSON.
-2. `resources/js/ai/app.ts` reads that attribute, mounts Vue, and resolves `Lab/Docs` to `resources/js/ai/Pages/Lab/Docs.vue`. The props become the component's props.
-3. Clicking a lab link does not reload the page. Inertia sends a `fetch` with an `X-Inertia` header; the server sees it and answers with only the JSON (`component`, `props`, `url`, `version`) instead of HTML. Inertia swaps the component, keeps the layout mounted and updates the URL with the History API.
-4. If the asset `version` changed since the first load, the server answers 409 and Inertia does a full reload, so a stale browser tab picks up new JavaScript.
-
-**Why the lab has its own Vite entry.** The existing pages (`/`, the listing pages) ship `app.css` and `app.js`, and their file names and hashes are part of the server parity checks. The lab builds from its own entries (`resources/css/ai.css`, `resources/js/ai/app.ts`) and its own Blade view, so adding Vue, Inertia and the design components changes nothing in the old bundle: `bench/asset-fingerprint.sh` prints the same names and hashes before and after, and `bench/parity.sh` stays `identical`. This is the parity rule applied to the front end.
-
-**How the browser reads an SSE stream.** `EventSource` can only send a `GET` with no custom handling, so the lab uses `fetch`. In [`useEventStream.ts`](../resources/js/ai/composables/useEventStream.ts):
-1. `fetch(url, { signal })` resolves as soon as the response headers arrive, not when the body ends.
-2. `response.body` is a [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) of bytes; `getReader().read()` returns the next chunk whenever the server flushes one.
-3. A `TextDecoder` turns bytes into text. Chunks do not line up with events, so the text is buffered and split on blank lines; a half event stays in the buffer until the rest arrives.
-4. Each `data: {json}` line becomes an event row and text delta; `data: [DONE]` ends the run. Time to first token and tokens per second are measured in the browser with `performance.now()`. Tokens per second is (tokens − 1) divided by the time from the first token to the last: the first token opens the interval, so counting it inside would overstate the rate (two tokens 10 ms apart are 100 tokens/s, not 200). A failed stream is logged as well, so the page looks up its run row too; the row names only the exception class, because the stored message can contain the internal model URL.
-
-**How Stop works.** Stop calls `abort()` on the [`AbortController`](https://developer.mozilla.org/en-US/docs/Web/API/AbortController) whose `signal` was passed to `fetch`. The browser closes the connection and the pending `read()` rejects with an `AbortError`, which the composable turns into "Stopped after N tokens". The server sees only a closed socket. Whether PHP notices at once depends on the server: it finds out on its next write or flush, and the run may still be logged as finished or not logged at all, which is why the page says "The server may not have logged this run."
-
-**What `Server-Timing` is.** A response header that lets the server report named durations to the browser, for example `Server-Timing: embed;dur=41.2, db;dur=6.8`. Both search endpoints (`/api/listings/semantic` and `/api/docs/search`) send `embed` (time to embed the query) and `db` (the SQL search); text-only docs search sends `db` only. The durations are collected by [`ServerTiming`](../app/Support/ServerTiming.php) and added by a middleware; the response bodies are unchanged. The browser shows the values in the dev tools Network tab, and the search pages read them from `response.headers` to show where the time went.
-
-**In this repo.**
-- Front end: [`resources/js/ai/`](../resources/js/ai/) (pages, layout, design components, composables); first page controller: [`ShowLabOverviewController`](../app/Http/Controllers/ShowLabOverviewController.php).
-- Pages: `/ai/chat` (SL-45) and `/ai/photos` (SL-27) are built inside this UI; the photos page shows a similar-photos strip (SL-36).
-- Tests: `AiLabOverviewTest`, `AiLabDescribeTest`, `AiLabSearchPagesTest`, `AiLabPlaceholderTest`.
-- Spec: [`.ai/specs/spec-20261103-0012-ai-lab-ui/`](../.ai/specs/spec-20261103-0012-ai-lab-ui/).
-
-**Read next.** [Inertia: how it works](https://inertiajs.com/the-protocol) · [Vue 3](https://vuejs.org/guide/introduction.html) · [MDN: `ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) · [MDN: `AbortController`](https://developer.mozilla.org/en-US/docs/Web/API/AbortController) · [MDN: `Server-Timing`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Server-Timing)
-
----
-
-## 14. Answering with citations: RAG, guards and the trace row
-
-**What it is.** `POST /api/docs/ask` with a JSON body `{"q": "..."}` answers a question about the indexed docs and says where the answer came from. This is retrieval-augmented generation (RAG): instead of trusting what the model remembers, the app first finds the most relevant chunks (section 12), puts them in the prompt, and asks the model to answer from them and cite them. `/ai/chat` is the page that uses it.
+**What it is.** `POST /api/docs/ask` with a JSON body `{"q": "..."}` answers a question about the indexed docs and says where the answer came from. This is retrieval-augmented generation (RAG): instead of trusting what the model remembers, the app first finds the most relevant chunks (section [II-10](#ii-10-chunking-and-hybrid-retrieval)), puts them in the prompt, and asks the model to answer from them and cite them. `/ai/chat` is the page that uses it.
 
 **One request, step by step.** Question: "How does rate limiting work in Laravel?" Code: [`DocsAnswerService`](../app/Services/DocsAnswerService.php).
 1. **Validate.** `q` must be non-blank, at most 500 code points, valid UTF-8 and without NUL; otherwise 422. Every valid request counts against `ai.docs.answer.per_minute` (10 per IP); the 11th gets 429 with `Retry-After`.
 2. **Input guard.** [`PromptInjectionGuard`](../app/Services/PromptInjectionGuard.php) checks the question against the regex list in `resources/guards/prompt-injection.v1.php`. A hit ends the request: a `refused` event, `[DONE]`, no embedding, no model call.
-3. **Retrieve.** The question is embedded and searched with the hybrid search of section 12 (vector plus full text, merged with RRF). This runs before the response starts, so the `Server-Timing` header is real: `embed;dur=46.7, db;dur=6.9` in the run below.
+3. **Retrieve.** The question is embedded and searched with the hybrid search of section [II-10](#ii-10-chunking-and-hybrid-retrieval) (vector plus full text, merged with RRF). This runs before the response starts, so the `Server-Timing` header is real: `embed;dur=46.7, db;dur=6.9` in the run below.
 4. **The relevance gate.** A chunk counts as relevant when its vector similarity is at least `ai.docs.answer.min_similarity` (0.5 by default) or it matched full-text search, but a full-text match only counts when the question has no search operators: `websearch_to_tsquery` reads the word `or` as OR and `-word` as NOT, so "who won the world cup or the final" needs just one chunk with "final". If nothing is relevant, the app answers `no_context` ("I don't know") and never calls the model: cheaper, deterministic and testable. The row still records the chunk ids that search returned.
 5. **Build the context.** The chunks that fit a token budget (4000 estimated tokens by default, about 4 characters each) are wrapped as `<doc n="1" source="laravel" path="routing.md" section="...">` elements inside a `<context>` block, with the question after it. Text is escaped, so a chunk cannot close the tag and pose as an instruction. The system prompt (`resources/prompts/docs-answer.v1.md`) tells the model that the context is data, to cite with `[n]`, and to say so when the context does not answer.
 6. **Stream.** [`DocsAnswerProtocol`](../app/Ai/DocsAnswerProtocol.php) sends `sources` first (the list the `[n]` markers point to), then the SDK events (`stream_start`, `text_delta`, ...) as the describe stream does, and last a `citations` event. The page shows the sources before the first token.
@@ -484,11 +931,11 @@ Two lessons. A single threshold barely separates "rare term" from "unrelated", w
 | `retrieved_chunk_ids` | 1677, 2300, 2114, 2191, 2302, 2301 |
 | `cited_chunk_ids` | 2191, 2300, 2301, 2302, 2114 |
 
-Two more things a later re-run (after the review fixes) showed. The same rate-limiting question answered once with no `[n]` at all (`cited: []`) and cited five sources the next time: the citation rule is a request to the model, not a guarantee, so the `citations` event and `cited_chunk_ids` record what it actually did. And "which servers does the benchmark compare" was answered as "four server configurations" with a correct citation: the cited chunk is an early finished spec written when the bench had four servers (it has six). Retrieval grounds the answer in the corpus, and a stale document in the corpus gives a stale, well-cited answer.
+Two more things a later re-run (after the review fixes) showed. The same rate-limiting question answered once with no `[n]` at all (`cited: []`) and cited five sources the next time: the citation rule is a request to the model, not a guarantee, so the `citations` event and `cited_chunk_ids` record what it actually did. And "which servers does the benchmark compare" was answered as "four server configurations" with a correct citation: the cited chunk is an early finished spec written when the bench had four servers (it had six at the time of this run; three remain). Retrieval grounds the answer in the corpus, and a stale document in the corpus gives a stale, well-cited answer.
 
 The time to `sources` is budgeted; TTFT is only recorded. Here it is 4.8 s against about 75 ms for the short describe prompt, because the prompt now carries the retrieved context, and the model has to read all of it before the first token. The chunk the full-text search found (1677, `mcp.md`) was retrieved but not cited: the model judged it off-topic, which is the point of recording both lists.
 
-**Live run: five questions** (2026-11-03, nginx-fpm, `qwen3.5:9b`, model warm). Three on-topic and two off-topic questions through `/api/docs/ask`. Tokens/s is output tokens divided by the time from the first token to `stream_end`.
+**Live run: five questions** (2026-11-03, <!-- history -->nginx-fpm (a removed server)<!-- /history -->, `qwen3.5:9b`, model warm). Three on-topic and two off-topic questions through `/api/docs/ask`. Tokens/s is output tokens divided by the time from the first token to `stream_end`.
 
 | Question | `sources` | TTFT | Whole answer | tokens/s | Retrieved | Cited |
 |---|---|---|---|---|---|---|
@@ -521,9 +968,9 @@ The structural defence is how the prompt is built: retrieved text is escaped and
 
 When one trips, the triggering delta is withheld, the run is logged as `refused` with the output stage as the reason, and the stream sends `refused` with `replace: true`; the page removes the text it had shown. But the protocol cannot un-send tokens already streamed: the browser, a proxy or `curl` has them. The alternative is holding back a window of tokens before releasing them, which delays every honest answer to stop a rare attack, so the app streams immediately and treats `replace: true` as a request the client should honour, not a guarantee. A client that ignores it has seen the leaked words. Detection and the logged row are the guarantees; secrecy of a prompt is not, which is why the prompt must not hold secrets.
 
-**Reasoning is not streamed.** With `AI_THINK=true`, Ollama sends the model's thinking as `reasoning_delta` events before the answer. Thinking often restates the instructions, and the output guard checks only answer text, so `DocsAnswerProtocol` drops reasoning events instead of passing them through. The describe stream (section 9) still sends them; it has no secret instructions to protect.
+**Reasoning is not streamed.** With `AI_THINK=true`, Ollama sends the model's thinking as `reasoning_delta` events before the answer. Thinking often restates the instructions, and the output guard checks only answer text, so `DocsAnswerProtocol` drops reasoning events instead of passing them through. The describe stream (section [II-2](#ii-2-streaming-an-ai-answer)) still sends them; it has no secret instructions to protect.
 
-**Why POST with a JSON body.** The question could be a query string, as the describe and search endpoints are. Two things argue against it here. A URL lands in access logs, proxy logs and browser history, and a question can be personal. And a GET, or a POST with form fields, is a "simple" request: any other web page can make a visitor's browser send it (an `<img src>` or an auto-submitted form), and each one starts a model run that holds the GPU for seconds and counts against the visitor's rate limit. A request with `Content-Type: application/json` is not simple: the browser first asks the server with a CORS preflight, which this app does not answer for other origins, so a cross-site page cannot send it. So the endpoint answers 415 to anything but JSON and 405 to GET, and the lab page sends `fetch(url, {method: 'POST', body: JSON.stringify({q})})`, reading the stream the same way as before.
+**Why POST with a JSON body.** The question could be a query string, as the describe and search endpoints are. Two things argue against it here. A URL lands in access logs, proxy logs and browser history, and a question can be personal. And a GET, or a POST with form fields, is a "simple" request: any other web page can make a visitor's browser send it (an `<img src>` or an auto-submitted form), and each one starts a model run that holds the GPU for seconds and counts against the visitor's rate limit. A request with `Content-Type: application/json` is not simple, so an `<img>` or a plain form cannot send it; a script on another site has to ask first with a CORS preflight. That preflight does not stop it here: the app keeps Laravel's default CORS settings, which answer preflights on `api/*` for any origin, and this route has no [`RefuseCrossSiteRequests`](../app/Http/Middleware/RefuseCrossSiteRequests.php), so a cross-site page can still make a visitor's browser send a question and read the answer. What bounds that is the per-IP `docs-ask` rate limit, and on a cloud provider [`LimitCloudAi`](../app/Http/Middleware/LimitCloudAi.php) refuses a cross-site request before any paid call. So the endpoint answers 415 to anything but JSON and 405 to GET, and the lab page sends `fetch(url, {method: 'POST', body: JSON.stringify({q})})`, reading the stream the same way as before.
 
 **What never leaves the server.** No refusal, `no_context` or `error` event contains the system prompt, the canary, an internal host name or a stack trace. A model failure is masked as "The answer could not be generated." and sent once; an embedding failure is a 503 JSON "Docs answering is unavailable right now."
 
@@ -534,11 +981,9 @@ When one trips, the triggering delta is withheld, the run is logged as `refused`
 
 **Read next.** [OpenAI: prompt engineering](https://platform.openai.com/docs/guides/prompt-engineering) · [OWASP Top 10 for LLM applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) · [pgvector](https://github.com/pgvector/pgvector) · [MDN: CORS preflight](https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request)
 
----
+## II-12. Measuring RAG: recall@k, calibration and LLM grading
 
-## 15. Measuring RAG: recall@k, calibration and LLM grading
-
-**What it is.** Section 14 answers from retrieved chunks. This slice (SL-33) measures how well it does that, so a change to chunk size, k, search mode or model is a number instead of an impression. The tool is one Artisan command, `rag:eval`, and a set of 30 labelled questions in `bench/rag-eval/questions.v1.jsonl`: 24 on-topic (18 about the Laravel docs, 6 about this repo) and 6 off-topic. Each on-topic question has a reference answer and an evidence phrase, a short quote that a retrieved chunk must contain for the question to count as found. It measures three separate things: did retrieval find the evidence, where should the relevance gate sit, and did the model answer correctly and from the sources.
+**What it is.** Section [II-11](#ii-11-answering-with-citations-rag-guards-and-the-trace-row) answers from retrieved chunks. This slice (SL-33) measures how well it does that, so a change to chunk size, k, search mode or model is a number instead of an impression. The tool is one Artisan command, `rag:eval`, and a set of 30 labelled questions in `bench/rag-eval/questions.v1.jsonl`: 24 on-topic (18 about the Laravel docs, 6 about this repo) and 6 off-topic. Each on-topic question has a reference answer and an evidence phrase, a short quote that a retrieved chunk must contain for the question to count as found. It measures three separate things: did retrieval find the evidence, where should the relevance gate sit, and did the model answer correctly and from the sources.
 
 **One run, step by step.**
 1. **Load and check.** `RagEvalSet` reads the file line by line; a bad line stops the run and the message names the line number. The command also refuses to run on an index with no embedded chunks, on a partly embedded one, or on chunk sizes that differ from the config (unless `--force`).
@@ -570,11 +1015,321 @@ When one trips, the triggering delta is withheld, the run is logged as `refused`
 
 **Read next.** [Youden's J statistic](https://en.wikipedia.org/wiki/Youden%27s_J_statistic) · [Mean reciprocal rank](https://en.wikipedia.org/wiki/Mean_reciprocal_rank) · [Judging LLM-as-a-judge with MT-Bench and Chatbot Arena](https://arxiv.org/abs/2306.05685) · [Laravel: Artisan console](https://laravel.com/docs/13.x/artisan)
 
----
+## II-13. Caching answers: exact keys, semantic neighbours and invalidation
 
-## 16. How the AI features are built: a map of the code
+**What it is.** Section [II-11](#ii-11-answering-with-citations-rag-guards-and-the-trace-row) spends a full model call on every question: a median of 6102 ms in the cache run, 8997 ms in section [II-12](#ii-12-measuring-rag-recallk-calibration-and-llm-grading). This slice (SL-40) puts a cache in front of `POST /api/docs/ask` so a repeated or reworded question is served from a stored answer. There are two lookups. **Exact:** a key in the cache store (Redis) over the normalized question, which costs no embedding. **Semantic:** the nearest stored question in a pgvector table, accepted only at or above a similarity threshold. A hit streams the stored answer at once; a miss runs the section [II-11](#ii-11-answering-with-citations-rag-guards-and-the-trace-row) pipeline unchanged and stores its answer afterwards.
 
-**What it is.** Sections 9–15 explain one mechanism each. This section is the map across all of them. It shows which files make up the AI features, what each one is for, how four requests flow through them, and where to make a change for the feature requests that come up most. Keep it current: every AI slice updates this map (`LearningGuideTest` checks that every file linked here exists).
+**Why a near-miss hit is worse than a miss.** A miss costs seconds. A wrong hit costs a wrong answer, delivered fast, with the original answer's sources and citations, so it looks as trustworthy as a fresh one. Two questions can share almost every word and still ask for different things, and an embedding model scores such a pair high because it measures topic, not intent. That is why the threshold is measured, not guessed.
+
+**The measured gap (committed under `bench/results/docs-cache/2026-11-03/`).** `docs:cache-calibrate` embeds 24 paraphrase pairs and 24 near-miss pairs once each and scores every pair by cosine similarity.
+- Paraphrases ran from 0.536 to 0.906 (median 0.792); near-misses from 0.714 to 0.930 (median 0.832). The ranges overlap: the most similar near-miss (0.930) scores above the most similar paraphrase (0.906).
+- So the zero-false-hit threshold (the lowest paraphrase strictly above the highest near-miss) does not exist: "none". The Youden-best cut, 0.893558, serves 3 of 24 paraphrases and also 1 of 24 near-misses.
+- The rule for the default is the highest near-miss rounded up to 2 decimals: **0.94**, set through `AI_DOCS_CACHE_MIN_SIMILARITY`. It serves no near-miss (FPR 0) and, on this pair set, no paraphrase either (24 of 24 lost). The earlier spec probe had a gap of only 0.028 between the groups and a common default of 0.95 would have missed most paraphrases; 0.85 would have served near-misses.
+- A small set is a safety bound, not a forecast. In the hit/miss run, 2 of 10 reworded questions were still served semantically at 0.94 (and all 18 light rewordings of the latency run), although none of the 24 pair-set paraphrases reaches it.
+
+**One request, step by step** (`POST /api/docs/ask`, cache on):
+1. **Validate.** `DocsAskRequest` accepts an optional boolean `cache`; a non-boolean is a 422.
+2. **Input guard first.** The input guard (`PromptInjectionGuard`) runs before the cache, before any lookup. If it ran after the cache, a refused phrasing could be served as soon as a similar honest question was cached, and the refusal would never be logged. Refusals are never stored either, so they cannot be replayed.
+3. **Exact lookup.** The question is normalized (lowercase, whitespace collapsed, every trailing run of spaces and `?!.` removed, so `How do I retry? ?` matches `how do i retry`) and hashed with the prompt version, answer model and index version. A hit re-checks the row: a key that points at a deleted, stale or expired row is dropped.
+4. **One embedding.** On an exact miss the raw question is embedded once (one embedding per request). That vector serves both the semantic lookup and the retrieval step, so a miss costs only the extra database query, not a second embedding.
+5. **Semantic lookup.** The nearest current entry by cosine; served at or above the threshold (equal passes).
+6. **On a hit.** The stream is `sources`, `cache_hit` (kind, similarity, `cached_at`, `saved_latency_ms`, `invocation_id`, `source_invocation_id`; not the stored question's text, which another client typed), one `text_delta` with the full answer, `citations`, `[DONE]`. No model stream exists, so there is no `stream_start` or `stream_end`. The answer is one burst on purpose: replaying fake token timing would misrepresent what happened. An `ai_runs` row with status `cached` records the kind, similarity, entry id and `saved_latency_ms` (the source run's logged `latency_ms` minus this one's, floored at 0), so the hit rate and the time saved are queryable.
+7. **On a miss.** Retrieval, gate, budget and the agent run as in section [II-11](#ii-11-answering-with-citations-rag-guards-and-the-trace-row). After `citations` is sent and the client is still connected, the store hook writes the entry, only for an outcome that is completed and cited. Refused, `no_context`, failed, uncited and stopped answers are never stored. A storing failure is reported, never thrown at the client.
+8. **Bypass.** `cache:false` (the body field `"cache": false`) skips both lookups and still stores a qualifying answer, so the lab can compare a fresh answer with a cached one. `DocsAnswerService::answer()` never touches the cache, so `rag:eval` measures the model and not the cache.
+
+**Invalidation: a filter, not deletes.** An entry is served only while its prompt version, answer model, embedding model and index version all equal the current ones. The index version is a hash over the indexed documents' source, path and hash, plus the embedding model; it is memoized for 60 s and `docs:index` forgets it when a document changes. While any chunk still waits for its vector, the hash also carries the pending count and nothing is stored, because an answer given during re-indexing was retrieved from a half-embedded index. The versions are read once when the request is planned and stored with the answer, so an answer cannot be filed under an index version that appeared while it was streaming. Re-indexing, a new prompt file or a model change therefore makes every older entry a miss with no manual step and no hook that could be forgotten. Stale rows stay inert until the TTL (`ai.docs.cache.ttl_hours`, default 168) or `docs:cache --prune` removes them with their exact keys.
+
+**Measuring it.** `docs:cache --stats` prints hit rate (cached over cached plus completed, endpoint rows only, follow-up turns excluded because they can never be served from the cache), hits by kind, saved latency sum and median, and current against stale entries. `bench/docs-cache.sh` asks 10 eval questions fresh, verbatim and reworded:
+
+| Path | Result |
+|---|---|
+| fresh (miss) | 6071 ms median, 10 of 10 misses |
+| exact repeat | 8 hits, 46.5 ms median |
+| reworded | 2 semantic hits, 126 ms median |
+| overall | 10 of 30 requests served from the cache |
+
+Both budgets hold (exact under 100 ms, semantic under 300 ms; the 18-question latency run: 51 ms and 86 ms). Both exact misses follow a fresh answer without a citation, which the store rule refuses (checked in `ai_runs`). The first run printed a stats hit rate of 2.6% because it divided by every completed row, `rag:eval` answers included; the stats now count endpoint rows only (`origin = api`), and the re-run printed 56.9% over the day.
+
+**Two review findings worth remembering.** A global cache on a public endpoint is shared state between strangers. The first `cache_hit` event sent the stored question's text, so a client could read what someone else had asked; it now sends only the similarity. And a cached answer is replayed to everyone, so a question carrying an injected instruction must never match a clean one: measured, such questions scored 0.827–0.881 against the clean version, under the 0.94 threshold. The threshold is the security boundary as well as the quality one.
+
+**In this repo.**
+- Code: [`DocsAnswerCache`](../app/Services/DocsAnswerCache.php), [`DocsIndexVersion`](../app/Services/DocsIndexVersion.php), [`DocsCacheCalibrator`](../app/Services/DocsCacheCalibrator.php), [`DocsCacheCommand`](../app/Console/Commands/DocsCacheCommand.php), [`DocsCacheCalibrateCommand`](../app/Console/Commands/DocsCacheCalibrateCommand.php).
+- Tests: `DocsCacheTest`, `DocsAnswerCacheTest`, `DocsCacheCalibrateTest`, `DocsCacheCommandTest`, `DocsCacheCommittedResultsTest`; `DocsAskTest` is unchanged because the cache is off in `phpunit.xml`.
+- Data and results: [`cache-pairs.v1.jsonl`](../bench/rag-eval/cache-pairs.v1.jsonl), [`bench/results/docs-cache/2026-11-03/`](../bench/results/docs-cache/2026-11-03/) and the "Answer cache (2026-11-03)" section of [`BENCHMARKS.md`](../BENCHMARKS.md).
+- Spec: [`.ai/specs/spec-20261103-1616-docs-semantic-cache/`](../.ai/specs/spec-20261103-1616-docs-semantic-cache/).
+
+**Read next.** [Redis: vector search](https://redis.io/docs/latest/develop/get-started/vector-database/) · [pgvector](https://github.com/pgvector/pgvector) · [Laravel: cache](https://laravel.com/docs/13.x/cache)
+
+## II-14. Stop that really stops, and conversations
+
+**What it is.** Section [II-22](#ii-22-the-ai-lab-ui-inertia-vue-and-streams-in-the-browser) gave the lab a Stop button: it calls `abort()` on the `fetch`, so the browser closes the connection. That only hides the answer. Whether the server stops depends on what PHP does when it notices the client has gone, and on a streaming endpoint that is easy to get wrong. This slice (SL-41) makes the server stop too, measured it on all six server modes of the time (three remain), and turns `/ai/chat` into a conversation that sends earlier turns as marked history.
+
+**What was wrong (probe of 2026-11-03, one stream aborted after 1.5 s).**
+- <!-- history -->**nginx-fpm:** no `ai_runs` row at all. PHP-FPM kills the script at its next write once the client has left (`ignore_user_abort` is off), so the code that writes the row never runs. That breaks the rule that every model call is logged.<!-- /history -->
+- **frankenphp-octane:** the server finished the answer anyway: a `completed` row with 320 tokens, written 22 224 ms after the client had gone. The model and a worker thread stayed busy for 20 s for nobody.
+
+**How the cancel works.**
+1. The stream sets `ignore_user_abort(true)` for its own duration. Without it PHP ends the script mid-loop once the client has left (as it did on the removed PHP-FPM servers) and nothing is logged; with it the loop survives to notice and clean up. It is set and restored in code (`finally`), not in php.ini, so no other request changes.
+2. After each flushed event the stream asks an `AbortWatcher` (the real one, `ConnectionAbortWatcher`, answers `connection_aborted()`). A test swaps in a fake that reports an abort after N events, so no test opens a real socket.
+3. On abort the recorder writes a `stopped` row, the loop breaks, and the generators are unset. Releasing the SDK generator releases the HTTP body, which closes the connection to Ollama, and Ollama stops generating. Nothing more is sent to the client.
+4. A stopped answer is never cached: the store step runs only when the loop resumes the stream after the `citations` flush, and the loop resumes only if the watcher said the client is still there.
+5. Three edges, each found in review:
+   - **Stop while the model is thinking** (`AI_THINK=true`). Reasoning is never sent, so there was nothing to flush and nothing to check. The protocol now writes an SSE comment (`: keepalive`) per reasoning event; the browser's parser ignores comment lines, and the flush gives the watcher its chance. The one window left is the model reading the prompt before its first event.
+   - **Stop before the model started.** A client that leaves during retrieval was caught at the first flush (`sources`), before the SDK had opened a run, so no row was written. The protocol now records a `stopped` row from the planned metadata, with null tokens and TTFT.
+   - **Stop noticed after the end.** If the abort is seen right after `stream_end`, the model had finished: the run is logged `completed` (or `failed` after the masked error), not `stopped`, so stop counts are not inflated.
+
+**The row.** Status `stopped`; `tokens_out` counts the text deltas PHP received (about one per token; Ollama reports no `eval_count` once the connection is closed, and `tokens_in` stays null); `stopped_after_ms` is the time from the first token to the abort being noticed; TTFT, `stopped_after_ms` and `tokens_out` are all null if the abort came before the first token. Nothing about a stopped run is ever cached, and the partial text is never sent back as history.
+
+**A bug worth knowing.** The first version hooked the parent's callback. On php-fpm (where it was found; a removed server) Laravel's wrapper echoes and flushes the generator itself and returns nothing, so the loop checking `connection_aborted()` never ran there; it only worked under Octane. `SseProtocol::response()` now builds the chunk generator itself, with the parent's masked-error logic copied into a private method, and works under both. Describe uses the same protocol, so it gets the same cancel; its events and masked errors are unchanged.
+
+**What each server mode does (committed under [`bench/results/chat-stop/2026-11-03/`](../bench/results/chat-stop/2026-11-03/), `bench/chat-stop.sh`, 5 runs per mode, abort after 20 deltas, qwen3.5:9b).** The bench closes its connection after 20 `text_delta` events, reads the row with that stream's invocation id, and immediately sends a 1-token request straight to Ollama.
+- The primary figure is whether the model is **free** again ("model free"): the time that probe needed, against the median of 5 idle probes taken before the runs. A model still generating a long answer would make it wait for seconds.
+- The secondary figure is the **delta lag** ("delta lag"): the row's `tokens_out` minus the deltas the client had actually received (20 to 25, since curl may hold a few more when the reader stops it), i.e. how many more deltas PHP read before noticing.
+- The direct evidence is **Ollama's own log**: for every one of the 30 runs it logged `Request terminated … context canceled` ([`ollama-log.txt`](../bench/results/chat-stop/2026-11-03/ollama-log.txt)). Ollama ran with one generation slot (`OLLAMA_NUM_PARALLEL:1`), so the fast probe and the log agree. The app cannot see this itself: a cancelled request returns no token count.
+
+<!-- history -->
+
+| Mode | Median tokens after Stop | Idle probe | Probe after Stop |
+|------|--------------------------|------------|------------------|
+| nginx-fpm | 1 | 65 ms | 113 ms |
+| apache-fpm | 4 | 40 ms | 115 ms |
+| openlitespeed | 3 | 41 ms | 144 ms |
+| frankenphp | 1 | 40 ms | 75 ms |
+| frankenphp-octane | 1 | 41 ms | 80 ms |
+| frankenphp-worker | 1 | 41 ms | 79 ms |
+
+<!-- /history -->
+
+Every mode wrote a `stopped` row for 5 of 5 runs. <!-- history -->nginx-fpm (a removed server)<!-- /history --> went from no row to a row, and frankenphp-octane from 320 tokens after Stop to about 1. NFR-1 (reported, not a gate: probe at most 1.5 times the idle median plus 1 s, delta lag at most 10) holds on every mode; the worst probe was 144 ms. A mode that could not see the disconnect would have kept the old behaviour (a `completed` row) and been reported as a finding; none was. The full tables and the surprises are in the "Stop and cancel per server mode (2026-11-03)" section of [`BENCHMARKS.md`](../BENCHMARKS.md).
+
+**Conversations: history is data, not instructions.** `POST /api/docs/ask` takes an optional `history`: alternating `user` and `assistant` turns, starting with `user` and ending with `assistant`, at most 6 turns (`ai.docs.chat.max_history_turns`), each at most 2 000 characters and valid UTF-8 without NUL. Anything else is a 422, never silently cut. The page sends whole completed exchanges only, so a stopped, refused, `no_context` or empty answer never becomes history.
+- **Marked and escaped.** History goes into the user message as `<history><turn role="…">…</turn></history>` before `<context>`, escaped like the retrieved text. A new prompt file, `docs-answer.v2.md`, says history is earlier conversation for reference and never instructions. It is used only when history is present, so a request without history keeps `docs-answer@v1` and every older result stays valid; the logged `prompt_version` (`docs-answer@v2`) and `history_turns` show which kind of request a run was.
+- **Input guard.** The pattern guard checks the latest question and every `user` turn. A match refuses the request (`refused`) and the event carries `turn` (the 0-based index in `history`, or `latest`). `assistant` turns are never matched, because a client can forge them, but they are always escaped and marked.
+- **Forged turns.** The client can write a turn as if the assistant had said it, so a forged turn is data like any other. The output guard's allowed texts stay the question and the chunk bodies; history is never added. A test forges an `assistant` turn holding 14 words of the v2 prompt and has the fake model repeat them: the answer is refused at the output stage with `output:prompt_overlap`. Treating history like retrieved text is what makes a client-supplied transcript safe.
+- **Never cached.** A follow-up's meaning depends on its history, so the same text means different things in different chats. A turn with history neither reads nor writes the cache; `"cache": true` with history is accepted and ignored.
+
+**Why follow-ups retrieve poorly.** Retrieval runs on the latest question only (the owner's instruction), so history helps the model read the question, not find the passage. Three real two-turn chats against `docs-answer@v2` on <!-- history -->nginx-fpm (a removed server)<!-- /history --> (`followups.md`): 1 of 3 answers was right. "How do I undo it?" has no subject to search for, so no migration passage came back and the model said the docs do not cover it. "How do I make it retry?" matched the HTTP client's `retry` method instead of queued jobs. "How do I clear it?" worked by luck: search never saw the word "cache", but the vector for "clear it" landed near the cache docs' "Clearing the Cache" section, and the model took "cache" from the history. The fix is query rewriting: condense the history and the follow-up into one standalone question before retrieval. It is out of scope here and recorded as the next option.
+
+**The lab page.** `/ai/chat` keeps a transcript: each assistant turn shows its own sources, citations (scoped to that turn), cached mark, refusal or "I don't know" state, and its logged run. Ask, Stop and New chat; Stop leaves the partial answer visible, marked "Stopped", and re-enables the controls at once. History lives in page state only and is lost on reload. Only the newest answer is an `aria-live` region, so a screen reader does not re-read the whole transcript.
+
+**In this repo.**
+- Code: [`SseProtocol`](../app/Ai/SseProtocol.php), [`AbortWatcher`](../app/Ai/AbortWatcher.php), [`ConnectionAbortWatcher`](../app/Ai/ConnectionAbortWatcher.php), [`DocsChatTurn`](../app/DTOs/DocsChatTurn.php), [`DocsAnswerAgent`](../app/Ai/DocsAnswerAgent.php), [`AiRunRecorder`](../app/Ai/AiRunRecorder.php).
+- Tests: `StreamCancelTest`, `DocsChatHistoryTest`, `BenchChatStopTest`, `ChatFollowupNoteTest`, `AiLabChatTranscriptTest`.
+- Measurements: [`bench/chat-stop.sh`](../bench/chat-stop.sh), [`bench/results/chat-stop/2026-11-03/`](../bench/results/chat-stop/2026-11-03/), [`followups.md`](../bench/results/chat-stop/2026-11-03/followups.md).
+- Spec: [`.ai/specs/spec-20261103-2118-chat-stop-multiturn/`](../.ai/specs/spec-20261103-2118-chat-stop-multiturn/).
+
+**Read next.** [PHP: ignore_user_abort](https://www.php.net/manual/en/function.ignore-user-abort.php) · [PHP: connection handling](https://www.php.net/manual/en/features.connection-handling.php) · [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md)
+
+## II-15. Similar photos and searching photos by text
+
+**What it is.** Finding photos that look like another photo, or like a sentence, without a vision model in the loop. An image encoder (CLIP, 512 numbers per vector) runs in a sidecar container and maps photos and text into the same space; pgvector finds the nearest photos with an HNSW cosine index, as in [II-9](#ii-9-embeddings-and-vector-search). Similar photos (SL-36) takes a photo as the query; searching photos by text (SL-37) takes a sentence.
+
+**One search, step by step:**
+
+1. `photos:embed` queues batches of 16 on the `ai-vision` queue; [`PhotoEncoderClient`](../app/Ai/PhotoEncoderClient.php) calls the sidecar, checks every vector's size, and the service normalises and stores each vector with its model label.
+2. For a similar-photos request, [`SimilarPhotosService`](../app/Services/SimilarPhotosService.php) asks the repository for the nearest photos of other listings through the index, applies the cutoffs and builds the reasons. The result is cached under a key that includes the embedding generation, which `photos:embed` bumps.
+3. For a text query (`GET /api/photos/search`, page `/ai/photo-search`), [`PhotoTextSearchService`](../app/Services/PhotoTextSearchService.php) validates and guards the text, wraps it in the query template (`a photo of {query}`), embeds it with the same encoder and searches the same index. A refused query is a 422 and an encoder that cannot answer is a 503, not a 500.
+4. `photos:similar-eval` and an eval over 30 labelled queries ([`queries.v1.jsonl`](../bench/photo-search/queries.v1.jsonl)) score both and write `run.json`.
+
+**In this repo.**
+- The sidecar: [`.ddev/docker-compose.photo-encoder.yaml`](../.ddev/docker-compose.photo-encoder.yaml).
+- Code: [`SimilarPhotosService`](../app/Services/SimilarPhotosService.php), [`PhotoTextSearchService`](../app/Services/PhotoTextSearchService.php) and [`EmbedPhotosCommand`](../app/Console/Commands/EmbedPhotosCommand.php).
+- Tests: [`PhotoSimilarEndpointTest`](../tests/Feature/PhotoSimilarEndpointTest.php) and [`PhotoTextSearchTest`](../tests/Feature/PhotoTextSearchTest.php).
+- Numbers: [`BENCHMARKS.md`](../BENCHMARKS.md#similar-car-photos-2026-11-11) and [the text search section](../BENCHMARKS.md#search-car-photos-by-text-2026-11-11); results in [`bench/results/photo-similar/`](../bench/results/photo-similar/) and [`bench/results/photo-search/`](../bench/results/photo-search/).
+- Specs: [similar photos (SL-36)](../.ai/specs/spec-20261111-1701-similar-photos/) and [text-to-photo search (SL-37)](../.ai/specs/spec-20261111-2206-photo-text-search/).
+
+**Numbers.** 156 photos, CLIP `clip-vit-base-patch32` on the sidecar (source: [`BENCHMARKS.md`](../BENCHMARKS.md#similar-car-photos-2026-11-11) and [the text search section](../BENCHMARKS.md#search-car-photos-by-text-2026-11-11)):
+- **Similar photos.** At the chosen cutoff 0.75, 0.785 of the results share the make and 0.677 the make and model, with coverage 0.987. Uncached latency is 0.82 ms at p50 and 1.26 ms at p95. A cutoff of 0.85 lifts make-and-model precision to 0.895 but answers only 0.603 of the photos. `photos:embed` took 11.4 s for the 156 photos.
+- **Text search.** 30 labelled queries at the shipped cutoff 0.2: coverage 0.967, precision at 8 of 0.506 and MRR 0.569. Uncached latency is 60.4 ms at p50 and 136.1 ms at p95, because each query is one text encode on the emulated sidecar.
+
+**Read next.** [CLIP](https://openai.com/index/clip/) · [pgvector](https://github.com/pgvector/pgvector) · [Infinity embedding server](https://github.com/michaelfeil/infinity)
+
+## II-16. Hybrid similarity and duplicate photos
+
+**What it is.** Two ways to go beyond one image vector per photo. Hybrid similarity (SL-38) blends the image vector with the vector of a templated caption of the photo, so two photos of the same model match through their words as well as their pixels. Duplicates (SL-39) groups photos that are the same picture in a degraded form (a resize, a crop, a re-encode), asks a vision model which photo of a group is the best, and lets a person review the answer.
+
+**One request each, step by step:**
+
+1. **Hybrid.** `photos:embed --text` encodes each photo's caption on the `ai-vision` queue into `text_embedding`. [`SimilarPhotosService`](../app/Services/SimilarPhotosService.php) takes the 40 nearest image candidates and ranks them by `w * image + (1 - w) * caption` ([`HybridParts`](../app/DTOs/HybridParts.php) keeps the parts); a pair without a caption keeps its image similarity and is flagged image only. The slider on `/ai/photos` sets `w`, and `w` of 1 is the image-only path of [II-15](#ii-15-similar-photos-and-searching-photos-by-text).
+2. **Duplicates.** `photos:make-duplicates` makes seeded, degraded copies (five kinds) so the eval knows the truth. `photos:duplicates` ([`DuplicateClusterService`](../app/Services/DuplicateClusterService.php)) runs one nearest query per photo and joins close photos into groups with union-find, cutting a group above 6 photos at its weakest link.
+3. [`JudgeDuplicateGroupJob`](../app/Jobs/JudgeDuplicateGroupJob.php) sends each group to a vision model ([`PhotoBestPickAgent`](../app/Ai/PhotoBestPickAgent.php), 1 to 6 photos) that names the best one; the pick is checked, with up to 3 attempts.
+4. A person reviews the group on the lab page ([`DuplicateReviewService`](../app/Services/DuplicateReviewService.php)); one review per group is stored apart from the model's pick.
+5. `photos:similar-eval --hybrid` sweeps `w` and compares the blend with image-only; `photos:duplicates-eval` scores the threshold, the chosen cutoff and the picked-original rate per model.
+
+**In this repo.**
+- Code: [`app/Services/HybridEvalScorer.php`](../app/Services/HybridEvalScorer.php), [`app/Services/DuplicateClusterService.php`](../app/Services/DuplicateClusterService.php), [`app/Services/DuplicateReviewService.php`](../app/Services/DuplicateReviewService.php) and [`app/Ai/PhotoBestPickAgent.php`](../app/Ai/PhotoBestPickAgent.php).
+- Tests: [`HybridSimilarPhotosTest`](../tests/Feature/HybridSimilarPhotosTest.php), [`PhotoDuplicateClusterTest`](../tests/Feature/PhotoDuplicateClusterTest.php) and [`PhotoBestPickTest`](../tests/Feature/PhotoBestPickTest.php).
+- Numbers: [`BENCHMARKS.md`](../BENCHMARKS.md#hybrid-similar-photos-2026-11-12) and [the duplicates section](../BENCHMARKS.md#duplicate-photos-and-the-best-pick-2026-11-12); results in [`bench/results/photo-duplicates/`](../bench/results/photo-duplicates/).
+- Specs: [hybrid similar photos (SL-38)](../.ai/specs/spec-20261112-1000-hybrid-similar-photos/) and [duplicate photos (SL-39)](../.ai/specs/spec-20261112-1157-photo-duplicates/).
+
+**Numbers.** Hybrid similarity (source: [`BENCHMARKS.md`](../BENCHMARKS.md#hybrid-similar-photos-2026-11-12)): at `w` 0.9 make-and-model precision is 0.693 against 0.677 for image only, with coverage 0.987; captions alone (`w` 0) reach 0.417. Uncached hybrid latency is 2.42 ms at p50 and 4.32 ms at p95. Duplicates (source: [the duplicates section](../BENCHMARKS.md#duplicate-photos-and-the-best-pick-2026-11-12)): over 212 photos and 114 true pairs, the old cutoff 0.98 found 0.184 of the pairs; the chosen 0.92 gives precision 0.902, recall 0.886 and F1 0.894, and clustering took 185 ms. When asked to pick the best photo of 19 clean groups, gemma4:12b chose the original in 5 (0.263) and qwen3.5:9b in 8 (0.421).
+
+**Read next.** [Reciprocal rank fusion](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf) · [pgvector](https://github.com/pgvector/pgvector)
+
+## II-17. A model that decides when to search: tool calling
+
+**What it is.** Section [II-6](#ii-6-from-words-to-filters-structured-output-with-a-validation-boundary) calls the model once and treats the reply as data. Here the model chooses: `/ai/assistant` gives it one tool, `SearchListings`, and it may answer directly or ask for a search first. The SDK runs the loop: model, tool call, tool result, model again, until there is an answer. The model never touches the database; it only proposes arguments.
+
+**One question, step by step.**
+1. `AskAssistantController` validates the request and `PromptInjectionGuard` checks the question and every earlier `user` turn **before** any model call. A hit answers one `refused` event and logs a row.
+2. [`BuyerAssistantAgent`](../app/Ai/BuyerAssistantAgent.php) declares the tool; the tool itself refuses a fifth search (`SearchListings::MAX_CALLS`), and the SDK step cap leaves room for the answer and one repair. The prompt is `buyer-assistant@v2`.
+3. When the model asks for a search, [`SearchListings`](../app/Ai/Tools/SearchListings.php) validates the arguments with [`ListingFilterRules`](../app/Rules/ListingFilterRules.php), the rules `/listings` uses, and passes them to the same search service. Values reach SQL only as bound parameters. At most 10 listings come back, as compact summaries.
+4. Invalid arguments are not run. The field errors go back to the model as a `tool_error`, and it gets one repair. A second invalid call ends the tool for that question.
+5. The stream carries `tool_call`, `tool_result` and `tool_error` next to the chat's own events ([`AssistantProtocol`](../app/Ai/AssistantProtocol.php)). Stop uses the same abort watcher as section [II-14](#ii-14-stop-that-really-stops-and-conversations).
+6. [`RecordToolStep`](../app/Ai/RecordToolStep.php) stores each call as an `ai_tool_steps` row; the `ai_runs` row counts `tool_steps` and `tool_errors`.
+
+**Tools are an attack surface.** The tool carries the `ReadOnlyTool` marker, and the agent's tool list is typed to accept only marked tools. Arguments from the model are untrusted input like a user's, so they get the same validation, not a shortcut.
+
+**How it is measured.** `assistant:eval` plays 30 questions from `bench/assistant/questions.v1.jsonl` (18 searches, 6 follow-ups that need two searches, 6 that need no tool) and reports tool-call precision and recall, argument validity on the first try, repair success, filter accuracy, steps, latency, and the share of answers that mention a listing id the tool did not return. A made-up id is a `/listings/{id}` link the tool did not return; the prompt requires that link form, so plain numbers such as "#1 pick" never count. A listing named without a link ("listing 12") is reported separately as an unlinked mention. It exits with failure if any question used more than 4 steps.
+
+**In this repo.** Code: [`BuyerAssistantAgent`](../app/Ai/BuyerAssistantAgent.php), [`SearchListings`](../app/Ai/Tools/SearchListings.php), [`AssistantProtocol`](../app/Ai/AssistantProtocol.php), [`RecordToolStep`](../app/Ai/RecordToolStep.php), [`AskAssistantController`](../app/Http/Controllers/AskAssistantController.php), [`AssistantEvalCommand`](../app/Console/Commands/AssistantEvalCommand.php). Tests: [`BuyerAssistantToolTest`](../tests/Feature/BuyerAssistantToolTest.php), [`BuyerAssistantAgentTest`](../tests/Feature/BuyerAssistantAgentTest.php), [`AssistantStepLogTest`](../tests/Feature/AssistantStepLogTest.php), [`AssistantEndpointTest`](../tests/Feature/AssistantEndpointTest.php), [`AssistantEvalTest`](../tests/Feature/AssistantEvalTest.php). Spec: [`.ai/specs/spec-20261112-1708-buyer-assistant/`](../.ai/specs/spec-20261112-1708-buyer-assistant/).
+
+**Read next.** [Laravel AI SDK: tools](https://laravel.com/docs/13.x/ai-sdk) · [OWASP: LLM06 excessive agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/)
+
+## II-18. Admin assistant: a hand-written tool loop
+
+**What it is.** The buyer assistant lets the SDK run its tool loop; `/ai/admin-assistant` writes that loop in plain PHP so each turn can be read. It is local only (the routes answer 404 elsewhere or with `AI_ADMIN_ASSISTANT=false`) and uses Ollama's OpenAI-shaped `/v1/chat/completions`.
+
+**One question, step by step.**
+
+1. [`AdminAssistantLoop`](../app/Ai/AdminAssistantLoop.php) guards the question, then [`OllamaChatClient`](../app/Ai/OllamaChatClient.php) sends the system prompt, the last 40 messages, the tool definitions, `tool_choice` and `temperature: 0`.
+2. `tool_calls` come back with `arguments` as a string. The loop decodes it only when it handles the call; invalid JSON, an unknown tool or a failed `validate` go back to the model as an error.
+3. A valid read call runs through [`AdminToolRegistry::runRead`](../app/Ai/AdminTools/AdminToolRegistry.php), which refuses write tools. Results are capped (4000 characters, 10 rows, descriptions cut at 500) and sent back wrapped in `<tool_result>` with `<` and `>` escaped.
+4. The first valid write becomes a pending action (random id, preview, 10 minutes) and the loop returns. Only [`AdminAssistantConfirmation`](../app/Services/AdminAssistantConfirmation.php), reached from the confirm endpoint, runs a write: it validates again, writes in a transaction and resumes the loop.
+5. At most 4 tool steps and 6 model calls run per question; the last call is sent with `tool_choice: none`. Every model call is an `ai_runs` row and every step an `ai_tool_steps` row (`ok`, `error`, `failed`, `pending`, `confirmed`, `rejected`).
+
+**To add a tool**, write a class in [`app/Ai/AdminTools/`](../app/Ai/AdminTools/) with `name`, `description`, `parameters`, `isWrite`, `validate` and `run`, give a write a `preview`, and list it in the registry. **Tests:** [`AdminToolsTest`](../tests/Feature/AdminToolsTest.php), [`AdminAssistantLoopTest`](../tests/Feature/AdminAssistantLoopTest.php), [`AdminAssistantConfirmTest`](../tests/Feature/AdminAssistantConfirmTest.php), [`AdminAssistantEndpointTest`](../tests/Feature/AdminAssistantEndpointTest.php), [`AdminAssistantPageTest`](../tests/Feature/AdminAssistantPageTest.php). The page is [`AdminAssistant.vue`](../resources/js/ai/Pages/Lab/AdminAssistant.vue); the in-app guide is `/ai/guides/admin-assistant`.
+
+Not measured: the loop is covered by tests, and its cost per question is that of the model calls, recorded as `ai_runs` rows; the tool-choice numbers for a model that runs its tools through the SDK are in [II-17](#ii-17-a-model-that-decides-when-to-search-tool-calling).
+
+**In this repo.** Spec: [admin assistant (SL-34)](../.ai/specs/spec-20261113-0950-admin-assistant/).
+
+**Read next.** [Ollama: OpenAI compatibility](https://docs.ollama.com/api/openai-compatibility) · [Ollama: tool calling](https://docs.ollama.com/capabilities/tool-calling)
+
+## II-19. MCP server for the listing tools
+
+**What it is.** The same listing tools as the admin assistant, published to outside clients (Claude Code, Claude Desktop) through a Laravel MCP server over stdio. It runs on the local machine only (`APP_ENV=local` and `AI_MCP_SERVER` on; otherwise `mcp:start listings` exits 1 and the Changes routes answer 404). No model runs on this side, so it has no settings row.
+
+**One tool call, step by step.**
+
+1. [`ListingsServer`](../app/Mcp/Servers/ListingsServer.php) lists six tools and carries instructions for the client's model; [`routes/ai.php`](../routes/ai.php) registers it as `listings`, and a client starts it with `php artisan mcp:start listings`.
+2. The read tools ([`AdminToolWrapper`](../app/Mcp/Tools/AdminToolWrapper.php)) take their schema, validation and caps from the admin tools, so the two entry points cannot drift. Each call is a row in `mcp_tool_calls`.
+3. The write tools ([`ProposeChangeTool`](../app/Mcp/Tools/ProposeChangeTool.php), named `propose_*`) never write a listing. They store a `pending_changes` row (30 minute expiry) and return the id, the preview and a link to `/ai/changes/{id}`.
+4. Only a click on that page applies a change: `POST /ai/changes/{id}/confirm` (local, JSON, `Sec-Fetch-Site: same-origin` required, one-time per-session nonce, rate limited) claims the row with one conditional update, validates again and writes in a transaction through [`AdminWriteApplier`](../app/Ai/AdminTools/AdminWriteApplier.php). The outcome is `confirmed`, or `failed` when the change no longer fits; a decided or expired change answers 409 `change_not_pending`. `change_status` lets the model read the outcome.
+
+**Why out of band.** The library has no elicitation, a client's permission prompt can be set to always allow, and a confirm tool could be called by the model itself. A human click on a local page is the one confirmation a model cannot give by itself: the endpoint needs a browser's same-origin header and a nonce that exists only in the developer's session. The residual risk is a client with a shell, which could fetch the page and forge the two headers, or one that drives a headless browser; the guide says so.
+
+**Connect.** `claude mcp add ai-lab -- ddev exec php artisan mcp:start listings` for Claude Code, a `claude_desktop_config.json` entry for Claude Desktop, and `ddev artisan mcp:inspector listings` to look at the tools without a model (README has the snippets). **Tests:** [`McpListingsServerTest`](../tests/Feature/McpListingsServerTest.php) and [`McpChangesTest`](../tests/Feature/McpChangesTest.php). The page is [`Changes.vue`](../resources/js/ai/Pages/Lab/Changes.vue); the in-app guide is `/ai/guides/mcp`.
+
+Not measured: the server calls no model, and a tool call is a database read or a stored proposal; there is no speed to report.
+
+**In this repo.** Spec: [MCP server for the listing tools (SL-35)](../.ai/specs/spec-20261113-2230-mcp-listing-tools/).
+
+**Read next.** [Model Context Protocol](https://modelcontextprotocol.io/) · [Laravel MCP](https://laravel.com/docs/13.x/mcp)
+
+## II-20. Multi-step research agent
+
+**What it is.** A topic becomes a cited markdown report from the docs, in phases that PHP fixes: the model never decides what runs next. The page is `/ai/research`, the command is `agent:research`, the endpoints are `POST /api/research` and `GET /api/research/{id}`.
+
+**One run, step by step.**
+
+1. [`ResearchRunner::start`](../app/Services/ResearchRunner.php) checks the topic (3 to 300 characters, the docs injection guard) and stores a `research_runs` row: `running`, or `refused` with no model call. The endpoint queues a job that calls `execute`; the command runs it in the process.
+2. The planner ([`ResearchPlannerAgent`](../app/Ai/ResearchPlannerAgent.php)) returns 2 to 5 sub-questions with structured output. PHP validates them; an invalid plan gets one more attempt, then the run is `failed`.
+3. For each sub-question the runner searches with `DocsSearchService` in hybrid mode (5 chunks) and the note agent ([`ResearchNoteAgent`](../app/Ai/ResearchNoteAgent.php)) reads them as `<chunk id>` data (1200 characters each) and returns facts with chunk ids. Ids the search did not return are dropped, and so are facts left with none. Notes go to a Redis hash ([`RedisResearchNotesStore`](../app/Support/RedisResearchNotesStore.php), 24 hours) and are also stored as steps.
+4. The report agent ([`ResearchReportAgent`](../app/Ai/ResearchReportAgent.php)) writes from the numbered notes and sources; [`ResearchCitations`](../app/Ai/ResearchCitations.php) removes markers that match no source. With no facts the report is a fixed sentence and no call is made.
+5. At most 8 model calls and 13 steps run per run; going over ends the run as `failed` with `cap_reached`. A model call starts only when it can end, at its provider timeout, inside the run's `AI_RESEARCH_MAX_SECONDS` (600); otherwise the run ends `failed` with `deadline_reached` and keeps its steps. The provider and model are read once, in `start`, stored on the run and pinned on every agent, so the `ai_runs` rows equal the run header even if the settings change meanwhile. A failed model call stores the code `model_call_failed`; the exception text is reported, not shown. A sub-question whose search failed is a skipped note with reason `search_failed`: the fixed "not covered" report is written only when no note failed, otherwise a run without a fact ends `failed` with `no_usable_notes`. Every call is an `ai_runs` row and every phase a `research_steps` row ([`EloquentResearchRunRepository`](../app/Repositories/EloquentResearchRunRepository.php)).
+
+**Replay.** `agent:research --replay=<id>` and the page read the stored steps only; no model, search or HTTP call is made, so the output is the stored text byte for byte. **Safety.** Chunks are data in the prompt, the report is rendered by [`ResearchReportHtml`](../app/Support/ResearchReportHtml.php): raw HTML is escaped, an image becomes its alt text, a link keeps only its text unless it points to a numbered source on the page, so a model that read hostile docs text cannot make the reader's browser load anything. The endpoint refuses cross-site requests, allows 5 runs a minute per IP, and a cloud run counts as 8 hits on the cloud limit.
+
+**To change it**, set the `research` provider and model on `/ai/settings`, a cap in `AI_RESEARCH_*`, or point a prompt at a new version with `AI_PROMPT_RESEARCH_*`. **Tests:** [`ResearchRunnerTest`](../tests/Feature/ResearchRunnerTest.php), [`ResearchReplayTest`](../tests/Feature/ResearchReplayTest.php), [`ResearchEndpointTest`](../tests/Feature/ResearchEndpointTest.php). The page is [`Research.vue`](../resources/js/ai/Pages/Lab/Research.vue); the in-app guide is `/ai/guides/research` ([`research.php`](../resources/guides/research.php)).
+
+**Numbers.** 15 runs on qwen3.5:9b, written by `research:stats` (source: [`bench/results/research/2026-11-14/stats.json`](../bench/results/research/2026-11-14/stats.json)): 11 done, 0 failed and 4 refused before any model call. The runs that ended used 3.9 model calls and 7.8 steps on average (at most 5 calls) and took 20 s.
+
+**In this repo.** Spec: [multi-step research agent (SL-42)](../.ai/specs/spec-20261114-1444-research-agent/).
+
+**Read next.** [Anthropic: building effective agents](https://www.anthropic.com/engineering/building-effective-agents) · [Laravel AI SDK: agents](https://laravel.com/docs/13.x/ai-sdk)
+
+## II-21. Prompt playground with versions
+
+**What it is.** A page at `/ai/playground` where one input is run against two or three models side by side with the same system prompt. Prompts are saved as numbered, immutable versions in their own tables, separate from the feature prompt files, so an experiment can never change how a feature behaves. The endpoints are under `/api/playground`; the in-app guide is `/ai/guides/playground` ([`playground.php`](../resources/guides/playground.php)).
+
+**One run, step by step.**
+
+1. [`PlaygroundPromptService`](../app/Services/PlaygroundPromptService.php) holds the prompt rules: a name is trimmed and lowercased, 3 to 80 characters, taken names answer `name_taken`. [`EloquentPlaygroundPromptRepository`](../app/Repositories/EloquentPlaygroundPromptRepository.php) creates version 1 with the prompt and adds `max(version) + 1` inside a transaction that locks the prompt row; the unique key is the backstop and a collision answers 409. There is no update method and versions have no `updated_at`.
+2. A save that equals the latest version in text (trimmed, `\n` line endings), temperature and maximum tokens is refused with 422 `unchanged`; a note-only change counts as unchanged, text equal to an older version does not.
+3. [`PlaygroundRunner::run`](../app/Services/PlaygroundRunner.php) takes either a version id or a typed prompt (exactly one), checks the input (1 to 4000 characters), the targets (2 or 3, distinct, an enabled text provider, a model the provider lists: Ollama's installed models, or the model name pattern for cloud providers) and the settings (temperature 0 to 2 with at most two decimals, maximum tokens 16 to 2048). Any failure is a 422 before the first call.
+4. The input goes through `PromptInjectionGuard`, but a match is only stored on the run as `input_flags` and shown as a badge: this is where injection text is tested.
+5. Each target is one non-streaming call through [`PlaygroundAgent`](../app/Ai/PlaygroundAgent.php), one after another, because Ollama serves one request at a time. Each call is an `ai_runs` row (feature `playground`, label `playground:name@v3` or `playground:unsaved`) and the result links to it. A failing target is stored as `failed` or `timeout` (60 seconds by default) with an error cleaned of keys, URLs, hosts, addresses and ports ([`PlaygroundErrorRedactor`](../app/Support/PlaygroundErrorRedactor.php)) and cut to 300 characters; the others still run. Time to first token needs streaming, so it is null and shown as a dash.
+6. [`EloquentPlaygroundRunRepository`](../app/Repositories/EloquentPlaygroundRunRepository.php) stores the run with a copy of the system prompt and its settings, and the results. Opening a stored run reads these rows only and calls no model. Deleting a prompt keeps its runs and results and clears the version link.
+
+**Limits and gates.** A run is 3 calls at most, `POST /api/playground/runs` allows `AI_PLAYGROUND_PER_MINUTE` runs a minute per IP (6) and refuses cross-site requests; on a cloud provider `LimitCloudAi` counts a run as many hits as it has cloud targets. The page and every playground endpoint answer 404 outside the local environment ([`EnsureLocalLab`](../app/Http/Middleware/EnsureLocalLab.php), JSON code `local_only`), and the navigation entry and overview card are hidden there, because a free-form model call with a stored history must not be public; for the same reason, were it ever reachable elsewhere, a cloud target would have to be the configured default or a listed model rather than any id of the right shape. The page shows output with `{{ }}` as plain pre-wrapped text, never as HTML.
+
+**To change it**, set `AI_PLAYGROUND_TARGETS` (the targets the page picks first, `provider:model` comma separated), `AI_PLAYGROUND_TIMEOUT` or `AI_PLAYGROUND_PER_MINUTE`. To use a winning prompt in a feature, copy its text into a new numbered file under `resources/prompts/` and point the feature's agent at it; the playground never writes there. **Tests:** [`PlaygroundPromptTest`](../tests/Feature/PlaygroundPromptTest.php), [`PlaygroundRunTest`](../tests/Feature/PlaygroundRunTest.php), [`PlaygroundEndpointTest`](../tests/Feature/PlaygroundEndpointTest.php). The page is [`Playground.vue`](../resources/js/ai/Pages/Lab/Playground.vue).
+
+**Numbers.** 9 stored runs over 3 prompts and 7 versions (source: [`bench/results/playground/2026-11-14/stats.json`](../bench/results/playground/2026-11-14/stats.json)); the 7 runs of two local models, both answering, took 10.3 s on average, the sum of the two calls, because they run one after another.
+
+**In this repo.** Spec: [prompt playground with versions (SL-43)](../.ai/specs/spec-20261114-2142-prompt-playground/).
+
+**Read next.** [Anthropic: prompt engineering](https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview) · [Ollama: API](https://docs.ollama.com/api)
+
+## II-22. The AI lab UI: Inertia, Vue and streams in the browser
+
+**What it is.** `/ai` is a small single-page-style UI for the AI features: the streamed description with a Stop button, semantic listing search, docs search in three modes side by side, and the newest `ai_runs`. It is built with Inertia, Vue 3 and TypeScript, but there is no JSON API for the pages: Laravel controllers still pick the page and pass its data.
+
+**One page visit with Inertia.**
+1. The first visit to `/ai/docs` is a normal full-page request. [`ShowLabDocsController`](../app/Http/Controllers/ShowLabDocsController.php) returns `Inertia::render('Lab/Docs', [...])`. Laravel renders the `ai.app` Blade view once, and the page component name and its props go into a `data-page` attribute as JSON.
+2. `resources/js/ai/app.ts` reads that attribute, mounts Vue, and resolves `Lab/Docs` to `resources/js/ai/Pages/Lab/Docs.vue`. The props become the component's props.
+3. Clicking a lab link does not reload the page. Inertia sends a `fetch` with an `X-Inertia` header; the server sees it and answers with only the JSON (`component`, `props`, `url`, `version`) instead of HTML. Inertia swaps the component, keeps the layout mounted and updates the URL with the History API.
+4. If the asset `version` changed since the first load, the server answers 409 and Inertia does a full reload, so a stale browser tab picks up new JavaScript.
+
+**Why the lab has its own Vite entry.** The existing pages (`/`, the listing pages) ship `app.css` and `app.js`, and their file names and hashes are part of the server parity checks. The lab builds from its own entries (`resources/css/ai.css`, `resources/js/ai/app.ts`) and its own Blade view, so adding Vue, Inertia and the design components changes nothing in the old bundle: `bench/asset-fingerprint.sh` prints the same names and hashes before and after, and `bench/parity.sh` stays `identical`. This is the parity rule applied to the front end.
+
+**How the browser reads an SSE stream.** `EventSource` can only send a `GET` with no custom handling, so the lab uses `fetch`. In [`useEventStream.ts`](../resources/js/ai/composables/useEventStream.ts):
+1. `fetch(url, { signal })` resolves as soon as the response headers arrive, not when the body ends.
+2. `response.body` is a [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) of bytes; `getReader().read()` returns the next chunk whenever the server flushes one.
+3. A `TextDecoder` turns bytes into text. Chunks do not line up with events, so the text is buffered and split on blank lines; a half event stays in the buffer until the rest arrives.
+4. Each `data: {json}` line becomes an event row and text delta; `data: [DONE]` ends the run. Time to first token and tokens per second are measured in the browser with `performance.now()`. Tokens per second is (tokens − 1) divided by the time from the first token to the last: the first token opens the interval, so counting it inside would overstate the rate (two tokens 10 ms apart are 100 tokens/s, not 200). A failed stream is logged as well, so the page looks up its run row too; the row names only the exception class, because the stored message can contain the internal model URL.
+
+**How Stop works.** Stop calls `abort()` on the [`AbortController`](https://developer.mozilla.org/en-US/docs/Web/API/AbortController) whose `signal` was passed to `fetch`. The browser closes the connection and the pending `read()` rejects with an `AbortError`, which the composable turns into "Stopped after N tokens". The server sees only a closed socket. Whether PHP notices at once depends on the server: it finds out on its next write or flush, and the run may still be logged as finished or not logged at all, which is why the page says "The server may not have logged this run."
+
+**What `Server-Timing` is.** A response header that lets the server report named durations to the browser, for example `Server-Timing: embed;dur=41.2, db;dur=6.8`. Both search endpoints (`/api/listings/semantic` and `/api/docs/search`) send `embed` (time to embed the query) and `db` (the SQL search); text-only docs search sends `db` only. The durations are collected by [`ServerTiming`](../app/Support/ServerTiming.php) and added by a middleware; the response bodies are unchanged. The browser shows the values in the dev tools Network tab, and the search pages read them from `response.headers` to show where the time went.
+
+**In this repo.**
+- Front end: [`resources/js/ai/`](../resources/js/ai/) (pages, layout, design components, composables); first page controller: [`ShowLabOverviewController`](../app/Http/Controllers/ShowLabOverviewController.php).
+- Pages: `/ai/chat` (SL-45) and `/ai/photos` (SL-27) are built inside this UI; the photos page shows a similar-photos strip (SL-36).
+- Tests: `AiLabOverviewTest`, `AiLabDescribeTest`, `AiLabSearchPagesTest`, `AiLabPlaceholderTest`.
+- Spec: [`.ai/specs/spec-20261103-0012-ai-lab-ui/`](../.ai/specs/spec-20261103-0012-ai-lab-ui/).
+
+**Read next.** [Inertia: how it works](https://inertiajs.com/the-protocol) · [Vue 3](https://vuejs.org/guide/introduction.html) · [MDN: `ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) · [MDN: `AbortController`](https://developer.mozilla.org/en-US/docs/Web/API/AbortController) · [MDN: `Server-Timing`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Server-Timing)
+
+## II-23. In-app guides and the homescreen
+
+**What it is.** Two pieces that sit around every other section. The in-app guides (SL-48) are the "How it works" panel on each lab page: one PHP file per guide in [`resources/guides/`](../resources/guides/), rendered at `/ai/guides/{key}` and shown beside a live run. The homescreen (SL-49) is the landing page at `/`: what the lab teaches, how to run it, a map of the capabilities that links into `/ai`, and where the numbers live. The same slice renamed the project to ai-lab.
+
+**One guide, step by step** (`/ai/guides/streaming`):
+
+1. [`GuideRepository`](../app/Guides/GuideRepository.php) loads `resources/guides/streaming.php` and validates its shape: steps, failures, recipes, support rows and numbers.
+2. [`GuideFacts`](../app/Guides/GuideFacts.php) fills the numbers from the committed result files, so a number on a page is read from the same committed file this guide quotes.
+3. [`GuideRenderer`](../app/Guides/GuideRenderer.php) renders the Markdown and any code snippet ([`SnippetResolver`](../app/Guides/SnippetResolver.php) reads only `app/`, `config/`, `resources/`, `routes/` and `database/`), and caches the result.
+4. The page shows the steps in a collapsible panel and highlights a step while a run streams its event.
+
+A guide never links to this learning guide or to a repository path: the in-app text is for someone using the page, this document is for someone reading the code. [`GuideContentTest`](../tests/Feature/GuideContentTest.php) and [`NoReferencesInUiTest`](../tests/Feature/NoReferencesInUiTest.php) enforce it.
+
+**The homescreen.** [`ShowLabHomeController`](../app/Http/Controllers/ShowLabHomeController.php) renders the `Home` page through the lab entry, with [`LabHomeService`](../app/Services/LabHomeService.php) supplying the run steps (`ddev setup`, the Ollama models, the local-model switch) and the capability list. The list of guide files and how to add a guide is in the code map ([II-24](#ii-24-how-the-ai-features-are-built-a-map-of-the-code), "In-app guides").
+
+**In this repo.**
+- Guides: [`resources/guides/`](../resources/guides/), [`app/Guides/`](../app/Guides/) and the page [`ShowLabGuideController`](../app/Http/Controllers/ShowLabGuideController.php).
+- Homescreen: [`ShowLabHomeController`](../app/Http/Controllers/ShowLabHomeController.php) and [`HomeLandingTest`](../tests/Feature/HomeLandingTest.php).
+- Specs: [in-app guides (SL-48)](../.ai/specs/spec-20261110-1149-in-app-guides/) and [rename and homescreen (SL-49)](../.ai/specs/spec-20261110-1014-rename-ai-lab/).
+
+Not measured: these are pages, not a mechanism with a speed; the numbers a guide shows come from the sections that measured them.
+
+**Read next.** [Inertia](https://inertiajs.com/) · [Laravel views](https://laravel.com/docs/13.x/views)
+
+## II-24. How the AI features are built: a map of the code
+
+**What it is.** The sections before this one (II-1 to II-23) explain one mechanism each. This section is the map across all of them. It shows which files make up the AI features, what each one is for, how four requests flow through them, and where to make a change for the feature requests that come up most. Keep it current: every AI slice updates this map (`LearningGuideTest` checks that every file linked here exists).
+
 
 ### The layers
 
@@ -668,7 +1423,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`SemanticSearchService`](../app/Services/SemanticSearchService.php) | Embeds a query (with `Server-Timing` `embed`) and asks pgvector for the nearest listings (`db`) | SL-24 |
 | [`SemanticBenchService`](../app/Services/SemanticBenchService.php) | Measures semantic search for `BENCHMARKS.md` | SL-24 |
 
-**Natural-language search (section 24)**
+**Natural-language search (section [II-6](#ii-6-from-words-to-filters-structured-output-with-a-validation-boundary))**
 
 | File | Purpose | Slice |
 |---|---|---|
@@ -770,7 +1525,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`PhotoDuplicatesEvalCommand`](../app/Console/Commands/PhotoDuplicatesEvalCommand.php), [`DuplicateEvalService`](../app/Services/DuplicateEvalService.php), [`DuplicateEvalScorer`](../app/Services/DuplicateEvalScorer.php), [`DuplicateEvalRepositoryInterface`](../app/Contracts/DuplicateEvalRepositoryInterface.php), [`EloquentDuplicateEvalRepository`](../app/Repositories/EloquentDuplicateEvalRepository.php) | `photos:duplicates-eval`: threshold curve, chosen cutoff, picked-original rate per model, clustering time; written to `run.json` | SL-39 |
 | [`PhotoDuplicateGeneratorTest`](../tests/Feature/PhotoDuplicateGeneratorTest.php), [`PhotoDuplicateClusterTest`](../tests/Feature/PhotoDuplicateClusterTest.php), [`PhotoBestPickTest`](../tests/Feature/PhotoBestPickTest.php), [`PhotoDuplicateReviewTest`](../tests/Feature/PhotoDuplicateReviewTest.php), [`PhotoDuplicateEvalTest`](../tests/Feature/PhotoDuplicateEvalTest.php) | Offline tests with generated images, fixed vectors and a faked agent | SL-39 |
 
-**Stop and conversations (section 18)**
+**Stop and conversations (section [II-14](#ii-14-stop-that-really-stops-and-conversations))**
 
 | File | Purpose | Slice |
 |---|---|---|
@@ -779,7 +1534,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`add_stop_columns_to_ai_runs_table`](../database/migrations/2026_11_03_210000_add_stop_columns_to_ai_runs_table.php) | `history_turns` and `stopped_after_ms` on `ai_runs`; the `stopped` status | SL-41 |
 | [`StreamCancelTest`](../tests/Feature/StreamCancelTest.php), [`DocsChatHistoryTest`](../tests/Feature/DocsChatHistoryTest.php) | Cancel with a fake watcher and a fake stream; history validation, escaping, guards, prompt v2, no cache | SL-41 |
 
-**Answer cache (section 17)**
+**Answer cache (section [II-13](#ii-13-caching-answers-exact-keys-semantic-neighbours-and-invalidation))**
 
 | File | Purpose | Slice |
 |---|---|---|
@@ -835,70 +1590,23 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 
 ### Local models and their limits
 
-**What it is.** A model that runs on your machine has limits a hosted one hides: how fast it writes, how much memory it holds, what a prompt longer than its window does, what the app shows when the server is down, and what a running model does to the rest of the site. `llm:bench` and `bench/llm-load.sh` measure them; the in-app guide `/ai/guides/local-models` explains how to read the numbers.
-
-- **Tokens per second and TTFT.** Time to first token is the wait for the prompt to be read (and the model to load, if it was not in memory); tokens per second is the writing speed after that. `llm:bench` measures TTFT in the client and takes the rates from the counts Ollama reports ([`LlmSpeedBench`](../app/Support/LlmSpeedBench.php)).
-- **`num_ctx` and truncation.** Ollama answers a prompt that does not fit instead of refusing it. [`LlmContextBench`](../app/Support/LlmContextBench.php) hides a code in the first sentence of a prompt 1.5 times the window, sends it at the configured size and at twice that, and reads the window the server really loaded (`context_length` in `/api/ps`). The same token count at both sizes with a count above that window is reported as a suspected context shift, not as "not truncated".
-- **`OLLAMA_NUM_PARALLEL`.** A setting of the host server. The concurrency run records what the app sees and shows how the wait grows at 1, 4 and 16 streams: on qwen3.5:9b the first byte comes after 0.2 s, 6.6 s and 31 s (median), while a stream that has started writes at about 52 chunks per second at every level. The streams queue; they do not share the speed.
-- **`keep_alive` and cold load.** The first request after the keep-alive time pays the load; the bench reports it apart and keeps it out of the warm statistics.
-- **Failover.** [`LlmFailoverBench`](../app/Support/LlmFailoverBench.php) records the status and the client-visible error of four entry points with the server unreachable (5-134 ms to fail), the model missing (8-32 ms) and a 1 s timeout (1013-1063 ms; the model is unloaded before each entry so none can answer in time). A fallback chain is not built: it would hide the fault and could reach a paid provider; the guide lists how to add one (try the next entry only on a transport error or timeout, log every attempt, keep the cloud limiter).
-- **Why the site slows.** A stream holds a PHP thread for its whole length, and the model competes for memory and cores with the database and the web server. `search-under-load` measures the p95 delta per server mode. With 4 describe streams open, search p95 went from 64 to 2724 ms on frankenphp-worker and from 63 to 2793 ms on frankenphp-octane (RPS about 950 to 23), because both run 4 PHP workers and each stream holds one; classic frankenphp, with 2 threads per CPU, slowed from 132 to 237 ms. The worker count, not the model, decides what an AI stream costs the rest of the site.
-
-**Run it.** `ddev artisan llm:bench`, `bench/llm-load.sh concurrency`, `bench/llm-load.sh search-under-load`, and the opt-in smoke group: `ddev exec env LOCAL_LLM_SMOKE=1 php artisan test --group=local-llm` after `ollama pull qwen3:0.6b` on the host. Results are in [`bench/results/llm/`](../bench/results/llm/) and [BENCHMARKS.md](../BENCHMARKS.md).
+Now a chapter of its own: [II-5](#ii-5-local-models-and-their-limits).
 
 ### Admin assistant: a hand-written tool loop
 
-**What it is.** The buyer assistant lets the SDK run its tool loop; `/ai/admin-assistant` writes that loop in plain PHP so each turn can be read. It is local only (the routes answer 404 elsewhere or with `AI_ADMIN_ASSISTANT=false`) and uses Ollama's OpenAI-shaped `/v1/chat/completions`.
-
-1. [`AdminAssistantLoop`](../app/Ai/AdminAssistantLoop.php) guards the question, then [`OllamaChatClient`](../app/Ai/OllamaChatClient.php) sends the system prompt, the last 40 messages, the tool definitions, `tool_choice` and `temperature: 0`.
-2. `tool_calls` come back with `arguments` as a string. The loop decodes it only when it handles the call; invalid JSON, an unknown tool or a failed `validate` go back to the model as an error.
-3. A valid read call runs through [`AdminToolRegistry::runRead`](../app/Ai/AdminTools/AdminToolRegistry.php), which refuses write tools. Results are capped (4000 characters, 10 rows, descriptions cut at 500) and sent back wrapped in `<tool_result>` with `<` and `>` escaped.
-4. The first valid write becomes a pending action (random id, preview, 10 minutes) and the loop returns. Only [`AdminAssistantConfirmation`](../app/Services/AdminAssistantConfirmation.php), reached from the confirm endpoint, runs a write: it validates again, writes in a transaction and resumes the loop.
-5. At most 4 tool steps and 6 model calls run per question; the last call is sent with `tool_choice: none`. Every model call is an `ai_runs` row and every step an `ai_tool_steps` row (`ok`, `error`, `failed`, `pending`, `confirmed`, `rejected`).
-
-**To add a tool**, write a class in [`app/Ai/AdminTools/`](../app/Ai/AdminTools/) with `name`, `description`, `parameters`, `isWrite`, `validate` and `run`, give a write a `preview`, and list it in the registry. **Tests:** [`AdminToolsTest`](../tests/Feature/AdminToolsTest.php), [`AdminAssistantLoopTest`](../tests/Feature/AdminAssistantLoopTest.php), [`AdminAssistantConfirmTest`](../tests/Feature/AdminAssistantConfirmTest.php), [`AdminAssistantEndpointTest`](../tests/Feature/AdminAssistantEndpointTest.php), [`AdminAssistantPageTest`](../tests/Feature/AdminAssistantPageTest.php). The page is [`AdminAssistant.vue`](../resources/js/ai/Pages/Lab/AdminAssistant.vue); the in-app guide is `/ai/guides/admin-assistant`.
+Now a chapter of its own: [II-18](#ii-18-admin-assistant-a-hand-written-tool-loop).
 
 ### MCP server for the listing tools
 
-**What it is.** The same listing tools as the admin assistant, published to outside clients (Claude Code, Claude Desktop) through a Laravel MCP server over stdio. It runs on the local machine only (`APP_ENV=local` and `AI_MCP_SERVER` on; otherwise `mcp:start listings` exits 1 and the Changes routes answer 404). No model runs on this side, so it has no settings row.
-
-1. [`ListingsServer`](../app/Mcp/Servers/ListingsServer.php) lists six tools and carries instructions for the client's model; [`routes/ai.php`](../routes/ai.php) registers it as `listings`, and a client starts it with `php artisan mcp:start listings`.
-2. The read tools ([`AdminToolWrapper`](../app/Mcp/Tools/AdminToolWrapper.php)) take their schema, validation and caps from the admin tools, so the two entry points cannot drift. Each call is a row in `mcp_tool_calls`.
-3. The write tools ([`ProposeChangeTool`](../app/Mcp/Tools/ProposeChangeTool.php), named `propose_*`) never write a listing. They store a `pending_changes` row (30 minute expiry) and return the id, the preview and a link to `/ai/changes/{id}`.
-4. Only a click on that page applies a change: `POST /ai/changes/{id}/confirm` (local, JSON, `Sec-Fetch-Site: same-origin` required, one-time per-session nonce, rate limited) claims the row with one conditional update, validates again and writes in a transaction through [`AdminWriteApplier`](../app/Ai/AdminTools/AdminWriteApplier.php). The outcome is `confirmed`, or `failed` when the change no longer fits; a decided or expired change answers 409 `change_not_pending`. `change_status` lets the model read the outcome.
-
-**Why out of band.** The library has no elicitation, a client's permission prompt can be set to always allow, and a confirm tool could be called by the model itself. A human click on a local page is the one confirmation a model cannot give by itself: the endpoint needs a browser's same-origin header and a nonce that exists only in the developer's session. The residual risk is a client with a shell, which could fetch the page and forge the two headers, or one that drives a headless browser; the guide says so.
-
-**Connect.** `claude mcp add ai-lab -- ddev exec php artisan mcp:start listings` for Claude Code, a `claude_desktop_config.json` entry for Claude Desktop, and `ddev artisan mcp:inspector listings` to look at the tools without a model (README has the snippets). **Tests:** [`McpListingsServerTest`](../tests/Feature/McpListingsServerTest.php) and [`McpChangesTest`](../tests/Feature/McpChangesTest.php). The page is [`Changes.vue`](../resources/js/ai/Pages/Lab/Changes.vue); the in-app guide is `/ai/guides/mcp`.
+Now a chapter of its own: [II-19](#ii-19-mcp-server-for-the-listing-tools).
 
 ### Multi-step research agent
 
-**What it is.** A topic becomes a cited markdown report from the docs, in phases that PHP fixes: the model never decides what runs next. The page is `/ai/research`, the command is `agent:research`, the endpoints are `POST /api/research` and `GET /api/research/{id}`.
-
-1. [`ResearchRunner::start`](../app/Services/ResearchRunner.php) checks the topic (3 to 300 characters, the docs injection guard) and stores a `research_runs` row: `running`, or `refused` with no model call. The endpoint queues a job that calls `execute`; the command runs it in the process.
-2. The planner ([`ResearchPlannerAgent`](../app/Ai/ResearchPlannerAgent.php)) returns 2 to 5 sub-questions with structured output. PHP validates them; an invalid plan gets one more attempt, then the run is `failed`.
-3. For each sub-question the runner searches with `DocsSearchService` in hybrid mode (5 chunks) and the note agent ([`ResearchNoteAgent`](../app/Ai/ResearchNoteAgent.php)) reads them as `<chunk id>` data (1200 characters each) and returns facts with chunk ids. Ids the search did not return are dropped, and so are facts left with none. Notes go to a Redis hash ([`RedisResearchNotesStore`](../app/Support/RedisResearchNotesStore.php), 24 hours) and are also stored as steps.
-4. The report agent ([`ResearchReportAgent`](../app/Ai/ResearchReportAgent.php)) writes from the numbered notes and sources; [`ResearchCitations`](../app/Ai/ResearchCitations.php) removes markers that match no source. With no facts the report is a fixed sentence and no call is made.
-5. At most 8 model calls and 13 steps run per run; going over ends the run as `failed` with `cap_reached`. A model call starts only when it can end, at its provider timeout, inside the run's `AI_RESEARCH_MAX_SECONDS` (600); otherwise the run ends `failed` with `deadline_reached` and keeps its steps. The provider and model are read once, in `start`, stored on the run and pinned on every agent, so the `ai_runs` rows equal the run header even if the settings change meanwhile. A failed model call stores the code `model_call_failed`; the exception text is reported, not shown. A sub-question whose search failed is a skipped note with reason `search_failed`: the fixed "not covered" report is written only when no note failed, otherwise a run without a fact ends `failed` with `no_usable_notes`. Every call is an `ai_runs` row and every phase a `research_steps` row ([`EloquentResearchRunRepository`](../app/Repositories/EloquentResearchRunRepository.php)).
-
-**Replay.** `agent:research --replay=<id>` and the page read the stored steps only; no model, search or HTTP call is made, so the output is the stored text byte for byte. **Safety.** Chunks are data in the prompt, the report is rendered by [`ResearchReportHtml`](../app/Support/ResearchReportHtml.php): raw HTML is escaped, an image becomes its alt text, a link keeps only its text unless it points to a numbered source on the page, so a model that read hostile docs text cannot make the reader's browser load anything. The endpoint refuses cross-site requests, allows 5 runs a minute per IP, and a cloud run counts as 8 hits on the cloud limit.
-
-**To change it**, set the `research` provider and model on `/ai/settings`, a cap in `AI_RESEARCH_*`, or point a prompt at a new version with `AI_PROMPT_RESEARCH_*`. **Tests:** [`ResearchRunnerTest`](../tests/Feature/ResearchRunnerTest.php), [`ResearchReplayTest`](../tests/Feature/ResearchReplayTest.php), [`ResearchEndpointTest`](../tests/Feature/ResearchEndpointTest.php). The page is [`Research.vue`](../resources/js/ai/Pages/Lab/Research.vue); the in-app guide is `/ai/guides/research` ([`research.php`](../resources/guides/research.php)).
+Now a chapter of its own: [II-20](#ii-20-multi-step-research-agent).
 
 ### Prompt playground with versions
 
-**What it is.** A page at `/ai/playground` where one input is run against two or three models side by side with the same system prompt. Prompts are saved as numbered, immutable versions in their own tables, separate from the feature prompt files, so an experiment can never change how a feature behaves. The endpoints are under `/api/playground`; the in-app guide is `/ai/guides/playground` ([`playground.php`](../resources/guides/playground.php)).
-
-1. [`PlaygroundPromptService`](../app/Services/PlaygroundPromptService.php) holds the prompt rules: a name is trimmed and lowercased, 3 to 80 characters, taken names answer `name_taken`. [`EloquentPlaygroundPromptRepository`](../app/Repositories/EloquentPlaygroundPromptRepository.php) creates version 1 with the prompt and adds `max(version) + 1` inside a transaction that locks the prompt row; the unique key is the backstop and a collision answers 409. There is no update method and versions have no `updated_at`.
-2. A save that equals the latest version in text (trimmed, `\n` line endings), temperature and maximum tokens is refused with 422 `unchanged`; a note-only change counts as unchanged, text equal to an older version does not.
-3. [`PlaygroundRunner::run`](../app/Services/PlaygroundRunner.php) takes either a version id or a typed prompt (exactly one), checks the input (1 to 4000 characters), the targets (2 or 3, distinct, an enabled text provider, a model the provider lists: Ollama's installed models, or the model name pattern for cloud providers) and the settings (temperature 0 to 2 with at most two decimals, maximum tokens 16 to 2048). Any failure is a 422 before the first call.
-4. The input goes through `PromptInjectionGuard`, but a match is only stored on the run as `input_flags` and shown as a badge: this is where injection text is tested.
-5. Each target is one non-streaming call through [`PlaygroundAgent`](../app/Ai/PlaygroundAgent.php), one after another, because Ollama serves one request at a time. Each call is an `ai_runs` row (feature `playground`, label `playground:name@v3` or `playground:unsaved`) and the result links to it. A failing target is stored as `failed` or `timeout` (60 seconds by default) with an error cleaned of keys, URLs, hosts, addresses and ports ([`PlaygroundErrorRedactor`](../app/Support/PlaygroundErrorRedactor.php)) and cut to 300 characters; the others still run. Time to first token needs streaming, so it is null and shown as a dash.
-6. [`EloquentPlaygroundRunRepository`](../app/Repositories/EloquentPlaygroundRunRepository.php) stores the run with a copy of the system prompt and its settings, and the results. Opening a stored run reads these rows only and calls no model. Deleting a prompt keeps its runs and results and clears the version link.
-
-**Limits and gates.** A run is 3 calls at most, `POST /api/playground/runs` allows `AI_PLAYGROUND_PER_MINUTE` runs a minute per IP (6) and refuses cross-site requests; on a cloud provider `LimitCloudAi` counts a run as many hits as it has cloud targets. The page and every playground endpoint answer 404 outside the local environment ([`EnsureLocalLab`](../app/Http/Middleware/EnsureLocalLab.php), JSON code `local_only`), and the navigation entry and overview card are hidden there, because a free-form model call with a stored history must not be public; for the same reason, were it ever reachable elsewhere, a cloud target would have to be the configured default or a listed model rather than any id of the right shape. The page shows output with `{{ }}` as plain pre-wrapped text, never as HTML.
-
-**To change it**, set `AI_PLAYGROUND_TARGETS` (the targets the page picks first, `provider:model` comma separated), `AI_PLAYGROUND_TIMEOUT` or `AI_PLAYGROUND_PER_MINUTE`. To use a winning prompt in a feature, copy its text into a new numbered file under `resources/prompts/` and point the feature's agent at it; the playground never writes there. **Tests:** [`PlaygroundPromptTest`](../tests/Feature/PlaygroundPromptTest.php), [`PlaygroundRunTest`](../tests/Feature/PlaygroundRunTest.php), [`PlaygroundEndpointTest`](../tests/Feature/PlaygroundEndpointTest.php). The page is [`Playground.vue`](../resources/js/ai/Pages/Lab/Playground.vue).
+Now a chapter of its own: [II-21](#ii-21-prompt-playground-with-versions).
 
 ### Four requests, end to end
 
@@ -914,7 +1622,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 2. `SemanticSearchService` embeds it, which `RecordEmbeddingsRun` logs; that time goes into `Server-Timing` as `embed`.
 3. The repository runs a pgvector `<=>` query on the HNSW index (`db`), and the controller returns JSON.
 
-**Natural-language search** (`GET /api/listings/nl?q=…`, section 24):
+**Natural-language search** (`GET /api/listings/nl?q=…`, section [II-6](#ii-6-from-words-to-filters-structured-output-with-a-validation-boundary)):
 1. `NlSearchRequest` validates `q`, the paging and that `model` is in `NlSearchService::allowedModels()`.
 2. `NlSearchService` runs `PromptInjectionGuard` (a match is a 422 `refused`, no model call), then `ListingFilterAgent` with structured output (a failure is a masked 503).
 3. `ListingFilterRules` validates the fields; a failure is a 422 with `extracted` and `unsupported`, and the `ai_runs` row has `validation_failed`.
@@ -926,9 +1634,9 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 3. The repository runs two queries, the nearest vectors and a `websearch_to_tsquery` rank, each 20 deep. RRF fuses the two lists and keeps the top k.
 
 **Ask the docs** (`POST /api/docs/ask`, JSON):
-1. `DocsAskRequest` rejects anything that is not JSON, then validates the question and the optional `history` (alternating turns, at most 6, section 18).
+1. `DocsAskRequest` rejects anything that is not JSON, then validates the question and the optional `history` (alternating turns, at most 6, section [II-14](#ii-14-stop-that-really-stops-and-conversations)).
 2. `DocsAnswerService::ask()` runs `PromptInjectionGuard` first, over the latest question and every `user` turn of the history. A match writes a `refused` row and returns `SseEventsResponse`, with no embedding.
-3. Unless `cache` is false, the cache is off or `history` is present (a follow-up never reads or writes the cache), `DocsAnswerCache::lookupExact()` checks the normalized question (no embedding). On a miss the question is embedded once and `lookupSemantic()` looks for the nearest current entry at or above the threshold. A hit streams `sources`, `cache_hit`, one `text_delta`, `citations`, `[DONE]` and writes a `cached` row (section 17).
+3. Unless `cache` is false, the cache is off or `history` is present (a follow-up never reads or writes the cache), `DocsAnswerCache::lookupExact()` checks the normalized question (no embedding). On a miss the question is embedded once and `lookupSemantic()` looks for the nearest current entry at or above the threshold. A hit streams `sources`, `cache_hit`, one `text_delta`, `citations`, `[DONE]` and writes a `cached` row (section [II-13](#ii-13-caching-answers-exact-keys-semantic-neighbours-and-invalidation)).
 4. Otherwise it retrieves hybrid top 6 with the same question vector, applies the gate and the budget in `DocsAnswerContext`, and returns `no_context` when nothing passes.
 5. `DocsAnswerAgent` builds the marked context with a fresh canary and streams. With history it adds an escaped `<history>` block before `<context>` and uses prompt `docs-answer@v2`; retrieval still ran on the latest question only.
 6. `DocsAnswerProtocol` sends `sources`, checks the text with `OutputGuard` after each delta, and parses `[n]` with `CitationParser` at the end. `SseProtocol` flushes each event and asks the `AbortWatcher` (`connection_aborted()`) right after: on a Stop it writes a `stopped` row and releases the model stream.
@@ -943,24 +1651,24 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | "Make the bot answer differently" | Copy the prompt to a new version (`docs-answer.v2.md`), point `config('ai.prompts.*')` at it. The old file stays for old runs' provenance. | a test on the built message; a `rag:eval` run before and after |
 | "A new AI feature" (summarise, classify, extract) | A new agent in `app/Ai/` using `UsesActiveProvider` and `VersionedPrompt`, a prompt file, a service that calls it, a controller and route with a throttle. Structured output → implement `HasStructuredOutput` like `RagGraderAgent`. Streaming → reuse `SseProtocol`. | feature test with the fake provider (`AI_FAKE_TEXT`) or the SDK fake; assert the `ai_runs` row |
 | "Block this injection phrasing" | Add a named pattern to a new guard file version (`prompt-injection.v2.php`), point `ai.docs.answer.guard` at it | a hit case and a benign near-miss in `PromptInjectionGuardTest` (both directions fail in practice) |
-| "It says I don't know too often" / "too rarely" | `AI_DOCS_ANSWER_MIN_SIMILARITY`, but only after `rag:eval` shows the trade (section 15); add the failing question to the eval set first | a new eval line; the calibration numbers |
+| "It says I don't know too often" / "too rarely" | `AI_DOCS_ANSWER_MIN_SIMILARITY`, but only after `rag:eval` shows the trade (section [II-12](#ii-12-measuring-rag-recallk-calibration-and-llm-grading)); add the failing question to the eval set first | a new eval line; the calibration numbers |
 | "Answers miss this part of the docs" | Check retrieval first: `docs:search "…" --mode=vector` and `rag:eval` recall. Then chunk size (`AI_DOCS_CHUNK_MAX_TOKENS`, re-index) or k (`AI_DOCS_ANSWER_K`) | an eval question with its evidence phrase |
-| "Make answers cacheable" / "tune the cache" | Behaviour is in `config('ai.docs.cache')`: `AI_DOCS_CACHE_ENABLED`, `AI_DOCS_CACHE_TTL_HOURS`, `AI_DOCS_CACHE_MIN_SIMILARITY`. Never lower the threshold without running `docs:cache-calibrate`: add the pair that fails to `cache-pairs.v1.jsonl` first (new pairs must not appear in an indexed file). A new thing that changes the answer (another prompt, model) must be part of the entry's version check in `DocsAnswerCache`. | a case in `DocsAnswerCacheTest` per version; a `DocsCacheCalibrateTest` fixture; `docs:cache --stats` after a run (section 17) |
+| "Make answers cacheable" / "tune the cache" | Behaviour is in `config('ai.docs.cache')`: `AI_DOCS_CACHE_ENABLED`, `AI_DOCS_CACHE_TTL_HOURS`, `AI_DOCS_CACHE_MIN_SIMILARITY`. Never lower the threshold without running `docs:cache-calibrate`: add the pair that fails to `cache-pairs.v1.jsonl` first (new pairs must not appear in an indexed file). A new thing that changes the answer (another prompt, model) must be part of the entry's version check in `DocsAnswerCache`. | a case in `DocsAnswerCacheTest` per version; a `DocsCacheCalibrateTest` fixture; `docs:cache --stats` after a run (section [II-13](#ii-13-caching-answers-exact-keys-semantic-neighbours-and-invalidation)) |
 | "Index a new folder of docs" | `DocsCorpus` lists the paths. Never add a folder holding eval questions (the contamination test will fail, as intended) | a `DocsCorpus` test case |
-| "Make the model extract another field" / "a new filter" | Add the rule to `ListingFilterRules` (so `/listings` gets it too), the key to `ListingFilterAgent::schema()` and the prompt (new version file), the field to `NlSearchService::FILTER_FIELDS`, then relabel `bench/nl-search/` and re-run `nl:eval` (section 24). | a case in `NlSearchTest` with faked structured output; an `NlEvalScorer` case |
-| "Turn free text into structured input" (a search box, a form from a sentence) | Follow the NL search: an agent with a JSON schema (`ListingFilterAgent`), the same rules the normal endpoint uses (`ListingFilterRules`), a service that guards, extracts, validates and only then queries (`NlSearchService`). Model output is data: validate it, never build SQL from it. Measure with a labelled set (section 24). | a case in `NlSearchTest` with faked structured output; an `nl:eval` run before and after |
-| "Classify or rate text with a closed label set" (moderation, triage, spam) | Follow the moderation: an agent with a schema whose labels are an enum (`ModerationAgent`), rules that check the answer in PHP (`ModerationRules`), a service that retries once and logs every attempt (`ModerationService`). Compute what the model cannot know in the app and pass it as facts (`ModerationFacts`). Calibrate the threshold per model with `moderation:eval` (section 26). | a case in `ModerationServiceTest` per rule; a case in `ModerationFactsTest` per fact |
+| "Make the model extract another field" / "a new filter" | Add the rule to `ListingFilterRules` (so `/listings` gets it too), the key to `ListingFilterAgent::schema()` and the prompt (new version file), the field to `NlSearchService::FILTER_FIELDS`, then relabel `bench/nl-search/` and re-run `nl:eval` (section [II-6](#ii-6-from-words-to-filters-structured-output-with-a-validation-boundary)). | a case in `NlSearchTest` with faked structured output; an `NlEvalScorer` case |
+| "Turn free text into structured input" (a search box, a form from a sentence) | Follow the NL search: an agent with a JSON schema (`ListingFilterAgent`), the same rules the normal endpoint uses (`ListingFilterRules`), a service that guards, extracts, validates and only then queries (`NlSearchService`). Model output is data: validate it, never build SQL from it. Measure with a labelled set (section [II-6](#ii-6-from-words-to-filters-structured-output-with-a-validation-boundary)). | a case in `NlSearchTest` with faked structured output; an `nl:eval` run before and after |
+| "Classify or rate text with a closed label set" (moderation, triage, spam) | Follow the moderation: an agent with a schema whose labels are an enum (`ModerationAgent`), rules that check the answer in PHP (`ModerationRules`), a service that retries once and logs every attempt (`ModerationService`). Compute what the model cannot know in the app and pass it as facts (`ModerationFacts`). Calibrate the threshold per model with `moderation:eval` (section [II-7](#ii-7-rating-a-listing-a-closed-label-set-computed-facts-and-a-threshold)). | a case in `ModerationServiceTest` per rule; a case in `ModerationFactsTest` per fact |
 | "Allow another model on the NL search" | `ai.nl_search.models` in `config/ai.php`; `nl:eval --models=` accepts only names in that list. | an `allowedModels()` case |
 | "Switch the embedding model" | `config('ai.embeddings')`, then re-index everything: vectors from two models cannot be compared, and the stored `embedding_model` keeps them apart | `docs:search-bench` and `rag:eval` before and after |
 | "Log something new about each call" | A nullable column on `ai_runs`, a field on `AiRunRecord`, set it from the recorder (`annotate()` for per-request data) | a feature test on the row |
 | "Show it in the lab" | A Vue page in `resources/js/ai/Pages/Lab/`, a `ShowLab*Controller` returning `Inertia::render`, a capability in `LabOverviewService` (navigation follows) | a page props test like `AiLabChatTest`; typecheck and build |
-| "Stop doesn't stop" / "Stop button / cancel" | The client aborts with `AbortController`; the server side lives in `SseProtocol` and `AbortWatcher` (section 18). Check `ai_runs` for a `stopped` row first, then run `bench/chat-stop.sh` for the mode in question. A new stream type must go through `SseProtocol` to get the cancel. | a case in `StreamCancelTest` with a fake watcher; a `bench/chat-stop.sh` run per mode |
-| "Notify the browser when something changes" | Fire a domain event after commit, publish from a listener through `MercurePublisher`, subscribe with `EventSource` in `resources/js/app.js`. The page never holds a PHP worker. Details in section 23. | a listener test with `Http::fake` for the hub; a `ListingLivePriceTest` case for the markup |
-| "Let the chat remember earlier turns" | `history` in the request (`DocsChatTurn`, `max_history_turns`), prompt `docs-answer.v2.md`. Never add history to the output guard's allowed texts, and never cache a turn that has history. A follow-up that retrieves badly needs query rewriting, not a bigger history (section 18). | `DocsChatHistoryTest`: validation, escaping, a forged turn |
+| "Stop doesn't stop" / "Stop button / cancel" | The client aborts with `AbortController`; the server side lives in `SseProtocol` and `AbortWatcher` (section [II-14](#ii-14-stop-that-really-stops-and-conversations)). Check `ai_runs` for a `stopped` row first, then run `bench/chat-stop.sh` for the mode in question. A new stream type must go through `SseProtocol` to get the cancel. | a case in `StreamCancelTest` with a fake watcher; a `bench/chat-stop.sh` run per mode |
+| "Notify the browser when something changes" | Fire a domain event after commit, publish from a listener through `MercurePublisher`, subscribe with `EventSource` in `resources/js/app.js`. The page never holds a PHP worker. Details in section [I-10](#i-10-live-updates-with-mercure). | a listener test with `Http::fake` for the hub; a `ListingLivePriceTest` case for the markup |
+| "Let the chat remember earlier turns" | `history` in the request (`DocsChatTurn`, `max_history_turns`), prompt `docs-answer.v2.md`. Never add history to the output guard's allowed texts, and never cache a turn that has history. A follow-up that retrieves badly needs query rewriting, not a bigger history (section [II-14](#ii-14-stop-that-really-stops-and-conversations)). | `DocsChatHistoryTest`: validation, escaping, a forged turn |
 
-**Live updates (SL-13).** The price on the listing detail page is pushed through the Mercure hub, not from PHP: `ListingPriceService::reprice` → `MercurePublisher` → hub → `EventSource` in `resources/js/app.js` (section 23). To change what is published or to whom, edit `ListingPriceService`, `ListingPricePublisher` and `MercureTokens`; a new topic needs a matching `data-price-topic`-style attribute on the page.
+**Live updates (SL-13).** The price on the listing detail page is pushed through the Mercure hub, not from PHP: `ListingPriceService::reprice` → `MercurePublisher` → hub → `EventSource` in `resources/js/app.js` (section [I-10](#i-10-live-updates-with-mercure)). To change what is published or to whom, edit `ListingPriceService`, `ListingPricePublisher` and `MercureTokens`; a new topic needs a matching `data-price-topic`-style attribute on the page.
 
-**Load note (SL-09).** Every streamed answer holds one PHP worker until `[DONE]`. [`bench/slow-load.sh --workload sse`](../bench/slow-load.sh) measures what that does to the rest of the server: 30 open answers on 8 FPM children starved the health check (section 19). Before adding an AI feature that streams to many users at once, size the pool for it or use a queued variant.
+**Load note (SL-09).** Every streamed answer holds one PHP worker until `[DONE]`. [`bench/slow-load.sh --workload sse`](../bench/slow-load.sh) measures what that does to the rest of the server: 30 open answers on 8 PHP-FPM children (a removed server) starved the health check (section [I-6](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast)). Before adding an AI feature that streams to many users at once, size the pool for it or use a queued variant.
 
 ### In-app guides
 
@@ -981,7 +1689,9 @@ The guide files:
 - [`mcp.php`](../resources/guides/mcp.php): the listing tools as an MCP server with a browser confirmation
 - [`nl-search.php`](../resources/guides/nl-search.php): words to filters
 - [`photos.php`](../resources/guides/photos.php): reading a car photo with a vision model
+- [`playground.php`](../resources/guides/playground.php): one prompt run on several models side by side
 - [`prompts.php`](../resources/guides/prompts.php): versioned prompts
+- [`research.php`](../resources/guides/research.php): the multi-step research agent
 - [`providers.php`](../resources/guides/providers.php): providers and models
 - [`run-log.php`](../resources/guides/run-log.php): the `ai_runs` log
 - [`local-models.php`](../resources/guides/local-models.php): speed, memory and limits of a local model
@@ -999,426 +1709,23 @@ The guide files:
 
 **Read next.** [Laravel AI SDK](https://laravel.com/docs/13.x/ai-sdk) · [Inertia](https://inertiajs.com/) · [pgvector](https://github.com/pgvector/pgvector) · [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md)
 
----
+## Closing summary
 
-## 17. Caching answers: exact keys, semantic neighbours and invalidation
+Part I showed that a PHP request is served by a web server that is chosen, measured and replaced on evidence; Part II built the AI features on top of one request that waits for a model. Five ideas came back in almost every section.
 
-**What it is.** Section 14 spends a full model call on every question: a median of 6102 ms in the cache run, 8997 ms in section 15. This slice (SL-40) puts a cache in front of `POST /api/docs/ask` so a repeated or reworded question is served from a stored answer. There are two lookups. **Exact:** a key in the cache store (Redis) over the normalized question, which costs no embedding. **Semantic:** the nearest stored question in a pgvector table, accepted only at or above a similarity threshold. A hit streams the stored answer at once; a miss runs the section 14 pipeline unchanged and stores its answer afterwards.
+- **Measure before claiming.** A speed-up, a recall figure or a model comparison is a number from a command with a fixed setup, quoted from [`BENCHMARKS.md`](../BENCHMARKS.md) or a committed result file. See [I-5](#i-5-measuring-fairly-and-what-the-numbers-say), [II-12](#ii-12-measuring-rag-recallk-calibration-and-llm-grading) and [II-16](#ii-16-hybrid-similarity-and-duplicate-photos).
+- **A validation boundary around every model answer.** The model proposes; PHP checks the shape, the closed label set and the allowed values before anything is used. See [II-6](#ii-6-from-words-to-filters-structured-output-with-a-validation-boundary), [II-7](#ii-7-rating-a-listing-a-closed-label-set-computed-facts-and-a-threshold) and [II-8](#ii-8-reading-a-car-photo-vision-extraction).
+- **Marked data, never instructions.** Retrieved text, listings and notes go into the prompt as escaped, marked data, and the output is checked for a leaked prompt. See [II-11](#ii-11-answering-with-citations-rag-guards-and-the-trace-row) and [II-19](#ii-19-mcp-server-for-the-listing-tools).
+- **Caps on every loop.** Tool steps, model calls, listings per search and sub-questions all have a limit, and a Stop really stops the call. See [II-14](#ii-14-stop-that-really-stops-and-conversations), [II-17](#ii-17-a-model-that-decides-when-to-search-tool-calling), [II-18](#ii-18-admin-assistant-a-hand-written-tool-loop) and [II-20](#ii-20-multi-step-research-agent).
+- **Logs for every call.** Each model or embeddings call writes one `ai_runs` row with the prompt version, timings and status, so a bug shows up in the trace. See [II-1](#ii-1-how-an-llm-call-works-end-to-end) and [II-24](#ii-24-how-the-ai-features-are-built-a-map-of-the-code).
 
-**Why a near-miss hit is worse than a miss.** A miss costs seconds. A wrong hit costs a wrong answer, delivered fast, with the original answer's sources and citations, so it looks as trustworthy as a fresh one. Two questions can share almost every word and still ask for different things, and an embedding model scores such a pair high because it measures topic, not intent. That is why the threshold is measured, not guessed.
+**Headline numbers.** Each is quoted in its section and comes from the linked part of [`BENCHMARKS.md`](../BENCHMARKS.md).
+- Worker memory: a static-array leak in a worker grew to `11.3` MB after 10 000 requests, and with max-requests 500 it peaked at `6.3` MB; recycling caps a leak, it does not remove it. A classic request also opens a new database connection: 500 searches opened `501` PostgreSQL sessions on classic FrankenPHP and 2 on Octane. See [I-5](#i-5-measuring-fairly-and-what-the-numbers-say) and [the classic vs worker results](../BENCHMARKS.md#classic-vs-worker-2026-11-02).
+- Health-check p95 with slow HTTP calls holding workers: `276` ms with FrankenPHP threads autoscaled from 14 to 64, against `2369` ms on a fixed pool of 14 threads. See [I-6](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast) and [the slow I/O results](../BENCHMARKS.md#slow-io-and-the-health-check-2026-11-03).
+- RAG recall@6: `0.875` for vector and hybrid search, 21 of 24 questions. See [II-12](#ii-12-measuring-rag-recallk-calibration-and-llm-grading) and [the RAG evaluation](../BENCHMARKS.md#rag-evaluation-2026-11-03).
+- Similar photos at cutoff 0.75: make-and-model precision `0.677`. See [II-15](#ii-15-similar-photos-and-searching-photos-by-text) and [the similar photos results](../BENCHMARKS.md#similar-car-photos-2026-11-11).
+- Search p95 with 4 describe streams open: from `64` ms to `2724` ms on frankenphp-worker. See [II-5](#ii-5-local-models-and-their-limits) and [the local models results](../BENCHMARKS.md#local-models-and-limits-2026-11-13).
 
-**The measured gap (committed under `bench/results/docs-cache/2026-11-03/`).** `docs:cache-calibrate` embeds 24 paraphrase pairs and 24 near-miss pairs once each and scores every pair by cosine similarity.
-- Paraphrases ran from 0.536 to 0.906 (median 0.792); near-misses from 0.714 to 0.930 (median 0.832). The ranges overlap: the most similar near-miss (0.930) scores above the most similar paraphrase (0.906).
-- So the zero-false-hit threshold (the lowest paraphrase strictly above the highest near-miss) does not exist: "none". The Youden-best cut, 0.893558, serves 3 of 24 paraphrases and also 1 of 24 near-misses.
-- The rule for the default is the highest near-miss rounded up to 2 decimals: **0.94**, set through `AI_DOCS_CACHE_MIN_SIMILARITY`. It serves no near-miss (FPR 0) and, on this pair set, no paraphrase either (24 of 24 lost). The earlier spec probe had a gap of only 0.028 between the groups and a common default of 0.95 would have missed most paraphrases; 0.85 would have served near-misses.
-- A small set is a safety bound, not a forecast. In the hit/miss run, 2 of 10 reworded questions were still served semantically at 0.94 (and all 18 light rewordings of the latency run), although none of the 24 pair-set paraphrases reaches it.
+**Read next.** Pick one section and change something in it: a prompt in [II-21](#ii-21-prompt-playground-with-versions), a threshold in [II-16](#ii-16-hybrid-similarity-and-duplicate-photos), the worker count in [I-6](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast). Then run the matching command and compare with the numbers quoted there. The plan for what is next is in [`backlog.md`](../backlog.md), starting with the reserved [I-11](#i-11-coming-next-metrics-logs-and-developer-experience).
 
-**One request, step by step** (`POST /api/docs/ask`, cache on):
-1. **Validate.** `DocsAskRequest` accepts an optional boolean `cache`; a non-boolean is a 422.
-2. **Input guard first.** The input guard (`PromptInjectionGuard`) runs before the cache, before any lookup. If it ran after the cache, a refused phrasing could be served as soon as a similar honest question was cached, and the refusal would never be logged. Refusals are never stored either, so they cannot be replayed.
-3. **Exact lookup.** The question is normalized (lowercase, whitespace collapsed, every trailing run of spaces and `?!.` removed, so `How do I retry? ?` matches `how do i retry`) and hashed with the prompt version, answer model and index version. A hit re-checks the row: a key that points at a deleted, stale or expired row is dropped.
-4. **One embedding.** On an exact miss the raw question is embedded once (one embedding per request). That vector serves both the semantic lookup and the retrieval step, so a miss costs only the extra database query, not a second embedding.
-5. **Semantic lookup.** The nearest current entry by cosine; served at or above the threshold (equal passes).
-6. **On a hit.** The stream is `sources`, `cache_hit` (kind, similarity, `cached_at`, `saved_latency_ms`, `invocation_id`, `source_invocation_id`; not the stored question's text, which another client typed), one `text_delta` with the full answer, `citations`, `[DONE]`. No model stream exists, so there is no `stream_start` or `stream_end`. The answer is one burst on purpose: replaying fake token timing would misrepresent what happened. An `ai_runs` row with status `cached` records the kind, similarity, entry id and `saved_latency_ms` (the source run's logged `latency_ms` minus this one's, floored at 0), so the hit rate and the time saved are queryable.
-7. **On a miss.** Retrieval, gate, budget and the agent run as in section 14. After `citations` is sent and the client is still connected, the store hook writes the entry, only for an outcome that is completed and cited. Refused, `no_context`, failed, uncited and stopped answers are never stored. A storing failure is reported, never thrown at the client.
-8. **Bypass.** `cache:false` (the body field `"cache": false`) skips both lookups and still stores a qualifying answer, so the lab can compare a fresh answer with a cached one. `DocsAnswerService::answer()` never touches the cache, so `rag:eval` measures the model and not the cache.
-
-**Invalidation: a filter, not deletes.** An entry is served only while its prompt version, answer model, embedding model and index version all equal the current ones. The index version is a hash over the indexed documents' source, path and hash, plus the embedding model; it is memoized for 60 s and `docs:index` forgets it when a document changes. While any chunk still waits for its vector, the hash also carries the pending count and nothing is stored, because an answer given during re-indexing was retrieved from a half-embedded index. The versions are read once when the request is planned and stored with the answer, so an answer cannot be filed under an index version that appeared while it was streaming. Re-indexing, a new prompt file or a model change therefore makes every older entry a miss with no manual step and no hook that could be forgotten. Stale rows stay inert until the TTL (`ai.docs.cache.ttl_hours`, default 168) or `docs:cache --prune` removes them with their exact keys.
-
-**Measuring it.** `docs:cache --stats` prints hit rate (cached over cached plus completed, endpoint rows only, follow-up turns excluded because they can never be served from the cache), hits by kind, saved latency sum and median, and current against stale entries. `bench/docs-cache.sh` asks 10 eval questions fresh, verbatim and reworded:
-
-| Path | Result |
-|---|---|
-| fresh (miss) | 6071 ms median, 10 of 10 misses |
-| exact repeat | 8 hits, 46.5 ms median |
-| reworded | 2 semantic hits, 126 ms median |
-| overall | 10 of 30 requests served from the cache |
-
-Both budgets hold (exact under 100 ms, semantic under 300 ms; the 18-question latency run: 51 ms and 86 ms). Both exact misses follow a fresh answer without a citation, which the store rule refuses (checked in `ai_runs`). The first run printed a stats hit rate of 2.6% because it divided by every completed row, `rag:eval` answers included; the stats now count endpoint rows only (`origin = api`), and the re-run printed 56.9% over the day.
-
-**Two review findings worth remembering.** A global cache on a public endpoint is shared state between strangers. The first `cache_hit` event sent the stored question's text, so a client could read what someone else had asked; it now sends only the similarity. And a cached answer is replayed to everyone, so a question carrying an injected instruction must never match a clean one: measured, such questions scored 0.827–0.881 against the clean version, under the 0.94 threshold. The threshold is the security boundary as well as the quality one.
-
-**In this repo.**
-- Code: [`DocsAnswerCache`](../app/Services/DocsAnswerCache.php), [`DocsIndexVersion`](../app/Services/DocsIndexVersion.php), [`DocsCacheCalibrator`](../app/Services/DocsCacheCalibrator.php), [`DocsCacheCommand`](../app/Console/Commands/DocsCacheCommand.php), [`DocsCacheCalibrateCommand`](../app/Console/Commands/DocsCacheCalibrateCommand.php).
-- Tests: `DocsCacheTest`, `DocsAnswerCacheTest`, `DocsCacheCalibrateTest`, `DocsCacheCommandTest`, `DocsCacheCommittedResultsTest`; `DocsAskTest` is unchanged because the cache is off in `phpunit.xml`.
-- Data and results: [`cache-pairs.v1.jsonl`](../bench/rag-eval/cache-pairs.v1.jsonl), [`bench/results/docs-cache/2026-11-03/`](../bench/results/docs-cache/2026-11-03/) and the "Answer cache (2026-11-03)" section of [`BENCHMARKS.md`](../BENCHMARKS.md).
-- Spec: [`.ai/specs/spec-20261103-1616-docs-semantic-cache/`](../.ai/specs/spec-20261103-1616-docs-semantic-cache/).
-
-**Read next.** [Redis: vector search](https://redis.io/docs/latest/develop/get-started/vector-database/) · [pgvector](https://github.com/pgvector/pgvector) · [Laravel: cache](https://laravel.com/docs/13.x/cache)
-
----
-
-## 18. Stop that really stops, and conversations
-
-**What it is.** Section 13 gave the lab a Stop button: it calls `abort()` on the `fetch`, so the browser closes the connection. That only hides the answer. Whether the server stops depends on what PHP does when it notices the client has gone, and on a streaming endpoint that is easy to get wrong. This slice (SL-41) makes the server stop too, measures it on all six server modes, and turns `/ai/chat` into a conversation that sends earlier turns as marked history.
-
-**What was wrong (probe of 2026-11-03, one stream aborted after 1.5 s).**
-- **nginx-fpm:** no `ai_runs` row at all. PHP-FPM kills the script at its next write once the client has left (`ignore_user_abort` is off), so the code that writes the row never runs. That breaks the rule that every model call is logged.
-- **frankenphp-octane:** the server finished the answer anyway: a `completed` row with 320 tokens, written 22 224 ms after the client had gone. The model and a worker thread stayed busy for 20 s for nobody.
-
-**How the cancel works.**
-1. The stream sets `ignore_user_abort(true)` for its own duration. Without it FPM ends the script mid-loop and nothing is logged; with it the loop survives to notice and clean up. It is set and restored in code (`finally`), not in php.ini, so no other request changes.
-2. After each flushed event the stream asks an `AbortWatcher` (the real one, `ConnectionAbortWatcher`, answers `connection_aborted()`). A test swaps in a fake that reports an abort after N events, so no test opens a real socket.
-3. On abort the recorder writes a `stopped` row, the loop breaks, and the generators are unset. Releasing the SDK generator releases the HTTP body, which closes the connection to Ollama, and Ollama stops generating. Nothing more is sent to the client.
-4. A stopped answer is never cached: the store step runs only when the loop resumes the stream after the `citations` flush, and the loop resumes only if the watcher said the client is still there.
-5. Three edges, each found in review:
-   - **Stop while the model is thinking** (`AI_THINK=true`). Reasoning is never sent, so there was nothing to flush and nothing to check. The protocol now writes an SSE comment (`: keepalive`) per reasoning event; the browser's parser ignores comment lines, and the flush gives the watcher its chance. The one window left is the model reading the prompt before its first event.
-   - **Stop before the model started.** A client that leaves during retrieval was caught at the first flush (`sources`), before the SDK had opened a run, so no row was written. The protocol now records a `stopped` row from the planned metadata, with null tokens and TTFT.
-   - **Stop noticed after the end.** If the abort is seen right after `stream_end`, the model had finished: the run is logged `completed` (or `failed` after the masked error), not `stopped`, so stop counts are not inflated.
-
-**The row.** Status `stopped`; `tokens_out` counts the text deltas PHP received (about one per token; Ollama reports no `eval_count` once the connection is closed, and `tokens_in` stays null); `stopped_after_ms` is the time from the first token to the abort being noticed; TTFT, `stopped_after_ms` and `tokens_out` are all null if the abort came before the first token. Nothing about a stopped run is ever cached, and the partial text is never sent back as history.
-
-**A bug worth knowing.** The first version hooked the parent's callback. On php-fpm Laravel's wrapper echoes and flushes the generator itself and returns nothing, so the loop checking `connection_aborted()` never ran there; it only worked under Octane. `SseProtocol::response()` now builds the chunk generator itself, with the parent's masked-error logic copied into a private method, and works under both. Describe uses the same protocol, so it gets the same cancel; its events and masked errors are unchanged.
-
-**What each server mode does (committed under [`bench/results/chat-stop/2026-11-03/`](../bench/results/chat-stop/2026-11-03/), `bench/chat-stop.sh`, 5 runs per mode, abort after 20 deltas, qwen3.5:9b).** The bench closes its connection after 20 `text_delta` events, reads the row with that stream's invocation id, and immediately sends a 1-token request straight to Ollama.
-- The primary figure is whether the model is **free** again ("model free"): the time that probe needed, against the median of 5 idle probes taken before the runs. A model still generating a long answer would make it wait for seconds.
-- The secondary figure is the **delta lag** ("delta lag"): the row's `tokens_out` minus the deltas the client had actually received (20 to 25, since curl may hold a few more when the reader stops it), i.e. how many more deltas PHP read before noticing.
-- The direct evidence is **Ollama's own log**: for every one of the 30 runs it logged `Request terminated … context canceled` ([`ollama-log.txt`](../bench/results/chat-stop/2026-11-03/ollama-log.txt)). Ollama ran with one generation slot (`OLLAMA_NUM_PARALLEL:1`), so the fast probe and the log agree. The app cannot see this itself: a cancelled request returns no token count.
-
-| Mode | Median tokens after Stop | Idle probe | Probe after Stop |
-|------|--------------------------|------------|------------------|
-| nginx-fpm | 1 | 65 ms | 113 ms |
-| apache-fpm | 4 | 40 ms | 115 ms |
-| openlitespeed | 3 | 41 ms | 144 ms |
-| frankenphp | 1 | 40 ms | 75 ms |
-| frankenphp-octane | 1 | 41 ms | 80 ms |
-| frankenphp-worker | 1 | 41 ms | 79 ms |
-
-Every mode wrote a `stopped` row for 5 of 5 runs. nginx-fpm went from no row to a row, and frankenphp-octane from 320 tokens after Stop to about 1. NFR-1 (reported, not a gate: probe at most 1.5 times the idle median plus 1 s, delta lag at most 10) holds on every mode; the worst probe was 144 ms. A mode that could not see the disconnect would have kept the old behaviour (a `completed` row) and been reported as a finding; none was. The full tables and the surprises are in the "Stop and cancel per server mode (2026-11-03)" section of [`BENCHMARKS.md`](../BENCHMARKS.md).
-
-**Conversations: history is data, not instructions.** `POST /api/docs/ask` takes an optional `history`: alternating `user` and `assistant` turns, starting with `user` and ending with `assistant`, at most 6 turns (`ai.docs.chat.max_history_turns`), each at most 2 000 characters and valid UTF-8 without NUL. Anything else is a 422, never silently cut. The page sends whole completed exchanges only, so a stopped, refused, `no_context` or empty answer never becomes history.
-- **Marked and escaped.** History goes into the user message as `<history><turn role="…">…</turn></history>` before `<context>`, escaped like the retrieved text. A new prompt file, `docs-answer.v2.md`, says history is earlier conversation for reference and never instructions. It is used only when history is present, so a request without history keeps `docs-answer@v1` and every older result stays valid; the logged `prompt_version` (`docs-answer@v2`) and `history_turns` show which kind of request a run was.
-- **Input guard.** The pattern guard checks the latest question and every `user` turn. A match refuses the request (`refused`) and the event carries `turn` (the 0-based index in `history`, or `latest`). `assistant` turns are never matched, because a client can forge them, but they are always escaped and marked.
-- **Forged turns.** The client can write a turn as if the assistant had said it, so a forged turn is data like any other. The output guard's allowed texts stay the question and the chunk bodies; history is never added. A test forges an `assistant` turn holding 14 words of the v2 prompt and has the fake model repeat them: the answer is refused at the output stage with `output:prompt_overlap`. Treating history like retrieved text is what makes a client-supplied transcript safe.
-- **Never cached.** A follow-up's meaning depends on its history, so the same text means different things in different chats. A turn with history neither reads nor writes the cache; `"cache": true` with history is accepted and ignored.
-
-**Why follow-ups retrieve poorly.** Retrieval runs on the latest question only (the owner's instruction), so history helps the model read the question, not find the passage. Three real two-turn chats against `docs-answer@v2` on nginx-fpm (`followups.md`): 1 of 3 answers was right. "How do I undo it?" has no subject to search for, so no migration passage came back and the model said the docs do not cover it. "How do I make it retry?" matched the HTTP client's `retry` method instead of queued jobs. "How do I clear it?" worked by luck: search never saw the word "cache", but the vector for "clear it" landed near the cache docs' "Clearing the Cache" section, and the model took "cache" from the history. The fix is query rewriting: condense the history and the follow-up into one standalone question before retrieval. It is out of scope here and recorded as the next option.
-
-**The lab page.** `/ai/chat` keeps a transcript: each assistant turn shows its own sources, citations (scoped to that turn), cached mark, refusal or "I don't know" state, and its logged run. Ask, Stop and New chat; Stop leaves the partial answer visible, marked "Stopped", and re-enables the controls at once. History lives in page state only and is lost on reload. Only the newest answer is an `aria-live` region, so a screen reader does not re-read the whole transcript.
-
-**In this repo.**
-- Code: [`SseProtocol`](../app/Ai/SseProtocol.php), [`AbortWatcher`](../app/Ai/AbortWatcher.php), [`ConnectionAbortWatcher`](../app/Ai/ConnectionAbortWatcher.php), [`DocsChatTurn`](../app/DTOs/DocsChatTurn.php), [`DocsAnswerAgent`](../app/Ai/DocsAnswerAgent.php), [`AiRunRecorder`](../app/Ai/AiRunRecorder.php).
-- Tests: `StreamCancelTest`, `DocsChatHistoryTest`, `BenchChatStopTest`, `ChatFollowupNoteTest`, `AiLabChatTranscriptTest`.
-- Measurements: [`bench/chat-stop.sh`](../bench/chat-stop.sh), [`bench/results/chat-stop/2026-11-03/`](../bench/results/chat-stop/2026-11-03/), [`followups.md`](../bench/results/chat-stop/2026-11-03/followups.md).
-- Spec: [`.ai/specs/spec-20261103-2118-chat-stop-multiturn/`](../.ai/specs/spec-20261103-2118-chat-stop-multiturn/).
-
-**Read next.** [PHP: ignore_user_abort](https://www.php.net/manual/en/function.ignore-user-abort.php) · [PHP: connection handling](https://www.php.net/manual/en/features.connection-handling.php) · [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md)
-
----
-
-## 19. Slow I/O, worker pools and a health check that stays fast
-
-**What it is.** A PHP request keeps its worker for as long as it waits: on a database, on another API, or on a model writing an answer. A server has a fixed or bounded number of workers, so enough slow requests fill them all, and everything else, the cheap health check included, waits in the same queue. This section measures that, with a slow HTTP call and with open AI answer streams, on PHP-FPM and on FrankenPHP.
-
-**The pieces.**
-- [`ShowSlowListingController`](../app/Http/Controllers/ShowSlowListingController.php) and [`VinReportService`](../app/Services/VinReportService.php): `GET /listings/{id}/slow` loads the listing, then calls a stub VIN API through [`VinStubClient`](../app/Support/VinStubClient.php) and waits for it. It is a lab endpoint: behind the debug-routes gate and its own throttle, because holding a worker on purpose is exactly what a public endpoint must not allow.
-- The stub, [`.ddev/vinstub/server.mjs`](../.ddev/vinstub/server.mjs), runs in its own Node container ([`docker-compose.vinstub.yaml`](../.ddev/docker-compose.vinstub.yaml)) and answers after 300 ms. If it were a Laravel route, the wait would take a second PHP worker and double the effect being measured; Node's event loop holds many sleeping requests at once, like a real external API.
-- [`HealthzController`](../app/Http/Controllers/HealthzController.php) on `GET /healthz`, loaded from [`routes/health.php`](../routes/health.php) with no middleware group: no session (no Redis write, no cookie), no database, no outbound call. It answers 503 in maintenance mode, because the global maintenance middleware still runs, and a server in maintenance should not get traffic.
-
-**One slow request, step by step.**
-1. On **nginx-fpm** nginx passes the request to the FPM pool. A free child takes it; with `pm=static` and 8 children, at most 8 requests run at once and the rest wait in the pool's listen queue. The child runs Laravel, which calls the stub and blocks for 300 ms. Only when it answers is the child free for the next request in the queue.
-2. On **frankenphp** Caddy hands the request to one of FrankenPHP's PHP threads. With a fixed `num_threads 14`, at most 14 run at once. With `max_threads 64`, FrankenPHP starts more threads while requests are waiting, up to 64; `max_wait_time 5s` makes a request that waited 5 s for a thread fail instead of waiting forever.
-3. `/healthz` arrives in the same queue. It has nothing to do, but it cannot start until a worker is free.
-
-**What was measured** ([`bench/slow-load.sh`](../bench/slow-load.sh), run 8 times by [`bench/slow-load-matrix.sh`](../bench/slow-load-matrix.sh); full tables and the chart in the "Slow I/O and the health check (2026-11-03)" section of [`BENCHMARKS.md`](../BENCHMARKS.md)). 100 users on the slow endpoint, or 30 users holding describe streams of about 6 s each ([`bench/k6-sse.js`](../bench/k6-sse.js), fake provider, no GPU), while a separate probe sends 5 requests per second to `/healthz`:
-
-| Configuration | Health p95, slow HTTP | Health p95, AI streams |
-|---|---|---|
-| nginx-fpm static 8 | 4003 ms | 10 000 ms, 299 of 300 timed out |
-| nginx-fpm static 32 | 998 ms | 15 ms |
-| frankenphp fixed 14 | 2369 ms | 10 000 ms, 118 of 300 timed out |
-| frankenphp autoscale 14→64 | 276 ms | 16 ms |
-
-- **Throughput = workers ÷ time held.** 8 children at 300 ms each can serve at most 26.7 requests per second; measured 23.9. 32 children: 107, measured 93.5. 14 threads: 46.7, measured 41.2. 64 threads: 213, measured 197.8. That is Little's law; once you know how long a request holds a worker, you know the ceiling.
-- **`pm.max_children` vs threads.** An FPM child is a whole process (its own memory, its own opcache view); a FrankenPHP thread shares one process. For waiting, that difference does not matter: 14 threads did worse than 32 children because 14 is less than 32. What mattered was that FrankenPHP could grow the pool under load.
-- **An AI answer is slow I/O that lasts 6 s.** With direct SSE (section 9) each open answer holds a worker until `[DONE]`. 30 open answers on 8 children made each one wait behind three others (24.8 s instead of 6.1 s) and starved the health check completely. That is the price of the direct variant, and the reason the queued Mercure or Reverb variant exists: there a short request queues a job and returns, and the answer reaches the browser through a hub, so a long answer holds a queue worker, not a web worker.
-- **No 502 or 504 appeared.** Every layer in front of PHP waited longer than the probe's 10 s, so the failure showed up as health checks that never answered. A real load balancer with a 2–5 s health timeout would have taken this server out of rotation while it was working correctly.
-
-**When to choose what.**
-- Size the pool for the slow part: workers ≥ concurrent slow requests (Little's law), within memory.
-- Prefer a pool that can grow (FrankenPHP `max_threads`, FPM `pm=dynamic` up to a high `max_children`) when load comes in bursts.
-- Move long work off the request: a queued job plus a broadcast (Mercure, Reverb) for AI answers that many people stream at once, or for anything longer than a few seconds.
-- Keep the health check on the cheapest path and give it its own lane where the server supports it (a separate small FPM pool or port), because no setting here gives it priority inside the shared queue.
-
-**In this repo.** Tests: [`HealthzTest`](../tests/Feature/HealthzTest.php), [`SlowListingTest`](../tests/Feature/SlowListingTest.php), `BenchSlowLoadTest`, `BenchConcurrencyTest`, `VinStubTest`. Results: [`bench/results/slow-load/`](../bench/results/slow-load/). Spec: [`.ai/specs/spec-20261104-0001-slow-io-healthz/`](../.ai/specs/spec-20261104-0001-slow-io-healthz/).
-
-**Read next.** [PHP-FPM configuration](https://www.php.net/manual/en/install.fpm.configuration.php) · [FrankenPHP: performance and `max_threads`](https://frankenphp.dev/docs/performance/) · [FrankenPHP configuration](https://frankenphp.dev/docs/config/) · [Little's law](https://en.wikipedia.org/wiki/Little%27s_law) · [oha](https://github.com/hatoo/oha)
-
----
-
-## 20. Letting the web server send the file
-
-**What it is.** A 50 MiB CSV export can be sent two ways. In **stream** mode PHP reads the file and writes it to the client in chunks, so a PHP worker is busy until the last byte has left, however slowly the client reads. In **offload** mode PHP only decides that the download is allowed, then answers with an empty body and a header that names the file; the web server reads the file from disk and sends it itself, and the PHP worker is free again after a few milliseconds. This is section 19's lesson (a worker that waits is a worker lost) applied to a download.
-
-**The pieces.**
-- `php artisan exports:generate` ([`ExportsGenerateCommand`](../app/Console/Commands/ExportsGenerateCommand.php), [`ExportFileService`](../app/Services/ExportFileService.php)) writes `listings.csv` to a temp file, renames it into place and records its size and sha256 in the `exports` table, so a reader never sees a half-written file.
-- `GET /exports/{id}?mode=offload|stream` ([`ServeExportController`](../app/Http/Controllers/ServeExportController.php), [`ExportDeliveryService`](../app/Services/ExportDeliveryService.php)) is a lab route behind the debug-routes gate and its own `exports` throttle, because every download holds bandwidth.
-- [`OffloadHeader`](../app/Enums/OffloadHeader.php) holds the header spellings. [`ExportStreamer`](../app/Support/ExportStreamer.php) is the 64 KiB-chunk stream with a flush after each chunk, stopping if the client has gone (the abort watcher from section 18).
-- [`ExportDownloadLog`](../app/Support/ExportDownloadLog.php) appends one JSON line per download to `storage/logs/exports.jsonl` from a shutdown callback: `php_held_ms`, peak memory, CPU and `bytes_sent_by_php`. For an offload download `bytes_sent_by_php` is 0, which is how the bench proves PHP did not send the file.
-
-**One offload download, step by step.**
-1. The client asks for `/exports/listings?mode=offload`. The web server passes it to PHP like any request.
-2. Laravel checks the debug gate and the throttle, finds the export record and answers 200 with no body, `Content-Length`, `Content-Disposition: attachment`, `X-Export-Mode: offload` and one hand-off header. The PHP worker finishes and goes back to the pool.
-3. The web server sees the hand-off header in PHP's response, drops the empty body and sends the named file to the client by itself. It can do this for 25 s, or for a client that stops and restarts with a `Range` request, without a PHP worker involved.
-
-**The four header spellings.** If the header is unknown or the server cannot offload, the controller answers with `X-Export-Mode: stream-fallback` and streams the same bytes.
-
-| Server | Header PHP sends | What the server config does |
-|---|---|---|
-| nginx-fpm | `X-Accel-Redirect: /_protected_exports/listings.csv` | An `internal` location `/_protected_exports/` aliased to `storage/app/exports/`. `internal` means a client asking for that URL directly gets 404. |
-| apache-fpm | `X-Sendfile: /var/www/html/storage/app/exports/listings.csv` | `mod_xsendfile` enabled, with the path allowed only under the exports directory. A direct request to `/storage/app/exports/` gets 403. |
-| frankenphp | `X-Sendfile` (same absolute path) | A Caddy `intercept` rule in the `export_offload` snippet matches `X-Sendfile` for the exports directory only and serves the file with a `file_server` rooted there. |
-| openlitespeed | `X-LiteSpeed-Location: /_protected_exports/listings.csv` | A `/_protected_exports/` context mapped to the exports directory, with its own `rewrite { enable 0 }` (otherwise the Laravel front-controller rewrite swallows the redirected URI) and a rewrite rule that answers 403 to direct requests, because OpenLiteSpeed has no "internal" flag. |
-
-**One offload per server.** The same request, `/exports/listings?mode=offload`, on each server: who reads the file, and when the PHP worker is free.
-- **nginx-fpm**: PHP-FPM returns the empty response with `X-Accel-Redirect` to nginx, and the FPM worker is free as soon as that response is written. nginx itself reads the file from the internal `/_protected_exports/` location and sends it, with `Range` support.
-- **apache-fpm**: PHP-FPM returns `X-Sendfile`. The FPM worker is free once the response is written; Apache's `mod_xsendfile` output filter then replaces the empty body with the file and Apache reads it from disk.
-- **frankenphp**: the PHP thread runs inside the Caddy process and is free once the handler returns the response with `X-Sendfile`. The `intercept` handler then sees the header and a `file_server` reads the file, so the slow client occupies a Caddy connection, not a PHP thread.
-- **openlitespeed**: the LSAPI PHP process returns `X-LiteSpeed-Location` and is free at once. OpenLiteSpeed re-routes the request internally to the `/_protected_exports/` context and serves the file from there.
-
-**Not covered.** Laravel Octane and the FrankenPHP worker mode are out of scope. In a long-lived worker the process does not end between requests, so shutdown functions do not run per request and the `ExportDownloadLog` line (written from a shutdown callback) would be missing or misattributed. The offload path also differs there, since the worker hands responses to its host server in a different way than classic FPM or the per-request FrankenPHP mode measured here.
-
-**Image rebuild cost.** apache-fpm needs `mod_xsendfile`, which `.ddev/web-build/Dockerfile` installs with `apt-get` as an extra step of the web image build. The first `ddev start` or `ddev restart` after adding or editing that file rebuilds the web image, which takes noticeably longer than a normal restart and needs network access; later restarts reuse the cached image. The extra layer is in the image for every server, not only apache-fpm.
-
-**Why the path must be restricted.** The hand-off header is a request from PHP to the web server: "read this file for me". If the application ever lets a user influence that path, or the server accepts any path, the header turns into a file-disclosure hole. So every config serves only the exports directory, the exports directory is not reachable by URL, and the checks in `manual-test.md#step-3` ask each server for the internal location and for the storage path directly.
-
-**What was measured** ([`bench/export-load.sh`](../bench/export-load.sh), run 8 times by [`bench/export-load-matrix.sh`](../bench/export-load-matrix.sh); full table and chart in the "File downloads: offload vs PHP streaming (2026-11-04)" section of [`BENCHMARKS.md`](../BENCHMARKS.md)). 20 clients downloading the 50 MiB file at 2 MiB/s each (about 25 s per file) while a probe asks `/healthz` 5 times per second:
-
-| Server | Mode | Health p95 | PHP held p95 |
-|---|---|---|---|
-| nginx-fpm | offload | 15 ms | 20 ms |
-| nginx-fpm | stream | 10 000 ms | 22 994 ms |
-| apache-fpm | offload | 16 ms | 23 ms |
-| apache-fpm | stream | 10 000 ms | 22 483 ms |
-| frankenphp | offload | 18 ms | 70 ms |
-| frankenphp | stream | 10 000 ms | 22 505 ms |
-| openlitespeed | offload | 19 ms | 42 ms |
-| openlitespeed | stream | 5189 ms | 15 704 ms |
-
-- **Streaming holds a worker for the whole download.** On nginx, Apache and FrankenPHP, PHP held the request for 22.5 to 23.0 s at p95 and the health check timed out on 170 to 181 of 300 probes. Offload cut the hold to 20 to 70 ms and the health check answered in 15 to 19 ms with no timeouts.
-- **OpenLiteSpeed is the exception, for a reason that is not a virtue.** It takes PHP's output faster than the client reads and buffers it, so PHP finished sooner (15.7 s at p95) and no health probe timed out, though the repeats varied by 44 %. The same buffering hides a disconnected client: PHP sends the whole 50 MiB even when the client left after 3 s.
-- **Memory was not the problem.** PHP's peak memory stayed at 2 MiB in stream mode too, because it reads 64 KiB at a time. A whole request cost about 6 ms of CPU with offload and 20 to 43 ms streamed, framework boot included. On FrankenPHP the CPU of one download cannot be read at all: `getrusage` counts the whole process, which holds every PHP thread and Caddy itself, so the bench reports n/a there.
-- **The client sees no difference.** Download p95 was 25.0 s in all 8 cells and every download had the right size; the first per client had the right sha256. Offload does not speed up a slow client, it stops that client from owning a worker.
-- **FrankenPHP worker and Octane modes stream.** Their Caddyfile has no `intercept`, so an `X-Sendfile` header would reach the client with the file's absolute path. The app sends the header only when the classic FrankenPHP config marks that it intercepts it (`EXPORTS_SENDFILE_INTERCEPT`), and falls back to streaming otherwise.
-
-**When to choose what.**
-- Offload any large file that PHP only has to authorise: exports, reports, invoices, media. Keep the authorisation in PHP and the sending in the server.
-- Stream from PHP only when the bytes must be produced or transformed on the way (an on-the-fly archive, a generated report too big to keep), and size the pool for it as in section 19.
-- Treat the directory the server may serve as a security boundary: one directory, no user-controlled path, no direct URL.
-
-**In this repo.** Tests: `ExportGenerateTest`, `ServeExportTest`, `ExportOffloadConfigTest`, `BenchExportLoadTest`, `ExportLoadResultsTest`. Configs: [`.ddev/nginx_full/nginx-site.conf`](../.ddev/nginx_full/nginx-site.conf), the apache site config (removed in commit `719c0a5`), [`.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp`](../.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp). Results: [`bench/results/export-load/`](../bench/results/export-load/). Spec: [`.ai/specs/spec-20261104-1944-export-offload/`](../.ai/specs/spec-20261104-1944-export-offload/).
-
-**Read next.** [nginx: X-Accel-Redirect and `internal`](https://nginx.org/en/docs/http/ngx_http_core_module.html#internal) · [mod_xsendfile](https://tn123.org/mod_xsendfile/) · [Caddy `intercept`](https://caddyserver.com/docs/caddyfile/directives/intercept) · [OpenLiteSpeed: X-LiteSpeed-Location](https://docs.openlitespeed.org/config/advanced/) · [FrankenPHP: X-Sendfile](https://frankenphp.dev/docs/x-sendfile/)
-
----
-
-## 21. Early Hints and compression
-
-**What it is.** Two ways to make the same page arrive sooner without changing its HTML. A **`103 Early Hints`** is an interim response the server sends before the real one, carrying `Link` headers that name the CSS and JS the page will need. **Compression** shrinks the response body on the wire, and the client says what it can decode in `Accept-Encoding`.
-
-**What a 103 is.** HTTP allows several responses to one request: any number of 1xx responses, then the final one. The 103 has no body, only `Link: <url>; rel=preload` headers, and the browser starts fetching those files while the server is still working. Browsers use it only over HTTP/2 or HTTP/3 (HTTP/1.1 clients ignore or mishandle 1xx responses), and only on a connection they trust: Chrome drops hints on a connection with a certificate error.
-
-**Why before the slow work.** The hint is worth the time PHP spends between receiving the request and sending the first byte of the page. It must therefore be sent at the start of the request, before the database and rendering; a hint sent when the page is ready arrives with the page and saves nothing. In this repo [`SendEarlyHints`](../app/Http/Middleware/SendEarlyHints.php) runs first on the listing detail route and asks [`PhpEarlyHintSender`](../app/Support/PhpEarlyHintSender.php) to call `headers_send(103)`. That function exists only on FrankenPHP. On other servers, and in FrankenPHP's worker and Octane modes (detected from `FRANKENPHP_WORKER` or `LARAVEL_OCTANE` in the request or the process environment), the sender reports itself unavailable and the middleware does nothing, and it never throws. The links come from Laravel's own Vite resolution (`Vite::preloadedAssets()` for the page's entries), so the 103 and the final `Link` header name the same files ([`config/performance.php`](../config/performance.php) has the `EARLY_HINTS` switch). The final response carries the same `Link` headers from Laravel's `AddLinkHeadersForPreloadedAssets`, so a client that ignored the 103 still gets them.
-
-**Why proxies may drop it.** A 103 is a hop-by-hop interim response. A proxy that does not understand 1xx responses, or an HTTP/1.1 hop in the chain, may discard it, buffer it until the final response (which defeats it) or fail. So the bench measures it on the path a user takes: `bench/early-hints.sh` found a 103 on classic frankenphp both through the router (Traefik 3.7 forwards it) and straight at the container, and none on nginx-fpm, frankenphp-worker or frankenphp-octane.
-
-**preload vs modulepreload.** Both ask the browser to fetch early. `rel=preload as=style` fetches a stylesheet; `rel=modulepreload` fetches a JavaScript module, parses it and its imports into the module map, so the later `<script type="module">` runs without a second fetch. Using `preload as=script` for a module would fetch the file but the module loader would not reuse it. The middleware sends `preload` for the CSS entry and `modulepreload` for the JS entry.
-
-**How an encoding is picked.** The client sends `Accept-Encoding: zstd, br, gzip`; the server picks one it supports, compresses the body, sets `Content-Encoding` and adds `Vary: Accept-Encoding` so a cache keeps one copy per encoding. If the client lists nothing the server supports, the body goes out as is. Caddy on FrankenPHP is set to `encode zstd br gzip` ([`Caddyfile.frankenphp`](../.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp), and the same in the [worker Caddyfile](../.ddev/servers/frankenphp-worker/web-build/Caddyfile.frankenphp)) and answered all three, preferring `zstd` for the combined header; nginx-fpm ([`nginx-site.conf`](../.ddev/nginx_full/nginx-site.conf), DDEV's defaults) answered `gzip` or nothing. A response must carry a single `Content-Encoding` value: a second compression layer on top of a compressed body would not decode.
-
-**What was measured** ([`bench/lcp.sh`](../bench/lcp.sh) and [`bench/lcp.mjs`](../bench/lcp.mjs), [`bench/compression.sh`](../bench/compression.sh), [`bench/early-hints.sh`](../bench/early-hints.sh); tables and chart in the "Early Hints and compression (2026-11-05)" section of [`BENCHMARKS.md`](../BENCHMARKS.md)). Cold Chromium behind a network-level throttle (a toxiproxy container: 150 ms RTT, 1.6 Mbit/s down, 750 kbit/s up) with 4x CPU slowdown, median of 5:
-
-| Variant | LCP | FCP |
-|---|---|---|
-| frankenphp-hints | 1211 ms | 609 ms |
-| frankenphp-no-hints | 1238 ms | 663 ms |
-| nginx-fpm | 1223 ms | 612 ms |
-
-- **The hint is worth the server's think time, no more.** FCP fell by 54 ms and LCP by 27 ms (about 2 %). This page's HTML is ready in about 15 ms, so there is little time for the browser to use; a page that spends hundreds of milliseconds in the database would gain far more.
-- **Throttle at the network, not in DevTools.** The first run used DevTools network emulation, which delays the final response but not the 103 and the fetches it starts. It reported FCP falling from 452 ms to 201 ms, an impossible gain under a 150 ms round trip. A TCP proxy delays every byte alike; the flawed run is kept in `bench/results/lcp/2026-11-05/cdp-throttle/` as a lesson.
-
-**The CPU and bytes trade-off.** Compression spends CPU to save bytes, and the best ratio costs the most. The 50 MiB export on FrankenPHP, web container CPU for one download:
-
-| Encoding | Wire bytes | CPU |
-|---|---|---|
-| gzip | 8 018 572 | 0.292 s |
-| br | 6 463 974 | 0.698 s |
-| zstd | 8 442 896 | 0.249 s |
-
-Uncompressed it cost 0.048 s (median of 5 downloads per encoding). `br` saved 19 % more bytes than `gzip` and cost 2.4 times the CPU; `zstd` was cheapest but sent the most bytes. The detail page's own script is empty (0 bytes), so the script rows in `BENCHMARKS.md` use the largest built bundle, the AI lab's, labelled `lab-bundle`.
-
-**Why compressing an offloaded large file can cost more than it saves.** As in section 20, the web server, not PHP, sends the file. If that server then compresses 52 428 832 bytes on the fly, the cost moves from PHP to the server's CPU, per download, and the wait on a slow client is the same. An uncompressed file also has a known `Content-Length`; an on-the-fly compressed stream does not. On nginx-fpm the export was sent uncompressed for every encoding, and on FrankenPHP it was compressed once per request (single `Content-Encoding`, sha256 equal to the record). Measure before turning it on for a big file.
-
-**In this repo.** Tests: `EarlyHintsTest`, `PreloadLinksTest`, `BenchEarlyHintsTest`, `BenchLcpTest`, `BenchCompressionTest`, `BenchCommittedRunsTest`. Results: [`bench/results/early-hints/`](../bench/results/early-hints/), [`bench/results/lcp/`](../bench/results/lcp/), [`bench/results/compression/`](../bench/results/compression/). Spec: [`.ai/specs/spec-20261104-2340-early-hints-compression/`](../.ai/specs/spec-20261104-2340-early-hints-compression/).
-
-**Read next.** [MDN: 103 Early Hints](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/103) · [Chrome: Early Hints](https://developer.chrome.com/docs/web-platform/early-hints) · [MDN: modulepreload](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/rel/modulepreload) · [MDN: Accept-Encoding](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding) · [FrankenPHP: early hints](https://frankenphp.dev/docs/early-hints/)
-
----
-
-## 22. HTTP/3 and QUIC
-
-**What it is.** HTTP/3 is HTTP carried over **QUIC**, a transport built on **UDP** instead of TCP. QUIC does the connection setup, TLS 1.3 encryption, loss recovery and multiplexing of streams itself, in user space. The HTTP semantics (methods, status codes, headers such as `Link` and `Alt-Svc`) are the same as in HTTP/2; what changes is how the bytes are moved.
-
-**Why the router path never used it.** FrankenPHP's Caddy listens on TCP 443 (h1 and h2) and UDP 443 (h3) inside the web container. The DDEV router (Traefik) sits in front: it ends TLS from the browser and talks plain HTTP to the container, and no UDP port is published. So `curl -I https://ai-lab.ddev.site/` shows no `Alt-Svc`, and no browser reaches the h3 listener. The bench therefore puts its clients on the `ddev_default` network and resolves the site host to the web container's address, skipping the router. Nothing in `.ddev/` changes ([`bench/http3.sh`](../bench/http3.sh), [`bench/lcp.mjs`](../bench/lcp.mjs)).
-
-**What `Alt-Svc` advertises, and how a browser upgrades.** A server tells a client that the same origin is also reachable over another protocol with `Alt-Svc: h3=":443"; ma=2592000` (HTTP/3 on UDP 443, valid for 30 days). A browser cannot know in advance whether UDP works, so its first visit uses h2 over TCP; it reads the header and tries QUIC on later requests, falling back to TCP if that fails. A cold run would therefore never see h3, and the bench forces it with Chromium's `--origin-to-force-quic-on` (h2 is forced with `--disable-quic`). Each run then reads `PerformanceNavigationTiming.nextHopProtocol` and counts only if it equals the protocol asked for. `bench/http3.sh` checks the advertisement separately: frankenphp answers the h2 request with `Alt-Svc: h3=":443"; ma=2592000` and the h3 request with status 200 and the same body hash; nginx-fpm has no UDP listener, so `h3_ok` is false there with the reason recorded.
-
-**Head-of-line blocking.** HTTP/2 multiplexes many streams over one TCP connection, but TCP delivers bytes in order: one lost segment holds back every stream behind it until it is retransmitted (head-of-line blocking at the transport level). QUIC recovers loss per stream, so only the stream that lost a packet waits. That is why a lossy link is where h2 and h3 should differ most, and why the bench has a 2 % loss variant. QUIC also sets up faster: the TCP handshake plus the TLS 1.3 handshake need two round trips before a request is sent, QUIC one.
-
-**Why the throttle must sit on the network layer.** Toxiproxy, used in [section 21](#21-early-hints-and-compression), proxies TCP only, so it cannot carry QUIC. DevTools network emulation delays only what the page fetches, not everything alike. [`bench/lib/netem.sh`](../bench/lib/netem.sh) instead shapes the browser container's own interface with the kernel's `netem`: a `NET_ADMIN` sidecar that shares the container's network namespace adds 75 ms of delay each way and the rate limit on outgoing traffic, and redirects incoming traffic through an `ifb` device that gets the same treatment. TCP and UDP both cross it, so h2 and h3 see the same link, and the script measures the RTT (median of 20 TCP connects, probed with HEAD so no page is downloaded; 140 to 170 ms accepted) before anything is recorded.
-
-**Why loss must be per packet.** `netem` drops one kernel buffer (skb) at a time, and with TCP segmentation offload, generic segmentation and receive offload, and UDP GSO (QUIC sends several datagrams in one call) one skb can hold dozens of wire packets. A "2 %" drop then removes whole bursts, and differently for TCP and QUIC, which makes the comparison unfair. The first version of this comparison did exactly that, and it found no loss effect. The scripts now turn `tso`, `gso`, `gro` and `tx-udp-segmentation` off on the browser container and, for the length of a variant, on the web container's `eth0` (values before: tso on, gso on, gro off, udp_gso on; restored on every exit path and recorded in the result files). That is runtime state of a shared container, so it is always put back. The qdisc counters are reset after the RTT check and read after the runs, giving the measured drop rate per direction in packets for that variant.
-
-**What was measured.** Frankenphp, `GET /listings/1`, 150 ms RTT, 1600kbit down, 750kbit up, 5 cold runs per variant (medians; the full table with ranges and the measured drop rates is in the "HTTP/3 vs HTTP/2 (2026-11-05)" section of [`BENCHMARKS.md`](../BENCHMARKS.md)):
-
-| Variant | Load time | LCP | TTFB |
-|---|---|---|---|
-| h2-loss0 | 1454 ms | 1477 ms | 582 ms |
-| h3-loss0 | 1233 ms | 1253 ms | 402 ms |
-| h2-loss2 | 1841 ms | 1868 ms | 725 ms |
-| h3-loss2 | 1257 ms | 1297 ms | 406 ms |
-
-On the clean link HTTP/3 saved about 180 ms of TTFB, roughly one round trip, and 221 ms of load time. With 2 % loss per packet (measured 2.01 % and 2.13 % on h2, 1.67 % and 1.86 % on h3, egress and ingress) h2 got 387 ms slower while h3 got 24 ms slower, so the gap grew to 584 ms: this is where TCP's in-order delivery and QUIC's per-stream recovery differ. Two caveats. QUIC was forced with `origin-to-force-quic-on`, so the h3 rows are a repeat visitor who already learned `Alt-Svc`; a first visit goes over h2. And each lossy variant saw only 18 to 21 drops, so the direction of the effect is solid and its exact size is not. The comparison is only valid inside this table; the router and toxiproxy numbers in section 21 used a different path and throttle.
-
-**Two practical limits.** The curl image is `alpine/curl-http3` (curl with quiche) because `curlimages/curl` has no HTTP/3 and the other common HTTP/3 curl images have no arm64 build. That curl cannot parse a `103 Early Hints` interim response over h3, so `bench/http3.sh` sets `EARLY_HINTS=false` for its two requests and records it; Chromium handles the 103 over QUIC, so the page timings keep the hints on.
-
-**In this repo.** Tests: [`BenchHttp3Test`](../tests/Feature/BenchHttp3Test.php), [`BenchNetemTest`](../tests/Feature/BenchNetemTest.php), `BenchLcpTest`, `BenchCommittedRunsTest` (including the privacy grep over the committed traces). Results: [`bench/results/http3/`](../bench/results/http3/). Spec: [`.ai/specs/spec-20261105-1109-http3/`](../.ai/specs/spec-20261105-1109-http3/).
-
-**Read next.** [RFC 9000: QUIC](https://www.rfc-editor.org/rfc/rfc9000) · [RFC 9114: HTTP/3](https://www.rfc-editor.org/rfc/rfc9114) · [MDN: Alt-Svc](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Alt-Svc) · [Linux netem](https://man7.org/linux/man-pages/man8/tc-netem.8.html) · [Caddy: HTTP/3](https://caddyserver.com/docs/caddyfile/options#protocols)
-
----
-
-## 23. Live updates with Mercure
-
-**What it is.** Mercure is a protocol for pushing updates to browsers over a long-lived HTTP response, in the `text/event-stream` format of section 9 and read in the browser with `EventSource`. The difference from section 9 is who holds the connection. Here a **hub** holds it: in FrankenPHP the hub is a module of the same Caddy that serves the site, written in Go. PHP never keeps a subscriber; it only makes one short `POST` to the hub when something changes, and the hub fans the update out to every open connection that asked for that **topic**.
-
-**The flow for a price change.**
-1. `ddev artisan listings:reprice 1 19990` calls `ListingPriceService::reprice`, which saves the price through the repository (one `UPDATE`, one DTO describing the change). There is no model hook or event: the model only saves, and the service decides what else happens.
-2. Once the update has committed, the service calls `MercurePublisher`, which sends a form `POST` to the hub with an `id`, the topic `<app url>/listings/1/price`, the JSON data and a short-lived publisher JWT. The service returns whether each publish (public, and private with `--private`) succeeded; the command prints a warning for one that failed. If the hub is down the failure is reported, never thrown, and the price change still stands. The publish is synchronous, which is fine for a CLI command. A web request that changes prices should queue the publish (a job holding the DTO) so a slow hub cannot hold the request; `ListingPriceService` says so in its docblock.
-3. The hub writes an SSE message to every connection subscribed to that topic. The detail page of listing 1 opened an `EventSource` on `/.well-known/mercure?topic=…` when it loaded, so it updates the price text and an `aria-live="polite"` region ("Price updated to …") without a reload. Listing 2's page subscribed to a different topic and does not change.
-
-**Topics and the page.** The layout carries a `mercure-hub` meta tag with the hub URL and the price element carries `data-price-topic`. `resources/js/app.js` reads them and opens one `EventSource`. The live region is a separate, visually hidden element: a polite announcement waits for the screen reader to finish, an alert would interrupt it.
-
-**Not losing an update between render and connect.** A page is rendered, then the browser loads the script, then the `EventSource` connects; a price published in that gap would never reach the page. The hub therefore keeps a short history (`transport bolt`, the last 100 updates, in a file under the container's `/tmp`; the default `local` transport keeps none), each publish carries an `id`, and the page subscribes with `lastEventID=earliest` so the hub replays that history on connect. History also holds changes the page already shows, so the controller renders the server time at render in `data-price-rendered-ms` (read before the listing is loaded) and the script applies a message only when its `published_at_ms` is not older than that time and not older than the last message it applied (`shouldApply` in [`price-updates.js`](../resources/js/price-updates.js); equal times are applied because the same price twice is harmless and a skipped newer price is not). Both times come from PHP on the same server, never from the browser clock. When the connection drops after it has worked, `EventSource` reconnects and sends the `Last-Event-ID` header itself, so the hub replays only what the page missed.
-
-**Give up without a hub.** An `EventSource` reconnects by itself, which is right when a hub restarts and wrong when there is no hub at all: on nginx-fpm the path answers 404 and the browser would retry forever. The script therefore closes the connection and stops if it errors before the connection has opened or any message has arrived. A connection that opened once and then dropped is allowed to reconnect. On nginx-fpm the page makes one failed request and no retries; its body is the same as on every server, so response parity holds.
-
-**Private updates and the subscriber JWT.** A public topic needs no token. A private update (published with `private=on`) goes only to a subscriber whose JWT has a `mercure.subscribe` claim naming that topic. `MercureTokens` signs and verifies these HS256 tokens with the keys in `.env`. For the demo, `/listings/1?watch=private` (only with the debug gate on) sets the `mercureAuthorization` cookie, and the hub accepts a subscriber token from that cookie. The cookie is `HttpOnly` (the script cannot read it), `Secure`, `SameSite=Strict`, scoped to the path `/.well-known/mercure`, and its `Max-Age` is the token's `exp` minus now, both taken from one `time()` read, so it dies with the token. A token for listing 2 does not open listing 1's private topic.
-
-**Why a plain page clears the cookie.** The browser attaches that cookie to every request to `/.well-known/mercure`, not only the private page's. `withCredentials` is not what sends it: for a same-origin `EventSource` (the hub is on the same origin as the page) cookies are sent whatever `withCredentials` says; the flag matters only cross-origin. So a leftover cookie, once its token is stale or the key has been rotated, would be sent with the public subscription of every listing page and the hub would answer 401, which stops live prices everywhere. A detail page without a valid private watch therefore sends an expired `Set-Cookie` for `mercureAuthorization` with the same name, path and flags (a cookie is only replaced or removed by a header that matches those), and the script's `withCredentials` is set only when the private topic is present.
-
-**Keys and the config.** Two secrets, one to publish and one to subscribe, are generated by `ddev artisan mercure:keys` into `.env` and `.ddev/.env.web`, both git-ignored. The hub reads them from the environment through the `mercure` directive in the frankenphp Caddyfile. There are two paths because two programs read them: Caddy sees only process environment variables, which DDEV fills from `.ddev/.env.web` when the web container starts, while Laravel reads `.env` to sign tokens and publish. Both files must hold the same keys, so `mercure:keys` writes both; after changing `.ddev/.env.web`, run `ddev restart`. Three details of that Caddyfile: the history transport must be written as a `transport bolt { path … size … }` block (a `transport_url` line parses without an error and is silently ignored, leaving the history-less default); the module needs `protocol_version_compatibility 8` to accept `publisher_jwt` and `subscriber_jwt`, and it allows one hub, so the hub sits in the `:80` block and the `:443` block proxies `/.well-known/mercure*` to it with `flush_interval -1`.
-
-**What a page costs on a server without a hub.** The markup and script are the same on all six servers (parity), so a detail page on nginx-fpm, Apache, OpenLiteSpeed and the two worker modes still asks for `/.well-known/mercure` once per view and gets the server's 404 path: one extra request per page view that boots the application to render a 404, after which the script gives up. That cost is accepted to keep the bodies byte-identical; rendering the hub tag only where a hub exists would remove the request and break parity.
-
-**Caddy metrics.** The busy-thread numbers come from Caddy's metrics. FrankenPHP's thread gauges only exist when the global `servers { metrics }` option is on (checked: without it `frankenphp_busy_threads` is absent), and that option adds work to every request, so every frankenphp cell measured from SL-13 on runs with Caddy metrics on, a condition earlier frankenphp cells did not have; `BENCHMARKS.md` records the difference.
-
-**What was measured.** Frankenphp, 14 PHP threads, listing 1's public topic, 5 publishes plus one private, with the section 19 health probe running at the same time (the full table and the method limits are in the "Mercure subscribers and the health check (2026-11-05)" section of [`BENCHMARKS.md`](../BENCHMARKS.md); the raw JSON per run is in [`bench/results/mercure-load/2026-11-05/`](../bench/results/mercure-load/2026-11-05/)):
-
-| Subscribers | Latency p50 | Latency p95 | Health p95 | Max busy PHP threads |
-|---|---|---|---|---|
-| 100 | 33 ms | 45 ms | 15 ms | 1 |
-| 1000 | 70 ms | 344 ms | 16 ms | 1 |
-
-Compare that with section 19: 30 open direct SSE answers on the same 14 threads left the health check at 10 000 ms with 118 of 300 probes unanswered, because each answer held a PHP thread for its whole length. 1000 subscribers held by the hub left at most 1 of 14 threads busy (the health probe's own requests). That is the reason to move a long or many-viewer stream behind a hub (section 9's direct variant is the simple one; this is the one that scales). The latency is from the publish in PHP to the receive in a Node container, through the DDEV router. The committed cells are full runs (90 s, 20 publishes, every one of 2100 and 21 000 deliveries arrived) with the bolt history on.
-
-**In this repo.** Code: [`config/mercure.php`](../config/mercure.php), [`MercurePublisher`](../app/Support/MercurePublisher.php), [`MercureTokens`](../app/Support/MercureTokens.php), [`ListingPriceService`](../app/Services/ListingPriceService.php), [`ListingsRepriceCommand`](../app/Console/Commands/ListingsRepriceCommand.php), [`ShowListingController`](../app/Http/Controllers/ShowListingController.php), [`app.js`](../resources/js/app.js), [`price-updates.js`](../resources/js/price-updates.js), the hub in [`Caddyfile.frankenphp`](../.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp). Tests: [`MercureTokensTest`](../tests/Feature/MercureTokensTest.php), [`MercurePublisherTest`](../tests/Feature/MercurePublisherTest.php), [`ListingLivePriceTest`](../tests/Feature/ListingLivePriceTest.php), [`BenchMercureLoadTest`](../tests/Feature/BenchMercureLoadTest.php). Bench: [`bench/mercure-load.sh`](../bench/mercure-load.sh). Spec: [`.ai/specs/spec-20261105-1709-mercure-live-price/`](../.ai/specs/spec-20261105-1709-mercure-live-price/).
-
-**Read next.** [Mercure protocol](https://mercure.rocks/spec) · [FrankenPHP: real-time with Mercure](https://frankenphp.dev/docs/mercure/) · [MDN: EventSource](https://developer.mozilla.org/en-US/docs/Web/API/EventSource)
-
-
----
-
-## 24. From words to filters: structured output with a validation boundary
-
-**What it is.** Sections 9 and 14 stream free text. This one asks a model for a small JSON object instead: `GET /api/listings/nl?q=diesel BMW after 2018 under 20k in Munich` becomes `make`, `model`, `city`, `fuel`, `min_year` and `max_price_eur` plus a list called `unsupported`. The model's job ends there. Everything after it is ordinary code, and that is the point: **model output is data, never a command.** It is checked, bound as parameters and handed to the same search that `/listings` uses.
-
-**Structured output.** [`ListingFilterAgent`](../app/Ai/ListingFilterAgent.php) declares a schema (every key required and nullable; `fuel` is limited to the `Fuel` enum values **and `null`**, see "What the eval found") and the SDK asks the provider to answer in that shape, so the reply is already a decoded array and not text to parse. A schema narrows what the model may say; it does not make it right (see "What the eval found" below).
-
-**One request, step by step.**
-1. `NlSearchRequest` validates `q` (required, length-limited), an optional `model` and the paging. The model name must be in `NlSearchService::allowedModels()`: the active provider's text model plus `gemma4:12b`, or `ai.nl_search.models` when set. A name outside the list is a 422 at the request, before any model runs.
-2. `NlSearchService` runs the same `PromptInjectionGuard` as section 14. A match answers 422 with `refused: true`, calls no model and writes a `refused` row.
-3. The agent returns the structured fields. A model failure becomes a masked 503 and a `failed` row.
-4. [`ListingFilterRules`](../app/Rules/ListingFilterRules.php) validates the fields. These are the same rules `ListListingsRequest` uses for `/listings` (they were extracted into one class so the two cannot drift apart). A failure is a 422 whose body carries `extracted`, `unsupported` and the field errors, and no listing query runs. The row is saved either way, with `validation_failed` set, so the lab and the eval can count how often the boundary fires.
-5. Valid fields go to `ListingSearchService`, the service behind `/listings`, so the same filters give the same listings and total. Values reach SQL only as bound parameters; nothing from the model is concatenated into a query.
-6. The 200 body carries the model name, the extracted filters, the `unsupported` list, the listings and the `invocation_id` of the `ai_runs` row. `Server-Timing` splits `model` from `db`.
-
-**`unsupported` is honesty.** The filters cannot say "estate", a colour, mileage or "cheap". Without a place to put them a model tends to bend them into some filter. The prompt asks it to list them instead, the service trims the list, and the lab shows them as chips so the user sees what was ignored. Matching is case-insensitive and exact, so "Merc" does not find Mercedes. An alias table or embeddings would be the next step; it is left out so that the eval stays easy to read.
-
-**The lab page.** `/ai/nl-search` ([`NlSearch.vue`](../resources/js/ai/Pages/Lab/NlSearch.vue)) shows the query, the model, the validation outcome, the extracted JSON, the errors, the `unsupported` chips, the listings and a link to the logged run. It handles the 200, both 422 kinds, 503 and 429, and the results region is `aria-live="polite"`.
-
-**How it is measured.** [`NlEvalCommand`](../app/Console/Commands/NlEvalCommand.php) (`nl:eval`) runs 40 labelled queries from [`bench/nl-search/queries.v1.jsonl`](../bench/nl-search/queries.v1.jsonl) through the same service, once per model, and [`NlEvalScorer`](../app/Services/NlEvalScorer.php) computes:
-- **exact match:** all six fields equal the label (an unmentioned field is labelled `null`);
-- **per-field accuracy**, to see which field breaks;
-- **unsupported recall:** counted per term: 12 expected terms over 10 queries, and a term is caught when a string the model returned in `unsupported` contains it (case-insensitive substring match);
-- **422 rate:** how often the boundary rejected the output;
-- **latency median and p95**, read from the `ai_runs` rows of calls that produced output.
-
-The eval queries are kept out of every prose document by the same contamination test as the RAG questions, so this section describes them and never quotes them.
-
-**What the eval found** (2026-11-09, prompt `listing-filters@v1`, 40 queries per model, local Ollama):
-
-| Model | Exact match | Unsupported recall | Latency median | Latency p95 |
-|---|---|---|---|---|
-| qwen3.5:9b | 0.950 | 9/12 | 906 ms | 1123 ms |
-| gemma4:12b | 0.975 | 12/12 | 1008 ms | 2263 ms |
-
-Neither model produced a 422 (0 of 40). The first run scored 0.400 for both models, and the cause was my schema, not the prompt: `fuel` was a nullable string whose `enum` listed the five fuels but not `null`. Ollama turns the schema into a grammar, so the decoder could only emit one of the five, and on the 24 queries that do not mention fuel both models answered with one (23 `petrol`, 1 `electric`). Fuel accuracy was 0.400. `petrol` is a legal value, so validation passed it and the search narrowed silently. Adding `null` to the enum, with the prompt unchanged, took fuel accuracy from 0.400 to 0.975 and exact match from 0.400 to 0.950 (qwen3.5:9b) and 0.975 (gemma4:12b). The two cells that still miss are one query where both models inferred `electric` from a make, and one model name from qwen3.5:9b. That is the lesson of the section: **validation makes output safe, an eval makes it correct, and a schema must let the model say "nothing".** Other hardening in the same pass: the model's integers must be real JSON integers (`true`, `2019.0` and `"2019"` are field errors), strings may not contain NUL bytes, the model call has its own 20 s timeout (`ai.nl_search.timeout`) instead of the 120 s streaming one, and `ListingFilter::fromValidated()` is the single place where validated input becomes a filter for both `/listings` and this endpoint. The full tables and the surprises are in the "Natural-language search" section of [`BENCHMARKS.md`](../BENCHMARKS.md).
-
-**In this repo.** Code: [`ListingFilterAgent`](../app/Ai/ListingFilterAgent.php), [`NlSearchService`](../app/Services/NlSearchService.php), [`NlSearchController`](../app/Http/Controllers/NlSearchController.php), [`ListingFilterRules`](../app/Rules/ListingFilterRules.php), [`NlEvalCommand`](../app/Console/Commands/NlEvalCommand.php), [`NlEvalScorer`](../app/Services/NlEvalScorer.php); prompt [`listing-filters.v1.md`](../resources/prompts/listing-filters.v1.md); eval set [`queries.v1.jsonl`](../bench/nl-search/queries.v1.jsonl); results [`bench/results/nl-search/2026-11-09/`](../bench/results/nl-search/2026-11-09/). Tests: [`NlSearchTest`](../tests/Feature/NlSearchTest.php) (one per criterion, with faked structured output), [`NlEvalCommandTest`](../tests/Feature/NlEvalCommandTest.php), [`AiLabNlSearchTest`](../tests/Feature/AiLabNlSearchTest.php). Spec: [`.ai/specs/spec-20261109-1213-nl-search/`](../.ai/specs/spec-20261109-1213-nl-search/).
-
-**Read next.** [Laravel AI SDK: structured output](https://laravel.com/docs/13.x/ai-sdk) · [Ollama: structured outputs](https://ollama.com/blog/structured-outputs) · [OWASP: LLM01 prompt injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/)
-
----
-
-## 25. A model that decides when to search: tool calling
-
-**What it is.** Section 24 calls the model once and treats the reply as data. Here the model chooses: `/ai/assistant` gives it one tool, `SearchListings`, and it may answer directly or ask for a search first. The SDK runs the loop: model, tool call, tool result, model again, until there is an answer. The model never touches the database; it only proposes arguments.
-
-**One question, step by step.**
-1. `AskAssistantController` validates the request and `PromptInjectionGuard` checks the question and every earlier `user` turn **before** any model call. A hit answers one `refused` event and logs a row.
-2. [`BuyerAssistantAgent`](../app/Ai/BuyerAssistantAgent.php) declares the tool; the tool itself refuses a fifth search (`SearchListings::MAX_CALLS`), and the SDK step cap leaves room for the answer and one repair. The prompt is `buyer-assistant@v2`.
-3. When the model asks for a search, [`SearchListings`](../app/Ai/Tools/SearchListings.php) validates the arguments with [`ListingFilterRules`](../app/Rules/ListingFilterRules.php), the rules `/listings` uses, and passes them to the same search service. Values reach SQL only as bound parameters. At most 10 listings come back, as compact summaries.
-4. Invalid arguments are not run. The field errors go back to the model as a `tool_error`, and it gets one repair. A second invalid call ends the tool for that question.
-5. The stream carries `tool_call`, `tool_result` and `tool_error` next to the chat's own events ([`AssistantProtocol`](../app/Ai/AssistantProtocol.php)). Stop uses the same abort watcher as section 18.
-6. [`RecordToolStep`](../app/Ai/RecordToolStep.php) stores each call as an `ai_tool_steps` row; the `ai_runs` row counts `tool_steps` and `tool_errors`.
-
-**Tools are an attack surface.** The tool carries the `ReadOnlyTool` marker, and the agent's tool list is typed to accept only marked tools. Arguments from the model are untrusted input like a user's, so they get the same validation, not a shortcut.
-
-**How it is measured.** `assistant:eval` plays 30 questions from `bench/assistant/questions.v1.jsonl` (18 searches, 6 follow-ups that need two searches, 6 that need no tool) and reports tool-call precision and recall, argument validity on the first try, repair success, filter accuracy, steps, latency, and the share of answers that mention a listing id the tool did not return. A made-up id is a `/listings/{id}` link the tool did not return; the prompt requires that link form, so plain numbers such as "#1 pick" never count. A listing named without a link ("listing 12") is reported separately as an unlinked mention. It exits with failure if any question used more than 4 steps.
-
-**In this repo.** Code: [`BuyerAssistantAgent`](../app/Ai/BuyerAssistantAgent.php), [`SearchListings`](../app/Ai/Tools/SearchListings.php), [`AssistantProtocol`](../app/Ai/AssistantProtocol.php), [`RecordToolStep`](../app/Ai/RecordToolStep.php), [`AskAssistantController`](../app/Http/Controllers/AskAssistantController.php), [`AssistantEvalCommand`](../app/Console/Commands/AssistantEvalCommand.php). Tests: [`BuyerAssistantToolTest`](../tests/Feature/BuyerAssistantToolTest.php), [`BuyerAssistantAgentTest`](../tests/Feature/BuyerAssistantAgentTest.php), [`AssistantStepLogTest`](../tests/Feature/AssistantStepLogTest.php), [`AssistantEndpointTest`](../tests/Feature/AssistantEndpointTest.php), [`AssistantEvalTest`](../tests/Feature/AssistantEvalTest.php). Spec: [`.ai/specs/spec-20261112-1708-buyer-assistant/`](../.ai/specs/spec-20261112-1708-buyer-assistant/).
-
-**Read next.** [Laravel AI SDK: tools](https://laravel.com/docs/13.x/ai-sdk) · [OWASP: LLM06 excessive agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/)
-
----
-
-## 26. Rating a listing: a closed label set, computed facts and a threshold
-
-**What it is.** Sections 24 and 25 turn words into filters and tool calls. Here the model gives a verdict: `/ai/moderation` rates how risky a listing is for a buyer, with a risk from 0 to 1, reasons from a closed list of seven, and a short explanation. Two of the signals cannot be read from the text. A price far below the market needs the market price, and a copied VIN needs a register of reported vehicles. A local model knows neither, so the app computes them and the model judges with the facts.
-
-**One listing, step by step.**
-1. `ModerateListingController` takes the form as JSON only, and the route refuses a request that the browser marks `Sec-Fetch-Site: cross-site` ([`RefuseCrossSiteRequests`](../app/Http/Middleware/RefuseCrossSiteRequests.php), the same check `LimitCloudAi` uses), because `api/*` answers CORS preflights with a wildcard origin and a JSON body alone does not keep another site out. [`ModerateListingRequest`](../app/Http/Requests/ModerateListingRequest.php) validates every field, so a bad price or a NUL byte is a 422 before any model call.
-2. [`ModerationFacts`](../app/Services/ModerationFacts.php) computes the median price of listings with the same make, model and year within one year (null under 5 listings, cached for an hour), the price ratio, the VINs in the text, whether one is reported, and the injection pattern from the input guard, run on the title, make, model, city and description.
-3. A description that matches the guard is **not** refused here. A listing that tries to steer its moderator is suspicious in itself, so it is classified with the pattern as a fact, and the prompt asks for the reason `other` and a high risk. The prompt is not the guarantee, though: see the floor below.
-4. [`ModerationAgent`](../app/Ai/ModerationAgent.php) sends the listing and the facts as two JSON blocks with `<` and `>` escaped, so listing text cannot close its block. The prompt is `moderation@v1`.
-5. [`ModerationRules`](../app/Rules/ModerationRules.php) checks the answer: the risk must be a JSON number from 0 to 1, at most four reasons, distinct and in the list, an explanation present (over 300 characters is cut). A rejected answer is asked for once more, and so is an empty or unparsable reply (logged as a `failed` row with `validation_failed`); two rejected answers end as `invalid`. A transport error is one attempt and ends as `failed`, a 503. Every attempt is an `ai_runs` row, and rejected ones are flagged `validation_failed`.
-6. A floor in PHP: an injection pattern or a reported VIN lifts the risk to at least 0.7 and adds the reason `other` or `reported_vin` (`ModerationService::FLOOR_RISK`), so a model that was talked into rating a listing 0 still ends above any calibrated threshold. The result keeps the model's own `model_risk` and the `floors` that fired, and the lab page says so. Rules the code can check do not rest on the model obeying its prompt.
-7. The verdict `risky` is the risk after the floor at or above the threshold of the model that answered (`ai.moderation.thresholds`, else `ai.moderation.threshold`).
-
-**Why facts beat knowledge.** Asking a model "is this price too low?" measures what it remembers. Computing the ratio in the app and asking "is the ratio 0.5 or lower?" measures whether it reads. The eval reports reason recall per reason, so a model that ignores a fact shows up as a low recall for that reason.
-
-**How it is measured.** `moderation:make-set` writes 100 labelled listings (`bench/moderation/listings.v1.jsonl`): 50 safe, of which 15 are hand-written hard negatives such as financing or a bank transfer at handover, and 50 risky, with 10 for each of four scam kinds and 10 mixed. The same seed writes the same file, and no item text may appear in the indexed corpus. `moderation:eval` classifies every item once per model (`--models`, default `qwen3.5:9b,gemma4:12b`; `--provider` replaces the moderation setting), writes one `run.json` with a `summary` and `results` entry per model id, and reports the JSON-valid rates, a threshold curve from 0.1 to 0.9, the best F1 and, at that threshold, accuracy, precision and recall for "risky" and the false positives on the hard negatives (the figures at the configured threshold are kept in their own fields), reason recall and latency. Each set item carries a `kind` (`safe`, `hard_negative`, `risky`, `mixed`), so the hard negatives are read from the file, not guessed from the id. An item that ends `invalid` or `failed` counts as wrong: a risky one as a false negative, a safe one as a false positive. The best F1 picks the per-model value in `ai.moderation.thresholds`; on a tie the higher threshold wins.
-
-**In this repo.** Code: [`ModerationService`](../app/Services/ModerationService.php), [`ModerationFacts`](../app/Services/ModerationFacts.php), [`ModerationAgent`](../app/Ai/ModerationAgent.php), [`ModerationRules`](../app/Rules/ModerationRules.php), [`ModerateListingController`](../app/Http/Controllers/ModerateListingController.php), [`ModerationEvalCommand`](../app/Console/Commands/ModerationEvalCommand.php), [`ModerationEvalScorer`](../app/Services/ModerationEvalScorer.php); prompt [`moderation.v1.md`](../resources/prompts/moderation.v1.md); eval set [`listings.v1.jsonl`](../bench/moderation/listings.v1.jsonl); results [`bench/results/moderation/2026-11-12/`](../bench/results/moderation/2026-11-12/). Tests: [`ModerationServiceTest`](../tests/Feature/ModerationServiceTest.php), [`ModerationFactsTest`](../tests/Feature/ModerationFactsTest.php), [`ModerationSetTest`](../tests/Feature/ModerationSetTest.php), [`ModerationEvalTest`](../tests/Feature/ModerationEvalTest.php), [`ModerationEndpointTest`](../tests/Feature/ModerationEndpointTest.php). Spec: [`.ai/specs/spec-20261112-2146-moderation/`](../.ai/specs/spec-20261112-2146-moderation/).
-
-**Read next.** [Laravel AI SDK: structured output](https://laravel.com/docs/13.x/ai-sdk) · [OWASP: LLM01 prompt injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/)
-
----
-
-## Planned sections
-
-Added as each slice ships (see [`backlog.md`](../backlog.md) for the order):
-
-- **Server track:** Early Hints and compression (SL-10), real-time updates with Reverb (SL-14), metrics and logs (SL-15, SL-16), hot reload and Xdebug in workers (SL-17).
-- **AI track:** how an LLM call works end to end, from model weights through the inference engine, model server and SDK to the app; tool calling (SL-25); vision (SL-27); model comparison (SL-28); a hand-written agent loop and MCP (SL-34, SL-35); image embeddings for similar photos (SL-36…SL-39, building on the photos and extractions of `/ai/photos`); a research agent (SL-42); a prompt playground (SL-43).
+This guide was put in learning order and finished in SL-44 (spec [`spec-20261115-1539-learning-guide-final`](../.ai/specs/spec-20261115-1539-learning-guide-final/)); from here on, each slice adds or updates its own section (BR-27).

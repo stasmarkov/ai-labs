@@ -28,10 +28,10 @@ test('AC-4 manual-test plans do not name nginx-fpm as the resting server', funct
     }
 });
 
-test('AC-4 the guide puts the default-server note in section 2 and never says nginx + PHP-FPM by default', function (): void {
+test('AC-4 the guide puts the default-server note in I-3 and never says nginx + PHP-FPM by default', function (): void {
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
 
-    expect(preg_match('/^## 2\..*?^## 3\./ms', $guide, $section))->toBe(1);
+    expect(preg_match('/^## I-3\..*?^## I-4\./ms', $guide, $section))->toBe(1);
     expect($section[0])->toContain('The default server is now `frankenphp`');
     expect(substr_count($guide, 'The default server is now `frankenphp`'))->toBe(1);
     expect($guide)->not->toContain('nginx + PHP-FPM by default');
@@ -96,11 +96,11 @@ test('AC-4 the bare-rollback check catches the lines it is meant to catch', func
     expect("## Rollback\n\n```sh\nddev server nginx-fpm\nrm x\n```\n")->toMatch('/^## [^\n]*rollback.*ddev server nginx-fpm(?![\w-])/is');
 });
 
-test('AC-4 BENCHMARKS.md top note and the guide section 2 note both mention ddev setup', function (): void {
+test('AC-4 BENCHMARKS.md top note and the guide I-3 note both mention ddev setup', function (): void {
     $benchmarks = file_get_contents(base_path('BENCHMARKS.md'));
     $top = substr($benchmarks, 0, strpos($benchmarks, "\n## "));
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
-    preg_match('/^## 2\..*?^## 3\./ms', $guide, $section);
+    preg_match('/^## I-3\..*?^## I-4\./ms', $guide, $section);
 
     expect($top)->toContain('The default server is now `frankenphp`')->toContain('ddev setup');
     expect($section[0])->toContain('ddev setup');

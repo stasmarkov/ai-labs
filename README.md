@@ -42,7 +42,7 @@ ddev artisan test --compact     # runs offline with fakes
 | I want to | Go to |
 |-----------|-------|
 | try the features | https://ai-lab.ddev.site/ai |
-| understand how each one works | [docs/learning-guide.md](docs/learning-guide.md) (section 16 is a map of all the AI code) |
+| understand how each one works | [docs/learning-guide.md](docs/learning-guide.md) (II-24 is a map of all the AI code) |
 | see the numbers | [BENCHMARKS.md](BENCHMARKS.md) |
 | see what is planned | [backlog.md](backlog.md) and [product-brief.md](product-brief.md) |
 
@@ -60,7 +60,7 @@ Both evals need Ollama running with the models above.
 
 ## Local models
 
-How fast the local models are, what they cost in memory, what a too-long prompt or a stopped server does, and what happens to the site under AI load. How to read the numbers: `/ai/guides/local-models` and section 16 of the learning guide.
+How fast the local models are, what they cost in memory, what a too-long prompt or a stopped server does, and what happens to the site under AI load. How to read the numbers: `/ai/guides/local-models` and [II-5 of the learning guide](docs/learning-guide.md#ii-5-local-models-and-their-limits).
 
 ```sh
 ddev artisan llm:bench                         # speed, context window, failover and eval figures per model (--models, --runs, --only=speed,context,failover, --force)
@@ -302,7 +302,7 @@ bench/leaks.sh                    # per scenario and mode: "leaked n/20"
 bench/leaks.sh --max-requests 1   # frankenphp-octane only: rerun with workers restarting after every request
 ```
 
-The script sets `DEBUG_ROUTES=true` in `.env` itself (backed up to `.env.bench-backup` and restored on exit) and restarts the workers before every row. It sends request A (dealer 1, locale uk) 20 times, then request B (dealer 2, locale de) 20 times, and counts the B responses with `leaked: true`. It exits 2 if `/debug/worker` does not answer 200, if a stale `.env.bench-backup` exists, or if `--max-requests` is given on another server. `--max-requests` writes the gitignored overlay `.ddev/config.zzz-bench-leaks.yaml`, a copy of the daemon config with the new value, and runs `ddev restart`; on exit it removes the overlay and restarts again. Each leak and its fix are explained in [section 7 of the learning guide](docs/learning-guide.md#7-state-leaks-in-worker-mode), and the measured counts are in [BENCHMARKS.md](BENCHMARKS.md#state-leaks).
+The script sets `DEBUG_ROUTES=true` in `.env` itself (backed up to `.env.bench-backup` and restored on exit) and restarts the workers before every row. It sends request A (dealer 1, locale uk) 20 times, then request B (dealer 2, locale de) 20 times, and counts the B responses with `leaked: true`. It exits 2 if `/debug/worker` does not answer 200, if a stale `.env.bench-backup` exists, or if `--max-requests` is given on another server. `--max-requests` writes the gitignored overlay `.ddev/config.zzz-bench-leaks.yaml`, a copy of the daemon config with the new value, and runs `ddev restart`; on exit it removes the overlay and restarts again. Each leak and its fix are explained in [the state-leaks part of I-4 in the learning guide](docs/learning-guide.md#state-leaks-in-worker-mode), and the measured counts are in [BENCHMARKS.md](BENCHMARKS.md#state-leaks).
 
 ## License
 

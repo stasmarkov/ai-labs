@@ -4,10 +4,24 @@ declare(strict_types=1);
 
 use App\Services\RagEvalSet;
 
+/**
+ * One `##` section of the learning guide: from its heading to the next `#` or `##` heading.
+ */
+function learningGuideSection(string $guide, string $heading): string
+{
+    $start = strpos($guide, "\n## ".$heading);
+    expect($start)->not->toBeFalse();
+
+    $rest = substr($guide, (int) $start + 1);
+    $end = preg_match('/^#{1,2} /m', $rest, $next, PREG_OFFSET_CAPTURE, 3) === 1 ? $next[0][1] : strlen($rest);
+
+    return substr($rest, 0, $end);
+}
+
 test('AC-10 learning guide explains state leaks with links', function (): void {
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
 
-    preg_match('/^## \d+\. State leaks in worker mode\n(.*?)(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    preg_match('/^### State leaks in worker mode\n(.*?)(?=^#{1,3} |\z)/ms', $guide, $matches);
     $section = $matches[1] ?? '';
 
     expect($section)->not->toBe('');
@@ -30,7 +44,7 @@ test('AC-10 learning guide explains state leaks with links', function (): void {
 test('AC-9 learning guide explains streaming an AI answer with links', function (): void {
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
 
-    preg_match('/^## 9\. Streaming an AI answer\n(.*?)(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    preg_match('/^## II-2\. Streaming an AI answer\n(.*?)(?=^#{1,2} |\z)/ms', $guide, $matches);
     $section = $matches[1] ?? '';
 
     expect($section)->not->toBe('');
@@ -54,13 +68,13 @@ test('AC-9 learning guide explains streaming an AI answer with links', function 
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–15');
+    expect($guide)->toContain('Part II (II-1 to II-24)');
 });
 
 test('AC-8 learning guide explains running the model locally', function (): void {
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
 
-    preg_match('/^## 10\. Running the model locally\n(.*?)(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    preg_match('/^## II-3\. Running the model locally\n(.*?)(?=^#{1,2} |\z)/ms', $guide, $matches);
     $section = $matches[1] ?? '';
 
     expect($section)->not->toBe('');
@@ -94,14 +108,14 @@ test('AC-8 learning guide explains running the model locally', function (): void
 
     expect($section)->toContain('| Server | Tokens in |');
 
-    expect($guide)->toContain('sections 1–15');
+    expect($guide)->toContain('Part II (II-1 to II-24)');
     expect($guide)->not->toContain('running models locally (SL-22)');
 });
 
 test('AC-9 learning guide explains embeddings and vector search', function (): void {
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
 
-    preg_match('/^## 11\. Embeddings and vector search\n(.*?)(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    preg_match('/^## II-9\. Embeddings and vector search\n(.*?)(?=^#{1,2} |\z)/ms', $guide, $matches);
     $section = $matches[1] ?? '';
 
     expect($section)->not->toBe('');
@@ -125,14 +139,14 @@ test('AC-9 learning guide explains embeddings and vector search', function (): v
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–15');
+    expect($guide)->toContain('Part II (II-1 to II-24)');
     expect($guide)->not->toContain('embeddings and vector search (SL-24)');
 });
 
 test('AC-9 learning guide explains chunking and hybrid retrieval', function (): void {
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
 
-    preg_match('/^## 12\. Chunking and hybrid retrieval\n(.*?)(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    preg_match('/^## II-10\. Chunking and hybrid retrieval\n(.*?)(?=^#{1,2} |\z)/ms', $guide, $matches);
     $section = $matches[1] ?? '';
 
     expect($section)->not->toBe('');
@@ -157,14 +171,14 @@ test('AC-9 learning guide explains chunking and hybrid retrieval', function (): 
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–15');
+    expect($guide)->toContain('Part II (II-1 to II-24)');
     expect($guide)->not->toContain('RAG with citations (SL-32)');
 });
 
 test('AC-8 learning guide explains the AI lab UI', function (): void {
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
 
-    preg_match('/^## 13\. The AI lab UI: Inertia, Vue and streams in the browser\n(.*?)(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    preg_match('/^## II-22\. The AI lab UI: Inertia, Vue and streams in the browser\n(.*?)(?=^#{1,2} |\z)/ms', $guide, $matches);
     $section = $matches[1] ?? '';
 
     expect($section)->not->toBe('');
@@ -190,13 +204,13 @@ test('AC-8 learning guide explains the AI lab UI', function (): void {
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–15');
+    expect($guide)->toContain('Part II (II-1 to II-24)');
 });
 
 test('AC-11 learning guide documents docs answering', function (): void {
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
 
-    preg_match('/^## 14\. Answering with citations: RAG, guards and the trace row\n(.*?)(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    preg_match('/^## II-11\. Answering with citations: RAG, guards and the trace row\n(.*?)(?=^#{1,2} |\z)/ms', $guide, $matches);
     $section = $matches[1] ?? '';
 
     expect($section)->not->toBe('');
@@ -221,14 +235,14 @@ test('AC-11 learning guide documents docs answering', function (): void {
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$path))->toBeTrue();
     }
 
-    expect($guide)->toContain('sections 1–15');
+    expect($guide)->toContain('Part II (II-1 to II-24)');
     expect($guide)->not->toContain('RAG with citations (SL-45, on top of the index from SL-32)');
 });
 
 test('AC-1 NFR-1 learning guide records the live docs answering run', function (): void {
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
 
-    preg_match('/^## 14\. Answering with citations: RAG, guards and the trace row\n(.*?)(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    preg_match('/^## II-11\. Answering with citations: RAG, guards and the trace row\n(.*?)(?=^#{1,2} |\z)/ms', $guide, $matches);
     $section = $matches[1] ?? '';
 
     foreach (['Live run: five questions', 'tokens/s', 'no_context', '1695', '2290', '2595', '2587', '1758', '1766', '4072', '5270', '4600', '500 ms'] as $needle) {
@@ -236,10 +250,10 @@ test('AC-1 NFR-1 learning guide records the live docs answering run', function (
     }
 });
 
-test('AC-10 learning guide section 15 explains measuring RAG', function (): void {
+test('AC-10 learning guide II-12 explains measuring RAG', function (): void {
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
 
-    preg_match('/^## 15\. Measuring RAG: recall@k, calibration and LLM grading\n(.*?)(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    preg_match('/^## II-12\. Measuring RAG: recall@k, calibration and LLM grading\n(.*?)(?=^#{1,2} |\z)/ms', $guide, $matches);
     $section = $matches[1] ?? '';
 
     expect($section)->not->toBe('');
@@ -279,14 +293,12 @@ test('AC-10 learning guide section 15 explains measuring RAG', function (): void
 
     expect($section)->not->toContain('is empty in the result files');
 
-    expect($guide)->toContain('sections 1–15');
+    expect($guide)->toContain('Part II (II-1 to II-24)');
 });
 
 test('the learning guide maps every AI file, request flow and feature recipe, and every linked file exists', function (): void {
     $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
-    $start = strpos($guide, '## 16. How the AI features are built: a map of the code');
-    expect($start)->not->toBeFalse();
-    $section = substr($guide, (int) $start, strpos($guide, '## Planned sections') - (int) $start);
+    $section = learningGuideSection($guide, 'II-24. How the AI features are built: a map of the code');
 
     foreach (['### The layers', '### Every file and its purpose', '### Four requests, end to end', '### Common feature requests and where they land', '### Testing patterns used everywhere'] as $heading) {
         expect($section)->toContain($heading);
@@ -304,10 +316,10 @@ test('the learning guide maps every AI file, request flow and feature recipe, an
     }
 });
 
-test('AC-11 learning guide section 17 explains caching answers', function (): void {
+test('AC-11 learning guide II-13 explains caching answers', function (): void {
     $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
 
-    preg_match('/^## 17\. Caching answers: exact keys, semantic neighbours and invalidation\n(.*?)(?=^---$|^## \d+\. |^## Planned sections|\z)/ms', $guide, $matches);
+    preg_match('/^## II-13\. Caching answers: exact keys, semantic neighbours and invalidation\n(.*?)(?=^#{1,2} |\z)/ms', $guide, $matches);
     $section = $matches[1] ?? '';
 
     expect($section)->not->toBe('');
@@ -346,13 +358,12 @@ test('AC-11 learning guide section 17 explains caching answers', function (): vo
             ->not->toContain(RagEvalSet::normalizeText($pair['b']));
     }
 
-    expect($guide)->toContain('sections 1–15')->toContain('Section 17');
+    expect($guide)->toContain('Part II (II-1 to II-24)')->toContain('## II-13. Caching answers');
 });
 
-test('AC-11 learning guide section 16 maps every answer cache file and the cache flow', function (): void {
+test('AC-11 learning guide II-24 maps every answer cache file and the cache flow', function (): void {
     $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
-    $start = (int) strpos($guide, '## 16. How the AI features are built: a map of the code');
-    $section = substr($guide, $start, (int) strpos($guide, '## 17. ') - $start);
+    $section = learningGuideSection($guide, 'II-24. How the AI features are built: a map of the code');
 
     $files = [
         'app/Services/DocsAnswerCache.php', 'app/Services/DocsIndexVersion.php', 'app/Services/DocsCacheCalibrator.php',
@@ -380,10 +391,10 @@ test('AC-11 learning guide section 16 maps every answer cache file and the cache
         ->toContain('tune the cache');
 });
 
-test('AC-8 learning guide section 18 explains Stop that really stops and conversations', function (): void {
+test('AC-8 learning guide II-14 explains Stop that really stops and conversations', function (): void {
     $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
 
-    preg_match('/^## 18\. Stop that really stops, and conversations\n(.*?)(?=^---$|^## \d+\. |^## Planned sections|\z)/ms', $guide, $matches);
+    preg_match('/^## II-14\. Stop that really stops, and conversations\n(.*?)(?=^#{1,2} |\z)/ms', $guide, $matches);
     $section = $matches[1] ?? '';
     expect($section)->not->toBe('');
 
@@ -401,13 +412,12 @@ test('AC-8 learning guide section 18 explains Stop that really stops and convers
         expect($section)->toContain('| '.$mode.' | '.$result['median_tokens_after_stop'].' | '.$result['median_idle_probe_ms'].' ms | '.$result['median_probe_ms_after_stop'].' ms |');
     }
 
-    expect($guide)->toContain('Section 18');
+    expect($guide)->toContain('## II-14. Stop that really stops');
 });
 
-test('AC-8 learning guide section 16 maps the Stop and conversation files, flow and feature request', function (): void {
+test('AC-8 learning guide II-24 maps the Stop and conversation files, flow and feature request', function (): void {
     $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
-    $start = (int) strpos($guide, '## 16. How the AI features are built: a map of the code');
-    $section = substr($guide, $start, (int) strpos($guide, '## 17. ') - $start);
+    $section = learningGuideSection($guide, 'II-24. How the AI features are built: a map of the code');
 
     foreach ([
         'app/Ai/AbortWatcher.php', 'app/Ai/ConnectionAbortWatcher.php', 'app/DTOs/DocsChatTurn.php',
@@ -420,14 +430,12 @@ test('AC-8 learning guide section 16 maps the Stop and conversation files, flow 
     }
 
     expect($section)->toContain('history')->toContain('docs-answer@v2')->toContain('connection_aborted()')
-        ->toContain('Stop doesn\'t stop')->toContain('section 18');
+        ->toContain('Stop doesn\'t stop')->toContain('section [II-14]');
 });
 
-test('AC-8 learning guide section 19 explains slow I/O, worker pools and the health check', function (): void {
+test('AC-8 learning guide I-6 explains slow I/O, worker pools and the health check', function (): void {
     $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
-    $start = strpos($guide, '## 19. Slow I/O, worker pools and a health check that stays fast');
-    expect($start)->not->toBeFalse();
-    $section = substr($guide, (int) $start, strpos($guide, '## Planned sections') - (int) $start);
+    $section = learningGuideSection($guide, 'I-6. Slow I/O, worker pools and a health check that stays fast');
 
     foreach (['pm.max_children', 'max_threads', 'max_wait_time', 'Little', '/healthz', 'no middleware group', 'SSE', 'queued', '4003 ms', '276 ms', '299 of 300', '16 ms'] as $needle) {
         expect($section)->toContain($needle);
@@ -438,16 +446,14 @@ test('AC-8 learning guide section 19 explains slow I/O, worker pools and the hea
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$link))->toBeTrue("missing: {$link}");
     }
 
-    expect(substr($guide, (int) strpos($guide, '## 16.'), (int) strpos($guide, '## 17.') - (int) strpos($guide, '## 16.')))->toContain('bench/slow-load.sh --workload sse');
+    expect(learningGuideSection($guide, 'II-24. '))->toContain('bench/slow-load.sh --workload sse');
 });
 
-test('AC-7 learning guide section 20 explains offloaded downloads with the measured numbers', function (): void {
+test('AC-7 learning guide I-7 explains offloaded downloads with the measured numbers', function (): void {
     $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
-    $start = strpos($guide, '## 20. Letting the web server send the file');
-    expect($start)->not->toBeFalse();
-    $section = substr($guide, (int) $start, strpos($guide, '## Planned sections') - (int) $start);
+    $section = learningGuideSection($guide, 'I-7. Letting the web server send the file');
 
-    foreach (['X-Accel-Redirect', 'X-Sendfile', 'X-LiteSpeed-Location', 'mod_xsendfile', 'intercept', '/_protected_exports/', 'internal', 'php_held_ms', 'bytes_sent_by_php', 'stream-fallback', 'nginx-fpm', 'apache-fpm', 'frankenphp', 'openlitespeed', 'section 19'] as $needle) {
+    foreach (['X-Accel-Redirect', 'X-Sendfile', 'X-LiteSpeed-Location', 'mod_xsendfile', 'intercept', '/_protected_exports/', 'internal', 'php_held_ms', 'bytes_sent_by_php', 'stream-fallback', 'nginx-fpm', 'apache-fpm', 'frankenphp', 'openlitespeed', 'section [I-6]'] as $needle) {
         expect($section)->toContain($needle);
     }
 
@@ -467,10 +473,9 @@ test('AC-7 learning guide section 20 explains offloaded downloads with the measu
     }
 });
 
-test('AC-7 learning guide section 20 walks each server through one offload and notes the out-of-scope modes', function (): void {
+test('AC-7 learning guide I-7 walks each server through one offload and notes the out-of-scope modes', function (): void {
     $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
-    $start = (int) strpos($guide, '## 20. Letting the web server send the file');
-    $section = substr($guide, $start, strpos($guide, '## Planned sections') - $start);
+    $section = learningGuideSection($guide, 'I-7. Letting the web server send the file');
 
     foreach (['**One offload per server.**', 'who reads the file', 'is free', 'Octane', 'worker mode', 'shutdown functions', '.ddev/web-build/Dockerfile', 'rebuild', '/exports/listings?mode=offload'] as $needle) {
         expect($section)->toContain($needle);
@@ -485,13 +490,11 @@ test('AC-7 learning guide section 20 walks each server through one offload and n
     }
 });
 
-test('AC-7 learning guide section 21 explains Early Hints and compression with the measured numbers', function (): void {
+test('AC-7 learning guide I-8 explains Early Hints and compression with the measured numbers', function (): void {
     $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
-    $start = strpos($guide, '## 21. Early Hints and compression');
-    expect($start)->not->toBeFalse();
-    $section = substr($guide, (int) $start, strpos($guide, '## Planned sections') - (int) $start);
+    $section = learningGuideSection($guide, 'I-8. Early Hints and compression');
 
-    foreach (['103', 'HTTP/2', 'before the slow work', 'proxies', 'preload', 'modulepreload', 'Accept-Encoding', 'Content-Encoding', 'Vary', 'zstd', 'br', 'gzip', 'CPU', 'section 20', 'SendEarlyHints', 'headers_send'] as $needle) {
+    foreach (['103', 'HTTP/2', 'before the slow work', 'proxies', 'preload', 'modulepreload', 'Accept-Encoding', 'Content-Encoding', 'Vary', 'zstd', 'br', 'gzip', 'CPU', 'section [I-7]', 'SendEarlyHints', 'headers_send'] as $needle) {
         expect($section)->toContain($needle);
     }
 
@@ -514,10 +517,9 @@ test('AC-7 learning guide section 21 explains Early Hints and compression with t
     }
 });
 
-test('AC-7 guide section 21 links the server compression configs and names the substitute script bundle', function (): void {
+test('AC-7 guide I-8 links the server compression configs and names the substitute script bundle', function (): void {
     $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
-    $start = (int) strpos($guide, '## 21. Early Hints and compression');
-    $section = substr($guide, $start, strpos($guide, '## Planned sections') - $start);
+    $section = learningGuideSection($guide, 'I-8. Early Hints and compression');
 
     foreach (['../.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp', '../.ddev/servers/frankenphp-worker/web-build/Caddyfile.frankenphp', '../.ddev/nginx_full/nginx-site.conf'] as $link) {
         expect($section)->toContain("]({$link})")
@@ -527,13 +529,11 @@ test('AC-7 guide section 21 links the server compression configs and names the s
     expect($section)->toContain('lab-bundle')->toContain('0 bytes');
 });
 
-test('AC-5 guide section 22 explains HTTP/3 and quotes the measured numbers with working links', function (): void {
+test('AC-5 guide I-9 explains HTTP/3 and quotes the measured numbers with working links', function (): void {
     $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
-    $start = strpos($guide, '## 22. HTTP/3 and QUIC');
-    expect($start)->not->toBeFalse();
-    $section = substr($guide, (int) $start, strpos($guide, '## Planned sections') - (int) $start);
+    $section = learningGuideSection($guide, 'I-9. HTTP/3 and QUIC');
 
-    foreach (['QUIC', 'UDP', 'Alt-Svc', 'head-of-line', 'Traefik', 'router', 'netem', 'network layer', 'handshake', 'origin-to-force-quic-on', 'nextHopProtocol', 'section 21'] as $needle) {
+    foreach (['QUIC', 'UDP', 'Alt-Svc', 'head-of-line', 'Traefik', 'router', 'netem', 'network layer', 'handshake', 'origin-to-force-quic-on', 'nextHopProtocol', 'section [I-8]'] as $needle) {
         expect($section)->toContain($needle);
     }
 
@@ -552,13 +552,11 @@ test('AC-5 guide section 22 explains HTTP/3 and quotes the measured numbers with
     expect($section)->toContain('https://www.rfc-editor.org/rfc/rfc9000')->toContain('https://www.rfc-editor.org/rfc/rfc9114');
 });
 
-test('AC-7 guide section 23 explains Mercure, quotes the measured numbers and section 16 points to it', function (): void {
+test('AC-7 guide I-10 explains Mercure, quotes the measured numbers and II-24 points to it', function (): void {
     $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
-    $start = strpos($guide, '## 23. Live updates with Mercure');
-    expect($start)->not->toBeFalse();
-    $section = substr($guide, (int) $start, strpos($guide, '## Planned sections') - (int) $start);
+    $section = learningGuideSection($guide, 'I-10. Live updates with Mercure');
 
-    foreach (['EventSource', 'text/event-stream', 'topic', 'JWT', 'mercure.subscribe', 'HttpOnly', 'SameSite=Strict', 'aria-live', 'private', 'Give up', 'section 19', 'section 9'] as $needle) {
+    foreach (['EventSource', 'text/event-stream', 'topic', 'JWT', 'mercure.subscribe', 'HttpOnly', 'SameSite=Strict', 'aria-live', 'private', 'Give up', 'section [I-6]', 'section [II-2]'] as $needle) {
         expect($section)->toContain($needle);
     }
 
@@ -582,16 +580,16 @@ test('AC-7 guide section 23 explains Mercure, quotes the measured numbers and se
     }
     expect($section)->not->toContain('PublishListingPrice')->not->toContain('because the script sets `withCredentials`');
 
-    preg_match('/^## 16\. .*?(?=^## 17\. )/ms', $guide, $map);
-    expect($map[0] ?? '')->toContain('section 23')->toContain('Mercure');
-    expect($map[0] ?? '')->toMatch('/Notify the browser when something changes[^\n]*section 23/');
+    $map = [learningGuideSection($guide, 'II-24. ')];
+    expect($map[0] ?? '')->toContain('section [I-10]')->toContain('Mercure');
+    expect($map[0] ?? '')->toMatch('/Notify the browser when something changes[^\n]*section \[I-10\]/');
 });
 
-test('AC-9 guide section 24 explains structured output with a validation boundary and quotes the eval numbers', function (): void {
+test('AC-9 guide II-6 explains structured output with a validation boundary and quotes the eval numbers', function (): void {
     $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
     $result = json_decode((string) file_get_contents(base_path('bench/results/nl-search/2026-11-09/run.json')), true, flags: JSON_THROW_ON_ERROR);
 
-    preg_match('/^## 24\. From words to filters: structured output with a validation boundary\n(.*?)(?=^---$|^## \d+\. |^## Planned sections|\z)/ms', $guide, $matches);
+    preg_match('/^## II-6\. From words to filters: structured output with a validation boundary\n(.*?)(?=^#{1,2} |\z)/ms', $guide, $matches);
     $section = $matches[1] ?? '';
     expect($section)->not->toBe('');
 
@@ -625,15 +623,15 @@ test('AC-9 guide section 24 explains structured output with a validation boundar
         expect(file_exists(dirname(base_path('docs/learning-guide.md')).'/'.$link))->toBeTrue("missing: {$link}");
     }
 
-    preg_match('/^## 16\. .*?(?=^## 17\. )/ms', $guide, $map);
-    expect($map[0] ?? '')->toContain('section 24')->toContain('NlSearchService')->toContain('NlSearchController')->toContain('NlEvalCommand');
-    expect($guide)->toContain('Section 24 (SL-23)');
+    $map = [learningGuideSection($guide, 'II-24. ')];
+    expect($map[0] ?? '')->toContain('section [II-6]')->toContain('NlSearchService')->toContain('NlSearchController')->toContain('NlEvalCommand');
+    expect($guide)->toContain('## II-6. From words to filters');
 });
 
-test('AC-9 guide section 24 describes recall per term and section 16 has the free-text row', function () {
+test('AC-9 guide II-6 describes recall per term and II-24 has the free-text row', function () {
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
 
-    preg_match('/^## 24\. .*?(?=^---$|^## \d+\. |\z)/ms', $guide, $matches);
+    preg_match('/^## II-6\. .*?(?=^#{1,2} |\z)/ms', $guide, $matches);
     $section = $matches[0] ?? '';
     expect($section)
         ->toContain('per term')
@@ -647,13 +645,12 @@ test('AC-9 guide section 24 describes recall per term and section 16 has the fre
         ->toContain('ListingFilterAgent')
         ->toContain('ListingFilterRules')
         ->toContain('NlSearchService')
-        ->toContain('section 24');
+        ->toContain('section [II-6]');
 });
 
-test('AC-8 learning guide section 16 lists every in-app guide file', function (): void {
+test('AC-8 learning guide II-24 lists every in-app guide file', function (): void {
     $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
-    preg_match('/^## 16\. .*?(?=^## 17\. )/ms', $guide, $map);
-    $section = $map[0] ?? '';
+    $section = learningGuideSection($guide, 'II-24. ');
 
     expect($section)->toContain('### In-app guides');
 
@@ -665,12 +662,12 @@ test('AC-8 learning guide section 16 lists every in-app guide file', function ()
     }
 });
 
-test('AC-4 learning guide sections 1-8 that name a removed server start with the history line', function (): void {
+test('AC-4 learning guide sections I-1 to I-5 that name a removed server start with the history line', function (): void {
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
     $history = '*History: measured on nginx-fpm, apache-fpm and OpenLiteSpeed, which the lab dropped on 2026-11-10; the FrankenPHP rows still apply.*';
 
-    foreach (range(1, 8) as $number) {
-        preg_match('/^## '.$number.'\. [^\n]*\n(.*?)(?=^## \d+\. |\z)/ms', $guide, $matches);
+    foreach (['I-1', 'I-2', 'I-3', 'I-4', 'I-5'] as $number) {
+        preg_match('/^## '.$number.'\. [^\n]*\n(.*?)(?=^#{1,2} |\z)/ms', $guide, $matches);
         $section = $matches[1] ?? '';
 
         expect($section)->not->toBe('');
@@ -679,7 +676,7 @@ test('AC-4 learning guide sections 1-8 that name a removed server start with the
             expect(ltrim($section))->toStartWith($history);
         }
 
-        if ($number === 2) {
+        if ($number === 'I-3') {
             expect($section)->toContain('`frankenphp`')
                 ->toContain('`frankenphp-worker`')
                 ->toContain('`frankenphp-octane`');
@@ -687,10 +684,9 @@ test('AC-4 learning guide sections 1-8 that name a removed server start with the
     }
 });
 
-test('AC-8 learning guide section 16 lists the cloud provider files and the add-a-provider recipe', function (): void {
+test('AC-8 learning guide II-24 lists the cloud provider files and the add-a-provider recipe', function (): void {
     $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
-    preg_match('/^## 16\. .*?(?=^## 17\. )/ms', $guide, $map);
-    $section = $map[0] ?? '';
+    $section = learningGuideSection($guide, 'II-24. ');
 
     foreach ([
         'app/Http/Middleware/LimitCloudAi.php',
@@ -712,4 +708,70 @@ test('AC-8 learning guide section 16 lists the cloud provider files and the add-
     }
 
     expect($section)->toContain('"Add a provider"')->toContain('ANTHROPIC_API_KEY');
+});
+
+dataset('AC-2 full sections', [
+    'I-2 server history' => ['I-2. '],
+    'II-4 providers and settings' => ['II-4. '],
+    'II-5 local model limits' => ['II-5. '],
+    'II-8 vision extraction' => ['II-8. '],
+    'II-15 similar photos and text search' => ['II-15. '],
+    'II-16 hybrid and duplicates' => ['II-16. '],
+    'II-18 hand-written tool loop' => ['II-18. '],
+    'II-19 MCP' => ['II-19. '],
+    'II-20 research agent' => ['II-20. '],
+    'II-21 prompt playground' => ['II-21. '],
+    'II-23 in-app guides and homescreen' => ['II-23. '],
+]);
+
+test('AC-2 guide section has code and spec links, a numbers or not-measured line and a read-next line', function (string $heading): void {
+    $guide = file_get_contents(base_path('docs/learning-guide.md'));
+    $section = learningGuideSection($guide, $heading);
+
+    expect($section)->toMatch('/\]\(\.\.\/(app|resources|routes|config|\.ddev)\//');
+    expect($section)->toContain('](../.ai/specs/');
+    expect($section)->toContain('**Read next.**');
+    expect(preg_match('/^\*\*Numbers\.\*\*|^Not measured:|^\*\*Numbers\b|\bNot measured:/m', $section))->toBe(1);
+
+    if (! str_starts_with($heading, 'I-2.')) {
+        expect(preg_match('/^\*\*[^\n]*step by step[^\n]*\n\n?1\. /mi', $section))->toBe(1);
+    }
+})->with('AC-2 full sections');
+
+test('AC-5 guide numbers in the new and promoted sections match BENCHMARKS and the result files', function (): void {
+    $guide = file_get_contents(base_path('docs/learning-guide.md'));
+    $benchmarks = file_get_contents(base_path('BENCHMARKS.md'));
+
+    $fromBenchmarks = [
+        'II-8. ' => ['3697 ms', '5879 ms', '37 of 50', '2572 ms', '6523 ms', '41 of 50', '0.860'],
+        'II-15. ' => ['0.785', '0.677', '0.987', '0.82 ms', '1.26 ms', '0.895', '0.603', '11.4 s', '0.506', '0.569', '60.4 ms', '136.1 ms'],
+        'II-16. ' => ['0.693', '0.417', '2.42 ms', '4.32 ms', '0.184', '0.902', '0.886', '0.894', '185 ms', '0.263', '0.421'],
+    ];
+
+    foreach ($fromBenchmarks as $heading => $numbers) {
+        $section = learningGuideSection($guide, $heading);
+        $quoted = substr($section, (int) strpos($section, '**Numbers.**'));
+
+        foreach ($numbers as $number) {
+            expect($quoted)->toContain($number);
+            expect($benchmarks)->toContain((string) preg_replace('/^(\d+) of 50$/', '$1/50', $number));
+        }
+    }
+
+    $research = json_decode((string) file_get_contents(base_path('bench/results/research/2026-11-14/stats.json')), true)['summary'];
+    $researchSection = learningGuideSection($guide, 'II-20. ');
+    expect($research['runs'])->toBe(15);
+    expect($research['done'])->toBe(11);
+    expect($research['refused'])->toBe(4);
+    expect($research['average_model_calls'])->toBe(3.9);
+    expect($research['average_steps'])->toBe(7.8);
+    expect($research['average_duration_s'])->toBe(20);
+    expect($researchSection)->toContain('15 runs')->toContain('3.9 model calls')->toContain('7.8 steps')->toContain('took 20 s');
+
+    $playground = json_decode((string) file_get_contents(base_path('bench/results/playground/2026-11-14/stats.json')), true)['summary'];
+    $playgroundSection = learningGuideSection($guide, 'II-21. ');
+    expect($playground['runs'])->toBe(9);
+    expect($playground['two_model_local_runs'])->toBe(7);
+    expect($playground['average_two_model_local_duration_s'])->toBe(10.3);
+    expect($playgroundSection)->toContain('9 stored runs')->toContain('7 runs')->toContain('10.3 s');
 });

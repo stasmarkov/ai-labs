@@ -28,7 +28,7 @@ test('AC-5 docs and guides name no removed server outside the history', function
     }
 
     $guide = file_get_contents(base_path('docs/learning-guide.md'));
-    preg_match('/^## 2\..*?^## 3\./ms', $guide, $section);
+    preg_match('/^## I-3\..*?^## I-4\./ms', $guide, $section);
 
     expect($section[0])->toContain('719c0a5')->toContain('frankenphp-octane');
     expect(file_get_contents(base_path('BENCHMARKS.md')))->toContain('719c0a5');
