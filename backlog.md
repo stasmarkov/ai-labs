@@ -199,7 +199,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-26
 - **Depends on:** SL-09
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261116-1120-metrics-dashboard
 - **Source:** brief (Phase 6)
 - **Run:** `/sdd "SL-15: Prometheus + Grafana as DDEV services scraping FrankenPHP/Caddy metrics and php-fpm_exporter, a dashboard (RPS, p95, busy vs total threads, busy workers, queue depth, memory), and SL-09 scenarios re-run with screenshots (BR-26). Rules in product-brief.md."`

@@ -13,7 +13,7 @@ return [
         ],
         [
             'title' => 'Threads: busy against total',
-            'body' => "`frankenphp_total_threads` is how many PHP threads exist (autoscale grows it). `frankenphp_busy_threads` counts the requests inside PHP, the ones running **and** the ones waiting for a thread. So when the pool is full busy climbs above total, and busy minus queue depth is what really runs. In classic mode one request holds one thread until it ends, so the health check waits behind slow requests although it does no work.\n\nIn worker and Octane mode a worker thread counts as busy while it waits for its next request, so busy reads 4 with 4 idle workers and does not move under load. Read the workers panel there.",
+            'body' => "`frankenphp_total_threads` is how many PHP threads were started. With autoscale it stayed at the starting 14 in the lab's measurements while up to 64 threads ran, so do not read it as the live pool size. `frankenphp_busy_threads` counts the requests inside PHP, the ones running **and** the ones waiting for a thread. So when the pool is full busy climbs above total, and busy minus queue depth is what really runs. In classic mode one request holds one thread until it ends, so the health check waits behind slow requests although it does no work.\n\nIn worker and Octane mode a worker thread counts as busy while it waits for its next request, so busy reads 4 with 4 idle workers and does not move under load. Read the workers panel there.",
             'snippet' => 'App\Http\Controllers\HealthzController',
         ],
         [
@@ -30,7 +30,7 @@ return [
         ],
         [
             'title' => 'One load on the graphs: slow calls on 14 threads',
-            'body' => "100 users each call a page that waits 300 ms for an outside VIN service, while a probe asks `/healthz` 5 times a second.\n\n1. Busy threads passes 14: all 14 threads wait on the outside service, and every request behind them is counted too.\n2. Queue depth rises with it, to busy minus 14: new requests, the health probe among them, wait for a thread.\n3. Requests per second flattens at about threads divided by 0.3 s, and p95 climbs to seconds.\n4. The load ends, busy threads fall, the queue drains to 0 and the graphs return to idle.\n\nWith autoscale the total line steps up instead, and the queue stays short.",
+            'body' => "100 users each call a page that waits 300 ms for an outside VIN service, while a probe asks `/healthz` 5 times a second.\n\n1. Busy threads passes 14: all 14 threads wait on the outside service, and every request behind them is counted too.\n2. Queue depth rises with it, to busy minus 14: new requests, the health probe among them, wait for a thread.\n3. Requests per second flattens at about threads divided by 0.3 s, and p95 climbs to seconds.\n4. The load ends, busy threads fall, the queue drains to 0 and the graphs return to idle.\n\nWith autoscale the server adds threads (up to 64 here): requests per second goes up about five times and the queue gets shorter, while the total line stays at 14.",
             'snippet' => 'App\Services\VinReportService::reportFor',
         ],
         [
@@ -101,7 +101,15 @@ return [
         ],
     ],
     'numbers' => [
-        ['label' => 'Max queue depth, 100 slow calls on 14 threads', 'pending' => true],
+        ['label' => '100 slow calls on 14 fixed threads: most requests inside PHP at once (busy threads)', 'file' => 'metrics/2026-11-16/http-frankenphp-14.json', 'path' => 'metrics.max_busy_threads'],
+        ['label' => '100 slow calls on 14 fixed threads: most requests waiting for a thread (queue depth)', 'file' => 'metrics/2026-11-16/http-frankenphp-14.json', 'path' => 'metrics.max_queue_depth'],
+        ['label' => '100 slow calls on 14 fixed threads: total threads reported', 'file' => 'metrics/2026-11-16/http-frankenphp-14.json', 'path' => 'metrics.max_total_threads'],
+        ['label' => '100 slow calls on autoscale 14 to 64: total threads reported (the gauge does not count added threads)', 'file' => 'metrics/2026-11-16/http-frankenphp-auto.json', 'path' => 'metrics.max_total_threads'],
+        ['label' => '100 slow calls on worker mode: most busy workers', 'file' => 'metrics/2026-11-16/http-frankenphp-worker-4.json', 'path' => 'metrics.max_busy_workers'],
+        ['label' => '100 slow calls on worker mode: workers', 'file' => 'metrics/2026-11-16/http-frankenphp-worker-4.json', 'path' => 'metrics.total_workers'],
+        ['label' => '100 slow calls on worker mode: most requests in the thread queue', 'file' => 'metrics/2026-11-16/http-frankenphp-worker-4.json', 'path' => 'metrics.max_queue_depth'],
+        ['label' => '30 answer streams on 14 threads: p95 from the histogram', 'file' => 'metrics/2026-11-16/sse-frankenphp-14.json', 'path' => 'metrics.p95_seconds'],
+        ['label' => 'Share of seconds scraped during the load, worker mode', 'file' => 'metrics/2026-11-16/http-frankenphp-worker-4.json', 'path' => 'scrape_coverage'],
     ],
     'experiments' => [
         [

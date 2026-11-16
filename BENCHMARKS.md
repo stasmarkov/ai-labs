@@ -1437,16 +1437,80 @@ I measured two local models the way a user feels them: time to first token, writ
 
 ## Metrics during slow I/O (2026-11-16)
 
-The slow-I/O scenarios of [Slow I/O and the health check](#slow-io-and-the-health-check-2026-11-03) are re-run on the three FrankenPHP modes with Prometheus and Grafana watching. Prometheus scrapes the web container's port 9180 (`/metrics`) every second ([`.ddev/metrics/prometheus.yml.template`](.ddev/metrics/prometheus.yml.template)) and the provisioned dashboard ([`frankenphp.json`](.ddev/metrics/grafana/dashboards/frankenphp.json)) shows requests per second, p50 and p95, busy and total threads, busy and ready workers, queue depth and process memory. How to read the panels: [I-11 of the learning guide](docs/learning-guide.md#i-11-metrics-watching-the-thread-pool).
+The slow-I/O scenarios of [Slow I/O and the health check](#slow-io-and-the-health-check-2026-11-03) were run again on the three FrankenPHP modes, with Prometheus and Grafana watching (SL-15). Prometheus scrapes the web container's port 9180 (`/metrics`) every second ([`prometheus.yml.template`](.ddev/metrics/prometheus.yml.template)). The provisioned dashboard ([`frankenphp.json`](.ddev/metrics/grafana/dashboards/frankenphp.json)) shows requests per second, p50 and p95, busy and total threads, busy, ready and total workers, queue depth, memory and status codes. How to read the panels: [I-11 of the learning guide](docs/learning-guide.md#i-11-metrics-watching-the-thread-pool) and `/ai/guides/metrics`.
+
+Raw files: [`bench/results/slow-load/2026-11-16/`](bench/results/slow-load/2026-11-16/) (slow-load results) and [`bench/results/metrics/2026-11-16/`](bench/results/metrics/2026-11-16/) (one Prometheus export and one PNG per cell). Set-up: commit `dcca93a`, the same load, probe and stub VIN service as SL-09.
 
 Method:
-- **Cells:** `http` and `sse` on `frankenphp` (fixed 14 threads and autoscale), `frankenphp-worker` and `frankenphp-octane`, plus a stack-off control cell per mode (`frankenphp-14`, `frankenphp-worker-4`, `frankenphp-octane-4`). The worker and Octane Caddyfiles record request metrics on every request with or without the stack, so those controls still carry that cost; the cells differ from SL-09 by that and by the scrape and Grafana. `bench/metrics-matrix.sh` wraps `bench/slow-load.sh` (not changed), so each cell keeps the BR-21 method: 30 s warm-up, 60 s measure, 3 repeats, the median, and a re-run once if the spread is over 5 %.
-- **Window:** the epoch milliseconds just before and after each `slow-load.sh` call. `bench/metrics-snapshot.sh <cell> <from-ms> <to-ms>` reads the maximum busy threads, maximum busy workers, maximum queue depth, maximum memory and the whole-window p95 from Prometheus (in worker cells `busy_threads` includes idle worker threads and `queue_depth` excludes requests waiting for a worker, so read `busy_workers` there; a p95 at or above 10 s, Caddy's top histogram bucket, is written as null with `p95_capped: true`, so SSE p95 comes from `slow-load.sh`), and saves a PNG of the dashboard, under `bench/results/metrics/<date>/`.
-- **Comparison:** each cell's health p95 and load p95 sit next to the SL-09 value with the difference in %; the SL-09 numbers are not replaced.
+- **Cells:** `http` (100 users on the 300 ms slow route) and `sse` (30 users on 6 s answer streams), each on `frankenphp` with 14 fixed threads, `frankenphp` with autoscale 14 to 64, `frankenphp-worker` with 4 workers and `frankenphp-octane` with 4 workers. Each mode also has an `http` control cell with the stack off.
+- **The run:** `bench/metrics-matrix.sh` wraps `bench/slow-load.sh`, which is not changed, so every cell keeps the BR-21 method: 30 s warm-up, 60 s measure, 3 repeats, the median. No health-p95 spread was above the 20 % flag; the largest was 10.9 % (`sse-frankenphp-auto`).
+- **Snapshot:** `bench/metrics-snapshot.sh` reads the maxima (busy threads, total threads, busy and total workers, queue depth, memory) and the histogram p95 from Prometheus. It reads them over the load window: from the first start of the slow-load load container to its last stop, warm-ups included. It also saves a PNG of the whole cell. The window includes the health probe's 5 requests per second, which share the handler with the load. Every cell was scraped in 100 % of its load seconds.
+- **Comparison:** each cell's load p95 and health p95 sit next to the SL-09 value. Within 5 % (the SL-09 spread) is "same". Worker and Octane were not in SL-09, so their cells are compared with their own stack-off control.
 
-Footprint of the stack, measured while it ran: Prometheus about 88 MB and Grafana about 135 MB, each under its 256 MB `mem_limit`, so both stay under 512 MB together. The scrape interval is 1 s and the retention is 2 days.
+### Results per cell
 
-Per-cell table, screenshots, "What the numbers say", "Surprises" and the interview story are added when the matrix run (`bench/metrics-matrix.sh`, task 4 of the spec) is committed.
+Load p95 is from the load generator (for `sse`, the time to `[DONE]`). Health p95 counts a probe with no answer within 10 s as 10 000 ms. The last six columns come from Prometheus.
+
+| Cell | Load RPS | Load p95 | SL-09 load p95 | Diff | Health p95 | SL-09 health p95 | Diff | Max busy threads | Max total threads | Max queue | Busy / total workers | Max memory | Histogram p95 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `http-frankenphp-14` | 41.4 | 2703 ms | 2712 ms | same (-0.3 %) | 2358 ms | 2369 ms | same (-0.5 %) | 112 | 14 | 98 | n/a | 196 MB | 4.02 s |
+| `http-frankenphp-auto` | 199.3 | 597 ms | 626 ms | same (-4.6 %) | 265 ms | 276 ms | same (-3.9 %) | 102 | 14 | 86 | n/a | 292 MB | 0.95 s |
+| `http-frankenphp-worker-4` | 12.6 | 7968 ms | n/a | n/a | 7904 ms | n/a | n/a | 4 | 14 | 0 | 140 / 4 | 197 MB | 9.73 s |
+| `http-frankenphp-octane-4` | 12.6 | 7974 ms | n/a | n/a | 7922 ms | n/a | n/a | 4 | 14 | 0 | 140 / 4 | 173 MB | 9.73 s |
+| `sse-frankenphp-14` | 2.1 | 18577 ms | 18573 ms | same (+0.0 %) | 10000 ms | 10000 ms | same (+0.0 %) | 80 | 14 | 66 | n/a | 206 MB | >10 (bucket cap) |
+| `sse-frankenphp-auto` | 4.9 | 6206 ms | 6193 ms | same (+0.2 %) | 15 ms | 16 ms | -6.9 % | 30 | 14 | 13 | n/a | 229 MB | 9.58 s |
+| `sse-frankenphp-worker-4` | 0.6 | 49770 ms | n/a | n/a | 10000 ms | n/a | n/a | 4 | 14 | 0 | 80 / 4 | 177 MB | >10 (bucket cap) |
+| `sse-frankenphp-octane-4` | 0.6 | 49799 ms | n/a | n/a | 10000 ms | n/a | n/a | 4 | 14 | 0 | 80 / 4 | 182 MB | >10 (bucket cap) |
+
+The `sse` health p95 of 10 000 ms means starved. On 14 fixed threads 120 of 300 probes timed out (SL-09: 118). On worker and Octane mode all 300 did.
+
+### Cost of the stack (stack-off controls, `http`)
+
+| Mode | Load RPS on / off | Diff | Load p95 on / off | Diff | Health p95 on / off | Diff |
+|---|---|---|---|---|---|---|
+| `frankenphp-14` | 41.4 / 41.3 | same (+0.2 %) | 2703 ms / 2707 ms | same (-0.1 %) | 2358 ms / 2358 ms | same (-0.0 %) |
+| `frankenphp-worker-4` | 12.6 / 12.5 | same (+0.9 %) | 7968 ms / 8033 ms | same (-0.8 %) | 7904 ms / 7969 ms | same (-0.8 %) |
+| `frankenphp-octane-4` | 12.6 / 12.6 | same (+0.3 %) | 7974 ms / 8007 ms | same (-0.4 %) | 7922 ms / 7955 ms | same (-0.4 %) |
+
+The request-metrics directive in the Caddyfiles is on in every mode, with or without the stack, so the controls still carry it. Its own cost was measured separately on `frankenphp-worker` with `bench/run.sh ping --quick`: 3 rounds each with and without `metrics` in `servers { }`, alternating. The means were 9375 against 9654 requests per second (-2.9 %) and 8.65 against 8.35 ms p95 (+3.6 %). That is under the 5 % limit, so it stays on. Prometheus used about 88 MB and Grafana about 135 MB while they ran, each under its 256 MB `mem_limit`. Scrape interval 1 s, retention 2 days.
+
+### Screenshots
+
+Each PNG covers the whole cell, restarts included (`bench/metrics-screenshot.mjs`, 1600x1320, auto-refresh off).
+
+**`http-frankenphp-14`:** busy threads climb above total (112 against 14) and the queue holds up to 98. Requests per second sits flat near 41.
+
+![http-frankenphp-14](bench/results/metrics/2026-11-16/http-frankenphp-14.png)
+
+**`sse-frankenphp-14`:** 30 streams on 14 threads. The p95 line runs into the 10 s bucket cap.
+
+![sse-frankenphp-14](bench/results/metrics/2026-11-16/sse-frankenphp-14.png)
+
+**`sse-frankenphp-auto`:** the same streams with autoscale. The queue stays short (at most 13) and the total line stays at 14, though 30 streams of 6.2 s at 4.9 per second need about 30 threads running.
+
+![sse-frankenphp-auto](bench/results/metrics/2026-11-16/sse-frankenphp-auto.png)
+
+**`sse-frankenphp-worker-4`:** busy threads flat at 4 and the queue at 0, while busy workers reach 80 against 4. The three repeats are visible: in each warm-up busy workers holds 30 (the streams), and in each measure 80 (the 30 streams plus the probe's 50 connections, all waiting). The short gap at the start is the restart `slow-load.sh` does before it measures.
+
+![sse-frankenphp-worker-4](bench/results/metrics/2026-11-16/sse-frankenphp-worker-4.png)
+
+### What the numbers say
+
+- **Watching did not change the result.** Every cell that SL-09 also ran is within 5 % of it on load p95 and health p95. The one exception is `sse-frankenphp-auto` health p95, 15 against 16 ms (-6.9 %, 1 ms). Each stack-off control is within 1 % of its stack-on cell. A 1 s scrape and an idle Grafana do not show in these numbers.
+- **The graphs show why, not only how much.** On 14 fixed threads 112 requests were inside PHP at the peak and 98 of them were waiting. That is the health p95 of 2358 ms seen from the inside: the probe waits in that queue.
+- **Worker mode needs a different panel.** With 4 workers, busy threads stayed at 4 and queue depth at 0 through the whole `http` run. The site was saturated anyway (health p95 7904 ms), and only busy workers shows it, at 140 against 4. A dashboard with only the thread and queue panels would call this server idle.
+- **Throughput still follows workers ÷ hold time.** 4 workers ÷ 0.3 s gives 13.3 requests per second; measured 12.6 on both worker and Octane. Classic with 14 threads gives 46.7; measured 41.4. Autoscale up to 64 gives 213; measured 199.3.
+
+### Surprises
+
+- **Busy is not "threads in use".** `frankenphp_busy_threads` (classic) and `frankenphp_busy_workers` (worker modes) count the requests handed to PHP, running or waiting. So they go far above the thread or worker count, and busy minus queue (or busy minus total workers) is the backlog.
+- **`frankenphp_total_threads` ignores autoscale.** The autoscale cell ran 199.3 requests per second, which needs about 60 threads, yet the total-threads gauge stayed at 14 in both workloads. A dashboard that trusts total threads would show a pool that never grew.
+- **The histogram p95 is an estimate.** On 14 threads Caddy's histogram said 4.02 s, while the load generator measured 2703 ms. The true value lies between the 2.5 s and 5 s buckets, and Prometheus interpolates inside the bucket. Every stream cell hit the 10 s top bucket, so stream times here come from `slow-load.sh`.
+- **The first screenshots were not of the dashboard.** In the container's Chromium, Grafana 12 stopped at boot on a missing locale and drew its "failed to load" page. The fix was an explicit locale. A check now fails the shot on that page, and auto-refresh is switched off by rewriting the dashboard JSON on its way to the page, because no URL parameter turns it off.
+
+### Interview story
+
+I put Prometheus and Grafana on a slow-I/O benchmark that had only given me before-and-after numbers, and first checked the stack itself: health check p95 2358 ms with it on and 2358 ms with it off, so watching was free. The graphs explained the old number: on 14 threads, 112 requests were inside PHP at once and 98 of them were queued, the health check among them. Worker mode was the lesson: the health check took 7.9 s, yet busy threads read 4 and queue depth read 0, so the usual panels said "idle", and only busy workers, at 140 against 4, showed the saturation. I also caught two gauges that lie by omission: total threads stayed at 14 while autoscale ran about 60 threads, and the histogram p95 said 4.02 s where the load generator measured 2.7 s. Now I check what a metric counts before it goes on a dashboard.
 
 ## Response parity
 

@@ -49,15 +49,32 @@
   - [x] 3.2 **Verify**: `bash -n`, `--help`, and a quick run writes the JSON and PNG.
     Results (2026-11-16): `tests/Feature/BenchMetricsSnapshotTest.php` passes (7 tests); a live `bench/metrics-snapshot.sh` run on a 15 s window with the stack on wrote the JSON and a 54 KB PNG.
 
-- [ ] 4. Re-run the slow-I/O scenarios (checks)
+- [x] 4. Re-run the slow-I/O scenarios (checks)
   Covers: AC-4
-  - [ ] 4.1 On a clean committed tree, run `bench/metrics-matrix.sh` (8 cells plus the control, full BR-21 method), then commit the results.
-  - [ ] 4.2 **Verify**: every cell has its slow-load JSON, metrics JSON and PNG. `.env` is restored and the starting server is restored.
+  - [x] 4.1 On a clean committed tree, run `bench/metrics-matrix.sh` (8 cells plus the control, full BR-21 method), then commit the results.
+  - [x] 4.2 **Verify**: every cell has its slow-load JSON, metrics JSON and PNG. `.env` is restored and the starting server is restored.
+    Results (2026-11-16): `bench/metrics-matrix.sh` on the clean tree `dcca93a` (started on `frankenphp`, about 2 h 15 min, exit 0, no failed cell), committed in `f2869af`. All 8 cells have `bench/results/slow-load/2026-11-16/<cell>.json`, `bench/results/metrics/2026-11-16/<cell>.json` and `<cell>.png`, and the three controls `http-<mode>-nostack.json`. Every cell has 3 repeats, none is flagged (largest health-p95 spread 10.9 %, `sse-frankenphp-auto`), and scrape coverage is 1 in every load window. Afterwards: server `frankenphp`, concurrency `default`, no `.env.bench-backup`, `.env` unchanged in git, and no Prometheus, Grafana, Playwright or load container running.
+    A `--quick` run before it found one bug: Grafana was still starting when the Octane SSE screenshot ran (`ERR_CONNECTION_REFUSED`). `ddev metrics on` now also waits for Grafana's `/api/health`, and the screenshot retries a refused connection for up to 60 s.
 
-- [ ] 5. Docs (docs)
+    | Cell | Load RPS | Load p95 | SL-09 load p95 | Diff | Health p95 | SL-09 health p95 | Diff | Max busy threads | Max total threads | Max queue | Busy / total workers | Max memory | Histogram p95 |
+    |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+    | `http-frankenphp-14` | 41.4 | 2703 ms | 2712 ms | same (-0.3 %) | 2358 ms | 2369 ms | same (-0.5 %) | 112 | 14 | 98 | n/a | 196 MB | 4.02 s |
+    | `http-frankenphp-auto` | 199.3 | 597 ms | 626 ms | same (-4.6 %) | 265 ms | 276 ms | same (-3.9 %) | 102 | 14 | 86 | n/a | 292 MB | 0.95 s |
+    | `http-frankenphp-worker-4` | 12.6 | 7968 ms | n/a | n/a | 7904 ms | n/a | n/a | 4 | 14 | 0 | 140 / 4 | 197 MB | 9.73 s |
+    | `http-frankenphp-octane-4` | 12.6 | 7974 ms | n/a | n/a | 7922 ms | n/a | n/a | 4 | 14 | 0 | 140 / 4 | 173 MB | 9.73 s |
+    | `sse-frankenphp-14` | 2.1 | 18577 ms | 18573 ms | same (+0.0 %) | 10000 ms | 10000 ms | same (+0.0 %) | 80 | 14 | 66 | n/a | 206 MB | >10 (bucket cap) |
+    | `sse-frankenphp-auto` | 4.9 | 6206 ms | 6193 ms | same (+0.2 %) | 15 ms | 16 ms | -6.9 % | 30 | 14 | 13 | n/a | 229 MB | 9.58 s |
+    | `sse-frankenphp-worker-4` | 0.6 | 49770 ms | n/a | n/a | 10000 ms | n/a | n/a | 4 | 14 | 0 | 80 / 4 | 177 MB | >10 (bucket cap) |
+    | `sse-frankenphp-octane-4` | 0.6 | 49799 ms | n/a | n/a | 10000 ms | n/a | n/a | 4 | 14 | 0 | 80 / 4 | 182 MB | >10 (bucket cap) |
+
+    Stack-off controls (load RPS, load p95, health p95, on / off): frankenphp-14 41.4 / 41.3, 2703 / 2707 ms, 2358 / 2358 ms; frankenphp-worker-4 12.6 / 12.5, 7968 / 8033 ms, 7904 / 7969 ms; frankenphp-octane-4 12.6 / 12.6, 7974 / 8007 ms, 7922 / 7955 ms. Every difference is within 1 %.
+
+- [x] 5. Docs (docs)
   Covers: AC-5
-  - [ ] 5.1 Add the BENCHMARKS section (the table, 3 to 4 screenshots, what the numbers say, surprises, the story), the learning guide I-11 replacing the reserved bullet, and README.
-  - [ ] 5.2 **Verify**: `DocsLinksTest`, `LearningGuideTest` and `BenchmarksDocTest`.
+  - [x] 5.1 Add the BENCHMARKS section (the table, 3 to 4 screenshots, what the numbers say, surprises, the story), the learning guide I-11 replacing the reserved bullet, and README.
+  - [x] 5.2 **Verify**: `DocsLinksTest`, `LearningGuideTest` and `BenchmarksDocTest`.
+    Results (2026-11-16): `BENCHMARKS.md` "Metrics during slow I/O (2026-11-16)" has the method, the per-cell table against SL-09, the stack-off table, the directive cost, 4 screenshots (`http-frankenphp-14`, `sse-frankenphp-14`, `sse-frankenphp-auto`, `sse-frankenphp-worker-4`), "What the numbers say", "Surprises" and the interview story. `BenchmarksDocTest` checks every row against the result files. The SL-09 test now globs only its own two folders, because the new run added files under `bench/results/slow-load/`. Learning guide I-11 was rewritten with the measured numbers and corrected meanings (busy counts waiting requests, total threads ignores autoscale), plus a headline number in the closing summary and the in-app guide in the II-24 map. README has the commands and the volume reset. `DocsLinksTest`, `LearningGuideTest` and `BenchmarksDocTest` pass.
+    In-app guide (owner request): `resources/guides/metrics.php`, a foundation guide on `/ai/guides/metrics`. It has six tabs: what each metric means and one load walked through (works), what to take into account (failures), how to add a panel and the same pattern in other domains (recipes), how to support it (support), the numbers from `bench/results/metrics/2026-11-16/` (numbers) and one experiment on the describe page (live check on classic: one stream gave busy threads 1 and queue 0). `GuideContentTest` (new test `AC-5 the metrics guide has six non-empty tabs...`), `GuidePageTest` and `NoReferencesInUiTest` pass.
 
 - [x] 6. Gates and ship (checks)
   Covers: MNC-1, MNC-2, MNC-3, MNC-5
@@ -83,7 +100,7 @@
 | AC-5 | BENCHMARKS and guide | `tests/Feature/DocsLinksTest.php`, `manual-test.md#step-7` | test, manual | 5 |
 | AC-6 | no secrets | `tests/Feature/MetricsStackConfigTest.php`, `manual-test.md#step-6` | test, manual | 2 |
 | MNC-1 | default start unchanged | `manual-test.md#step-1`, `tests/Feature/MetricsGatesTest.php` (MNC-1 test) | manual, test | 2, 6 |
-| MNC-2 | pages, fingerprint, parity | `manual-test.md#step-4`, `tests/Feature/MetricsGatesTest.php` (MNC-2 test) | manual, test | 1, 6 |
+| MNC-2 | pages, fingerprint, parity | `manual-test.md#step-4`, `tests/Feature/MetricsStackConfigTest.php` (`MNC-2 the main site blocks keep their existing routing`), task 25 | manual, test | 1, 6, 25 |
 | MNC-3 | bench scripts unchanged | `manual-test.md#step-4`, `tests/Feature/MetricsGatesTest.php` (MNC-3 test), existing bench tests pass unchanged | manual, test | 6 |
 | MNC-4 | config.yaml untouched | `manual-test.md#step-4` | manual | 6 |
 | MNC-5 | suite needs no stack | `tests/Feature/MetricsGatesTest.php` (MNC-5 test), `manual-test.md#step-7` | test, manual | 2, 6 |
@@ -98,9 +115,9 @@
 
 ## Done when
 
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green (task 26)
 
 ## Phase: Gaps (converge round 1)
 
@@ -226,3 +243,17 @@ Findings F1 to F20 come from `.ai/reports/ship-spec-20261116-1120-metrics-dashbo
   - Live, the Playwright Chromium in the container has no locale. Grafana 12 then fails at boot ("Error bootstrapping Grafana RangeError: Incorrect locale information provided") and renders its "failed to load its application files" page. The 54 KB PNG of task 3 was that page.
   - On top of that, a full-page shot resizes the viewport, Grafana redraws the panels, and the shot catches them blank.
   - Fix: the page gets `locale: 'en-US'` and `timezoneId: 'UTC'`, a 1600x1320 viewport that holds all seven panels (not 1600x900 as C-8 said; 900 cut off two panels), a plain viewport shot, and a check that fails the run when the "failed to load" page shows or "Requests per second" never renders. A live 2-minute snapshot then showed all seven panels with data (78 KB).
+- [x] 25. Gap 15 again: parity and fingerprint on the final Caddyfiles (without `per_host`)
+  - Re-run on 2026-11-16 after `per_host` was removed. `bench/parity` was reverted after each mode.
+
+    | Mode | `app.css` | `app.js` | Matches C-12 | `git diff -U0 bench/parity` |
+    |------|-----------|----------|--------------|-----------------------------|
+    | frankenphp | `app-DNob7CFE.css` | `app-PTzu1QaN.js` | yes | only `captured=` differs |
+    | frankenphp-worker | `app-DNob7CFE.css` | `app-PTzu1QaN.js` | yes | only `captured=` differs |
+    | frankenphp-octane | `app-DNob7CFE.css` | `app-PTzu1QaN.js` | yes | only `captured=` differs |
+
+  - Also per mode: 9180 answers from `ddev_default`, 2019 is closed (`000`), and both `# TYPE` lines are in the captured fixture.
+- [x] 26. Final gates
+  - __GATES__
+- Measured facts that changed the docs: `frankenphp_busy_threads` (classic) and `frankenphp_busy_workers` (worker modes) count requests that run **or wait**, so they go above total (112 against 14, and 140 against 4). `frankenphp_total_threads` stayed at 14 while autoscale ran about 60 threads (199.3 requests per second at 0.3 s each). The Caddy histogram p95 is interpolated: 4.02 s against the measured 2703 ms. All of this is in the dashboard descriptions, the in-app guide, I-11 and BENCHMARKS "Surprises".
+- Spec changes made here: C-1 numbers now cover the load window, not the whole cell (the PNG still covers the whole cell). C-8 viewport is 1600x1320, not 1600x900. Grafana router port is 3030 (task 2).

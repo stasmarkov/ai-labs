@@ -121,7 +121,7 @@
       "id": 3,
       "type": "timeseries",
       "title": "Busy and total threads",
-      "description": "Classic mode: busy counts the requests in PHP, running or waiting for a thread, so it rises above total when the pool is full (busy minus queue is what runs). Autoscale grows total. In worker and Octane mode busy stays at the worker count (an idle worker thread counts as busy), so read the workers panel there.",
+      "description": "Classic mode: busy counts the requests in PHP, running or waiting for a thread, so it rises above total when the pool is full (busy minus queue is what runs). With autoscale the total line stayed at the starting 14 in this FrankenPHP version while up to 64 threads ran, so busy minus queue is the reliable running count. In worker and Octane mode busy stays at the worker count (an idle worker thread counts as busy), so read the workers panel there.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"

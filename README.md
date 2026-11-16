@@ -60,14 +60,15 @@ Both evals need Ollama running with the models above.
 
 ## Metrics dashboard
 
-Prometheus and Grafana are opt-in: a plain `ddev start` does not start them. Every FrankenPHP mode serves metrics on port 9180 inside `ddev_default` (the Caddy admin API is not exposed). How to read the graphs: [I-11 of the learning guide](docs/learning-guide.md#i-11-metrics-watching-the-thread-pool); the numbers are in [BENCHMARKS.md](BENCHMARKS.md#metrics-during-slow-io-2026-11-16).
+Prometheus and Grafana are opt-in: a plain `ddev start` does not start them, and a restart or a server switch stops them again. Every FrankenPHP mode serves metrics on port 9180 inside `ddev_default` (the Caddy admin API is not exposed). Grafana is anonymous and read-only, with no login. How to read the graphs: `/ai/guides/metrics` and [I-11 of the learning guide](docs/learning-guide.md#i-11-metrics-watching-the-thread-pool). The numbers are in [BENCHMARKS.md](BENCHMARKS.md#metrics-during-slow-io-2026-11-16).
 
 ```sh
-ddev metrics on                              # start Prometheus and Grafana, print the Grafana URL (https://ai-lab.ddev.site:3030)
-ddev metrics status                          # the scrape target state
-ddev metrics off                             # stop both containers
-bench/metrics-matrix.sh [--quick]            # re-run the slow-I/O cells with the stack on, one JSON and PNG per cell
-bench/metrics-snapshot.sh <cell> <from-ms> <to-ms>   # snapshot one window
+ddev metrics on                              # write the Prometheus config, start both, wait for the target, print https://ai-lab.ddev.site:3030
+ddev metrics status                          # prometheus, grafana and the scrape target
+ddev metrics off                             # stop both containers (samples stay in the volume for 2 days)
+bench/metrics-matrix.sh [--quick]            # re-run the slow-I/O cells with the stack on: slow-load JSON, metrics JSON and PNG per cell
+bench/metrics-snapshot.sh <cell> <from-ms> <to-ms> [--load-window <from>-<to>]   # snapshot one window
+docker volume rm ddev-ai-lab-prometheus-data # reset the stored samples (stack off first; nothing does this for you)
 ```
 
 ## Local models

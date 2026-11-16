@@ -504,6 +504,18 @@ it('AC-5 the metrics guide has six non-empty tabs, no references, answers 200 an
         expect($text)->toContain($needle);
     }
 
+    foreach ($rendered['numbers'] as $number) {
+        expect($number['value'])->not->toBe(GuideFacts::PENDING_TEXT);
+    }
+
+    $numbers = collect($rendered['numbers'])->pluck('value', 'label');
+
+    expect((int) $numbers['100 slow calls on 14 fixed threads: most requests inside PHP at once (busy threads)'])
+        ->toBeGreaterThan((int) $numbers['100 slow calls on 14 fixed threads: total threads reported'])
+        ->and((int) $numbers['100 slow calls on worker mode: most busy workers'])->toBeGreaterThan((int) $numbers['100 slow calls on worker mode: workers'])
+        ->and($numbers['100 slow calls on worker mode: most requests in the thread queue'])->toBe('0')
+        ->and($numbers['30 answer streams on 14 threads: p95 from the histogram'])->toBe('>10 (bucket cap)');
+
     $this->withoutVite();
     $this->get('/ai/guides/metrics')->assertOk();
     $this->get('/ai/guides')->assertOk()->assertSee('Metrics: watching the thread pool');

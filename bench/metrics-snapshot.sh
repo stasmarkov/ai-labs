@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ## Usage: bench/metrics-snapshot.sh <cell> <from-ms> <to-ms> [--load-window <from-ms>-<to-ms>] [--no-screenshot] [--force]
 ## Reads one window of the metrics stack (`ddev metrics on`) and saves it for a slow-load cell: a JSON with the maximum busy
-## threads, total threads (autoscale grows them), busy workers, total workers, queue depth and resident memory and the p95 request latency, and a PNG of the
+## threads, total threads (the gauge did not count autoscaled threads in the measured version), busy workers, total workers, queue depth and resident memory and the p95 request latency, and a PNG of the
 ## whole Grafana dashboard for <from-ms> to <to-ms>. <cell> is `<workload>-<server>-<threads>` (a-z, 0-9, -); the times are
 ## epoch milliseconds, which bench/metrics-matrix.sh takes just before and after the slow-load call.
 ## --load-window narrows the numbers (not the PNG) to the time the load generator ran: bench/metrics-matrix.sh watches for the

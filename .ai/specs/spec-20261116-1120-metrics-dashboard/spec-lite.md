@@ -4,7 +4,7 @@ title: Metrics dashboard for the FrankenPHP family
 type: feature
 size: M
 priority: P2
-status: in-progress
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-16; standing approval)

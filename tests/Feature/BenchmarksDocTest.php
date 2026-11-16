@@ -423,7 +423,7 @@ test('AC-7 BENCHMARKS.md quotes the committed slow-load matrix', function (): vo
         expect($section)->toContain($needle);
     }
 
-    $files = glob(base_path('bench/results/slow-load/*/*.json')) ?: [];
+    $files = glob(base_path('bench/results/slow-load/2026-11-0{3,4}/*.json'), GLOB_BRACE) ?: [];
     expect($files)->toHaveCount(8);
 
     foreach ($files as $file) {
@@ -838,4 +838,36 @@ test('AC-5 BENCHMARKS.md has the metrics during slow I/O section with its method
         ->toContain('BR-21')
         ->toContain('88 MB')
         ->toContain('135 MB');
+
+    foreach (['### Results per cell', '### Cost of the stack', '### Screenshots', '### What the numbers say', '### Surprises', '### Interview story'] as $heading) {
+        expect($section)->toContain($heading);
+    }
+
+    $cells = ['http-frankenphp-14', 'http-frankenphp-auto', 'http-frankenphp-worker-4', 'http-frankenphp-octane-4', 'sse-frankenphp-14', 'sse-frankenphp-auto', 'sse-frankenphp-worker-4', 'sse-frankenphp-octane-4'];
+
+    foreach ($cells as $cell) {
+        $load = json_decode((string) file_get_contents(base_path("bench/results/slow-load/2026-11-16/{$cell}.json")), true, flags: JSON_THROW_ON_ERROR);
+        $metrics = json_decode((string) file_get_contents(base_path("bench/results/metrics/2026-11-16/{$cell}.json")), true, flags: JSON_THROW_ON_ERROR);
+
+        expect($load['repeats'])->toBe(3)
+            ->and($metrics['scrape_coverage'])->toBeGreaterThanOrEqual(0.8)
+            ->and(base_path("bench/results/metrics/2026-11-16/{$cell}.png"))->toBeFile();
+
+        preg_match('/^\| `'.preg_quote($cell, '/').'` \|.*$/m', $section, $row);
+        $healthP95 = (int) round($load['median']['health_p95_ms']);
+
+        expect($row[0] ?? '')->toContain(sprintf('| %.1f |', $load['median']['load_rps']))
+            ->toContain($healthP95.' ms')
+            ->toContain('| '.$metrics['metrics']['max_busy_threads'].' |')
+            ->toContain('| '.$metrics['metrics']['max_queue_depth'].' |');
+    }
+
+    foreach (['http-frankenphp-14', 'sse-frankenphp-14', 'sse-frankenphp-auto', 'sse-frankenphp-worker-4'] as $shot) {
+        expect($section)->toContain("](bench/results/metrics/2026-11-16/{$shot}.png)");
+    }
+
+    preg_match('/### Interview story\n(.*?)(?=^##|\z)/ms', $section, $story);
+    $sentences = preg_split('/(?<=[.!?])\s+(?=[A-Z])/', trim($story[1] ?? '')) ?: [];
+    expect(count($sentences))->toBeGreaterThanOrEqual(3)->toBeLessThanOrEqual(7)
+        ->and($story[1] ?? '')->toContain('2358 ms')->toContain('140');
 });
