@@ -26,6 +26,8 @@ final class ShowLabPhotosController extends Controller
         return Inertia::render('Lab/Photos', [
             'howItWorks' => $guides->howItWorks('photos'),
             'guideHref' => route('ai.guides.show', ['key' => 'photos'], absolute: false),
+            'guideKey' => 'photos',
+            'teach' => $guides->teach('photos'),
             'photos' => array_map(fn (PhotoLabItem $photo): array => $photo->toArray(), $page->items()),
             'pagination' => [
                 'page' => $page->currentPage(),

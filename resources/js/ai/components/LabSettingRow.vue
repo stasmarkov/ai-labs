@@ -148,13 +148,13 @@ const errors = computed(() => Object.values(form.errors).filter((error): error i
         <form class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2" @submit.prevent="save">
             <div class="flex min-w-0 flex-col gap-1">
                 <label :for="`${idPrefix}-provider`" class="text-[13px] font-medium text-muted">Provider</label>
-                <select :id="`${idPrefix}-provider`" v-model="form.provider" class="min-h-10 rounded-sm border border-field bg-white px-3 text-[15px] text-ink">
+                <select :id="`${idPrefix}-provider`" v-model="form.provider" :aria-describedby="`${idPrefix}-hint`" class="min-h-10 rounded-sm border border-field bg-white px-3 text-[15px] text-ink">
                     <option v-for="entry in row.providers" :key="entry.name" :value="entry.name">{{ entry.name }}</option>
                 </select>
             </div>
             <div class="flex min-w-0 flex-col gap-1">
                 <label :for="`${idPrefix}-model`" class="text-[13px] font-medium text-muted">Model</label>
-                <select :id="`${idPrefix}-model`" v-model="form.model" class="min-h-10 rounded-sm border border-field bg-white px-3 text-[15px] text-ink">
+                <select :id="`${idPrefix}-model`" v-model="form.model" :aria-describedby="`${idPrefix}-hint`" class="min-h-10 rounded-sm border border-field bg-white px-3 text-[15px] text-ink">
                     <option v-for="id in models" :key="id" :value="id">{{ id }}</option>
                     <option v-if="provider?.free" :value="OTHER">Other id</option>
                 </select>
@@ -166,6 +166,9 @@ const errors = computed(() => Object.values(form.errors).filter((error): error i
                 label="Other model id"
                 placeholder="model-id"
             />
+            <p :id="`${idPrefix}-hint`" class="m-0 text-[13px] text-muted sm:col-span-2">
+                The provider runs the model; the model is the id it serves. A free provider also accepts another id.
+            </p>
             <p v-if="provider?.note" class="m-0 text-[13px] text-muted sm:col-span-2">{{ provider.note }}</p>
 
             <label v-if="needsAcknowledgement" class="flex items-start gap-2 text-[15px] sm:col-span-2">

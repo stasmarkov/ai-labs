@@ -88,4 +88,19 @@ return [
         ],
     ],
     'related' => ['providers', 'run-log'],
+    'build' => [
+        ['step' => 'Keep each prompt in a versioned file', 'detail' => 'One file per name and version, so history is in source control.', 'tab' => 'recipes'],
+        ['step' => 'Name the active version in config', 'detail' => 'A setting picks the version, and changing it needs no code change.', 'tab' => 'recipes'],
+        ['step' => 'Load through one reader', 'detail' => 'A single class reads the file, fills variables and fails clearly when a file is missing.', 'tab' => 'support'],
+        ['step' => 'Log the version with the run', 'detail' => 'Record name and version on every run, so results can be compared per prompt.', 'tab' => 'support'],
+    ],
+    'watch' => [
+        ['point' => 'Edits change old results', 'detail' => 'Editing a version in place breaks comparisons. Add a new version instead.', 'tab' => 'failures'],
+        ['point' => 'Missing files', 'detail' => 'A wrong setting points to a file that does not exist. Fail at boot or with a clear message.', 'tab' => 'failures'],
+        ['point' => 'Prompts are code', 'detail' => 'Review them, test them and keep secrets out.', 'tab' => 'support'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Customer support bots', 'problem' => 'The tone of replies needs tuning.', 'how' => 'Add a version, switch the setting and compare runs per version.'],
+        ['domain' => 'Content teams', 'problem' => 'Editors adjust style rules often.', 'how' => 'Keep the style prompt as a file they can version and review.'],
+    ],
 ];

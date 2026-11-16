@@ -7,7 +7,10 @@ export default { layout: LabLayout };
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import LabButton from '../../components/LabButton.vue';
+import LabExamples from '../../components/LabExamples.vue';
 import LabHowItWorks from '../../components/LabHowItWorks.vue';
+import LabTeach from '../../components/LabTeach.vue';
+import type { Teach } from '../../components/LabTeach.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabSimilarityBar from '../../components/LabSimilarityBar.vue';
 import LabTag from '../../components/LabTag.vue';
@@ -46,6 +49,7 @@ interface Column {
 const props = defineProps<{
     howItWorks: GuideStep[];
     guideHref: string;
+    teach: Teach;
     searchUrl: string;
     maxQueryLength: number;
     k: number;
@@ -62,6 +66,8 @@ const MODES: Array<Pick<Column, 'mode' | 'title' | 'note'>> = [
 function emptyColumns(): Column[] {
     return MODES.map((mode) => ({ ...mode, matches: [], timings: null, elapsedMs: null, failure: null, done: false }));
 }
+
+const EXAMPLES = ['how do queues retry failed jobs', 'how does hybrid search rank results', 'what does a rate limiter protect'];
 
 const query = ref(presetQuery());
 const limit = ref(String(props.k));
@@ -149,17 +155,16 @@ async function search(): Promise<void> {
         Embeddings: <span class="font-mono">{{ embeddingsProvider.provider }}</span> / <span class="font-mono">{{ embeddingsProvider.model }}</span>
     </p>
 
-    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
-
     <form class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end" @submit.prevent="search">
         <div class="min-w-0 flex-1">
             <LabTextInput id="docs-query" v-model="query" type="search" label="Query" placeholder="e.g. how do queues retry failed jobs" />
         </div>
-        <div class="sm:w-28">
-            <LabTextInput id="docs-k" v-model="limit" type="number" label="Results per mode" />
+        <div class="sm:w-32">
+            <LabTextInput id="docs-k" v-model="limit" type="number" label="Results per mode" placeholder="e.g. 5" />
         </div>
         <LabButton type="submit" :disabled="!canSearch">{{ loading ? 'Searching…' : 'Search' }}</LabButton>
     </form>
+    <LabExamples class="mt-3" label="Example queries" :examples="EXAMPLES" :disabled="loading" @pick="query = $event" />
     <p v-if="query.length > maxQueryLength" role="alert" class="mt-2 text-[13px] text-danger">
         The query is limited to {{ maxQueryLength }} characters.
     </p>
@@ -202,4 +207,10 @@ async function search(): Promise<void> {
             </ol>
         </section>
     </div>
+
+    <LabTeach :teach="teach">
+        <template #works>
+            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
+        </template>
+    </LabTeach>
 </template>

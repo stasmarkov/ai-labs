@@ -17,6 +17,8 @@ final class ShowLabDocsController extends Controller
         return Inertia::render('Lab/Docs', [
             'howItWorks' => $guides->howItWorks('docs'),
             'guideHref' => route('ai.guides.show', ['key' => 'docs'], false),
+            'guideKey' => 'docs',
+            'teach' => $guides->teach('docs'),
             'searchUrl' => route('docs.search', [], false),
             'embeddingsProvider' => $providers->embeddings('embeddings-docs'),
             'maxQueryLength' => DocsSearchService::MAX_QUERY_LENGTH,

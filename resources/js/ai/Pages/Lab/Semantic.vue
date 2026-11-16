@@ -7,7 +7,10 @@ export default { layout: LabLayout };
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import LabButton from '../../components/LabButton.vue';
+import LabExamples from '../../components/LabExamples.vue';
 import LabHowItWorks from '../../components/LabHowItWorks.vue';
+import LabTeach from '../../components/LabTeach.vue';
+import type { Teach } from '../../components/LabTeach.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabSimilarityBar from '../../components/LabSimilarityBar.vue';
 import LabTextInput from '../../components/LabTextInput.vue';
@@ -32,10 +35,13 @@ interface ListingMatch {
 const props = defineProps<{
     howItWorks: GuideStep[];
     guideHref: string;
+    teach: Teach;
     searchUrl: string;
     maxQueryLength: number;
     embeddingsProvider: { provider: string; model: string };
 }>();
+
+const EXAMPLES = ['roomy family car for long trips', 'cheap city car that is easy to park', 'sporty convertible for summer weekends'];
 
 const query = ref(presetQuery());
 const loading = ref(false);
@@ -91,14 +97,13 @@ async function search(): Promise<void> {
         Embeddings: <span class="font-mono">{{ embeddingsProvider.provider }}</span> / <span class="font-mono">{{ embeddingsProvider.model }}</span>
     </p>
 
-    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
-
     <form class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end" @submit.prevent="search">
         <div class="min-w-0 flex-1">
             <LabTextInput id="semantic-query" v-model="query" type="search" label="Query" placeholder="e.g. roomy family car for long trips" />
         </div>
         <LabButton type="submit" :disabled="!canSearch">{{ loading ? 'Searching…' : 'Search' }}</LabButton>
     </form>
+    <LabExamples class="mt-3" label="Example queries" :examples="EXAMPLES" :disabled="loading" @pick="query = $event" />
     <p v-if="query.length > maxQueryLength" role="alert" class="mt-2 text-[13px] text-danger">
         The query is limited to {{ maxQueryLength }} characters.
     </p>
@@ -131,4 +136,10 @@ async function search(): Promise<void> {
             </dl>
         </section>
     </Teleport>
+
+    <LabTeach :teach="teach">
+        <template #works>
+            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
+        </template>
+    </LabTeach>
 </template>

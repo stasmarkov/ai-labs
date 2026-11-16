@@ -6,7 +6,10 @@ export default { layout: LabLayout };
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import LabExamples from '../../components/LabExamples.vue';
 import LabHowItWorks from '../../components/LabHowItWorks.vue';
+import LabTeach from '../../components/LabTeach.vue';
+import type { Teach } from '../../components/LabTeach.vue';
 import LabButton from '../../components/LabButton.vue';
 import LabEventRow from '../../components/LabEventRow.vue';
 import LabMetric from '../../components/LabMetric.vue';
@@ -40,6 +43,7 @@ interface RunRow {
 const props = defineProps<{
     howItWorks: GuideStep[];
     guideHref: string;
+    teach: Teach;
     listings: ListingOption[];
     describeUrl: string;
     runUrl: string;
@@ -54,6 +58,7 @@ const stream = useEventStream();
 const { provider, override: providerOverride } = useProviderChoice(props.enabledTextProviders);
 const selectedId = ref(props.listings[0] !== undefined ? String(props.listings[0].id) : '');
 const freeId = ref('');
+const exampleIds = computed(() => props.listings.slice(0, 3).map((listing) => String(listing.id)));
 const run = ref<RunRow | null>(null);
 const runMessage = ref<string | null>(null);
 let lookupToken = 0;
@@ -161,25 +166,28 @@ onBeforeUnmount(() => {
         Streams the description as server-sent events and shows what arrives, when.
     </p>
 
-    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="eventTypes" :state="stream.status.value" />
-
-    <form class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end" @submit.prevent="start">
-        <div class="flex min-w-0 flex-1 flex-col gap-1">
+    <form class="mt-6 flex flex-col gap-4" @submit.prevent="start">
+        <div class="flex min-w-0 flex-col gap-1">
             <label for="describe-listing" class="text-[13px] font-medium text-muted">Listing</label>
             <select
                 id="describe-listing"
                 v-model="selectedId"
-                class="min-h-10 w-full min-w-0 rounded-sm border border-field bg-white px-3 text-[15px] text-ink"
+                aria-describedby="describe-listing-hint"
+                class="min-h-10 w-full min-w-40 rounded-sm border border-field bg-white px-3 text-[15px] text-ink"
             >
                 <option v-for="listing in listings" :key="listing.id" :value="String(listing.id)">
                     {{ listing.id }} · {{ listing.title }}
                 </option>
             </select>
+            <p id="describe-listing-hint" class="m-0 text-[13px] text-muted">The listing whose description the model writes. Or type an id below.</p>
         </div>
-        <div class="sm:w-40">
-            <LabTextInput id="describe-free-id" v-model="freeId" label="Or a listing id" placeholder="e.g. 4812" />
+        <div class="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+            <div class="sm:w-40">
+                <LabTextInput id="describe-free-id" v-model="freeId" label="Or a listing id" placeholder="e.g. 4812" />
+            </div>
+            <LabProviderSelect id="describe-provider" v-model="provider" :providers="enabledTextProviders" :disabled="isStreaming" />
         </div>
-        <LabProviderSelect id="describe-provider" v-model="provider" :providers="enabledTextProviders" :disabled="isStreaming" />
+        <LabExamples label="Example listing ids" :examples="exampleIds" :disabled="isStreaming" @pick="freeId = $event" />
         <div class="flex gap-2">
             <LabButton type="submit" :disabled="!canStart">Start</LabButton>
             <LabButton variant="secondary" :disabled="!isStreaming" @click="stream.stop()">Stop</LabButton>
@@ -248,4 +256,10 @@ onBeforeUnmount(() => {
             </section>
         </div>
     </Teleport>
+
+    <LabTeach :teach="teach">
+        <template #works>
+            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="eventTypes" :state="stream.status.value" />
+        </template>
+    </LabTeach>
 </template>

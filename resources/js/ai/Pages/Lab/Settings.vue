@@ -7,8 +7,11 @@ export default { layout: LabLayout };
 <script setup lang="ts">
 import LabSettingRow from '../../components/LabSettingRow.vue';
 import type { SettingRow } from '../../components/LabSettingRow.vue';
+import LabTeach from '../../components/LabTeach.vue';
+import type { Teach } from '../../components/LabTeach.vue';
 
 const props = defineProps<{
+    teach: Teach;
     rows: SettingRow[];
     flash: { feature: string; message: string } | null;
     saveUrl: string;
@@ -27,6 +30,8 @@ function urlFor(template: string, feature: string): string {
         Pick the provider and model of each feature. A choice made on a lab page wins for that request; a saved choice
         wins over configuration; reset returns the feature to configuration.
     </p>
+
+    <LabTeach :teach="teach" />
 
     <ul class="mt-6 grid list-none grid-cols-1 gap-4 p-0">
         <li v-for="row in rows" :key="row.feature" class="min-w-0">

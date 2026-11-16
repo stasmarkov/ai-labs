@@ -130,4 +130,23 @@ return [
         ],
     ],
     'related' => ['nl-search', 'chat'],
+    'build' => [
+        ['step' => 'Describe the tool for the model', 'detail' => 'Give each tool a name, a description and a typed parameter schema, so the model knows when to call it.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],
+        ['step' => 'Validate every call in code', 'detail' => 'Treat tool arguments as untrusted input and check them with normal validation rules before running anything.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/validation'],
+        ['step' => 'Keep the first tools read-only', 'detail' => 'Start with a search tool that cannot change data, so a wrong call costs nothing.', 'tab' => 'recipes'],
+        ['step' => 'Repair a bad call once', 'detail' => 'Return the validation error to the model as the tool result and allow one retry.', 'tab' => 'recipes'],
+        ['step' => 'Cap the steps', 'detail' => 'Stop after a fixed number of tool calls and say that the limit was reached.', 'tab' => 'support'],
+        ['step' => 'Log every tool call', 'detail' => 'Store the tool, arguments, result and duration, so a strange answer can be traced.', 'tab' => 'support'],
+    ],
+    'watch' => [
+        ['point' => 'Invented listings', 'detail' => 'The model may name a result the tool never returned. Show the tool results next to the answer.', 'tab' => 'failures'],
+        ['point' => 'Repeated calls', 'detail' => 'A model can repeat the same search until the cap. Count steps and stop the loop.', 'tab' => 'failures'],
+        ['point' => 'Tool results are data, not instructions', 'detail' => 'Text inside a result can try to steer the model. State that in the prompt.', 'tab' => 'support'],
+        ['point' => 'Guard the question', 'detail' => 'Check input before the first request, as for any model call.', 'tab' => 'support'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Customer service', 'problem' => 'A bot should look up an order, not guess its status.', 'how' => 'Give it a read-only order lookup tool and answer from the result.'],
+        ['domain' => 'Travel', 'problem' => 'A user asks for flights and hotels in one sentence.', 'how' => 'Expose search tools, validate the arguments and answer from what they return.'],
+        ['domain' => 'Internal tools', 'problem' => 'Staff ask questions about stock or tickets.', 'how' => 'Wrap the existing queries as tools and log every call.'],
+    ],
 ];

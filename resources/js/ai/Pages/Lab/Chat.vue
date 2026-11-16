@@ -7,7 +7,10 @@ export default { layout: LabLayout };
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import LabButton from '../../components/LabButton.vue';
+import LabExamples from '../../components/LabExamples.vue';
 import LabHowItWorks from '../../components/LabHowItWorks.vue';
+import LabTeach from '../../components/LabTeach.vue';
+import type { Teach } from '../../components/LabTeach.vue';
 import LabEventRow from '../../components/LabEventRow.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabProviderSelect from '../../components/LabProviderSelect.vue';
@@ -84,6 +87,7 @@ interface Turn {
 const props = defineProps<{
     howItWorks: GuideStep[];
     guideHref: string;
+    teach: Teach;
     askUrl: string;
     runUrl: string;
     idPlaceholder: string;
@@ -95,6 +99,8 @@ const props = defineProps<{
 
 const RUN_LOOKUP_ATTEMPTS = 5;
 const RUN_LOOKUP_DELAY_MS = 300;
+
+const EXAMPLES = ['how do queued jobs retry after a failure?', 'how does hybrid search rank results?', 'what is a rate limiter for?'];
 
 const question = ref(presetQuery());
 const turns = ref<Turn[]>([]);
@@ -393,8 +399,6 @@ onBeforeUnmount(() => {
         A conversation answered from the indexed docs with citations. Each follow-up carries the last few answers as history; sources are looked up for the newest question only.
     </p>
 
-    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="eventTypes" :state="stream.status.value" />
-
     <ol v-if="turns.length > 0" aria-label="Conversation" class="m-0 mt-6 flex list-none flex-col gap-8 p-0">
         <li v-for="turn in turns" :key="turn.id" class="min-w-0 border-t border-rule pt-6" :data-turn="turn.id">
             <h2 class="m-0 text-[13px] font-medium text-muted">You</h2>
@@ -487,6 +491,7 @@ onBeforeUnmount(() => {
                 {{ length }} / {{ maxQuestionLength }} characters
             </p>
         </div>
+        <LabExamples label="Example questions" :examples="EXAMPLES" :disabled="isStreaming" @pick="question = $event" />
         <LabProviderSelect id="chat-provider" v-model="provider" :providers="enabledTextProviders" :disabled="isStreaming" />
         <div class="flex items-center gap-2">
             <input id="chat-use-cache" v-model="useCache" type="checkbox" class="size-4 accent-signal" />
@@ -534,4 +539,10 @@ onBeforeUnmount(() => {
             </section>
         </div>
     </Teleport>
+
+    <LabTeach :teach="teach">
+        <template #works>
+            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="eventTypes" :state="stream.status.value" />
+        </template>
+    </LabTeach>
 </template>

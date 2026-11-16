@@ -152,4 +152,24 @@ return [
         ],
     ],
     'related' => ['docs', 'guards', 'prompts'],
+    'build' => [
+        ['step' => 'Split the work into fixed phases', 'detail' => 'Plan, search, take notes and write a report as separate steps, each stored before the next starts.', 'tab' => 'recipes'],
+        ['step' => 'Let a planner agent produce sub-questions', 'detail' => 'Ask for a short list as structured output and validate its size and content.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],
+        ['step' => 'Make search code, not a model choice', 'detail' => 'Run retrieval in your own code for each sub-question, so cost and sources stay predictable.', 'tab' => 'recipes'],
+        ['step' => 'Take notes from chunks as data', 'detail' => 'A note agent reads retrieved chunks and returns short notes with source ids.', 'tab' => 'recipes'],
+        ['step' => 'Write the report from notes only', 'detail' => 'Require a citation per claim and drop any citation that is not one of the sources.', 'tab' => 'support'],
+        ['step' => 'Enforce caps in code', 'detail' => 'Limit sub-questions, tokens and time in PHP, and end the run with a clear reason.', 'tab' => 'support'],
+        ['step' => 'Store every phase', 'detail' => 'Persist plan, notes and report so a run can be replayed with no model call.', 'tab' => 'recipes'],
+    ],
+    'watch' => [
+        ['point' => 'Cost multiplies', 'detail' => 'One topic makes many calls. Put a hard cap on calls and tokens per run.', 'tab' => 'support'],
+        ['point' => 'Plans can be invalid', 'detail' => 'The planner may return nothing usable. Validate it and fail the run clearly.', 'tab' => 'failures'],
+        ['point' => 'Citations can mislead', 'detail' => 'A source can be cited for a claim it does not make. Spot check against the chunk.', 'tab' => 'failures'],
+        ['point' => 'Long runs need a queue', 'detail' => 'A run takes tens of seconds. Do not hold a web request open for it.', 'tab' => 'support'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Due diligence', 'problem' => 'An analyst needs a cited overview of a company.', 'how' => 'Plan sub-questions, search the filings and write a report where every claim has a source.'],
+        ['domain' => 'Market research', 'problem' => 'A team needs a summary of a topic from many reports.', 'how' => 'Split the topic, note per report and write a cited synthesis.'],
+        ['domain' => 'Legal research', 'problem' => 'A lawyer needs the rules that apply to a case.', 'how' => 'Search the statute texts per sub-question and report with citations.'],
+    ],
 ];

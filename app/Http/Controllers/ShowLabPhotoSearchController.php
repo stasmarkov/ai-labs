@@ -22,6 +22,8 @@ final class ShowLabPhotoSearchController extends Controller
         return Inertia::render('Lab/PhotoSearch', [
             'howItWorks' => $guides->howItWorks('photo-search'),
             'guideHref' => route('ai.guides.show', ['key' => 'photo-search'], false),
+            'guideKey' => 'photo-search',
+            'teach' => $guides->teach('photo-search'),
             'searchUrl' => route('photos.search', [], false),
             'embeddingsProvider' => $providers->embeddings('embeddings-photos'),
             'minQueryLength' => PhotoTextSearchService::MIN_QUERY_LENGTH,

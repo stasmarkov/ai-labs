@@ -135,4 +135,22 @@ return [
         ],
     ],
     'related' => ['semantic', 'docs'],
+    'build' => [
+        ['step' => 'Define the filters as a schema', 'detail' => 'List every filter with its type and allowed values, and ask the model for structured output in exactly that shape.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],
+        ['step' => 'Validate the model output with the normal rules', 'detail' => 'Run the extracted values through the same validation as the filter form, and reject what it rejects.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/validation'],
+        ['step' => 'Reuse the existing search', 'detail' => 'Pass the checked filters to the search code the listings page already uses, so the model adds no new query path.', 'tab' => 'recipes'],
+        ['step' => 'Guard the sentence at the door', 'detail' => 'Limit its length and check it for injection patterns before the model sees it.', 'tab' => 'support'],
+        ['step' => 'Show the filters that were understood', 'detail' => 'Display the extracted filters next to the results, so a wrong reading is easy to see and fix.', 'tab' => 'support'],
+    ],
+    'watch' => [
+        ['point' => 'Invented filters', 'detail' => 'A model may fill a field the user never mentioned. Validate, and leave unmentioned fields empty.', 'tab' => 'failures'],
+        ['point' => 'A 422 from the model', 'detail' => 'A value outside the allowed list fails validation. Show the extracted values so the user can see why.', 'tab' => 'failures'],
+        ['point' => 'Latency on every search', 'detail' => 'One model call comes before the query. Cache repeated sentences and keep the model small.', 'tab' => 'support'],
+        ['point' => 'The model is not a security layer', 'detail' => 'Everything it returns is untrusted input. Never build SQL or paths from it.', 'tab' => 'failures'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Travel booking', 'problem' => 'A traveller writes "quiet beach hotel in May under 150".', 'how' => 'Turn the sentence into destination, month, price and tags, then run the normal availability search.'],
+        ['domain' => 'HR tools', 'problem' => 'A manager asks for "senior Laravel developers in Berlin".', 'how' => 'Extract role, seniority and city into filters and search the existing people table.'],
+        ['domain' => 'Analytics', 'problem' => 'An analyst asks for "orders over 500 last week".', 'how' => 'Extract the metric and date range, validate them and run a prepared report.'],
+    ],
 ];

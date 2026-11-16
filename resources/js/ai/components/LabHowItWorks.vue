@@ -9,6 +9,7 @@ const props = defineProps<{
     events: string[];
     state: GuideRunState;
     guideHref: string;
+    bare?: boolean;
 }>();
 
 const active = computed(() => activeStep(props.steps, props.events, props.state));
@@ -63,8 +64,8 @@ function endNote(index: number): string | null {
 </script>
 
 <template>
-    <details v-if="steps.length > 0" class="mt-4 rounded-sm border border-rule px-4 py-3">
-        <summary class="cursor-pointer text-[15px] font-medium">How it works</summary>
+    <component :is="bare ? 'div' : 'details'" v-if="steps.length > 0" :class="bare ? '' : 'mt-4 rounded-sm border border-rule px-4 py-3'">
+        <summary v-if="!bare" class="cursor-pointer text-[15px] font-medium">How it works</summary>
         <ol class="m-0 mt-3 flex list-none flex-col gap-3 p-0">
             <li
                 v-for="(step, index) in steps"
@@ -84,6 +85,6 @@ function endNote(index: number): string | null {
                 </div>
             </li>
         </ol>
-        <Link :href="guideHref" class="mt-3 inline-block text-[13px] text-ink underline">Open the full guide</Link>
-    </details>
+        <Link v-if="!bare" :href="guideHref" class="mt-3 inline-block text-[13px] text-ink underline">Open the full guide</Link>
+    </component>
 </template>

@@ -147,4 +147,23 @@ return [
         ],
     ],
     'related' => ['nl-search', 'guards', 'prompts'],
+    'build' => [
+        ['step' => 'Compute the facts in code', 'detail' => 'Work out median price, price ratio and register hits in PHP, and send them to the model as data.', 'tab' => 'recipes'],
+        ['step' => 'Use a closed list of reasons', 'detail' => 'Ask for a risk number and up to four reasons from a fixed list, as structured output.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],
+        ['step' => 'Validate the answer strictly', 'detail' => 'Check range, type, distinct reasons and length with rules, and ask again once on a bad answer.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/validation'],
+        ['step' => 'Put a floor under the risk in code', 'detail' => 'Hard signals such as an injection pattern or a reported VIN raise the risk whatever the model said.', 'tab' => 'recipes'],
+        ['step' => 'Choose the threshold from an eval', 'detail' => 'Score a labelled set per model and pick the cut-off with the best F1.', 'tab' => 'support'],
+        ['step' => 'Keep a human in the loop', 'detail' => 'Show reasons and the floor reason to a reviewer instead of acting on the verdict automatically.', 'tab' => 'support'],
+    ],
+    'watch' => [
+        ['point' => 'False positives', 'detail' => 'A legitimate phrase can look like a scam to a small model. Keep hard negatives in the eval.', 'tab' => 'failures'],
+        ['point' => 'Prompt injection by the content', 'detail' => 'The listing is attacker text. Escape it, label it as data and floor the risk in code.', 'tab' => 'failures'],
+        ['point' => 'A cost per listing', 'detail' => 'Every listing is a model call. Moderate on change, queue the work and cache by content hash.', 'tab' => 'support'],
+        ['point' => 'Models differ', 'detail' => 'Each model rates on its own scale. Set one threshold per model.', 'tab' => 'failures'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Support tickets', 'problem' => 'Spam and abuse reach the agents.', 'how' => 'Rate each ticket with a closed list of reasons and route risky ones to a person.'],
+        ['domain' => 'Invoice checks', 'problem' => 'Fraud shows up as odd amounts or repeated vendors.', 'how' => 'Compute the ratios in code, let the model name reasons and floor known signals.'],
+        ['domain' => 'User reviews', 'problem' => 'Fake reviews harm trust.', 'how' => 'Moderate with facts such as account age and send borderline cases to review.'],
+    ],
 ];

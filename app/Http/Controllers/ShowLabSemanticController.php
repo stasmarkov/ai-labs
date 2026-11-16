@@ -17,6 +17,8 @@ final class ShowLabSemanticController extends Controller
         return Inertia::render('Lab/Semantic', [
             'howItWorks' => $guides->howItWorks('semantic'),
             'guideHref' => route('ai.guides.show', ['key' => 'semantic'], false),
+            'guideKey' => 'semantic',
+            'teach' => $guides->teach('semantic'),
             'searchUrl' => route('listings.semantic', [], false),
             'embeddingsProvider' => $providers->embeddings('embeddings-listings'),
             'maxQueryLength' => SemanticSearchRequest::MAX_QUERY_LENGTH,

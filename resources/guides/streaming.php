@@ -97,4 +97,22 @@ return [
         ],
     ],
     'related' => ['run-log', 'chat'],
+    'build' => [
+        ['step' => 'Stream a line per event', 'detail' => 'Send newline-delimited JSON events, each with a type and a payload, and flush after each one.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/responses#streamed-responses'],
+        ['step' => 'Disable buffering on the path', 'detail' => 'Turn off output buffering and proxy buffering, and test on the server you deploy to.', 'tab' => 'recipes', 'doc' => 'https://frankenphp.dev/docs/'],
+        ['step' => 'Read the stream in the browser', 'detail' => 'Use the Fetch API reader, split by lines and append text as events arrive.', 'tab' => 'recipes'],
+        ['step' => 'Mask errors', 'detail' => 'Send a safe error event and keep details in the log.', 'tab' => 'support'],
+        ['step' => 'End with a marker', 'detail' => 'Finish every stream with a done event, so the client can tell a clean end from a cut.', 'tab' => 'support'],
+    ],
+    'watch' => [
+        ['point' => 'Buffering', 'detail' => 'Any layer that buffers the response turns a stream into a block at the end.', 'tab' => 'failures'],
+        ['point' => 'Stop must reach the model', 'detail' => 'Closing the page does not always cancel the upstream call. Check that it does.', 'tab' => 'failures'],
+        ['point' => 'Workers are held', 'detail' => 'A streamed answer occupies a thread for its whole length.', 'tab' => 'support'],
+        ['point' => 'Errors mid-stream', 'detail' => 'Headers are already sent, so an error needs an event, not a status code.', 'tab' => 'failures'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Chat products', 'problem' => 'Users wait for a long answer.', 'how' => 'Stream tokens as they arrive so the first words show in under a second.'],
+        ['domain' => 'Reports', 'problem' => 'A long export should show progress.', 'how' => 'Stream progress events and a final link.'],
+        ['domain' => 'Live logs', 'problem' => 'Operators watch a job run.', 'how' => 'Stream log lines from the job as events.'],
+    ],
 ];

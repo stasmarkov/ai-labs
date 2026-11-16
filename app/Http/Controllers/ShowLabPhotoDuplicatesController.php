@@ -22,6 +22,8 @@ final class ShowLabPhotoDuplicatesController extends Controller
         return Inertia::render('Lab/PhotoDuplicates', [
             'howItWorks' => $guides->howItWorks('photo-duplicates'),
             'guideHref' => route('ai.guides.show', ['key' => 'photo-duplicates'], absolute: false),
+            'guideKey' => 'photo-duplicates',
+            'teach' => $guides->teach('photo-duplicates'),
             'label' => $review->label(),
             'cutoff' => $review->cutoff(),
             'summary' => $review->summary()->toArray(),

@@ -90,4 +90,22 @@ return [
         ],
     ],
     'related' => ['photos', 'similar-photos', 'providers'],
+    'build' => [
+        ['step' => 'Embed the images', 'detail' => 'Use an image encoder and store normalised vectors per photo.', 'tab' => 'recipes'],
+        ['step' => 'Link close vectors', 'detail' => 'Connect any two photos above a similarity cutoff, and take each connected group as one cluster.', 'tab' => 'recipes'],
+        ['step' => 'Ask a vision model about a whole group', 'detail' => 'Send the group in one request and ask for the best photo and the reason, as structured output.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],
+        ['step' => 'Review by hand, never delete', 'detail' => 'Let a person mark photos in the review page and store the choice, so no file is removed by a model.', 'tab' => 'support'],
+        ['step' => 'Keep reviews across rebuilds', 'detail' => 'Key the review on photo ids, so a new grouping does not wipe what was decided.', 'tab' => 'support'],
+    ],
+    'watch' => [
+        ['point' => 'Cutoff trade-off', 'detail' => 'Too low groups different cars, too high misses a cropped copy. Check it on pairs you know.', 'tab' => 'failures'],
+        ['point' => 'Chains join strangers', 'detail' => 'Connected groups can link A to C through B. Review large groups first.', 'tab' => 'failures'],
+        ['point' => 'The judge can fail', 'detail' => 'A vision model may time out or give an invalid pick. Keep the group and show the failure.', 'tab' => 'failures'],
+        ['point' => 'Never act on the verdict alone', 'detail' => 'A deletion based on a model answer cannot be undone. Make the review a human step.', 'tab' => 'support'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Insurance claims', 'problem' => 'The same photo is sent with several claims.', 'how' => 'Group near-identical images across claims and flag the groups for an adjuster.'],
+        ['domain' => 'Real estate listings', 'problem' => 'Agents upload the same room many times.', 'how' => 'Cluster the photos and let a person keep the best one.'],
+        ['domain' => 'Stock libraries', 'problem' => 'Contributors submit slightly edited copies.', 'how' => 'Join near copies by vector and review the groups before removing any.'],
+    ],
 ];

@@ -7,6 +7,8 @@ use App\Guides\GuideEventTypes;
 use App\Guides\GuideFacts;
 use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
+use App\Guides\GuideTeach;
+use App\Guides\InvalidGuideException;
 use App\Guides\SnippetResolver;
 
 const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation', 'admin-assistant', 'research', 'playground'];
@@ -519,4 +521,100 @@ it('AC-5 the metrics guide has six non-empty tabs, no references, answers 200 an
     $this->withoutVite();
     $this->get('/ai/guides/metrics')->assertOk();
     $this->get('/ai/guides')->assertOk()->assertSee('Metrics: watching the thread pool');
+});
+
+const TEACH_FEATURE_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation', 'research', 'playground', 'admin-assistant'];
+
+/**
+ * @return list<string>
+ */
+function teachTexts(GuideTeach $teach): array
+{
+    $texts = [];
+    foreach ([...$teach->works, ...$teach->build, ...$teach->watch, ...$teach->elsewhere] as $row) {
+        foreach ($row as $value) {
+            if (is_string($value)) {
+                $texts[] = $value;
+            }
+        }
+    }
+
+    return $texts;
+}
+
+it('AC-6 every feature and foundation guide teaches how to build it, what to watch and where else it applies', function (string $key): void {
+    $teach = app(GuideRepository::class)->teach($key);
+
+    expect($teach->key)->toBe($key)
+        ->and($teach->title)->not->toBe('')
+        ->and(count($teach->works))->toBeBetween(3, 6)
+        ->and(count($teach->build))->toBeBetween(4, 8)
+        ->and(count($teach->watch))->toBeBetween(3, 6)
+        ->and(count($teach->elsewhere))->toBeBetween(2, 3);
+
+    foreach ($teach->works as $row) {
+        expect($row['title'])->not->toBe('')->and($row['summary'])->not->toBe('')->and($row['summary'])->not->toMatch('/[`*]/');
+    }
+    foreach ($teach->build as $row) {
+        expect($row['tab'])->toBeIn([null, 'modify', 'support']);
+        if ($row['doc'] !== null) {
+            expect(parse_url($row['doc'], PHP_URL_HOST))->toBeIn(['laravel.com', 'frankenphp.dev', 'ollama.com', 'github.com']);
+        }
+    }
+    foreach ($teach->watch as $row) {
+        expect($row['tab'])->toBeIn(['support']);
+    }
+})->with(ALL_FILLED_GUIDES);
+
+it('AC-6 keeps every teach row short and free of slice ids, markdown files and repo paths', function (string $key): void {
+    foreach (teachTexts(app(GuideRepository::class)->teach($key)) as $text) {
+        expect(mb_strlen($text))->toBeLessThanOrEqual(240)
+            ->and($text)->not->toMatch('/\bSL-\d+/')
+            ->not->toMatch('/\.md\b/')
+            ->not->toMatch('#\b(app|resources|config|routes|database|bench)/#');
+    }
+})->with(ALL_FILLED_GUIDES);
+
+it('AC-6 teach rows never name an app class', function (string $key): void {
+    foreach (teachTexts(app(GuideRepository::class)->teach($key)) as $text) {
+        expect($text)->not->toMatch('/\bApp\\\\/')->not->toMatch('/\b[A-Z]\w+(Agent|Service|Controller|Repository)\b/');
+    }
+})->with(TEACH_FEATURE_GUIDES);
+
+it('AC-6 the teach sections stay optional and a guide without them still loads', function (): void {
+    $directory = sys_get_temp_dir().'/guides-'.bin2hex(random_bytes(4));
+    mkdir($directory);
+    file_put_contents($directory.'/plain.php', "<?php\nreturn ['kind' => 'foundation', 'title' => 'Plain', 'summary' => 'No teach.'];");
+
+    $repository = new GuideRepository($directory);
+    $guide = $repository->find('plain');
+    $teach = $repository->teach('plain');
+
+    expect($guide->build)->toBe([])
+        ->and($teach->build)->toBe([])
+        ->and($teach->watch)->toBe([])
+        ->and($teach->elsewhere)->toBe([]);
+
+    unlink($directory.'/plain.php');
+    rmdir($directory);
+});
+
+it('AC-6 rejects a build section outside 4 to 8 rows and a watch row with an unknown tab', function (): void {
+    $directory = sys_get_temp_dir().'/guides-'.bin2hex(random_bytes(4));
+    mkdir($directory);
+    $row = "['step' => 'Do it', 'detail' => 'Like this.']";
+    file_put_contents($directory.'/short.php', "<?php\nreturn ['kind' => 'foundation', 'title' => 'T', 'summary' => 'S', 'build' => [{$row}, {$row}]];");
+    file_put_contents($directory.'/tab.php', "<?php\nreturn ['kind' => 'foundation', 'title' => 'T', 'summary' => 'S', 'watch' => [['point' => 'a', 'detail' => 'b', 'tab' => 'nowhere']]];");
+
+    $repository = new GuideRepository($directory);
+
+    expect(fn () => $repository->find('short'))->toThrow(InvalidGuideException::class)
+        ->and(fn () => $repository->find('tab'))->toThrow(InvalidGuideException::class);
+
+    array_map('unlink', glob($directory.'/*.php'));
+    rmdir($directory);
+});
+
+it('AC-6 asking for the teach data of an unknown guide fails', function (): void {
+    expect(fn () => app(GuideRepository::class)->teach('nope'))->toThrow(InvalidGuideException::class);
 });

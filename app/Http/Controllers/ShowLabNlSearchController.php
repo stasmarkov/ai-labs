@@ -20,6 +20,8 @@ final class ShowLabNlSearchController extends Controller
         return Inertia::render('Lab/NlSearch', [
             'howItWorks' => $guides->howItWorks('nl-search'),
             'guideHref' => route('ai.guides.show', ['key' => 'nl-search'], false),
+            'guideKey' => 'nl-search',
+            'teach' => $guides->teach('nl-search'),
             'searchUrl' => route('listings.nl', [], false),
             'runUrl' => route('ai.runs.show', ['invocationId' => self::ID_PLACEHOLDER], false),
             'enabledTextProviders' => $providers->textOptions('nl-search'),

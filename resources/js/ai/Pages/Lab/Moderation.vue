@@ -7,6 +7,8 @@ export default { layout: LabLayout };
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue';
 import LabHowItWorks from '../../components/LabHowItWorks.vue';
+import LabTeach from '../../components/LabTeach.vue';
+import type { Teach } from '../../components/LabTeach.vue';
 import LabButton from '../../components/LabButton.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabProviderSelect from '../../components/LabProviderSelect.vue';
@@ -86,6 +88,7 @@ type Outcome =
 const props = defineProps<{
     howItWorks: GuideStep[];
     guideHref: string;
+    teach: Teach;
     moderateUrl: string;
     runUrl: string;
     idPlaceholder: string;
@@ -283,16 +286,14 @@ onBeforeUnmount(() => {
         A model rates how risky a listing is for a buyer. The app computes the facts it cannot know, such as the market price, and checks the answer before showing it.
     </p>
 
-    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
-
     <form class="mt-6 flex flex-col gap-4" @submit.prevent="submit">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-end">
-            <div class="flex min-w-0 flex-1 flex-col gap-1">
+        <div class="flex flex-col gap-4">
+            <div class="flex min-w-0 flex-col gap-1">
                 <label for="moderation-pick" class="text-[13px] font-medium text-muted">Pick a listing</label>
                 <select
                     id="moderation-pick"
                     v-model="pickedId"
-                    class="min-h-10 w-full min-w-0 rounded-sm border border-field bg-white px-3 text-[15px] text-ink"
+                    class="min-h-10 w-full min-w-40 rounded-sm border border-field bg-white px-3 text-[15px] text-ink"
                     @change="pick"
                 >
                     <option value="">Choose one of the first listings…</option>
@@ -302,7 +303,7 @@ onBeforeUnmount(() => {
             <div class="flex min-w-0 flex-col gap-1">
                 <span id="moderation-examples-label" class="text-[13px] font-medium text-muted">Load an example</span>
                 <div role="group" aria-labelledby="moderation-examples-label" class="flex flex-wrap gap-2">
-                    <LabButton v-for="example in examples" :key="example.label" variant="secondary" @click="loadExample(example)">
+                    <LabButton v-for="example in examples" :key="example.label" variant="secondary" data-example @click="loadExample(example)">
                         {{ example.label.replaceAll('_', ' ') }}
                     </LabButton>
                 </div>
@@ -310,13 +311,13 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2" @input="edited">
-            <LabTextInput id="moderation-title" v-model="title" label="Title" />
-            <LabTextInput id="moderation-price" v-model="priceEur" type="number" label="Price (EUR)" />
-            <LabTextInput id="moderation-make" v-model="make" label="Make" />
-            <LabTextInput id="moderation-model" v-model="model" label="Model" />
-            <LabTextInput id="moderation-year" v-model="year" type="number" label="Year" />
-            <LabTextInput id="moderation-mileage" v-model="mileageKm" type="number" label="Mileage (km)" />
-            <LabTextInput id="moderation-city" v-model="city" label="City" />
+            <LabTextInput id="moderation-title" v-model="title" label="Title" placeholder="e.g. 2018 Audi A4 Avant 2.0 TDI" />
+            <LabTextInput id="moderation-price" v-model="priceEur" type="number" label="Price (EUR)" placeholder="e.g. 18900" />
+            <LabTextInput id="moderation-make" v-model="make" label="Make" placeholder="e.g. Audi" />
+            <LabTextInput id="moderation-model" v-model="model" label="Model" placeholder="e.g. A4" />
+            <LabTextInput id="moderation-year" v-model="year" type="number" label="Year" placeholder="e.g. 2018" />
+            <LabTextInput id="moderation-mileage" v-model="mileageKm" type="number" label="Mileage (km)" placeholder="e.g. 96000" />
+            <LabTextInput id="moderation-city" v-model="city" label="City" placeholder="e.g. Munich" />
         </div>
 
         <div class="flex min-w-0 flex-col gap-1" @input="edited">
@@ -325,6 +326,7 @@ onBeforeUnmount(() => {
                 id="moderation-description"
                 v-model="description"
                 rows="6"
+                placeholder="e.g. One owner, full service history, new tyres. Call 0171 555 0100 for a viewing."
                 class="w-full min-w-0 rounded-sm border border-field bg-white px-3 py-2 text-[15px] text-ink"
             />
             <p class="m-0 text-[13px]" :class="descriptionLength > limits.description ? 'text-danger' : 'text-muted'">
@@ -454,4 +456,10 @@ onBeforeUnmount(() => {
             </section>
         </div>
     </Teleport>
+
+    <LabTeach :teach="teach">
+        <template #works>
+            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
+        </template>
+    </LabTeach>
 </template>

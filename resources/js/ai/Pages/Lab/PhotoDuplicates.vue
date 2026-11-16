@@ -9,6 +9,8 @@ import { ref, watch } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import LabButton from '../../components/LabButton.vue';
 import LabHowItWorks from '../../components/LabHowItWorks.vue';
+import LabTeach from '../../components/LabTeach.vue';
+import type { Teach } from '../../components/LabTeach.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabSimilarityBar from '../../components/LabSimilarityBar.vue';
 import LabTag from '../../components/LabTag.vue';
@@ -63,6 +65,7 @@ interface Summary {
 const props = defineProps<{
     howItWorks: GuideStep[];
     guideHref: string;
+    teach: Teach;
     label: string;
     cutoff: number;
     summary: Summary;
@@ -178,8 +181,6 @@ function undo(group: Group): Promise<void> {
         <LabTag caption="cutoff">{{ cutoff.toFixed(2) }}</LabTag>
     </div>
 
-    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="[]" state="idle" />
-
     <section v-if="pagination.total === 0" aria-labelledby="duplicates-empty-title" class="mt-8 border-t border-rule pt-6">
         <h2 id="duplicates-empty-title" class="m-0 text-[18px]">No duplicate groups yet</h2>
         <p class="mt-2 max-w-[65ch] text-[15px]">
@@ -284,4 +285,10 @@ function undo(group: Group): Promise<void> {
             <Link v-if="pagination.page < pagination.lastPage" :href="pageHref(pagination.page + 1)" class="font-semibold text-ink underline">Next</Link>
         </nav>
     </template>
+
+    <LabTeach :teach="teach">
+        <template #works>
+            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="[]" state="idle" />
+        </template>
+    </LabTeach>
 </template>

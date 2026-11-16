@@ -90,4 +90,19 @@ return [
         ],
     ],
     'related' => ['providers', 'streaming'],
+    'build' => [
+        ['step' => 'Write one row per call', 'detail' => 'Create the row when the call starts, with agent, provider, model and prompt version.', 'tab' => 'recipes'],
+        ['step' => 'Time the first token', 'detail' => 'Store time to first token and total time, because they answer different questions.', 'tab' => 'recipes'],
+        ['step' => 'End every run in one of three states', 'detail' => 'Mark finished, stopped or failed, so no run is left open.', 'tab' => 'support'],
+        ['step' => 'Keep the failure reason', 'detail' => 'Store the error class and a masked message on failed rows.', 'tab' => 'support'],
+    ],
+    'watch' => [
+        ['point' => 'A stopped run has no tokens', 'detail' => 'Usage arrives at the end. A cut stream may have none.', 'tab' => 'failures'],
+        ['point' => 'Do not log secrets', 'detail' => 'Never store keys, and mask personal data in prompts.', 'tab' => 'support'],
+        ['point' => 'Rows grow', 'detail' => 'Archive or prune old rows, and index the columns you filter on.', 'tab' => 'support'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Cost reporting', 'problem' => 'Finance wants cost per feature.', 'how' => 'Sum tokens per feature and model from the log.'],
+        ['domain' => 'Quality monitoring', 'problem' => 'Latency creeps up after a model update.', 'how' => 'Chart p95 per model from the log and alert on a change.'],
+    ],
 ];

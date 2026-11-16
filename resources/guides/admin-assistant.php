@@ -122,4 +122,23 @@ return [
         ],
     ],
     'related' => ['assistant', 'guards'],
+    'build' => [
+        ['step' => 'Write the loop yourself', 'detail' => 'Send messages and tool definitions, run the tool calls the model asks for, and loop until it answers in text.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],
+        ['step' => 'Validate each call before it runs', 'detail' => 'Check the tool name and arguments with normal rules, and send errors back as tool results.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/validation'],
+        ['step' => 'Make reads run at once', 'detail' => 'Read tools return data to the model immediately, within a step limit.', 'tab' => 'recipes'],
+        ['step' => 'Turn writes into proposals', 'detail' => 'A write tool stops the loop and returns a change card that a person can confirm.', 'tab' => 'recipes'],
+        ['step' => 'Apply only on confirm', 'detail' => 'A separate endpoint with an authorisation check and a one-time nonce writes the change.', 'tab' => 'support'],
+        ['step' => 'Log every step', 'detail' => 'Store tool calls, arguments and results, so the history of a change is auditable.', 'tab' => 'support'],
+    ],
+    'watch' => [
+        ['point' => 'The model may claim a change', 'detail' => 'It can say a change was made before you confirmed. Trust the card and the log, not the text.', 'tab' => 'failures'],
+        ['point' => 'Never trust arguments', 'detail' => 'Arguments are model output. Validate types, ids and ranges every time.', 'tab' => 'failures'],
+        ['point' => 'Limit the loop', 'detail' => 'Cap the number of steps and report when the cap ends the run.', 'tab' => 'failures'],
+        ['point' => 'Local only', 'detail' => 'A tool that writes belongs behind authentication, or on a local machine.', 'tab' => 'support'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Back office', 'problem' => 'Staff want to change records by describing the change.', 'how' => 'Propose a change card from the description and apply it only after a person confirms.'],
+        ['domain' => 'DevOps', 'problem' => 'An engineer asks an assistant to restart a service.', 'how' => 'Allow read tools freely and make every action a proposal with a confirm step.'],
+        ['domain' => 'Finance', 'problem' => 'A bookkeeper asks to correct an entry.', 'how' => 'Show the proposed correction with before and after values and apply it on approval.'],
+    ],
 ];

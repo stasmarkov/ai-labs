@@ -8,6 +8,8 @@ export default { layout: LabLayout };
 import { computed, ref } from 'vue';
 import LabButton from '../../components/LabButton.vue';
 import LabMetric from '../../components/LabMetric.vue';
+import LabTeach from '../../components/LabTeach.vue';
+import type { Teach } from '../../components/LabTeach.vue';
 import LabTag from '../../components/LabTag.vue';
 import { diffLines } from '../../composables/useLineDiff';
 
@@ -87,7 +89,14 @@ interface ApiBody {
     code?: string;
 }
 
+const EXAMPLES = [
+    { label: 'Summarise a listing', text: '2019 BMW 320d, 84,000 km, one owner, full service history, minor scratch on the rear bumper.' },
+    { label: 'Rewrite a complaint', text: 'The seller said the car had no accidents but the report shows a 2021 front collision.' },
+    { label: 'Extract the facts', text: 'Selling my 2016 Golf, petrol, automatic, 112k km, new tyres, asking 9,400 EUR in Leipzig.' },
+];
+
 const props = defineProps<{
+    teach: Teach;
     run: Run | null;
     recent: RunSummary[];
     prompts: PromptSummary[];
@@ -395,32 +404,34 @@ const DIFF_MARKS = { same: '  ', added: '+ ', removed: '- ' } as const;
                     <label for="playground-version" class="text-[13px] font-medium text-muted">Version</label>
                     <select
                         id="playground-version"
+                        aria-describedby="playground-version-hint"
                         class="min-h-10 rounded-sm border border-field bg-white px-3 text-[15px] text-ink"
                         :value="selectedVersionId"
                         @change="(event) => { const version = selected?.versions.find((item) => item.id === Number((event.target as HTMLSelectElement).value)); if (version) showVersion(version); }"
                     >
                         <option v-for="version in selected.versions" :key="version.id" :value="version.id">{{ versionLabel(version) }}</option>
                     </select>
+                    <p id="playground-version-hint" class="m-0 text-[13px] text-muted">A saved version never changes; pick one to run it again or to compare it.</p>
                 </div>
 
                 <div class="flex flex-col gap-1">
                     <label for="playground-system" class="text-[13px] font-medium text-muted">System prompt</label>
-                    <textarea id="playground-system" v-model="systemPrompt" rows="6" :maxlength="limits.systemPrompt * 2" class="w-full min-w-0 rounded-sm border border-field bg-white px-3 py-2 font-mono text-[13px] text-ink" />
+                    <textarea id="playground-system" v-model="systemPrompt" rows="6" :maxlength="limits.systemPrompt * 2" placeholder="e.g. You write one-sentence summaries of used-car listings. Reply with the summary only." class="w-full min-w-0 rounded-sm border border-field bg-white px-3 py-2 font-mono text-[13px] text-ink" />
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-3">
                     <div class="flex flex-col gap-1">
                         <label for="playground-temperature" class="text-[13px] font-medium text-muted">Temperature</label>
-                        <input id="playground-temperature" v-model.number="temperature" type="number" min="0" :max="limits.temperature" step="0.01" class="min-h-10 min-w-0 rounded-sm border border-field bg-white px-3 text-[15px] text-ink" />
+                        <input id="playground-temperature" v-model.number="temperature" type="number" min="0" :max="limits.temperature" step="0.01" placeholder="e.g. 0" class="min-h-10 min-w-0 rounded-sm border border-field bg-white px-3 text-[15px] text-ink" />
                         <p class="m-0 text-[13px] text-muted">0 gives the fairest comparison.</p>
                     </div>
                     <div class="flex flex-col gap-1">
                         <label for="playground-max-tokens" class="text-[13px] font-medium text-muted">Max tokens</label>
-                        <input id="playground-max-tokens" v-model.number="maxTokens" type="number" :min="limits.maxTokens.min" :max="limits.maxTokens.max" step="16" class="min-h-10 min-w-0 rounded-sm border border-field bg-white px-3 text-[15px] text-ink" />
+                        <input id="playground-max-tokens" v-model.number="maxTokens" type="number" :min="limits.maxTokens.min" :max="limits.maxTokens.max" step="16" placeholder="e.g. 256" class="min-h-10 min-w-0 rounded-sm border border-field bg-white px-3 text-[15px] text-ink" />
                     </div>
                     <div class="flex flex-col gap-1">
                         <label for="playground-note" class="text-[13px] font-medium text-muted">Note</label>
-                        <input id="playground-note" v-model="note" type="text" maxlength="200" class="min-h-10 min-w-0 rounded-sm border border-field bg-white px-3 text-[15px] text-ink" />
+                        <input id="playground-note" v-model="note" type="text" maxlength="200" placeholder="e.g. shorter, no adjectives" class="min-h-10 min-w-0 rounded-sm border border-field bg-white px-3 text-[15px] text-ink" />
                     </div>
                 </div>
 
@@ -433,22 +444,35 @@ const DIFF_MARKS = { same: '  ', added: '+ ', removed: '- ' } as const;
 
                 <div class="flex flex-col gap-1">
                     <label for="playground-input" class="text-[13px] font-medium text-muted">Input</label>
-                    <textarea id="playground-input" v-model="input" rows="3" :maxlength="limits.input * 2" class="w-full min-w-0 rounded-sm border border-field bg-white px-3 py-2 text-[15px] text-ink" />
+                    <textarea id="playground-input" v-model="input" rows="3" :maxlength="limits.input * 2" placeholder="e.g. 2019 BMW 320d, 84,000 km, one owner, full service history." class="w-full min-w-0 rounded-sm border border-field bg-white px-3 py-2 text-[15px] text-ink" />
                     <p class="m-0 text-[13px] text-muted">{{ inputLength }} of {{ limits.input }} characters.</p>
+                    <div role="group" aria-label="Example inputs" class="flex flex-wrap gap-2">
+                        <button
+                            v-for="example in EXAMPLES"
+                            :key="example.label"
+                            type="button"
+                            data-example
+                            class="min-h-10 rounded-sm border border-rule px-3 text-left text-[13px] text-ink"
+                            @click="input = example.text"
+                        >
+                            {{ example.label }}
+                        </button>
+                    </div>
                 </div>
 
                 <fieldset class="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
                     <legend class="mb-1 text-[13px] font-medium text-muted">Targets ({{ limits.targets.min }} to {{ limits.targets.max }})</legend>
+                    <p id="playground-targets-hint" class="m-0 text-[13px] text-muted">Pick a provider and a model for each target; the same input runs against every target.</p>
                     <div v-for="(target, index) in targets" :key="index" class="flex flex-wrap items-end gap-2">
                         <div class="flex min-w-0 flex-col gap-1">
                             <label :for="`playground-provider-${index}`" class="text-[13px] text-muted">Provider {{ index + 1 }}</label>
-                            <select :id="`playground-provider-${index}`" v-model="target.provider" class="min-h-10 rounded-sm border border-field bg-white px-3 text-[15px] text-ink" @change="changeProvider(target)">
+                            <select :id="`playground-provider-${index}`" v-model="target.provider" aria-describedby="playground-targets-hint" class="min-h-10 rounded-sm border border-field bg-white px-3 text-[15px] text-ink" @change="changeProvider(target)">
                                 <option v-for="provider in providers" :key="provider.name" :value="provider.name">{{ provider.name }}</option>
                             </select>
                         </div>
                         <div class="flex min-w-0 flex-col gap-1">
                             <label :for="`playground-model-${index}`" class="text-[13px] text-muted">Model {{ index + 1 }}</label>
-                            <select :id="`playground-model-${index}`" v-model="target.model" class="min-h-10 min-w-0 rounded-sm border border-field bg-white px-3 text-[15px] text-ink">
+                            <select :id="`playground-model-${index}`" v-model="target.model" aria-describedby="playground-targets-hint" class="min-h-10 min-w-0 rounded-sm border border-field bg-white px-3 text-[15px] text-ink">
                                 <option v-for="model in modelsOf(target.provider)" :key="model" :value="model">{{ model }}</option>
                             </select>
                         </div>
@@ -470,16 +494,17 @@ const DIFF_MARKS = { same: '  ', added: '+ ', removed: '- ' } as const;
 
             <section v-if="selected && selected.versions.length > 1" class="mt-8 border-t border-rule pt-6" aria-labelledby="playground-diff-title">
                 <h2 id="playground-diff-title" class="m-0 text-[18px]">Diff between versions</h2>
+                <p id="playground-diff-hint" class="m-0 mt-1 text-[13px] text-muted">Choose two saved versions to see which lines changed.</p>
                 <div class="mt-3 flex flex-wrap gap-4">
                     <div class="flex flex-col gap-1">
                         <label for="playground-diff-from" class="text-[13px] text-muted">From</label>
-                        <select id="playground-diff-from" v-model="diffFrom" class="min-h-10 rounded-sm border border-field bg-white px-3 text-[15px] text-ink">
+                        <select id="playground-diff-from" v-model="diffFrom" aria-describedby="playground-diff-hint" class="min-h-10 rounded-sm border border-field bg-white px-3 text-[15px] text-ink">
                             <option v-for="version in selected.versions" :key="version.id" :value="version.id">{{ versionLabel(version) }}</option>
                         </select>
                     </div>
                     <div class="flex flex-col gap-1">
                         <label for="playground-diff-to" class="text-[13px] text-muted">To</label>
-                        <select id="playground-diff-to" v-model="diffTo" class="min-h-10 rounded-sm border border-field bg-white px-3 text-[15px] text-ink">
+                        <select id="playground-diff-to" v-model="diffTo" aria-describedby="playground-diff-hint" class="min-h-10 rounded-sm border border-field bg-white px-3 text-[15px] text-ink">
                             <option v-for="version in selected.versions" :key="version.id" :value="version.id">{{ versionLabel(version) }}</option>
                         </select>
                     </div>
@@ -533,4 +558,6 @@ const DIFF_MARKS = { same: '  ', added: '+ ', removed: '- ' } as const;
             </section>
         </div>
     </div>
+
+    <LabTeach :teach="teach" />
 </template>

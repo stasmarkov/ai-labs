@@ -182,4 +182,23 @@ return [
         ],
     ],
     'related' => ['prompts', 'run-log'],
+    'build' => [
+        ['step' => 'Put providers in one config list', 'detail' => 'Name each provider with its driver, base URL and key, so enabling one is a configuration change.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],
+        ['step' => 'Resolve through one class', 'detail' => 'Ask a single resolver for the provider and model of each feature instead of reading env values in many places.', 'tab' => 'recipes'],
+        ['step' => 'Let a saved choice override config', 'detail' => 'Store a per-feature choice in the database, between the request and the default.', 'tab' => 'recipes'],
+        ['step' => 'Pass options per call', 'detail' => 'Send temperature and token limits as call options, not as global settings.', 'tab' => 'recipes'],
+        ['step' => 'Log provider and model on every run', 'detail' => 'Add both to each run row, so you can compare providers on real traffic.', 'tab' => 'support'],
+        ['step' => 'Fail with a clear error', 'detail' => 'Return a typed error such as not configured instead of a raw provider exception.', 'tab' => 'support'],
+    ],
+    'watch' => [
+        ['point' => 'Embeddings are tied to a model', 'detail' => 'Changing the embedding model needs a full re-index. Guard searches against a mismatch.', 'tab' => 'failures'],
+        ['point' => 'Provider limits', 'detail' => 'Cloud providers rate limit and change model names. Handle 429 and 404 with a message.', 'tab' => 'failures'],
+        ['point' => 'Keys are secrets', 'detail' => 'Keep them in env, never in a database column that is shown or logged.', 'tab' => 'support'],
+        ['point' => 'Cold start on local models', 'detail' => 'The first call after a pause loads the model and is slow. Warm it or show a hint.', 'tab' => 'failures'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'SaaS products', 'problem' => 'Customers want a choice of model vendor.', 'how' => 'Keep a provider list and let each tenant choose a model through the same resolver.'],
+        ['domain' => 'Cost control', 'problem' => 'A team wants a cheaper model for simple tasks.', 'how' => 'Route each feature to its own model and compare cost per run.'],
+        ['domain' => 'Compliance', 'problem' => 'Some data must stay on premises.', 'how' => 'Use a local provider for that feature and a cloud one for the rest.'],
+    ],
 ];

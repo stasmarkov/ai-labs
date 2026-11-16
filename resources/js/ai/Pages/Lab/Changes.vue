@@ -8,6 +8,8 @@ export default { layout: LabLayout };
 import { Link, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import LabButton from '../../components/LabButton.vue';
+import LabTeach from '../../components/LabTeach.vue';
+import type { Teach } from '../../components/LabTeach.vue';
 import { csrfToken } from '../../composables/csrfToken';
 
 interface Current {
@@ -45,6 +47,7 @@ interface Row {
 }
 
 const props = defineProps<{
+    teach?: Teach;
     pending: Row[];
     recent: Row[];
     change: Change | null;
@@ -146,6 +149,8 @@ async function decide(id: string, url: string, nonce: string | undefined, fromRo
     <p class="mt-2 text-[15px] text-muted">
         Changes an outside client proposed over MCP. Nothing is saved until you confirm a change here.
     </p>
+
+    <LabTeach v-if="teach" :teach="teach" />
 
     <section v-if="shown" aria-labelledby="change-heading" class="mt-6 rounded-sm border border-ink px-4 py-3" data-section="change" :data-status="shown.status">
         <h2 id="change-heading" class="m-0 text-[17px] font-semibold">{{ shown.tool }}</h2>
