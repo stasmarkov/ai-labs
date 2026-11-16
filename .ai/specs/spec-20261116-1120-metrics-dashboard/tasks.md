@@ -257,3 +257,4 @@ Findings F1 to F20 come from `.ai/reports/ship-spec-20261116-1120-metrics-dashbo
   - __GATES__
 - Measured facts that changed the docs: `frankenphp_busy_threads` (classic) and `frankenphp_busy_workers` (worker modes) count requests that run **or wait**, so they go above total (112 against 14, and 140 against 4). `frankenphp_total_threads` stayed at 14 while autoscale ran about 60 threads (199.3 requests per second at 0.3 s each). The Caddy histogram p95 is interpolated: 4.02 s against the measured 2703 ms. All of this is in the dashboard descriptions, the in-app guide, I-11 and BENCHMARKS "Surprises".
 - Spec changes made here: C-1 numbers now cover the load window, not the whole cell (the PNG still covers the whole cell). C-8 viewport is 1600x1320, not 1600x900. Grafana router port is 3030 (task 2).
+- Clean-tree bench: after commit 1c2b4cc, `bench/run.sh ping --quick` exited 0 on frankenphp.
