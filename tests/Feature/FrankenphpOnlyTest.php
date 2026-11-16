@@ -57,6 +57,7 @@ it('AC-4 finds no removed server name in tracked files outside the allowlist', f
         'tests/Feature/DocsDefaultServerTest.php' => 'pins what the docs say about the old default',
         'tests/Feature/PreloadLinksTest.php' => 'reads the historical early-hints spec',
         'tests/Feature/LearningGuideTest.php' => 'reads the history narrative in the learning guide',
+        'tests/Feature/DocsLinksTest.php' => 'asserts the docs hold no removed server name outside history',
     ];
 
     // Files where only one known sentence may name a removed server; any other matching line fails.

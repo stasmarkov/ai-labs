@@ -58,6 +58,18 @@ ddev artisan nl:eval                        # natural-language search turned int
 
 Both evals need Ollama running with the models above.
 
+## Metrics dashboard
+
+Prometheus and Grafana are opt-in: a plain `ddev start` does not start them. Every FrankenPHP mode serves metrics on port 9180 inside `ddev_default` (the Caddy admin API is not exposed). How to read the graphs: [I-11 of the learning guide](docs/learning-guide.md#i-11-metrics-watching-the-thread-pool); the numbers are in [BENCHMARKS.md](BENCHMARKS.md#metrics-during-slow-io-2026-11-16).
+
+```sh
+ddev metrics on                              # start Prometheus and Grafana, print the Grafana URL (https://ai-lab.ddev.site:3030)
+ddev metrics status                          # the scrape target state
+ddev metrics off                             # stop both containers
+bench/metrics-matrix.sh [--quick]            # re-run the slow-I/O cells with the stack on, one JSON and PNG per cell
+bench/metrics-snapshot.sh <cell> <from-ms> <to-ms>   # snapshot one window
+```
+
 ## Local models
 
 How fast the local models are, what they cost in memory, what a too-long prompt or a stopped server does, and what happens to the site under AI load. How to read the numbers: `/ai/guides/local-models` and [II-5 of the learning guide](docs/learning-guide.md#ii-5-local-models-and-their-limits).

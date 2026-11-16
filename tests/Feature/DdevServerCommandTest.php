@@ -606,3 +606,9 @@ it('AC-1 the --help annotations list exactly the three modes and default, no rem
         expect($usage[1].$description[1])->not->toContain($removed);
     }
 });
+
+test('every FrankenPHP server config installs the fileinfo extension, which the PHP ZTS repository ships as its own package', function (): void {
+    foreach (['.ddev/servers/frankenphp/config.frankenphp.yaml', '.ddev/servers/frankenphp-octane/config.frankenphp-octane.yaml'] as $config) {
+        expect(file_get_contents(base_path($config)))->toContain('  - php-zts-fileinfo');
+    }
+});

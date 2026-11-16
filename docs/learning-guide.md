@@ -4,7 +4,7 @@ This guide explains how everything in this project works. It reads from top to b
 
 It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan is in [`backlog.md`](../backlog.md); the slice id (`SL-nn`) in a section's spec link shows when it was built.
 
-**Status (2026-11-15):** the guide is in learning order. Part I (I-1 to I-10) covers the shipped server slices SL-01 to SL-13, SL-47 and SL-50; I-11 holds the places for SL-15 to SL-17, which are not built yet. Part II (II-1 to II-24) covers the shipped AI slices from SL-20 on, including SL-48, SL-49, SL-51 and SL-52, and II-24 maps every AI file.
+**Status (2026-11-15):** the guide is in learning order. Part I (I-1 to I-11) covers the shipped server slices SL-01 to SL-13, SL-15, SL-47 and SL-50; I-11 explains the metrics dashboard (SL-15) and I-12 holds the places for SL-16 and SL-17, which are not built yet. Part II (II-1 to II-24) covers the shipped AI slices from SL-20 on, including SL-48, SL-49, SL-51 and SL-52, and II-24 maps every AI file.
 
 ## How to read this guide
 
@@ -38,7 +38,8 @@ It is a living document: every slice adds or updates its section when it ships (
 - [I-8. Early Hints and compression](#i-8-early-hints-and-compression)
 - [I-9. HTTP/3 and QUIC](#i-9-http3-and-quic)
 - [I-10. Live updates with Mercure](#i-10-live-updates-with-mercure)
-- [I-11. Coming next: metrics, logs and developer experience](#i-11-coming-next-metrics-logs-and-developer-experience)
+- [I-11. Metrics: watching the thread pool](#i-11-metrics-watching-the-thread-pool)
+- [I-12. Coming next: logs and developer experience](#i-12-coming-next-logs-and-developer-experience)
 
 **Part II — AI**
 
@@ -529,11 +530,37 @@ Compare that with section [I-6](#i-6-slow-io-worker-pools-and-a-health-check-tha
 
 **Read next.** [Mercure protocol](https://mercure.rocks/spec) · [FrankenPHP: real-time with Mercure](https://frankenphp.dev/docs/mercure/) · [MDN: EventSource](https://developer.mozilla.org/en-US/docs/Web/API/EventSource)
 
-## I-11. Coming next: metrics, logs and developer experience
+## I-11. Metrics: watching the thread pool
+
+**What it is.** Sections [I-6](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast) and [I-10](#i-10-live-updates-with-mercure) read the thread pool once a second with `curl` and print a number after the run. This section puts the same numbers on a graph over time. FrankenPHP and Caddy already publish Prometheus text metrics; two opt-in containers, Prometheus and Grafana, collect and draw them. Nothing starts unless you ask (`ddev metrics on`), so the default `ddev start` starts the same containers. The Caddy request metrics themselves are on in every mode all the time (classic already had them; worker and Octane now record them too), so the benchmark matrix has a stack-off control cell for each of the three modes.
+
+**What each metric means.**
+- `frankenphp_total_threads` and `frankenphp_busy_threads`: the PHP threads that exist and the ones running a request right now. In classic mode, when busy reaches total, the next request waits. In worker and Octane mode `busy_threads` also counts idle worker threads (it reads 4 at idle with 4 workers), so read `busy_workers` there.
+- `frankenphp_busy_workers` and `frankenphp_ready_workers`: in worker mode, how many workers are handling a request and how many booted workers can take one ([I-4](#i-4-worker-mode-boot-once-serve-many-and-the-state-leaks)). Classic mode has none, so those panels show "No data".
+- `frankenphp_queue_depth`: regular requests waiting for a free thread. This is the number that rises in classic mode while the health check of I-6 gets slow. It does not count requests waiting for a worker, so in worker and Octane mode it stays at 0 while the workers are saturated; watch `busy_workers` against `ready_workers` instead.
+- `caddy_http_requests_total` and `caddy_http_request_duration_seconds`: requests per second, per status code, and p50 and p95 latency from the histogram. The graphs count one handler per mode (`vars` classic, `php` worker, `subroute` Octane), because Caddy counts a worker-mode request once per handler; the metrics port is left out. Caddy's latency histogram stops at 10 s, so a p95 above that is shown as 10 s on the panel and written as null by the snapshot.
+- `process_resident_memory_bytes`: the memory of the server process.
+
+**One load, step by step** (30 open slow connections against 14 threads, as in I-6):
+1. `ddev metrics on` starts Prometheus and Grafana and prints the Grafana URL, `https://ai-lab.ddev.site:3030`. The dashboard opens with no login and cannot be edited.
+2. Prometheus scrapes the web container's port 9180 (`/metrics`) every second. That port is a `:9180 { metrics }` block in the Caddyfile of each mode; the Caddy admin API on 2019 is not exposed to other containers.
+3. `bench/slow-load.sh` starts the slow connections. In classic mode busy threads climb to the total and flat-line there; in worker modes busy workers climb to the worker count.
+4. In classic mode queue depth starts rising and the p95 panel climbs with it, while requests per second drops: the pool is full and new requests wait.
+5. The slow connections end, busy threads fall, queue depth drains to 0, and the graphs return to the idle level.
+6. `bench/metrics-snapshot.sh <cell> <from-ms> <to-ms>` reads the maximum busy threads, busy workers, queue depth and memory and the whole-window p95 over that window and saves a PNG of the dashboard; `bench/metrics-matrix.sh` does it for every cell.
+
+**How to add a panel.** Copy a panel in [`frankenphp.json`](../.ddev/metrics/grafana/dashboards/frankenphp.json), change its query to a metric listed in the fixtures `tests/Fixtures/metrics/frankenphp.txt`, `tests/Fixtures/metrics/frankenphp-worker.txt` and `tests/Fixtures/metrics/frankenphp-octane.txt`, and restart Grafana with `ddev metrics off` and `ddev metrics on`. `MetricsStackConfigTest` fails if a panel names a metric that is not in those fixtures.
+
+**Numbers.** Prometheus used about 88 MB and Grafana about 135 MB while running, each under its 256 MB `mem_limit`. The scrape interval is 1 s and data is kept for 2 days. The per-cell figures from re-running the slow-I/O scenarios are in the "Metrics during slow I/O" section of [`BENCHMARKS.md`](../BENCHMARKS.md#metrics-during-slow-io-2026-11-16).
+
+**In this repo.** Code: [`docker-compose.metrics.yaml`](../.ddev/docker-compose.metrics.yaml), [`prometheus.yml.template`](../.ddev/metrics/prometheus.yml.template), [`frankenphp.json`](../.ddev/metrics/grafana/dashboards/frankenphp.json), [`metrics`](../.ddev/commands/host/metrics), the `:9180` block in [`Caddyfile.frankenphp`](../.ddev/servers/frankenphp/web-build/Caddyfile.frankenphp) and in the [Octane Caddyfile](../.ddev/servers/frankenphp-octane/Caddyfile). Tests: [`MetricsStackConfigTest`](../tests/Feature/MetricsStackConfigTest.php), [`BenchMetricsSnapshotTest`](../tests/Feature/BenchMetricsSnapshotTest.php). Bench: [`bench/metrics-snapshot.sh`](../bench/metrics-snapshot.sh), [`bench/metrics-matrix.sh`](../bench/metrics-matrix.sh). Spec: [`.ai/specs/spec-20261116-1120-metrics-dashboard/`](../.ai/specs/spec-20261116-1120-metrics-dashboard/).
+
+**Read next.** [FrankenPHP: metrics](https://frankenphp.dev/docs/metrics/) · [Prometheus: querying](https://prometheus.io/docs/prometheus/latest/querying/basics/) · [Grafana: provisioning](https://grafana.com/docs/grafana/latest/administration/provisioning/)
+
+## I-12. Coming next: logs and developer experience
 
 These places are reserved. Each slice replaces its bullet with its own numbered section when it ships (rule BR-27); none of them is built yet.
 
-- **SL-15, metrics.** What FrankenPHP and PHP report about themselves (busy and total threads, busy workers, queue depth, durations) in Grafana, read next to the health check of [I-6](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast).
 - **SL-16, structured logs and worker restart.** Logs written from PHP as structured JSON with request fields in the server log stream, and one Artisan command that restarts the workers through the admin API, compared with Octane's reload ([I-4](#i-4-worker-mode-boot-once-serve-many-and-the-state-leaks)).
 - **SL-17, worker-mode developer experience.** How fast a code edit takes effect in worker mode (watch or hot reload) and how an Xdebug breakpoint works inside a worker request.
 
@@ -1726,6 +1753,6 @@ Part I showed that a PHP request is served by a web server that is chosen, measu
 - Similar photos at cutoff 0.75: make-and-model precision `0.677`. See [II-15](#ii-15-similar-photos-and-searching-photos-by-text) and [the similar photos results](../BENCHMARKS.md#similar-car-photos-2026-11-11).
 - Search p95 with 4 describe streams open: from `64` ms to `2724` ms on frankenphp-worker. See [II-5](#ii-5-local-models-and-their-limits) and [the local models results](../BENCHMARKS.md#local-models-and-limits-2026-11-13).
 
-**Read next.** Pick one section and change something in it: a prompt in [II-21](#ii-21-prompt-playground-with-versions), a threshold in [II-16](#ii-16-hybrid-similarity-and-duplicate-photos), the worker count in [I-6](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast). Then run the matching command and compare with the numbers quoted there. The plan for what is next is in [`backlog.md`](../backlog.md), starting with the reserved [I-11](#i-11-coming-next-metrics-logs-and-developer-experience).
+**Read next.** Pick one section and change something in it: a prompt in [II-21](#ii-21-prompt-playground-with-versions), a threshold in [II-16](#ii-16-hybrid-similarity-and-duplicate-photos), the worker count in [I-6](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast). Then run the matching command and compare with the numbers quoted there. The plan for what is next is in [`backlog.md`](../backlog.md), starting with the reserved [I-12](#i-12-coming-next-logs-and-developer-experience).
 
 This guide was put in learning order and finished in SL-44 (spec [`spec-20261115-1539-learning-guide-final`](../.ai/specs/spec-20261115-1539-learning-guide-final/)); from here on, each slice adds or updates its own section (BR-27).

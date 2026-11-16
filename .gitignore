@@ -50,3 +50,4 @@ Thumbs.db
 .ddev/bench-timeouts/
 .ddev/config.zzz-bench-leaks.yaml
 /.ai/tmp/
+/.ddev/metrics/prometheus.generated.yml

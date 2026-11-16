@@ -247,7 +247,7 @@ test('AC-3 no bare section number references remain in the covered docs', functi
 
 test('AC-1 the guide has two parts and the sections follow the learning order', function (): void {
     $expected = [
-        'I' => ['one request', 'run PHP', 'Switching servers', 'Worker mode', 'Measuring fairly', 'Slow I/O', 'send the file', 'Early Hints', 'HTTP/3', 'Mercure', 'Coming next'],
+        'I' => ['one request', 'run PHP', 'Switching servers', 'Worker mode', 'Measuring fairly', 'Slow I/O', 'send the file', 'Early Hints', 'HTTP/3', 'Mercure', 'Metrics', 'Coming next'],
         'II' => ['LLM call', 'Streaming', 'locally', 'providers', 'limits', 'structured output', 'Rating', 'Vision', 'Embeddings', 'Chunking', 'citations', 'Measuring RAG', 'Caching answers', 'Stop', 'Similar', 'Duplicate', 'tool calling', 'tool loop', 'MCP', 'research agent', 'playground', 'lab UI', 'guides', 'map of the code'],
     ];
 
@@ -403,15 +403,15 @@ test('AC-4 the guide, README and BENCHMARKS present no removed server as current
     expect($found)->toBe([]);
 });
 
-test('AC-4 the guide has no Planned sections list and reserves the places for SL-15 to SL-17', function (): void {
+test('AC-4 the guide has no Planned sections list and reserves the places for SL-16 and SL-17', function (): void {
     $guide = docsLinksRead('docs/learning-guide.md');
 
     expect($guide)->not->toContain('## Planned sections')
-        ->and($guide)->toMatch('/^## I-11\. Coming next: metrics, logs and developer experience$/m');
+        ->and($guide)->toMatch('/^## I-12\. Coming next: logs and developer experience$/m');
 
-    $reserved = docsLinksGuideSections()['I-11. Coming next: metrics, logs and developer experience'] ?? '';
+    $reserved = docsLinksGuideSections()['I-12. Coming next: logs and developer experience'] ?? '';
 
-    foreach (['SL-15', 'SL-16', 'SL-17'] as $slice) {
+    foreach (['SL-16', 'SL-17'] as $slice) {
         expect($reserved)->toContain($slice);
     }
 });

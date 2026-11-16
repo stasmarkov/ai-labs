@@ -1,7 +1,7 @@
 webserver_type: generic
 web_extra_daemons:
   - name: "frankenphp-octane"
-    command: "env OCTANE_HTTPS=true php artisan octane:frankenphp --host=0.0.0.0 --port=8000 --workers=4 --max-requests=500 --log-level=warn"
+    command: "env OCTANE_HTTPS=true php artisan octane:frankenphp --host=0.0.0.0 --port=8000 --workers=4 --max-requests=500 --log-level=warn --caddyfile=/var/www/html/.ddev/servers/frankenphp-octane/Caddyfile"
     directory: /var/www/html
 web_extra_exposed_ports:
   - name: "frankenphp-octane"
@@ -16,6 +16,7 @@ webimage_extra_packages:
   - php-zts-bz2
   - php-zts-cli
   - php-zts-ffi
+  - php-zts-fileinfo
   - php-zts-ftp
   - php-zts-gd
   - php-zts-gettext

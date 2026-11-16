@@ -1,0 +1,11 @@
+# Template: `ddev metrics on` writes prometheus.generated.yml (gitignored) from it, with ${DDEV_SITENAME} replaced by the
+# project name, and the Prometheus container mounts that file. Edit this template, not the generated file.
+global:
+  scrape_interval: 1s
+  scrape_timeout: 1s
+
+scrape_configs:
+  - job_name: frankenphp
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["ddev-${DDEV_SITENAME}-web:9180"]

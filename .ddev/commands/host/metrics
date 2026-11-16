@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+
+## Description: Start or stop the opt-in Prometheus and Grafana stack (on, off, status)
+## Usage: metrics [on|off|status]
+## Example: ddev metrics on
+
+set -Eeuo pipefail
+
+SITE="${DDEV_SITENAME:?run this through ddev: ddev metrics on|off|status}"
+PROMETHEUS="ddev-${SITE}-prometheus"
+GRAFANA="ddev-${SITE}-grafana"
+GRAFANA_URL="https://${DDEV_HOSTNAME:-${SITE}.ddev.site}:3030"
+METRICS_DIR="${DDEV_APPROOT:-.}/.ddev/metrics"
+
+running() {
+  [[ "$(docker inspect -f '{{.State.Running}}' "$1" 2>/dev/null || true)" == "true" ]]
+}
+
+state() {
+  if running "$1"; then echo running; else echo stopped; fi
+}
+
+# Prints "up", "down" or "n/a" for the frankenphp scrape target.
+target_state() {
+  local json
+  if ! running "$PROMETHEUS"; then
+    echo "n/a"
+    return
+  fi
+  json="$(docker exec "$PROMETHEUS" wget -qO- http://localhost:9090/api/v1/targets 2>/dev/null || true)"
+  if [[ "$json" == *'"health":"up"'* ]]; then
+    echo "up"
+  else
+    echo "down"
+  fi
+}
+
+# Writes the Prometheus config with this project's web container as the target (the template has ${DDEV_SITENAME}).
+write_prometheus_config() {
+  sed "s/\${DDEV_SITENAME}/${SITE}/g" "$METRICS_DIR/prometheus.yml.template" > "$METRICS_DIR/prometheus.generated.yml"
+}
+
+case "${1:-status}" in
+  on)
+    write_prometheus_config
+    ddev start --profiles=metrics
+    for _ in $(seq 1 60); do
+      if [[ "$(target_state)" == "up" ]]; then
+        echo "Grafana: ${GRAFANA_URL}"
+        exit 0
+      fi
+      sleep 1
+    done
+    echo "target not up after 60 s (prometheus: $(state "$PROMETHEUS"), target: $(target_state))" >&2
+    exit 1
+    ;;
+  off)
+    docker stop "$PROMETHEUS" "$GRAFANA" >/dev/null 2>&1 || true
+    echo "metrics stack stopped"
+    ;;
+  status)
+    echo "prometheus: $(state "$PROMETHEUS")"
+    echo "grafana: $(state "$GRAFANA")"
+    echo "target: $(target_state)"
+    ;;
+  *)
+    echo "Usage: ddev metrics [on|off|status]" >&2
+    exit 2
+    ;;
+esac

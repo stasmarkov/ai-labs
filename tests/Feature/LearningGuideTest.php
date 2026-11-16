@@ -712,6 +712,7 @@ test('AC-8 learning guide II-24 lists the cloud provider files and the add-a-pro
 
 dataset('AC-2 full sections', [
     'I-2 server history' => ['I-2. '],
+    'I-11 metrics' => ['I-11. '],
     'II-4 providers and settings' => ['II-4. '],
     'II-5 local model limits' => ['II-5. '],
     'II-8 vision extraction' => ['II-8. '],
@@ -774,4 +775,27 @@ test('AC-5 guide numbers in the new and promoted sections match BENCHMARKS and t
     expect($playground['two_model_local_runs'])->toBe(7);
     expect($playground['average_two_model_local_duration_s'])->toBe(10.3);
     expect($playgroundSection)->toContain('9 stored runs')->toContain('7 runs')->toContain('10.3 s');
+});
+
+test('AC-5 guide I-11 explains the metrics, one load on the graphs and how to add a panel', function (): void {
+    $guide = file_get_contents(base_path('docs/learning-guide.md'));
+    $section = learningGuideSection($guide, 'I-11. ');
+
+    foreach (['frankenphp_busy_threads', 'frankenphp_queue_depth', 'ddev metrics on', '9180', 'How to add a panel'] as $needle) {
+        expect($section)->toContain($needle);
+    }
+
+    expect($guide)->not->toContain('SL-15, metrics.');
+});
+
+test('AC-5 guide I-11 quotes only fixture paths that exist', function (): void {
+    $section = learningGuideSection(file_get_contents(base_path('docs/learning-guide.md')), 'I-11. ');
+
+    preg_match_all('#tests/Fixtures/[A-Za-z0-9_./-]+\.[a-z]+#', $section, $matches);
+
+    expect($matches[0])->not->toBeEmpty();
+
+    foreach (array_unique($matches[0]) as $path) {
+        expect(base_path($path))->toBeFile();
+    }
 });

@@ -1,0 +1,55 @@
+services:
+  prometheus:
+    container_name: ddev-${DDEV_SITENAME}-prometheus
+    image: prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
+    hostname: prometheus
+    profiles: [metrics]
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: ${DDEV_APPROOT}
+    restart: "no"
+    # `ddev metrics on` writes metrics/prometheus.generated.yml from metrics/prometheus.yml.template with this project's name.
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=2d
+    volumes:
+      - "./metrics/prometheus.generated.yml:/etc/prometheus/prometheus.yml:ro"
+      - "prometheus-data:/prometheus"
+    mem_limit: 256m
+    memswap_limit: 256m
+
+  grafana:
+    container_name: ddev-${DDEV_SITENAME}-grafana
+    image: grafana/grafana-oss:12.4.3@sha256:2e986801428cd689c2358605289c90ab37d2b39e24808874971f54c99bcdc412
+    hostname: grafana
+    profiles: [metrics]
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: ${DDEV_APPROOT}
+    restart: "no"
+    depends_on:
+      - prometheus
+    environment:
+      - VIRTUAL_HOST=${DDEV_HOSTNAME}
+      - HTTPS_EXPOSE=3030:3000
+      - DDEV_SITENAME=${DDEV_SITENAME}
+      - GF_SERVER_ROOT_URL=https://${DDEV_HOSTNAME}:3030
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_AUTH_DISABLE_LOGIN=true
+      - GF_AUTH_BASIC_ENABLED=false
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/frankenphp.json
+    volumes:
+      - "./metrics/grafana/provisioning:/etc/grafana/provisioning:ro"
+      - "./metrics/grafana/dashboards:/var/lib/grafana/dashboards:ro"
+    mem_limit: 256m
+    memswap_limit: 256m
+
+volumes:
+  prometheus-data:
+    name: ddev-${DDEV_SITENAME}-prometheus-data

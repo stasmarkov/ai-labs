@@ -824,3 +824,18 @@ test('AC-8 BENCHMARKS.md similar-photos section quotes the committed run.json', 
     expect($section)->toContain("At {$chosen}, {$ratio($metrics['precision_make'])} of results share the make "
         ."and {$ratio($metrics['precision_make_model'])} share the make and model");
 });
+
+test('AC-5 BENCHMARKS.md has the metrics during slow I/O section with its method and footprint', function (): void {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+
+    expect($doc)->toContain("\n## Metrics during slow I/O (2026-11-16)\n");
+
+    preg_match('/^## Metrics during slow I\/O \(2026-11-16\)\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->toContain('bench/metrics-matrix.sh')
+        ->toContain('bench/metrics-snapshot.sh')
+        ->toContain('BR-21')
+        ->toContain('88 MB')
+        ->toContain('135 MB');
+});

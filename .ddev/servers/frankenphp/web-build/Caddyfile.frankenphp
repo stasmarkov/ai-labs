@@ -124,6 +124,12 @@
 	}
 }
 
+# SL-15: Prometheus scrapes this listener on the ddev_default network. It serves only the metrics handler;
+# the Caddy admin API stays on localhost:2019 and is not published.
+:9180 {
+	metrics
+}
+
 # As an alternative to editing the above site block, you can add your own site
 # block files in the Caddyfile.d directory, and they will be included as long
 # as they use the .caddyfile extension.
