@@ -733,3 +733,16 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 | 2026-11-10 | Stanislav Markov | In-app interactive guides instead of md links on the site; no slice ids, `.md` or repo-path references in the UI | Revised slice | SL-48 rewritten and specced (spec-20261110-1149-in-app-guides); moved forward to run right after SL-49 so every later AI slice adds a `resources/guides/` file instead of links; order SL-49 → SL-48 → SL-50 → SL-51 → AI slices → SL-28 → SL-44 |
 | 2026-11-10 | Stanislav Markov | Switch the LLM or other models via the UI, no login, local only | New slice | SL-52 local settings page (spec-20261110-2155-model-settings-ui), after SL-51; BR-91 to be revised in that slice; order SL-51 → SL-52 → SL-25 … |
 | 2026-11-11 | Stanislav Markov | Photos next: import Stanford Cars, vision extraction with the local models | Revised slice | SL-27 widened with the photo import (spec-20261111-0000-photo-vision), taken before SL-52 and SL-25 at the owner's request; SL-52 spec reads features from AiProviders so it covers photo-vision |
+
+### SL-53 · Lab pages that teach, with no broken layouts
+
+- **Outcome:** Every lab page renders without broken layouts at 1440 and 1024 px. Each page gives an example for every field and has a shared block with four parts: How it works, Build it yourself, Watch out for, and Same pattern elsewhere. Each part links to the matching guide tab, and the guides show the same text. A Playwright UI audit script guards every page.
+- **Entry point:** every `/ai/*` lab page, `/ai/guides`
+- **Size:** M
+- **BRs:** BR-27
+- **Depends on:** SL-52
+- **Blocked by:** none
+- **Status:** specced
+- **Spec:** spec-20261116-2004-lab-pages-teach
+- **Source:** owner request 2026-11-16 (Stanislav Markov: the Moderation page layout was broken; every page should have examples, explain how it works, link the guides, show how to build it yourself, what to take into account, and examples from other domains)
+- **Run:** `/sdd spec-20261116-2004-lab-pages-teach`
