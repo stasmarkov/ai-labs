@@ -42,7 +42,18 @@ try {
     }
     await route.fulfill({ response, json });
   });
-  await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+  // Grafana may still be starting right after `ddev metrics on` recreated it: retry a refused connection for up to 60 s.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+      break;
+    } catch (error) {
+      if (attempt >= 30 || !String(error).includes('ERR_CONNECTION_REFUSED')) {
+        throw error;
+      }
+      await page.waitForTimeout(2000);
+    }
+  }
   await page.waitForTimeout(SETTLE_MS);
   if ((await page.getByText('failed to load its application files').count()) > 0) {
     throw new Error('Grafana did not start in the browser (its "failed to load" page is shown).');

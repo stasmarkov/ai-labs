@@ -35,6 +35,10 @@ target_state() {
   fi
 }
 
+grafana_ready() {
+  running "$GRAFANA" && docker exec "$GRAFANA" wget -qO- http://localhost:3000/api/health >/dev/null 2>&1
+}
+
 # Writes the Prometheus config with this project's web container as the target (the template has ${DDEV_SITENAME}).
 write_prometheus_config() {
   sed "s/\${DDEV_SITENAME}/${SITE}/g" "$METRICS_DIR/prometheus.yml.template" > "$METRICS_DIR/prometheus.generated.yml"
@@ -45,13 +49,13 @@ case "${1:-status}" in
     write_prometheus_config
     ddev start --profiles=metrics
     for _ in $(seq 1 60); do
-      if [[ "$(target_state)" == "up" ]]; then
+      if [[ "$(target_state)" == "up" ]] && grafana_ready; then
         echo "Grafana: ${GRAFANA_URL}"
         exit 0
       fi
       sleep 1
     done
-    echo "target not up after 60 s (prometheus: $(state "$PROMETHEUS"), target: $(target_state))" >&2
+    echo "target not up or Grafana not answering after 60 s (prometheus: $(state "$PROMETHEUS"), grafana: $(state "$GRAFANA"), target: $(target_state))" >&2
     exit 1
     ;;
   off)

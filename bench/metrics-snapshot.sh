@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ## Usage: bench/metrics-snapshot.sh <cell> <from-ms> <to-ms> [--load-window <from-ms>-<to-ms>] [--no-screenshot] [--force]
 ## Reads one window of the metrics stack (`ddev metrics on`) and saves it for a slow-load cell: a JSON with the maximum busy
-## threads, busy workers, total workers, queue depth and resident memory and the p95 request latency, and a PNG of the
+## threads, total threads (autoscale grows them), busy workers, total workers, queue depth and resident memory and the p95 request latency, and a PNG of the
 ## whole Grafana dashboard for <from-ms> to <to-ms>. <cell> is `<workload>-<server>-<threads>` (a-z, 0-9, -); the times are
 ## epoch milliseconds, which bench/metrics-matrix.sh takes just before and after the slow-load call.
 ## --load-window narrows the numbers (not the PNG) to the time the load generator ran: bench/metrics-matrix.sh watches for the
@@ -116,6 +116,7 @@ query_value() {
 
 w="${load_s}s"
 max_busy="$(query_value "max(max_over_time(frankenphp_busy_threads[$w]))")"
+max_total="$(query_value "max(max_over_time(frankenphp_total_threads[$w]))")"
 max_queue="$(query_value "max(max_over_time(frankenphp_queue_depth[$w]))")"
 max_busy_workers="$(query_value "sum(max_over_time(frankenphp_busy_workers[$w]))")"
 total_workers="$(query_value "sum(max_over_time(frankenphp_total_workers[$w]))")"
@@ -145,11 +146,11 @@ server="$(current_server "$APPROOT" 2>/dev/null)" || server="unknown"
 commit="$(cd "$APPROOT" && git rev-parse --short HEAD 2>/dev/null)" || commit="unknown"
 
 mkdir -p "$OUT_DIR"
-printf '{\n  "cell": "%s",\n  "server": "%s",\n  "commit": "%s",\n  "from_ms": %s,\n  "to_ms": %s,\n  "window_s": %s,\n  "load_from_ms": %s,\n  "load_to_ms": %s,\n  "load_s": %s,\n  "scrape_coverage": %s,\n  "metrics": {\n    "max_busy_threads": %s,\n    "max_busy_workers": %s,\n    "total_workers": %s,\n    "max_queue_depth": %s,\n    "max_memory_bytes": %s,\n    "p95_seconds": %s,\n    "p95_capped": %s\n  },\n  "counted": "%s"\n}\n' \
+printf '{\n  "cell": "%s",\n  "server": "%s",\n  "commit": "%s",\n  "from_ms": %s,\n  "to_ms": %s,\n  "window_s": %s,\n  "load_from_ms": %s,\n  "load_to_ms": %s,\n  "load_s": %s,\n  "scrape_coverage": %s,\n  "metrics": {\n    "max_busy_threads": %s,\n    "max_total_threads": %s,\n    "max_busy_workers": %s,\n    "total_workers": %s,\n    "max_queue_depth": %s,\n    "max_memory_bytes": %s,\n    "p95_seconds": %s,\n    "p95_capped": %s\n  },\n  "counted": "%s"\n}\n' \
   "$cell" "$server" "$commit" "$from_ms" "$to_ms" "$window_s" "$load_from_ms" "$load_to_ms" "$load_s" "$coverage" \
-  "$max_busy" "$max_busy_workers" "$total_workers" "$max_queue" "$max_memory" "$p95" "$p95_capped" \
+  "$max_busy" "$max_total" "$max_busy_workers" "$total_workers" "$max_queue" "$max_memory" "$p95" "$p95_capped" \
   "one handler per mode (vars, php, subroute): load, warm-up and health probe; not the scrape" > "$json_file"
-echo "cell=$cell load_s=$load_s max_busy_threads=$max_busy max_busy_workers=$max_busy_workers total_workers=$total_workers max_queue_depth=$max_queue max_memory_bytes=$max_memory p95_seconds=$p95"
+echo "cell=$cell load_s=$load_s max_busy_threads=$max_busy max_total_threads=$max_total max_busy_workers=$max_busy_workers total_workers=$total_workers max_queue_depth=$max_queue max_memory_bytes=$max_memory p95_seconds=$p95"
 
 if [[ "$screenshot" == "1" ]]; then
   url="$(playwright_dashboard_url "$GRAFANA" "$from_ms" "$to_ms")"

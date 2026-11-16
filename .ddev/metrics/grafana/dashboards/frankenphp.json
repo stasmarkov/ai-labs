@@ -121,7 +121,7 @@
       "id": 3,
       "type": "timeseries",
       "title": "Busy and total threads",
-      "description": "PHP threads that exist and the ones running a request. In classic mode the pool is full when busy reaches total. In worker and Octane mode busy also counts idle worker threads (4 at idle with 4 workers), so read the workers panel there.",
+      "description": "Classic mode: busy counts the requests in PHP, running or waiting for a thread, so it rises above total when the pool is full (busy minus queue is what runs). Autoscale grows total. In worker and Octane mode busy stays at the worker count (an idle worker thread counts as busy), so read the workers panel there.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -175,7 +175,7 @@
       "id": 4,
       "type": "timeseries",
       "title": "Busy, ready and total workers",
-      "description": "Worker and Octane mode only (classic shows No data). The workers are saturated when busy reaches total; ready is how many booted workers can take a request.",
+      "description": "Worker and Octane mode only (classic shows No data). Busy counts the requests handed to the workers, running or waiting for one; above total, the workers are saturated and busy minus total are waiting. Ready is how many booted workers can take a request.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -238,7 +238,7 @@
       "id": 5,
       "type": "timeseries",
       "title": "Queue depth",
-      "description": "Regular requests waiting for a free PHP thread. Requests waiting for a worker are not counted, so it stays at 0 while workers are saturated; read the workers panel in worker and Octane mode.",
+      "description": "Regular requests waiting for a free PHP thread. Requests waiting for a worker are not counted, so it stays at 0 while the workers are saturated; read busy against total workers in worker and Octane mode.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"

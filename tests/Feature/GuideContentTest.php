@@ -11,7 +11,7 @@ use App\Guides\SnippetResolver;
 
 const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation', 'admin-assistant', 'research', 'playground'];
 
-const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards', 'local-models', 'mcp'];
+const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards', 'local-models', 'mcp', 'metrics'];
 
 const ALL_FILLED_GUIDES = [...CAPABILITY_GUIDES, ...FOUNDATION_GUIDES];
 
@@ -483,4 +483,28 @@ it('AC-9 the playground guide has six non-empty tabs, no references, answers 200
 
     expect($learning)->toContain('### Prompt playground with versions')->toContain('/ai/guides/playground')
         ->and($readme)->toContain('## Prompt playground')->toContain('AI_PLAYGROUND_TARGETS')->toContain('AI_PLAYGROUND_PER_MINUTE');
+});
+
+it('AC-5 the metrics guide has six non-empty tabs, no references, answers 200 and teaches the pool, the cap and the pattern', function (): void {
+    $guide = app(GuideRepository::class)->find('metrics');
+    $rendered = app(GuideRenderer::class)->render('metrics');
+    $text = mb_strtolower(implode("\n", guideTexts($guide)));
+
+    expect($guide->kind)->toBe('foundation')
+        ->and($guide->planned)->toBeFalse()
+        ->and($rendered['works'])->not->toBeEmpty()
+        ->and($rendered['failures'])->not->toBeEmpty()
+        ->and($rendered['recipes'])->not->toBeEmpty()
+        ->and($rendered['support'])->not->toBeEmpty()
+        ->and($rendered['numbers'])->not->toBeEmpty()
+        ->and($rendered['experiments'])->not->toBeEmpty()
+        ->and(implode(' ', array_column($rendered['recipes'], 'title')))->toContain('Add a panel')->toContain('other places');
+
+    foreach (['frankenphp_busy_threads', 'frankenphp_total_threads', 'frankenphp_busy_workers', 'frankenphp_total_workers', 'frankenphp_queue_depth', 'caddy_http_request_duration_seconds', 'process_resident_memory_bytes', '10 s', 'ddev metrics on', 'one load on the graphs', 'queue workers', 'connection pool'] as $needle) {
+        expect($text)->toContain($needle);
+    }
+
+    $this->withoutVite();
+    $this->get('/ai/guides/metrics')->assertOk();
+    $this->get('/ai/guides')->assertOk()->assertSee('Metrics: watching the thread pool');
 });

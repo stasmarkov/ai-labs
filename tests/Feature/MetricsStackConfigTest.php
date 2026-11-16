@@ -98,6 +98,7 @@ test('AC-2 the metrics command offers on, off and status', function () {
         ->and($command)->toContain('--profiles=metrics')
         ->and($command)->toContain('docker stop "$PROMETHEUS" "$GRAFANA"')
         ->and($command)->toContain('/api/v1/targets')
+        ->and($command)->toContain('/api/health')
         ->and($command)->toMatch('/^\s*on\)/m')
         ->and($command)->toMatch('/^\s*off\)/m')
         ->and($command)->toMatch('/^\s*status\)/m');
@@ -186,7 +187,7 @@ test('AC-3 the dashboard parses, is not editable and shows every scope panel', f
     $panels = collect($dashboard['panels'])->keyBy('title');
 
     expect($panels['Latency p50 and p95']['description'])->toContain('10 s')
-        ->and($panels['Busy and total threads']['description'])->toContain('idle worker threads')
+        ->and($panels['Busy and total threads']['description'])->toContain('idle worker thread')->toContain('waiting for a thread')
         ->and($panels['Queue depth']['description'])->toContain('not counted')
         ->and(collect($panels['Busy, ready and total workers']['targets'])->pluck('expr')->all())
         ->toBe(['frankenphp_busy_workers', 'frankenphp_ready_workers', 'frankenphp_total_workers']);

@@ -40,6 +40,7 @@ case "$1" in
       *sum_over_time*) value="${STUB_COUNT:-100}" ;;
       *busy_workers*) value="${STUB_WORKERS:-3}" ;;
       *total_workers*) value="4" ;;
+      *total_threads*) value="${STUB_TOTAL:-64}" ;;
       *busy_threads*) value="${STUB_BUSY:-12}" ;;
       *queue_depth*) value="7" ;;
       *process_resident_memory_bytes*) value="104857600" ;;
@@ -116,7 +117,7 @@ it('AC-4 the snapshot writes the JSON with max busy threads, max queue depth, ma
             'server' => 'frankenphp', 'commit' => 'abc1234',
         ])
         ->and($result['metrics'])->toMatchArray([
-            'max_busy_threads' => 12, 'max_busy_workers' => 3, 'total_workers' => 4, 'max_queue_depth' => 7, 'max_memory_bytes' => 104857600, 'p95_seconds' => 0.4125, 'p95_capped' => false,
+            'max_busy_threads' => 12, 'max_total_threads' => 64, 'max_busy_workers' => 3, 'total_workers' => 4, 'max_queue_depth' => 7, 'max_memory_bytes' => 104857600, 'p95_seconds' => 0.4125, 'p95_capped' => false,
         ])
         ->and($result['scrape_coverage'])->toBe(1)
         ->and($calls)->toContain('ddev-ai-lab-prometheus', 'max_over_time', '%5B100s%5D', 'time=1763299100.000');
@@ -176,7 +177,7 @@ it('AC-4 the matrix restores the server it started on, not the default one', fun
 });
 
 it('AC-4 the matrix restores the default server when the current one cannot be read', function (): void {
-    $process = ($this->run)('metrics-matrix.sh', ['--dry-run'], ['STUB_CURRENT' => 'nginx-fpm']);
+    $process = ($this->run)('metrics-matrix.sh', ['--dry-run'], ['STUB_CURRENT' => 'not-a-server']);
     $lines = array_values(array_filter(explode("\n", trim($process->getOutput()))));
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())

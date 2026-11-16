@@ -1,6 +1,6 @@
 # HELP caddy_config_last_reload_success_timestamp_seconds Timestamp of the last successful configuration reload.
 # TYPE caddy_config_last_reload_success_timestamp_seconds gauge
-caddy_config_last_reload_success_timestamp_seconds 1.7948239447374089e+09
+caddy_config_last_reload_success_timestamp_seconds 1.7948411745709069e+09
 # HELP caddy_config_last_reload_successful Whether the last configuration reload attempt was successful.
 # TYPE caddy_config_last_reload_successful gauge
 caddy_config_last_reload_successful 1
@@ -8,81 +8,81 @@ caddy_config_last_reload_successful 1
 # TYPE caddy_http_request_duration_seconds histogram
 caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.005"} 0
 caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.01"} 0
-caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.025"} 2
-caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.05"} 2
-caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.1"} 2
-caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.25"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.5"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="1"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="2.5"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="5"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="10"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="+Inf"} 3
-caddy_http_request_duration_seconds_sum{code="200",handler="map",method="GET",server="srv1"} 0.193425392
-caddy_http_request_duration_seconds_count{code="200",handler="map",method="GET",server="srv1"} 3
+caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.025"} 0
+caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.05"} 4
+caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.1"} 4
+caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.25"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.5"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="1"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="2.5"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="5"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="10"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="+Inf"} 5
+caddy_http_request_duration_seconds_sum{code="200",handler="map",method="GET",server="srv1"} 0.24003097199999998
+caddy_http_request_duration_seconds_count{code="200",handler="map",method="GET",server="srv1"} 5
 caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.005"} 0
 caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.01"} 0
-caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.025"} 2
-caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.05"} 2
-caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.1"} 2
-caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.25"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.5"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="1"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="2.5"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="5"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="10"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="+Inf"} 3
-caddy_http_request_duration_seconds_sum{code="200",handler="php",method="GET",server="srv1"} 0.191558327
-caddy_http_request_duration_seconds_count{code="200",handler="php",method="GET",server="srv1"} 3
+caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.025"} 0
+caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.05"} 4
+caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.1"} 4
+caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.25"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.5"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="1"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="2.5"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="5"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="10"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="+Inf"} 5
+caddy_http_request_duration_seconds_sum{code="200",handler="php",method="GET",server="srv1"} 0.238161662
+caddy_http_request_duration_seconds_count{code="200",handler="php",method="GET",server="srv1"} 5
 caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.005"} 0
 caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.01"} 0
-caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.025"} 2
-caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.05"} 2
-caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.1"} 2
-caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.25"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.5"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="1"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="2.5"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="5"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="10"} 3
-caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="+Inf"} 3
-caddy_http_request_duration_seconds_sum{code="200",handler="rewrite",method="GET",server="srv1"} 0.191611743
-caddy_http_request_duration_seconds_count{code="200",handler="rewrite",method="GET",server="srv1"} 3
+caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.025"} 0
+caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.05"} 4
+caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.1"} 4
+caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.25"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.5"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="1"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="2.5"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="5"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="10"} 5
+caddy_http_request_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="+Inf"} 5
+caddy_http_request_duration_seconds_sum{code="200",handler="rewrite",method="GET",server="srv1"} 0.23824791399999995
+caddy_http_request_duration_seconds_count{code="200",handler="rewrite",method="GET",server="srv1"} 5
 # HELP caddy_http_request_size_bytes Total size of the request. Includes body
 # TYPE caddy_http_request_size_bytes histogram
-caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="256"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="1024"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="4096"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="16384"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="65536"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="262144"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="1.048576e+06"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="4.194304e+06"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="+Inf"} 3
-caddy_http_request_size_bytes_sum{code="200",handler="map",method="GET",server="srv1"} 741
-caddy_http_request_size_bytes_count{code="200",handler="map",method="GET",server="srv1"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="256"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="1024"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="4096"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="16384"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="65536"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="262144"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="1.048576e+06"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="4.194304e+06"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="+Inf"} 3
-caddy_http_request_size_bytes_sum{code="200",handler="php",method="GET",server="srv1"} 741
-caddy_http_request_size_bytes_count{code="200",handler="php",method="GET",server="srv1"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="256"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="1024"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="4096"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="16384"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="65536"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="262144"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="1.048576e+06"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="4.194304e+06"} 3
-caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="+Inf"} 3
-caddy_http_request_size_bytes_sum{code="200",handler="rewrite",method="GET",server="srv1"} 741
-caddy_http_request_size_bytes_count{code="200",handler="rewrite",method="GET",server="srv1"} 3
+caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="256"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="1024"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="4096"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="16384"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="65536"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="262144"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="1.048576e+06"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="4.194304e+06"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="+Inf"} 5
+caddy_http_request_size_bytes_sum{code="200",handler="map",method="GET",server="srv1"} 1235
+caddy_http_request_size_bytes_count{code="200",handler="map",method="GET",server="srv1"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="256"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="1024"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="4096"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="16384"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="65536"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="262144"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="1.048576e+06"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="4.194304e+06"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="+Inf"} 5
+caddy_http_request_size_bytes_sum{code="200",handler="php",method="GET",server="srv1"} 1235
+caddy_http_request_size_bytes_count{code="200",handler="php",method="GET",server="srv1"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="256"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="1024"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="4096"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="16384"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="65536"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="262144"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="1.048576e+06"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="4.194304e+06"} 5
+caddy_http_request_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="+Inf"} 5
+caddy_http_request_size_bytes_sum{code="200",handler="rewrite",method="GET",server="srv1"} 1235
+caddy_http_request_size_bytes_count{code="200",handler="rewrite",method="GET",server="srv1"} 5
 # HELP caddy_http_requests_in_flight Number of requests currently handled by this server.
 # TYPE caddy_http_requests_in_flight gauge
 caddy_http_requests_in_flight{handler="map",server="srv1"} 0
@@ -91,88 +91,88 @@ caddy_http_requests_in_flight{handler="php",server="srv1"} 0
 caddy_http_requests_in_flight{handler="rewrite",server="srv1"} 0
 # HELP caddy_http_requests_total Counter of HTTP(S) requests made.
 # TYPE caddy_http_requests_total counter
-caddy_http_requests_total{handler="map",server="srv1"} 3
-caddy_http_requests_total{handler="php",server="srv1"} 3
-caddy_http_requests_total{handler="rewrite",server="srv1"} 3
+caddy_http_requests_total{handler="map",server="srv1"} 5
+caddy_http_requests_total{handler="php",server="srv1"} 5
+caddy_http_requests_total{handler="rewrite",server="srv1"} 5
 # HELP caddy_http_response_duration_seconds Histogram of times to first byte in response bodies.
 # TYPE caddy_http_response_duration_seconds histogram
 caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.005"} 0
 caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.01"} 0
-caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.025"} 2
-caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.05"} 2
-caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.1"} 2
-caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.25"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.5"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="1"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="2.5"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="5"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="10"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="+Inf"} 3
-caddy_http_response_duration_seconds_sum{code="200",handler="map",method="GET",server="srv1"} 0.190366644
-caddy_http_response_duration_seconds_count{code="200",handler="map",method="GET",server="srv1"} 3
+caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.025"} 0
+caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.05"} 4
+caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.1"} 4
+caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.25"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="0.5"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="1"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="2.5"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="5"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="10"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="map",method="GET",server="srv1",le="+Inf"} 5
+caddy_http_response_duration_seconds_sum{code="200",handler="map",method="GET",server="srv1"} 0.23806566299999998
+caddy_http_response_duration_seconds_count{code="200",handler="map",method="GET",server="srv1"} 5
 caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.005"} 0
 caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.01"} 0
-caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.025"} 2
-caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.05"} 2
-caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.1"} 2
-caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.25"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.5"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="1"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="2.5"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="5"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="10"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="+Inf"} 3
-caddy_http_response_duration_seconds_sum{code="200",handler="php",method="GET",server="srv1"} 0.19011684899999998
-caddy_http_response_duration_seconds_count{code="200",handler="php",method="GET",server="srv1"} 3
+caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.025"} 0
+caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.05"} 4
+caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.1"} 4
+caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.25"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="0.5"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="1"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="2.5"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="5"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="10"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="php",method="GET",server="srv1",le="+Inf"} 5
+caddy_http_response_duration_seconds_sum{code="200",handler="php",method="GET",server="srv1"} 0.237610073
+caddy_http_response_duration_seconds_count{code="200",handler="php",method="GET",server="srv1"} 5
 caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.005"} 0
 caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.01"} 0
-caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.025"} 2
-caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.05"} 2
-caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.1"} 2
-caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.25"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.5"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="1"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="2.5"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="5"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="10"} 3
-caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="+Inf"} 3
-caddy_http_response_duration_seconds_sum{code="200",handler="rewrite",method="GET",server="srv1"} 0.190171975
-caddy_http_response_duration_seconds_count{code="200",handler="rewrite",method="GET",server="srv1"} 3
+caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.025"} 0
+caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.05"} 4
+caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.1"} 4
+caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.25"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="0.5"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="1"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="2.5"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="5"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="10"} 5
+caddy_http_response_duration_seconds_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="+Inf"} 5
+caddy_http_response_duration_seconds_sum{code="200",handler="rewrite",method="GET",server="srv1"} 0.237730535
+caddy_http_response_duration_seconds_count{code="200",handler="rewrite",method="GET",server="srv1"} 5
 # HELP caddy_http_response_size_bytes Size of the returned response.
 # TYPE caddy_http_response_size_bytes histogram
 caddy_http_response_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="256"} 0
 caddy_http_response_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="1024"} 0
 caddy_http_response_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="4096"} 0
-caddy_http_response_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="16384"} 3
-caddy_http_response_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="65536"} 3
-caddy_http_response_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="262144"} 3
-caddy_http_response_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="1.048576e+06"} 3
-caddy_http_response_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="4.194304e+06"} 3
-caddy_http_response_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="+Inf"} 3
-caddy_http_response_size_bytes_sum{code="200",handler="map",method="GET",server="srv1"} 15063
-caddy_http_response_size_bytes_count{code="200",handler="map",method="GET",server="srv1"} 3
+caddy_http_response_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="16384"} 5
+caddy_http_response_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="65536"} 5
+caddy_http_response_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="262144"} 5
+caddy_http_response_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="1.048576e+06"} 5
+caddy_http_response_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="4.194304e+06"} 5
+caddy_http_response_size_bytes_bucket{code="200",handler="map",method="GET",server="srv1",le="+Inf"} 5
+caddy_http_response_size_bytes_sum{code="200",handler="map",method="GET",server="srv1"} 25103
+caddy_http_response_size_bytes_count{code="200",handler="map",method="GET",server="srv1"} 5
 caddy_http_response_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="256"} 0
 caddy_http_response_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="1024"} 0
 caddy_http_response_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="4096"} 0
 caddy_http_response_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="16384"} 0
-caddy_http_response_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="65536"} 3
-caddy_http_response_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="262144"} 3
-caddy_http_response_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="1.048576e+06"} 3
-caddy_http_response_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="4.194304e+06"} 3
-caddy_http_response_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="+Inf"} 3
-caddy_http_response_size_bytes_sum{code="200",handler="php",method="GET",server="srv1"} 51672
-caddy_http_response_size_bytes_count{code="200",handler="php",method="GET",server="srv1"} 3
+caddy_http_response_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="65536"} 5
+caddy_http_response_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="262144"} 5
+caddy_http_response_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="1.048576e+06"} 5
+caddy_http_response_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="4.194304e+06"} 5
+caddy_http_response_size_bytes_bucket{code="200",handler="php",method="GET",server="srv1",le="+Inf"} 5
+caddy_http_response_size_bytes_sum{code="200",handler="php",method="GET",server="srv1"} 86120
+caddy_http_response_size_bytes_count{code="200",handler="php",method="GET",server="srv1"} 5
 caddy_http_response_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="256"} 0
 caddy_http_response_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="1024"} 0
 caddy_http_response_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="4096"} 0
 caddy_http_response_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="16384"} 0
-caddy_http_response_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="65536"} 3
-caddy_http_response_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="262144"} 3
-caddy_http_response_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="1.048576e+06"} 3
-caddy_http_response_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="4.194304e+06"} 3
-caddy_http_response_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="+Inf"} 3
-caddy_http_response_size_bytes_sum{code="200",handler="rewrite",method="GET",server="srv1"} 51672
-caddy_http_response_size_bytes_count{code="200",handler="rewrite",method="GET",server="srv1"} 3
+caddy_http_response_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="65536"} 5
+caddy_http_response_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="262144"} 5
+caddy_http_response_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="1.048576e+06"} 5
+caddy_http_response_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="4.194304e+06"} 5
+caddy_http_response_size_bytes_bucket{code="200",handler="rewrite",method="GET",server="srv1",le="+Inf"} 5
+caddy_http_response_size_bytes_sum{code="200",handler="rewrite",method="GET",server="srv1"} 86120
+caddy_http_response_size_bytes_count{code="200",handler="rewrite",method="GET",server="srv1"} 5
 # HELP caddy_reverse_proxy_upstreams_healthy Health status of reverse proxy upstreams.
 # TYPE caddy_reverse_proxy_upstreams_healthy gauge
 caddy_reverse_proxy_upstreams_healthy{upstream="localhost:80"} 1
@@ -201,22 +201,22 @@ frankenphp_total_threads 14
 frankenphp_total_workers{worker="/var/www/html/public/frankenphp-worker.php"} 4
 # HELP frankenphp_worker_request_count 
 # TYPE frankenphp_worker_request_count counter
-frankenphp_worker_request_count{worker="/var/www/html/public/frankenphp-worker.php"} 3
+frankenphp_worker_request_count{worker="/var/www/html/public/frankenphp-worker.php"} 5
 # HELP frankenphp_worker_request_time 
 # TYPE frankenphp_worker_request_time counter
-frankenphp_worker_request_time{worker="/var/www/html/public/frankenphp-worker.php"} 0.19151866
+frankenphp_worker_request_time{worker="/var/www/html/public/frankenphp-worker.php"} 0.23809995399999997
 # HELP go_build_info Build information about the main Go module.
 # TYPE go_build_info gauge
 go_build_info{checksum="",path="caddy",version="(devel)"} 1
 # HELP go_gc_duration_seconds A summary of the wall-time pause (stop-the-world) duration in garbage collection cycles.
 # TYPE go_gc_duration_seconds summary
-go_gc_duration_seconds{quantile="0"} 2.7625e-05
-go_gc_duration_seconds{quantile="0.25"} 3.8042e-05
-go_gc_duration_seconds{quantile="0.5"} 4.3709e-05
-go_gc_duration_seconds{quantile="0.75"} 0.000671842
-go_gc_duration_seconds{quantile="1"} 0.000784177
-go_gc_duration_seconds_sum 0.001606353
-go_gc_duration_seconds_count 6
+go_gc_duration_seconds{quantile="0"} 1.6833e-05
+go_gc_duration_seconds{quantile="0.25"} 3.2501e-05
+go_gc_duration_seconds{quantile="0.5"} 4.2125e-05
+go_gc_duration_seconds{quantile="0.75"} 7.0501e-05
+go_gc_duration_seconds{quantile="1"} 0.001426305
+go_gc_duration_seconds_sum 0.001588265
+go_gc_duration_seconds_count 5
 # HELP go_gc_gogc_percent Heap size target percentage configured by the user, otherwise 100. This value is set by the GOGC environment variable, and the runtime/debug.SetGCPercent function. Sourced from /gc/gogc:percent.
 # TYPE go_gc_gogc_percent gauge
 go_gc_gogc_percent 100
@@ -231,43 +231,43 @@ go_goroutines 38
 go_info{version="go1.27.3"} 1
 # HELP go_memstats_alloc_bytes Number of bytes allocated in heap and currently in use. Equals to /memory/classes/heap/objects:bytes.
 # TYPE go_memstats_alloc_bytes gauge
-go_memstats_alloc_bytes 8.729928e+06
+go_memstats_alloc_bytes 7.714664e+06
 # HELP go_memstats_alloc_bytes_total Total number of bytes allocated in heap until now, even if released already. Equals to /gc/heap/allocs:bytes.
 # TYPE go_memstats_alloc_bytes_total counter
-go_memstats_alloc_bytes_total 1.8124624e+07
+go_memstats_alloc_bytes_total 1.7041912e+07
 # HELP go_memstats_buck_hash_sys_bytes Number of bytes used by the profiling bucket hash table. Equals to /memory/classes/profiling/buckets:bytes.
 # TYPE go_memstats_buck_hash_sys_bytes gauge
-go_memstats_buck_hash_sys_bytes 1.459418e+06
+go_memstats_buck_hash_sys_bytes 1.464631e+06
 # HELP go_memstats_frees_total Total number of heap objects frees. Equals to /gc/heap/frees:objects + /gc/heap/tiny/allocs:objects.
 # TYPE go_memstats_frees_total counter
-go_memstats_frees_total 130105
+go_memstats_frees_total 129811
 # HELP go_memstats_gc_sys_bytes Number of bytes used for garbage collection system metadata. Equals to /memory/classes/metadata/other:bytes.
 # TYPE go_memstats_gc_sys_bytes gauge
-go_memstats_gc_sys_bytes 3.964672e+06
+go_memstats_gc_sys_bytes 3.85816e+06
 # HELP go_memstats_heap_alloc_bytes Number of heap bytes allocated and currently in use, same as go_memstats_alloc_bytes. Equals to /memory/classes/heap/objects:bytes.
 # TYPE go_memstats_heap_alloc_bytes gauge
-go_memstats_heap_alloc_bytes 8.729928e+06
+go_memstats_heap_alloc_bytes 7.714664e+06
 # HELP go_memstats_heap_idle_bytes Number of heap bytes waiting to be used. Equals to /memory/classes/heap/released:bytes + /memory/classes/heap/free:bytes.
 # TYPE go_memstats_heap_idle_bytes gauge
-go_memstats_heap_idle_bytes 3.260416e+06
+go_memstats_heap_idle_bytes 7.872512e+06
 # HELP go_memstats_heap_inuse_bytes Number of heap bytes that are in use. Equals to /memory/classes/heap/objects:bytes + /memory/classes/heap/unused:bytes
 # TYPE go_memstats_heap_inuse_bytes gauge
-go_memstats_heap_inuse_bytes 1.204224e+07
+go_memstats_heap_inuse_bytes 1.1624448e+07
 # HELP go_memstats_heap_objects Number of currently allocated objects. Equals to /gc/heap/objects:objects.
 # TYPE go_memstats_heap_objects gauge
-go_memstats_heap_objects 33884
+go_memstats_heap_objects 35851
 # HELP go_memstats_heap_released_bytes Number of heap bytes released to OS. Equals to /memory/classes/heap/released:bytes.
 # TYPE go_memstats_heap_released_bytes gauge
-go_memstats_heap_released_bytes 2.637824e+06
+go_memstats_heap_released_bytes 7.348224e+06
 # HELP go_memstats_heap_sys_bytes Number of heap bytes obtained from system. Equals to /memory/classes/heap/objects:bytes + /memory/classes/heap/unused:bytes + /memory/classes/heap/released:bytes + /memory/classes/heap/free:bytes.
 # TYPE go_memstats_heap_sys_bytes gauge
-go_memstats_heap_sys_bytes 1.5302656e+07
+go_memstats_heap_sys_bytes 1.949696e+07
 # HELP go_memstats_last_gc_time_seconds Number of seconds since 1970 of last garbage collection.
 # TYPE go_memstats_last_gc_time_seconds gauge
-go_memstats_last_gc_time_seconds 1.7948239562481623e+09
+go_memstats_last_gc_time_seconds 1.7948411741228094e+09
 # HELP go_memstats_mallocs_total Total number of heap objects allocated, both live and gc-ed. Semantically a counter version for go_memstats_heap_objects gauge. Equals to /gc/heap/allocs:objects + /gc/heap/tiny/allocs:objects.
 # TYPE go_memstats_mallocs_total counter
-go_memstats_mallocs_total 163989
+go_memstats_mallocs_total 165662
 # HELP go_memstats_mcache_inuse_bytes Number of bytes in use by mcache structures. Equals to /memory/classes/metadata/mcache/inuse:bytes.
 # TYPE go_memstats_mcache_inuse_bytes gauge
 go_memstats_mcache_inuse_bytes 16072
@@ -276,16 +276,16 @@ go_memstats_mcache_inuse_bytes 16072
 go_memstats_mcache_sys_bytes 16072
 # HELP go_memstats_mspan_inuse_bytes Number of bytes in use by mspan structures. Equals to /memory/classes/metadata/mspan/inuse:bytes.
 # TYPE go_memstats_mspan_inuse_bytes gauge
-go_memstats_mspan_inuse_bytes 177120
+go_memstats_mspan_inuse_bytes 195520
 # HELP go_memstats_mspan_sys_bytes Number of bytes used for mspan structures obtained from system. Equals to /memory/classes/metadata/mspan/inuse:bytes + /memory/classes/metadata/mspan/free:bytes.
 # TYPE go_memstats_mspan_sys_bytes gauge
-go_memstats_mspan_sys_bytes 179520
+go_memstats_mspan_sys_bytes 195840
 # HELP go_memstats_next_gc_bytes Number of heap bytes when next garbage collection will take place. Equals to /gc/heap/goal:bytes.
 # TYPE go_memstats_next_gc_bytes gauge
-go_memstats_next_gc_bytes 1.3871786e+07
+go_memstats_next_gc_bytes 1.154529e+07
 # HELP go_memstats_other_sys_bytes Number of bytes used for other system allocations. Equals to /memory/classes/other:bytes.
 # TYPE go_memstats_other_sys_bytes gauge
-go_memstats_other_sys_bytes 1.411382e+06
+go_memstats_other_sys_bytes 1.418521e+06
 # HELP go_memstats_stack_inuse_bytes Number of bytes obtained from system for stack allocator in non-CGO environments. Equals to /memory/classes/heap/stacks:bytes.
 # TYPE go_memstats_stack_inuse_bytes gauge
 go_memstats_stack_inuse_bytes 1.47456e+06
@@ -294,7 +294,7 @@ go_memstats_stack_inuse_bytes 1.47456e+06
 go_memstats_stack_sys_bytes 1.47456e+06
 # HELP go_memstats_sys_bytes Number of bytes obtained from system. Equals to /memory/classes/total:byte.
 # TYPE go_memstats_sys_bytes gauge
-go_memstats_sys_bytes 2.380828e+07
+go_memstats_sys_bytes 2.7924744e+07
 # HELP go_sched_gomaxprocs_threads The current runtime.GOMAXPROCS setting, or the number of operating system threads that can execute user-level Go code simultaneously. Sourced from /sched/gomaxprocs:threads.
 # TYPE go_sched_gomaxprocs_threads gauge
 go_sched_gomaxprocs_threads 7
@@ -303,28 +303,28 @@ go_sched_gomaxprocs_threads 7
 go_threads 28
 # HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.
 # TYPE process_cpu_seconds_total counter
-process_cpu_seconds_total 1.11
+process_cpu_seconds_total 1.41
 # HELP process_max_fds Maximum number of open file descriptors.
 # TYPE process_max_fds gauge
 process_max_fds 1.048575e+06
 # HELP process_network_receive_bytes_total Number of bytes received by the process over the network.
 # TYPE process_network_receive_bytes_total counter
-process_network_receive_bytes_total 10117
+process_network_receive_bytes_total 9795
 # HELP process_network_transmit_bytes_total Number of bytes sent by the process over the network.
 # TYPE process_network_transmit_bytes_total counter
-process_network_transmit_bytes_total 29831
+process_network_transmit_bytes_total 43136
 # HELP process_open_fds Number of open file descriptors.
 # TYPE process_open_fds gauge
-process_open_fds 19
+process_open_fds 20
 # HELP process_resident_memory_bytes Resident memory size in bytes.
 # TYPE process_resident_memory_bytes gauge
-process_resident_memory_bytes 2.11574784e+08
+process_resident_memory_bytes 2.11738624e+08
 # HELP process_start_time_seconds Start time of the process since unix epoch in seconds.
 # TYPE process_start_time_seconds gauge
-process_start_time_seconds 1.79482394357e+09
+process_start_time_seconds 1.79484117324e+09
 # HELP process_virtual_memory_bytes Virtual memory size in bytes.
 # TYPE process_virtual_memory_bytes gauge
-process_virtual_memory_bytes 4.221591552e+09
+process_virtual_memory_bytes 4.10918912e+09
 # HELP process_virtual_memory_max_bytes Maximum amount of virtual memory available in bytes.
 # TYPE process_virtual_memory_max_bytes gauge
 process_virtual_memory_max_bytes 1.8446744073709552e+19

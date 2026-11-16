@@ -177,3 +177,52 @@
     | frankenphp | `app-DNob7CFE.css` | `app-PTzu1QaN.js` | yes | only `captured=` differs |
     | frankenphp-worker | `app-DNob7CFE.css` | `app-PTzu1QaN.js` | yes | only `captured=` differs |
     | frankenphp-octane | `app-DNob7CFE.css` | `app-PTzu1QaN.js` | yes | only `captured=` differs |
+
+## Phase: Fix pass after the ship report (2026-11-16)
+
+Findings F1 to F20 come from `.ai/reports/ship-spec-20261116-1120-metrics-dashboard-20261116-1634.md`. The owner made the decisions; tests were written before the fix where it could be tested.
+
+- [x] 16. Environment: `fileinfo` after the image rebuild (done by the orchestrator)
+  - The PHP ZTS repository now ships `fileinfo` as its own package, `php-zts-fileinfo`, so the rebuilt web image had no `finfo` and 106 tests failed. The package is added to `.ddev/servers/frankenphp/config.frankenphp.yaml`, `.ddev/servers/frankenphp-octane/config.frankenphp-octane.yaml` and the active `.ddev/config.zz-server.yaml`. `DdevServerCommandTest` asserts it for both server configs. Full suite afterwards: 2968 passed.
+- [x] 17. F1, request rate counted three times on worker mode
+  - Every request and status-code query selects one handler per mode, `handler=~"php|vars|subroute"` (classic `vars`, worker `php`, Octane `subroute`). The scrape's own `metrics` handler is left out.
+  - The three fixtures were captured again from the live endpoints after `per_host` was removed, each after 5 app requests: classic `vars` 5; worker `map` 5, `php` 5, `rewrite` 5; Octane `subroute` 5.
+  - Test: `AC-1 AC-3 the handler selector picks exactly one request series per mode, the one that counts every app request` (3 datasets), plus `AC-3 the request panels count one handler per mode`.
+  - Found on the way: `caddy_http_requests_total` has no `code` label, so the status-code panel only showed one series named "Value". It now groups `caddy_http_request_duration_seconds_count` by `code`. Test: `AC-3 the status code panel groups a series that carries the code label on every mode`.
+- [x] 18. F2 and F3, p95 capped at 10 s and the snapshot window
+  - The snapshot writes a p95 of 10 s or more as the string `">10 (bucket cap)"` with `p95_capped: true` (Caddy's top finite bucket is 10 s). BENCHMARKS uses slow-load's own p95 for the SSE cells. The latency panel description explains the cap.
+  - Window: measuring only the repeats would need timestamps from `slow-load.sh`, which may not change (MNC-3). Instead the matrix watches for the slow-load load container and passes its first start and last stop as `--load-window`. The numbers cover that window (the warm-ups are the same load), while the PNG keeps the whole cell (C-1). The window still holds the health probe (5 requests per second on the same handler). This is documented in the script header and BENCHMARKS. It changes C-1 for the numbers only. The scrape coverage uses the same window, so a project restart outside the load no longer pulls it under 0.8.
+  - Tests: `AC-4 a p95 at the top Caddy bucket is written as above the bucket cap, not as a number`, `AC-4 a p95 just below the bucket cap stays a number`, `AC-4 the load window narrows the numbers but not the screenshot`, `AC-4 the snapshot refuses a malformed or reversed load window`.
+- [x] 19. F4 and gap 14, worker saturation
+  - Live (fixtures): with 4 idle workers `frankenphp_busy_threads` reads 4 on worker and Octane mode, and this FrankenPHP has no worker queue metric. The workers panel is now "Busy, ready and total workers" (`frankenphp_busy_workers`, `frankenphp_ready_workers`, `frankenphp_total_workers`). Every panel has a description, and those of threads, queue and workers say what to read in worker modes. The snapshot exports `max_busy_workers` and `total_workers`. Learning guide I-11 was corrected to match.
+- [x] 20. F9, Grafana admin/admin
+  - Compose sets `GF_AUTH_BASIC_ENABLED=false`, `GF_USERS_ALLOW_SIGN_UP=false`, `GF_AUTH_DISABLE_LOGIN_FORM=true` and `GF_AUTH_DISABLE_LOGIN=true`, with anonymous Viewer. `AC-3 grafana is provisioned and read-only for the anonymous viewer` asserts all of them.
+  - Live proof (2026-11-16): `POST /api/dashboards/db` with `-u admin:admin` returns **403** "Permissions needed: dashboards:create", not the expected 401. `-u admin:wrong` gets the identical 403, and so do `GET /api/admin/settings` and `GET /api/users` with either pair. So the credentials are not evaluated at all, and the request is served as the anonymous Viewer. `GET /api/user` with admin:admin is 401, `POST /login` is 400 and `POST /api/user/signup` is 401. The anonymous dashboard has `canSave: false` and `canEdit: false`.
+- [x] 21. F10, the cost of the metrics directive on worker mode
+  - Method: `bench/run.sh ping --quick` (50 connections, warm-up 5 s, measure 15 s, 1 repeat) on `frankenphp-worker` with the stack off. Three alternating rounds with and without `metrics` in `servers { }`, edited only in the active, gitignored `.ddev/web-build/Caddyfile.frankenphp` and restored after (`restored: 1`), committed tree `8cba151`. Raw files: `bench/results/raw/2026-11-16/frankenphp-worker/ping-directive-*.json` (gitignored).
+
+    | Round | With: RPS | With: p95 | Without: RPS | Without: p95 |
+    |-------|-----------|-----------|--------------|--------------|
+    | 1 | 9430 | 8.60 ms | 9619 | 8.51 ms |
+    | 2 | 9370 | 8.59 ms | 9732 | 8.15 ms |
+    | 3 | 9324 | 8.75 ms | 9610 | 8.38 ms |
+    | Mean | 9375 | 8.65 ms | 9654 | 8.35 ms |
+
+  - Cost: 2.9 % RPS and 3.6 % p95 on the lightest route. That is under the 5 % limit, so the directive stays on and is not gated behind an env var. The stack-off controls in the matrix therefore still include it.
+- [x] 22. F14, hardcoded site name
+  - `.ddev/metrics/prometheus.yml.template` has the target `ddev-${DDEV_SITENAME}-web:9180`. `ddev metrics on` writes `.ddev/metrics/prometheus.generated.yml` from it with the project name (gitignored), and the Prometheus container mounts that file with its normal entrypoint (no `sed` in the container). The command requires `DDEV_SITENAME`, which DDEV sets for host commands. Compose and the datasource use `${DDEV_SITENAME}`. The bench scripts follow the repo convention `${DDEV_SITENAME:-ai-lab}`, and the screenshot URL is built from it.
+  - Test: `AC-2 the prometheus config is generated per project by ddev metrics on into a gitignored file`, which also asserts that no stack file contains `ai-lab`. Live: `ddev metrics on` wrote the target `ddev-ai-lab-web:9180` and reported `target: up`, and `git check-ignore` matches the generated file.
+- [x] 23. Minor findings
+  - F5: `--quick` writes to the gitignored raw folder and overwrites without `--force`. A full run still refuses the same day. The guard now also runs on `--dry-run`, which makes it testable.
+  - F6 and F13: the keep-alive is one watcher loop. Once the web container is healthy again, it recreates only the two containers with `docker compose -f .ddev/.ddev-docker-compose-full.yaml --profile metrics up -d --no-deps prometheus grafana`, one call at a time, with no `ddev start` inside. `watch_stop` removes a flag file and waits for the loop to end, so nothing outlives it. It polls Docker once a second, which is negligible next to the load. A failed cell is reported at the end and the run goes on.
+  - F7: coverage counts `sum_over_time(up[...])`, so only successful scrapes count (already fixed, test kept).
+  - F8: the fixtures were captured again (task 17). Test: `AC-1 the fixtures were captured without a per-host label`.
+  - F11: the dashboard refreshes every 5 s. Live, a URL cannot switch that off: `refresh=`, `refresh=false` and `refresh=0` all ended at `5s` (21 extra queries in 12 s), and `refresh=1d` ended at `10s`. So `bench/metrics-screenshot.mjs` rewrites the dashboard JSON with an empty refresh on its way to the page (route interception). With that, 7 queries at load and none after.
+  - F12: one Playwright container per matrix run (`bench/lib/playwright.sh`), with playwright-core installed once. The snapshot uses `docker exec` into it when `PLAYWRIGHT_CONTAINER` is set.
+  - F15 and F16: `MetricsGatesTest` lost the MNC-2 test that duplicated `MetricsStackConfigTest` and the test that read this file. It keeps MNC-1, MNC-3 and MNC-5.
+  - F17 to F19: the metrics command uses its own variables throughout, and `state` is a plain if. The `--help` sed was not a no-op (it strips the `## ` prefix) and stays.
+  - F20: `per_host` was removed from all three Caddyfiles. Every series was labelled `host="_other"`, because the sites are catch-all (`:80`, `:443`, Octane's `:8000`), so the label carried nothing and no query used it. Test: `AC-1 every mode serves metrics on port 9180 and records request metrics without a per-host label`.
+- [x] 24. New finding: the screenshots never showed the dashboard
+  - Live, the Playwright Chromium in the container has no locale. Grafana 12 then fails at boot ("Error bootstrapping Grafana RangeError: Incorrect locale information provided") and renders its "failed to load its application files" page. The 54 KB PNG of task 3 was that page.
+  - On top of that, a full-page shot resizes the viewport, Grafana redraws the panels, and the shot catches them blank.
+  - Fix: the page gets `locale: 'en-US'` and `timezoneId: 'UTC'`, a 1600x1320 viewport that holds all seven panels (not 1600x900 as C-8 said; 900 cut off two panels), a plain viewport shot, and a check that fails the run when the "failed to load" page shows or "Requests per second" never renders. A live 2-minute snapshot then showed all seven panels with data (78 KB).

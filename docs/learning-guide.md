@@ -1511,6 +1511,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`photo-duplicates.php`](../resources/guides/photo-duplicates.php) | The capability guide behind `/ai/guides/photo-duplicates` | SL-39 |
 | [`admin-assistant.php`](../resources/guides/admin-assistant.php) | The capability guide behind `/ai/guides/admin-assistant` | SL-34 |
 | [`mcp.php`](../resources/guides/mcp.php) | The foundation guide behind `/ai/guides/mcp` | SL-35 |
+| [`metrics.php`](../resources/guides/metrics.php) | The foundation guide behind `/ai/guides/metrics`: the thread pool on the metrics dashboard | SL-15 |
 | [`assistant.php`](../resources/guides/assistant.php) | The capability guide behind `/ai/guides/assistant` | SL-25 |
 | [`moderation.php`](../resources/guides/moderation.php) | The capability guide behind `/ai/guides/moderation` | SL-26 |
 | [`ModerationService`](../app/Services/ModerationService.php), [`ModerationFacts`](../app/Services/ModerationFacts.php), [`ModerationRules`](../app/Rules/ModerationRules.php), [`ModerationInput`](../app/DTOs/ModerationInput.php), [`ModerationResult`](../app/DTOs/ModerationResult.php), [`ModerationFactsResult`](../app/DTOs/ModerationFactsResult.php) | Moderation: compute the facts (median, ratio, VINs, injection pattern), ask the model, check the answer in PHP, retry once, apply the PHP floor for an injection pattern or a reported VIN, and apply the per-model threshold | SL-26 |
@@ -1714,6 +1715,7 @@ The guide files:
 - [`docs.php`](../resources/guides/docs.php): docs search
 - [`guards.php`](../resources/guides/guards.php): the guards around a model call
 - [`mcp.php`](../resources/guides/mcp.php): the listing tools as an MCP server with a browser confirmation
+- [`metrics.php`](../resources/guides/metrics.php): the thread pool on the metrics dashboard
 - [`nl-search.php`](../resources/guides/nl-search.php): words to filters
 - [`photos.php`](../resources/guides/photos.php): reading a car photo with a vision model
 - [`playground.php`](../resources/guides/playground.php): one prompt run on several models side by side
