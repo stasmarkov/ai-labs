@@ -122,4 +122,23 @@ return [
         ],
     ],
     'related' => ['nl-search', 'docs'],
+    'build' => [
+        ['step' => 'Choose one embedding model and keep it', 'detail' => 'Vectors from different models cannot be compared. Store the model name next to the index and refuse a search when it differs.', 'tab' => 'recipes'],
+        ['step' => 'Store vectors in pgvector', 'detail' => 'Add a vector column and an HNSW index, then query by cosine distance with an ordinary SQL order by.', 'tab' => 'recipes', 'doc' => 'https://github.com/pgvector/pgvector'],
+        ['step' => 'Embed the query the same way', 'detail' => 'Run the sentence through the same model and the same normalising as the stored rows.', 'tab' => 'recipes'],
+        ['step' => 'Guard the input first', 'detail' => 'Reject empty or oversized text before it reaches the embedding model, and cache the vector for repeated queries.', 'tab' => 'support', 'doc' => 'https://laravel.com/docs/validation'],
+        ['step' => 'Return a small ranked list', 'detail' => 'Ask the index for the nearest ten and show rows with their score, so a bad match is visible.', 'tab' => 'recipes'],
+        ['step' => 'Re-index after a model change', 'detail' => 'Write a command that re-embeds every row and an indicator that says whether the index is current.', 'tab' => 'support'],
+    ],
+    'watch' => [
+        ['point' => 'Exact words get lost', 'detail' => 'Part numbers and names embed badly. Add a keyword search or a hybrid merge when exact terms matter.', 'tab' => 'failures'],
+        ['point' => 'Always some result', 'detail' => 'A vector search returns the nearest rows even when none is close. Use a minimum score.', 'tab' => 'failures'],
+        ['point' => 'Index and model must agree', 'detail' => 'Switching the model without a re-index gives nonsense that looks valid. Check for it on every search.', 'tab' => 'support'],
+        ['point' => 'Embedding costs add up', 'detail' => 'Each document is embedded once, each query once. Cache queries and embed on a queue.', 'tab' => 'support'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Recruiting', 'problem' => 'A recruiter types a role and wants profiles that fit, whatever words the CV uses.', 'how' => 'Embed each profile once, embed the query and return the nearest profiles with a score.'],
+        ['domain' => 'Legal', 'problem' => 'A lawyer looks for past cases that match a situation.', 'how' => 'Embed the case summaries and search by the described facts instead of keywords.'],
+        ['domain' => 'Customer support', 'problem' => 'Customers describe a problem in their own words.', 'how' => 'Embed the help articles and suggest the nearest ones before a ticket is opened.'],
+    ],
 ];

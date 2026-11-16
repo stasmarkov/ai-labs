@@ -153,4 +153,22 @@ return [
         ],
     ],
     'related' => ['prompts', 'run-log', 'local-models', 'guards'],
+    'build' => [
+        ['step' => 'Store prompts as immutable versions', 'detail' => 'Save each change as a new numbered version and refuse a save that changes nothing.', 'tab' => 'recipes'],
+        ['step' => 'Run the same input on several models', 'detail' => 'Call each model in turn with the same prompt and keep every result in its own column.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],
+        ['step' => 'Validate before the first call', 'detail' => 'Check the prompt, input, models and limits up front, so a bad run never starts.', 'tab' => 'support', 'doc' => 'https://laravel.com/docs/validation'],
+        ['step' => 'Record numbers for every column', 'detail' => 'Store tokens, time and status per column, so models are compared on facts.', 'tab' => 'support'],
+        ['step' => 'Keep comparisons openable', 'detail' => 'Persist each run and show it later without calling a model again.', 'tab' => 'recipes'],
+    ],
+    'watch' => [
+        ['point' => 'Unfair comparisons', 'detail' => 'Models differ in size and in system prompt handling. Compare like with like.', 'tab' => 'failures'],
+        ['point' => 'One failure should not hide the rest', 'detail' => 'A timeout in one column must not discard the others.', 'tab' => 'failures'],
+        ['point' => 'Runs cost money', 'detail' => 'Each target is a call. Limit targets and input size.', 'tab' => 'support'],
+        ['point' => 'Prompts can leak data', 'detail' => 'Stored prompts may contain secrets. Treat the store like source code.', 'tab' => 'support'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Prompt engineering teams', 'problem' => 'A team wants to know whether a new prompt is better.', 'how' => 'Run both versions on the same inputs and compare outputs and cost.'],
+        ['domain' => 'Vendor selection', 'problem' => 'A company chooses between model providers.', 'how' => 'Run one task through each provider and compare quality and latency.'],
+        ['domain' => 'Regression checks', 'problem' => 'A model upgrade may change answers.', 'how' => 'Replay saved inputs against the new model before switching.'],
+    ],
 ];

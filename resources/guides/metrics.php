@@ -125,4 +125,21 @@ return [
         ],
     ],
     'related' => ['streaming', 'local-models'],
+    'build' => [
+        ['step' => 'Expose server counters', 'detail' => 'Enable the server metrics endpoint, so threads, workers, queue and memory can be scraped.', 'tab' => 'recipes', 'doc' => 'https://frankenphp.dev/docs/'],
+        ['step' => 'Scrape every second', 'detail' => 'Run a time series store with a short interval and keep it local for labs.', 'tab' => 'recipes'],
+        ['step' => 'Draw the pool', 'detail' => 'Build a dashboard of busy against total threads, queue depth, requests and latency.', 'tab' => 'recipes'],
+        ['step' => 'Run a known load', 'detail' => 'Drive a fixed number of slow calls and read the graph, so you can predict and compare.', 'tab' => 'support'],
+        ['step' => 'Save a window as numbers', 'detail' => 'Export a time window as a table and a picture for the record.', 'tab' => 'recipes'],
+    ],
+    'watch' => [
+        ['point' => 'Averages hide queues', 'detail' => 'Look at queue depth and p95, not only the mean.', 'tab' => 'failures'],
+        ['point' => 'Capped percentiles', 'detail' => 'A flat p95 can be the histogram cap, not the real value.', 'tab' => 'failures'],
+        ['point' => 'Scrape interval', 'detail' => 'A one second scrape misses what happens between samples.', 'tab' => 'failures'],
+        ['point' => 'Metrics are opt-in', 'detail' => 'Do not expose the endpoint on a public host.', 'tab' => 'support'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Capacity planning', 'problem' => 'A team must size a PHP pool for a model call.', 'how' => 'Run the load, watch busy threads and queue depth, and set the pool from the graph.'],
+        ['domain' => 'Incident review', 'problem' => 'A site was slow and nobody knows why.', 'how' => 'Compare queue depth and latency graphs around the incident.'],
+    ],
 ];

@@ -8,6 +8,8 @@ export default { layout: LabLayout };
 import { computed, ref } from 'vue';
 import LabButton from '../../components/LabButton.vue';
 import LabHowItWorks from '../../components/LabHowItWorks.vue';
+import LabTeach from '../../components/LabTeach.vue';
+import type { Teach } from '../../components/LabTeach.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabSimilarityBar from '../../components/LabSimilarityBar.vue';
 import LabTag from '../../components/LabTag.vue';
@@ -30,6 +32,7 @@ interface PhotoMatch {
 const props = defineProps<{
     howItWorks: GuideStep[];
     guideHref: string;
+    teach: Teach;
     searchUrl: string;
     minQueryLength: number;
     maxQueryLength: number;
@@ -129,8 +132,6 @@ function useExample(example: string): void {
         <LabTag caption="cutoff">{{ minScore.toFixed(2) }}</LabTag>
     </div>
 
-    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
-
     <form class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end" @submit.prevent="search">
         <div class="min-w-0 flex-1">
             <LabTextInput id="photo-search-query" v-model="query" type="search" label="Query" placeholder="e.g. red sports car" />
@@ -143,7 +144,7 @@ function useExample(example: string): void {
 
     <ul aria-label="Example queries" class="m-0 mt-3 flex list-none flex-wrap gap-2 p-0">
         <li v-for="example in examples" :key="example">
-            <LabButton variant="secondary" :disabled="loading" @click="useExample(example)">{{ example }}</LabButton>
+            <LabButton variant="secondary" data-example :disabled="loading" @click="useExample(example)">{{ example }}</LabButton>
         </li>
     </ul>
 
@@ -183,4 +184,10 @@ function useExample(example: string): void {
             </dl>
         </section>
     </Teleport>
+
+    <LabTeach :teach="teach">
+        <template #works>
+            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
+        </template>
+    </LabTeach>
 </template>

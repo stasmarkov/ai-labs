@@ -117,4 +117,23 @@ return [
         ],
     ],
     'related' => ['describe', 'providers', 'similar-photos', 'photo-search', 'photo-duplicates'],
+    'build' => [
+        ['step' => 'Store a small copy of each image', 'detail' => 'Resize before sending, because image tokens and upload time grow with size.', 'tab' => 'recipes'],
+        ['step' => 'Ask for a schema, not prose', 'detail' => 'Request caption, tags, colours and counts as structured output with fixed types and allowed values.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],
+        ['step' => 'Validate the answer again in PHP', 'detail' => 'Check types, ranges and allowed values after the model, and treat a failure as a rejected answer.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/validation'],
+        ['step' => 'Run on a queue', 'detail' => 'Dispatch one job per photo with a timeout and a retry limit, so a slow model never blocks a request.', 'tab' => 'support', 'doc' => 'https://laravel.com/docs/queues'],
+        ['step' => 'Handle a server that does not answer', 'detail' => 'Map timeouts and refused connections to a clear state on the photo, and retry later.', 'tab' => 'support'],
+        ['step' => 'Log every call', 'detail' => 'Record model, tokens and duration per photo, so you can compare vision models on the same set.', 'tab' => 'support'],
+    ],
+    'watch' => [
+        ['point' => 'Vision models are slow', 'detail' => 'A local model can take seconds per photo. Plan the batch size and the queue timeout.', 'tab' => 'failures'],
+        ['point' => 'The model sees what it sees', 'detail' => 'Damage or people counts are guesses. Show them as model output, not as facts.', 'tab' => 'support'],
+        ['point' => 'Privacy', 'detail' => 'Photos can show faces and plates. Decide what leaves your server before using a cloud model.', 'tab' => 'support'],
+        ['point' => 'Schema drift', 'detail' => 'Adding a field changes the prompt and the checks. Change both together and re-run a sample.', 'tab' => 'failures'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Insurance', 'problem' => 'Claim photos need a damage description.', 'how' => 'Send each photo with a schema for damaged parts and severity, and let an adjuster confirm.'],
+        ['domain' => 'Marketplaces', 'problem' => 'Sellers upload photos with no tags.', 'how' => 'Extract category, colour and condition as tags so search can use them.'],
+        ['domain' => 'Property management', 'problem' => 'Inspection photos need an inventory.', 'how' => 'Extract visible items and defects into a checklist for review.'],
+    ],
 ];

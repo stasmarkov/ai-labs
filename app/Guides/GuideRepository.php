@@ -5,17 +5,34 @@ declare(strict_types=1);
 namespace App\Guides;
 
 use App\DTOs\Guide;
+use App\DTOs\GuideBuildStep;
+use App\DTOs\GuideElsewhere;
 use App\DTOs\GuideExperiment;
 use App\DTOs\GuideItem;
 use App\DTOs\GuideNumber;
 use App\DTOs\GuideRecipe;
 use App\DTOs\GuideStep;
 use App\DTOs\GuideSupport;
+use App\DTOs\GuideWatchPoint;
 
 final readonly class GuideRepository
 {
     /** The guide kinds; capability guides back a live lab page, a planned guide only explains what is coming. */
     public const KINDS = ['capability', 'foundation', 'planned'];
+
+    /** The guide tab each teach row can link on to, keyed by the name a guide file uses. */
+    private const TAB_KEYS = ['recipes' => 'modify', 'failures' => 'support', 'support' => 'support'];
+
+    /** How many rows each teach section holds when a guide has it. */
+    private const BUILD_ROWS = [4, 8];
+
+    private const WATCH_ROWS = [3, 6];
+
+    private const ELSEWHERE_ROWS = [2, 3];
+
+    private const WORKS_ROWS = 6;
+
+    private const SUMMARY_LENGTH = 240;
 
     public function __construct(private string $directory) {}
 
@@ -49,6 +66,55 @@ final readonly class GuideRepository
         }
 
         return $this->build($key, $data, (string) sha1_file($path));
+    }
+
+    /**
+     * What a live lab page teaches: the steps of "How it works" as a title and first sentence, then the
+     * build, watch and elsewhere rows, all read from the guide file so a page and its guide never differ.
+     */
+    public function teach(string $key): GuideTeach
+    {
+        $guide = $this->find($key);
+
+        return new GuideTeach(
+            key: $guide->key,
+            title: $guide->title,
+            works: array_map(fn ($step): array => [
+                'title' => $step->title,
+                'summary' => $this->firstSentence($step->body),
+            ], array_slice($guide->works, 0, self::WORKS_ROWS)),
+            build: array_map(fn (GuideBuildStep $row): array => [
+                'step' => $row->step,
+                'detail' => $row->detail,
+                'tab' => $row->tab,
+                'doc' => $row->doc,
+            ], $guide->build),
+            watch: array_map(fn (GuideWatchPoint $row): array => [
+                'point' => $row->point,
+                'detail' => $row->detail,
+                'tab' => $row->tab,
+            ], $guide->watch),
+            elsewhere: array_map(fn (GuideElsewhere $row): array => [
+                'domain' => $row->domain,
+                'problem' => $row->problem,
+                'how' => $row->how,
+            ], $guide->elsewhere),
+        );
+    }
+
+    private function firstSentence(string $body): string
+    {
+        $plain = trim((string) preg_replace('/\s+/', ' ', str_replace(['`', '**', '*'], '', $body)));
+
+        $sentence = preg_match('/^.+?[.!?](?=\s|$)/u', $plain, $match) === 1 ? $match[0] : $plain;
+
+        if (mb_strlen($sentence) <= self::SUMMARY_LENGTH) {
+            return $sentence;
+        }
+
+        $cut = mb_substr($sentence, 0, self::SUMMARY_LENGTH - 1);
+
+        return rtrim(mb_substr($cut, 0, (int) mb_strrpos($cut, ' ')), ' ,;:').'…';
     }
 
     private function path(string $key): string
@@ -111,6 +177,22 @@ final readonly class GuideRepository
                 );
             }),
             experiments: $this->rows($key, $data, 'experiments', fn (array $row): GuideExperiment => $this->experiment($key, $row)),
+            build: $this->counted($key, $data, 'build', self::BUILD_ROWS, fn (array $row): GuideBuildStep => new GuideBuildStep(
+                $this->string($key, $row, 'step'),
+                $this->string($key, $row, 'detail'),
+                $this->tab($key, $row, ['recipes', 'support'], false),
+                $this->optional($row, 'doc'),
+            )),
+            watch: $this->counted($key, $data, 'watch', self::WATCH_ROWS, fn (array $row): GuideWatchPoint => new GuideWatchPoint(
+                $this->string($key, $row, 'point'),
+                $this->string($key, $row, 'detail'),
+                (string) $this->tab($key, $row, ['failures', 'support'], true),
+            )),
+            elsewhere: $this->counted($key, $data, 'elsewhere', self::ELSEWHERE_ROWS, fn (array $row): GuideElsewhere => new GuideElsewhere(
+                $this->string($key, $row, 'domain'),
+                $this->string($key, $row, 'problem'),
+                $this->string($key, $row, 'how'),
+            )),
             plan: $this->plan($key, $data, $planned),
             related: array_values(array_map('strval', is_array($data['related'] ?? null) ? $data['related'] : [])),
             contentHash: $hash,
@@ -175,6 +257,46 @@ final readonly class GuideRepository
             $this->string($key, $row, 'page'),
             array_map('strval', is_array($row['params'] ?? null) ? $row['params'] : []),
         );
+    }
+
+    /**
+     * A teach section: absent is fine, present must hold a number of rows inside the range.
+     *
+     * @template T
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array{int, int}  $range
+     * @param  callable(array<string, mixed>): T  $make
+     * @return list<T>
+     */
+    private function counted(string $key, array $data, string $field, array $range, callable $make): array
+    {
+        $rows = $this->rows($key, $data, $field, $make);
+
+        if ($rows !== [] && (count($rows) < $range[0] || count($rows) > $range[1])) {
+            throw new InvalidGuideException("Guide [{$key}] field [{$field}] needs {$range[0]} to {$range[1]} rows.");
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @param  list<string>  $allowed
+     */
+    private function tab(string $key, array $row, array $allowed, bool $required): ?string
+    {
+        $tab = $this->optional($row, 'tab');
+
+        if ($tab === null && ! $required) {
+            return null;
+        }
+
+        if ($tab === null || ! in_array($tab, $allowed, true)) {
+            throw new InvalidGuideException("Guide [{$key}] row tab must be one of [".implode(', ', $allowed).'].');
+        }
+
+        return self::TAB_KEYS[$tab];
     }
 
     /**

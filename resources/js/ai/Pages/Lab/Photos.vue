@@ -9,6 +9,8 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import LabButton from '../../components/LabButton.vue';
 import LabHowItWorks from '../../components/LabHowItWorks.vue';
+import LabTeach from '../../components/LabTeach.vue';
+import type { Teach } from '../../components/LabTeach.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabSimilarityBar from '../../components/LabSimilarityBar.vue';
 import LabTag from '../../components/LabTag.vue';
@@ -63,6 +65,7 @@ interface PhotoDetail extends PhotoItem {
 const props = defineProps<{
     howItWorks: GuideStep[];
     guideHref: string;
+    teach: Teach;
     photos: PhotoItem[];
     pagination: { page: number; lastPage: number; total: number };
     selected: PhotoDetail | null;
@@ -326,8 +329,6 @@ onBeforeUnmount(() => {
         Car photos on listings. A vision model reads one photo and answers with a caption, tags and a few checked fields.
     </p>
 
-    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="guideEvents" :state="guideState" />
-
     <section v-if="pagination.total === 0" aria-labelledby="photos-empty-title" class="mt-8 border-t border-rule pt-6">
         <h2 id="photos-empty-title" class="m-0 text-[18px]">No photos yet</h2>
         <p class="mt-2 max-w-[65ch] text-[15px]">
@@ -483,4 +484,10 @@ ddev artisan photos:import</pre>
             </div>
         </section>
     </div>
+
+    <LabTeach :teach="teach">
+        <template #works>
+            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="guideEvents" :state="guideState" />
+        </template>
+    </LabTeach>
 </template>

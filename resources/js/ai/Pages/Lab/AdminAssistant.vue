@@ -8,6 +8,8 @@ export default { layout: LabLayout };
 import { computed, nextTick, ref } from 'vue';
 import LabButton from '../../components/LabButton.vue';
 import LabHowItWorks from '../../components/LabHowItWorks.vue';
+import LabTeach from '../../components/LabTeach.vue';
+import type { Teach } from '../../components/LabTeach.vue';
 import LabTag from '../../components/LabTag.vue';
 import type { GuideStep } from '../../composables/useGuideSteps';
 import { presetQuery } from '../../composables/usePresetQuery';
@@ -58,6 +60,7 @@ interface Entry {
 const props = defineProps<{
     howItWorks: GuideStep[];
     guideHref: string;
+    teach: Teach;
     askUrl: string;
     confirmUrl: string;
     rejectUrl: string;
@@ -260,14 +263,12 @@ function newChat(): void {
         Ask about listings or ask for a small change. The loop is written in PHP: the model asks for a tool, PHP checks the call, and a read runs at once. A write only becomes a card with the exact change, and nothing is saved until you click Confirm. A question uses at most {{ maxSteps }} tool steps.
     </p>
 
-    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="eventTypes" state="idle" />
-
     <section v-if="showExamples" aria-labelledby="admin-empty-title" class="mt-6" data-state="empty">
         <h2 id="admin-empty-title" class="m-0 text-[18px]">Nothing asked yet</h2>
         <p class="mt-1 text-[13px] text-muted">Pick an example or write your own question below.</p>
         <ul class="m-0 mt-3 flex list-none flex-wrap gap-2 p-0" aria-label="Example questions">
             <li v-for="example in examples" :key="example">
-                <button type="button" class="min-h-10 rounded-sm border border-rule px-3 text-left text-[13px] text-ink" @click="useExample(example)">
+                <button type="button" data-example class="min-h-10 rounded-sm border border-rule px-3 text-left text-[13px] text-ink" @click="useExample(example)">
                     {{ example }}
                 </button>
             </li>
@@ -388,4 +389,10 @@ function newChat(): void {
         </div>
     </form>
     <p v-if="tooLong" role="alert" class="mt-2 text-[13px] text-danger">The question is limited to {{ maxQuestionLength }} characters.</p>
+
+    <LabTeach :teach="teach">
+        <template #works>
+            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="eventTypes" state="idle" />
+        </template>
+    </LabTeach>
 </template>

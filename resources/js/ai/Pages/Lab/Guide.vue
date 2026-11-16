@@ -34,12 +34,35 @@ interface Item {
     snippet: Snippet | null;
 }
 
+interface BuildStep {
+    step: string;
+    detail: string;
+    tab: string | null;
+    doc: string | null;
+}
+
+interface WatchPoint {
+    point: string;
+    detail: string;
+    tab: string;
+}
+
+interface Elsewhere {
+    domain: string;
+    problem: string;
+    how: string;
+}
+
 interface Guide {
     key: string;
     title: string;
     summary: string;
     planned: boolean;
     tabs: Array<{ key: string; label: string }>;
+    teachTabs: Array<{ key: string; label: string }>;
+    build: BuildStep[];
+    watch: WatchPoint[];
+    elsewhere: Elsewhere[];
     works: Step[];
     implementation: Step[];
     failures: Item[];
@@ -68,9 +91,11 @@ function omitProvider(row: Record<string, string>): Record<string, string> {
     return rest;
 }
 
+const allTabs = computed(() => [...props.guide.tabs, ...props.guide.teachTabs]);
 const active = ref(props.guide.tabs[0]?.key ?? 'works');
 const tabButtons = ref<HTMLButtonElement[]>([]);
-const tabKeys = computed(() => props.guide.tabs.map((tab) => tab.key));
+const tabKeys = computed(() => allTabs.value.map((tab) => tab.key));
+const tabLabels = computed(() => Object.fromEntries(allTabs.value.map((tab) => [tab.key, tab.label])));
 
 function select(key: string, focus = false): void {
     active.value = key;
@@ -121,7 +146,7 @@ const statusLabel: Record<string, string> = {
 
     <div role="tablist" aria-label="Guide sections" class="mt-6 flex flex-wrap gap-x-4 gap-y-1 border-b border-rule" @keydown="onKeydown">
         <button
-            v-for="tab in guide.tabs"
+            v-for="tab in allTabs"
             :id="`tab-${tab.key}`"
             :key="tab.key"
             ref="tabButtons"
@@ -139,7 +164,7 @@ const statusLabel: Record<string, string> = {
     </div>
 
     <section
-        v-for="tab in guide.tabs"
+        v-for="tab in allTabs"
         v-show="active === tab.key"
         :id="`panel-${tab.key}`"
         :key="tab.key"
@@ -215,6 +240,45 @@ const statusLabel: Record<string, string> = {
 
         <template v-else-if="tab.key === 'experiments'">
             <LabExperiment v-for="(experiment, index) in guide.experiments" :key="index" v-bind="experiment" />
+        </template>
+
+        <template v-else-if="tab.key === 'build'">
+            <ol class="m-0 flex list-none flex-col gap-4 p-0">
+                <li v-for="(row, index) in guide.build" :key="index" class="min-w-0 border-b border-rule pb-4">
+                    <h3 class="m-0 text-[16px] font-semibold">{{ index + 1 }}. {{ row.step }}</h3>
+                    <p class="mt-1 text-[15px]">{{ row.detail }}</p>
+                    <p v-if="row.tab || row.doc" class="mt-1 flex flex-wrap gap-x-4 text-[14px]">
+                        <button v-if="row.tab" type="button" class="border-0 bg-transparent p-0 text-signal underline" @click="select(row.tab)">
+                            See {{ tabLabels[row.tab] ?? row.tab }}
+                        </button>
+                        <a v-if="row.doc" :href="row.doc" rel="noopener noreferrer" target="_blank" class="text-signal underline">Public docs</a>
+                    </p>
+                </li>
+            </ol>
+        </template>
+
+        <template v-else-if="tab.key === 'watch'">
+            <ul class="m-0 flex list-none flex-col gap-4 p-0">
+                <li v-for="(row, index) in guide.watch" :key="index" class="min-w-0 border-b border-rule pb-4">
+                    <h3 class="m-0 text-[16px] font-semibold">{{ row.point }}</h3>
+                    <p class="mt-1 text-[15px]">{{ row.detail }}</p>
+                    <p class="mt-1 text-[14px]">
+                        <button type="button" class="border-0 bg-transparent p-0 text-signal underline" @click="select(row.tab)">
+                            See {{ tabLabels[row.tab] ?? row.tab }}
+                        </button>
+                    </p>
+                </li>
+            </ul>
+        </template>
+
+        <template v-else-if="tab.key === 'elsewhere'">
+            <ul class="m-0 flex list-none flex-col gap-4 p-0">
+                <li v-for="(row, index) in guide.elsewhere" :key="index" class="min-w-0 border-b border-rule pb-4">
+                    <h3 class="m-0 text-[16px] font-semibold">{{ row.domain }}</h3>
+                    <p class="mt-1 text-[15px]"><strong>Problem:</strong> {{ row.problem }}</p>
+                    <p class="mt-1 text-[15px]"><strong>The same pattern:</strong> {{ row.how }}</p>
+                </li>
+            </ul>
         </template>
 
         <template v-else-if="tab.key === 'plan'">

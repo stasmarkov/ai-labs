@@ -19,6 +19,8 @@ final class ShowLabChatController extends Controller
         return Inertia::render('Lab/Chat', [
             'howItWorks' => $guides->howItWorks('chat'),
             'guideHref' => route('ai.guides.show', ['key' => 'chat'], false),
+            'guideKey' => 'chat',
+            'teach' => $guides->teach('chat'),
             'askUrl' => route('docs.ask', [], false),
             'runUrl' => route('ai.runs.show', ['invocationId' => self::ID_PLACEHOLDER], false),
             'enabledTextProviders' => $providers->textOptions('docs-answer'),

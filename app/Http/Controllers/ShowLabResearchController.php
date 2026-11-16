@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Services\GuidePageService;
 use App\Services\LabProviderService;
 use App\Services\ResearchRunner;
 use App\Services\ResearchRunService;
@@ -14,11 +15,13 @@ final class ShowLabResearchController extends Controller
 {
     private const ID_PLACEHOLDER = 'RUN_ID';
 
-    public function __invoke(ResearchRunService $service, LabProviderService $providers, ?string $id = null): Response
+    public function __invoke(ResearchRunService $service, LabProviderService $providers, GuidePageService $guides, ?string $id = null): Response
     {
         $run = $id === null ? null : ($service->find($id) ?? abort(404));
 
         return Inertia::render('Lab/Research', [
+            'guideKey' => 'research',
+            'teach' => $guides->teach('research'),
             'run' => $run,
             'recent' => $service->recent(),
             'startUrl' => route('research.start', [], false),

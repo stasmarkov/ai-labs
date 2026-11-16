@@ -27,6 +27,8 @@ final class ShowLabAssistantController extends Controller
         return Inertia::render('Lab/Assistant', [
             'howItWorks' => $guides->howItWorks('assistant'),
             'guideHref' => route('ai.guides.show', ['key' => 'assistant'], false),
+            'guideKey' => 'assistant',
+            'teach' => $guides->teach('assistant'),
             'askUrl' => route('assistant.ask', [], false),
             'runUrl' => route('ai.runs.show', ['invocationId' => self::ID_PLACEHOLDER], false),
             'enabledTextProviders' => $providers->textOptions('assistant'),

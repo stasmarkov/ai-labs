@@ -171,4 +171,21 @@ return [
         ],
     ],
     'related' => ['providers', 'streaming', 'run-log'],
+    'build' => [
+        ['step' => 'Run the model on a local server', 'detail' => 'Install a server such as Ollama, pull a model and point a provider entry at its URL.', 'tab' => 'recipes', 'doc' => 'https://ollama.com/'],
+        ['step' => 'Set timeouts for slow starts', 'detail' => 'The first call loads the model into memory. Give it a longer timeout than a warm call.', 'tab' => 'recipes'],
+        ['step' => 'Handle a busy or missing server', 'detail' => 'Map refusals and timeouts to clear errors, so the page says what happened.', 'tab' => 'support'],
+        ['step' => 'Mind the context window', 'detail' => 'Check the prompt length against the model limit and cut or refuse before the call.', 'tab' => 'support'],
+        ['step' => 'Measure concurrency', 'detail' => 'Test with several requests at once, because one model serves them one by one.', 'tab' => 'support'],
+    ],
+    'watch' => [
+        ['point' => 'Memory', 'detail' => 'A model needs its size in RAM or VRAM. A second model can push the first out.', 'tab' => 'support'],
+        ['point' => 'One at a time', 'detail' => 'A busy model queues requests, so the rest of the site can feel slower.', 'tab' => 'failures'],
+        ['point' => 'Prompts that are too long', 'detail' => 'Some servers cut silently. Count tokens first.', 'tab' => 'failures'],
+        ['point' => 'Quality gap', 'detail' => 'Small local models are weaker. Use them for tests and privacy, and compare before deciding.', 'tab' => 'support'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Privacy-sensitive teams', 'problem' => 'Data must not leave the company.', 'how' => 'Serve an open model on your own hardware behind the same provider list.'],
+        ['domain' => 'Development', 'problem' => 'Cloud calls cost money during tests.', 'how' => 'Use a local model or a fake provider for tests and development.'],
+    ],
 ];

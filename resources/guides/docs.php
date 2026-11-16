@@ -128,4 +128,23 @@ return [
         ],
     ],
     'related' => ['chat', 'semantic'],
+    'build' => [
+        ['step' => 'Cut documents into chunks', 'detail' => 'Split by heading or fixed size with a small overlap, and keep the source and position on every chunk.', 'tab' => 'recipes'],
+        ['step' => 'Store each chunk twice', 'detail' => 'Keep a vector for meaning and a full-text column for exact words, in the same table.', 'tab' => 'recipes', 'doc' => 'https://github.com/pgvector/pgvector'],
+        ['step' => 'Search by mode', 'detail' => 'Offer vector, text and hybrid search, and let the caller see which mode ran.', 'tab' => 'recipes'],
+        ['step' => 'Merge the two lists with a rank fusion', 'detail' => 'Combine both rankings by reciprocal rank, so neither score scale dominates.', 'tab' => 'recipes'],
+        ['step' => 'Return the source with every chunk', 'detail' => 'Include file, heading and position in each result, so a reader can open the original.', 'tab' => 'support'],
+        ['step' => 'Re-index when content changes', 'detail' => 'Hash each document and re-embed only chunks whose text changed.', 'tab' => 'support'],
+    ],
+    'watch' => [
+        ['point' => 'Chunk size decides recall', 'detail' => 'Too small loses context, too large blurs meaning. Try sizes against questions you know the answer to.', 'tab' => 'failures'],
+        ['point' => 'Vectors miss exact names', 'detail' => 'A function name may find nothing by meaning. Hybrid mode covers this.', 'tab' => 'failures'],
+        ['point' => 'Stale index', 'detail' => 'Edited documents keep old chunks until re-indexed. Show when the index was last built.', 'tab' => 'support'],
+        ['point' => 'Embedding model lock-in', 'detail' => 'Changing the model means re-embedding every chunk. Record the model with the index.', 'tab' => 'support'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Internal wiki', 'problem' => 'Staff cannot find the right page by title.', 'how' => 'Chunk the pages, search by meaning and words, and show the section that matched.'],
+        ['domain' => 'API documentation', 'problem' => 'Developers search for a function and for a concept.', 'how' => 'Hybrid search finds the exact name and the explaining paragraph in one list.'],
+        ['domain' => 'Contracts', 'problem' => 'A clause is described in different words in each contract.', 'how' => 'Chunk by clause and search by meaning, with the contract name as source.'],
+    ],
 ];

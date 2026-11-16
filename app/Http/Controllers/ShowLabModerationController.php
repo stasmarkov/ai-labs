@@ -21,6 +21,8 @@ final class ShowLabModerationController extends Controller
         return Inertia::render('Lab/Moderation', [
             'howItWorks' => $guides->howItWorks('moderation'),
             'guideHref' => route('ai.guides.show', ['key' => 'moderation'], false),
+            'guideKey' => 'moderation',
+            'teach' => $guides->teach('moderation'),
             'moderateUrl' => route('moderation.moderate', [], false),
             'runUrl' => route('ai.runs.show', ['invocationId' => self::ID_PLACEHOLDER], false),
             'enabledTextProviders' => $providers->textOptions('moderation'),

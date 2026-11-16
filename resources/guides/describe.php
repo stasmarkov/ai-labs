@@ -111,4 +111,23 @@ return [
         ],
     ],
     'related' => ['chat'],
+    'build' => [
+        ['step' => 'Build the prompt from stored facts', 'detail' => 'Look the record up first and turn its fields into the prompt, so the model never has to guess a make, year or price.', 'tab' => 'recipes'],
+        ['step' => 'Use an agent class with fixed instructions', 'detail' => 'Keep the system prompt in one class or file and pass the facts as the user message, so the wording can be versioned and changed on its own.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],
+        ['step' => 'Stream the answer', 'detail' => 'Return a streamed response and flush every event, so words appear while the model is still writing.', 'tab' => 'support', 'doc' => 'https://laravel.com/docs/responses#streamed-responses'],
+        ['step' => 'Close the run in all three ways', 'detail' => 'Log finished, stopped and failed runs with their tokens and timings, so a cut stream still leaves a row.', 'tab' => 'support'],
+        ['step' => 'Mask provider errors', 'detail' => 'Send the page a short error event and keep the provider message in the log, never in the stream.', 'tab' => 'support'],
+        ['step' => 'Rate limit the route', 'detail' => 'Put a throttle on the endpoint, because each call costs money and holds a PHP worker for seconds.', 'doc' => 'https://laravel.com/docs/routing#rate-limiting'],
+    ],
+    'watch' => [
+        ['point' => 'Cost grows with every click', 'detail' => 'A long description costs more output tokens than a short one. Cap the length in the prompt and in the options.', 'tab' => 'support'],
+        ['point' => 'A streamed call holds a worker', 'detail' => 'A request that streams for ten seconds blocks one PHP thread for ten seconds. Size the pool for it.', 'tab' => 'failures'],
+        ['point' => 'Buffering hides the stream', 'detail' => 'A proxy or output buffer can hold every word until the end. Test streaming on the server you deploy to.', 'tab' => 'failures'],
+        ['point' => 'Invented details', 'detail' => 'The model may add a feature the car does not have. Give it only the stored facts and say so in the prompt.', 'tab' => 'failures'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Real estate', 'problem' => 'A listing needs a readable summary from rooms, area and price.', 'how' => 'Pass the stored fields as facts, stream a short description and let the agent edit before publishing.'],
+        ['domain' => 'E-commerce', 'problem' => 'Thousands of products have specs but no copy.', 'how' => 'Build the prompt from the product row and generate one description per product on a queue.'],
+        ['domain' => 'Support', 'problem' => 'An agent needs a one-line summary of a ticket history.', 'how' => 'Feed the thread as data, stream a summary into the sidebar and log every run.'],
+    ],
 ];

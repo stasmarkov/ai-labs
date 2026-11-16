@@ -32,6 +32,8 @@ final class ShowLabAdminAssistantController extends Controller
         return Inertia::render('Lab/AdminAssistant', [
             'howItWorks' => $guides->howItWorks('admin-assistant'),
             'guideHref' => route('ai.guides.show', ['key' => 'admin-assistant'], false),
+            'guideKey' => 'admin-assistant',
+            'teach' => $guides->teach('admin-assistant'),
             'askUrl' => route('admin-assistant.ask', [], false),
             'confirmUrl' => route('admin-assistant.confirm', ['actionId' => self::ACTION_PLACEHOLDER], false),
             'rejectUrl' => route('admin-assistant.reject', ['actionId' => self::ACTION_PLACEHOLDER], false),

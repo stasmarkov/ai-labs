@@ -156,3 +156,45 @@ it('AC-6 the experiment props carry predictions and the answer HTML, and the car
 
     expect($source)->toContain('type="radio"')->toContain('localStorage')->toContain('did not match')->toContain('matched');
 });
+
+it('AC-5 a guide page shows the build, watch and elsewhere sections with the same text as the page data', function (string $key): void {
+    $teach = app(GuideRepository::class)->teach($key);
+
+    $this->get('/ai/guides/'.$key)
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Lab/Guide')
+            ->where('guide.tabs', fn ($tabs): bool => collect($tabs)->pluck('key')->all() === ['works', 'implementation', 'modify', 'support', 'numbers', 'experiments'])
+            ->where('guide.teachTabs', fn ($tabs): bool => collect($tabs)->pluck('key')->all() === ['build', 'watch', 'elsewhere'])
+            ->where('guide.build', fn ($rows): bool => collect($rows)->map(fn (array $row): array => [$row['step'], $row['detail'], $row['tab'], $row['doc']])->all()
+                === collect($teach->build)->map(fn (array $row): array => [$row['step'], $row['detail'], $row['tab'], $row['doc']])->all())
+            ->where('guide.watch', fn ($rows): bool => collect($rows)->pluck('point')->all() === collect($teach->watch)->pluck('point')->all())
+            ->where('guide.elsewhere', fn ($rows): bool => collect($rows)->pluck('domain')->all() === collect($teach->elsewhere)->pluck('domain')->all()
+                && collect($rows)->pluck('how')->all() === collect($teach->elsewhere)->pluck('how')->all())
+        );
+})->with(['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation', 'research', 'playground', 'admin-assistant', 'providers', 'mcp']);
+
+it('AC-5 a guide with no teach data has no teach tabs', function (): void {
+    $directory = sys_get_temp_dir().'/guides-'.bin2hex(random_bytes(4));
+    mkdir($directory);
+    file_put_contents($directory.'/plain.php', "<?php\nreturn ['kind' => 'foundation', 'title' => 'Plain', 'summary' => 'No teach.', 'works' => [['title' => 'One', 'body' => 'Body.']]];");
+    app()->bind(GuideRepository::class, fn (): GuideRepository => new GuideRepository($directory));
+
+    $this->get('/ai/guides/plain')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('guide.teachTabs', [])->where('guide.build', []));
+
+    unlink($directory.'/plain.php');
+    rmdir($directory);
+});
+
+it('AC-5 the guide page renders the teach tabs and opens the one named in the URL hash', function (): void {
+    $source = (string) file_get_contents(resource_path('js/ai/Pages/Lab/Guide.vue'));
+
+    expect($source)
+        ->toContain('guide.teachTabs')
+        ->toContain("tab.key === 'build'")
+        ->toContain("tab.key === 'watch'")
+        ->toContain("tab.key === 'elsewhere'")
+        ->toContain('window.location.hash');
+});

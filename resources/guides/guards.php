@@ -90,4 +90,22 @@ return [
         ],
     ],
     'related' => ['docs', 'prompts'],
+    'build' => [
+        ['step' => 'Check the question first', 'detail' => 'Run cheap pattern checks for known injection phrases before any model call.', 'tab' => 'recipes'],
+        ['step' => 'Plant a canary in the instructions', 'detail' => 'Add a random marker to the system prompt, and treat its appearance in an answer as a leak.', 'tab' => 'recipes'],
+        ['step' => 'Watch the stream', 'detail' => 'Scan text as it grows and end the answer when a marker or a forbidden pattern appears.', 'tab' => 'recipes'],
+        ['step' => 'Refuse with a short message', 'detail' => 'Return a fixed, polite refusal and log the reason.', 'tab' => 'support'],
+        ['step' => 'Test with hostile questions', 'detail' => 'Keep a list of attack prompts and run them after every prompt change.', 'tab' => 'recipes'],
+    ],
+    'watch' => [
+        ['point' => 'Patterns are not enough', 'detail' => 'Attackers rephrase. Guards reduce risk and never remove it.', 'tab' => 'failures'],
+        ['point' => 'False refusals', 'detail' => 'A harmless question may match a pattern. Log refusals and review them.', 'tab' => 'failures'],
+        ['point' => 'Cut answers', 'detail' => 'Ending a stream on a pattern can leave a half answer. Say so to the user.', 'tab' => 'failures'],
+        ['point' => 'Defence in depth', 'detail' => 'Combine guards with least privilege tools and output validation.', 'tab' => 'support'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Customer chatbots', 'problem' => 'Users try to extract the system prompt.', 'how' => 'Plant a canary and end any answer that repeats it.'],
+        ['domain' => 'Internal assistants', 'problem' => 'Documents may contain hidden instructions.', 'how' => 'Treat documents as data and scan the output for leaks.'],
+        ['domain' => 'Public forms', 'problem' => 'A text box feeds a model.', 'how' => 'Check the text for injection patterns before the call.'],
+    ],
 ];

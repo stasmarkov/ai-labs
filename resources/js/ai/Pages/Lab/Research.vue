@@ -9,9 +9,11 @@ import { Link } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import LabButton from '../../components/LabButton.vue';
 import LabMetric from '../../components/LabMetric.vue';
+import LabTeach from '../../components/LabTeach.vue';
 import LabProviderSelect from '../../components/LabProviderSelect.vue';
 import LabTag from '../../components/LabTag.vue';
 import type { ProviderOption } from '../../components/LabProviderSelect.vue';
+import type { Teach } from '../../components/LabTeach.vue';
 import { useProviderChoice } from '../../composables/useProviderChoice';
 
 type Status = 'running' | 'done' | 'failed' | 'refused';
@@ -63,6 +65,7 @@ const POLL_MS = 1500;
 const REPLAY_STEP_MS = 400;
 
 const props = defineProps<{
+    teach: Teach;
     run: Run | null;
     recent: RecentRun[];
     startUrl: string;
@@ -288,6 +291,7 @@ onBeforeUnmount(stopTimers);
                 v-for="example in examples"
                 :key="example"
                 type="button"
+                data-example
                 class="min-h-10 rounded-sm border border-rule px-3 text-left text-[13px] text-ink"
                 @click="topic = example"
             >
@@ -376,4 +380,6 @@ onBeforeUnmount(stopTimers);
             </li>
         </ul>
     </section>
+
+    <LabTeach :teach="teach" />
 </template>

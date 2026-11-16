@@ -137,3 +137,13 @@ it('AC-8 every capability and coming item carries a guide href and a live route,
         expect($source)->toMatch('/<Link[^>]*:href="[^"]*guideHref[^"]*"/');
     }
 });
+
+it('AC-6 the build, watch and elsewhere sections of every guide show no slice id, markdown file name or repository path', function (string $key): void {
+    app()->detectEnvironment(fn (): string => 'local');
+    $guide = $this->get('/ai/guides/'.$key)->assertOk()->viewData('page')['props']['guide'];
+    $text = json_encode([$guide['build'], $guide['watch'], $guide['elsewhere'], $guide['teachTabs']], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+    expect($text)->not->toMatch('/SL-\d+/')
+        ->not->toMatch('/\.md\b/')
+        ->not->toMatch('#\b(?:app|resources|config|routes|database|bench)/#');
+})->with(['describe', 'moderation', 'research', 'playground', 'providers', 'mcp']);

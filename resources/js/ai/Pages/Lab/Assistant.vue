@@ -9,6 +9,8 @@ import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import LabButton from '../../components/LabButton.vue';
 import LabEventRow from '../../components/LabEventRow.vue';
 import LabHowItWorks from '../../components/LabHowItWorks.vue';
+import LabTeach from '../../components/LabTeach.vue';
+import type { Teach } from '../../components/LabTeach.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabProviderSelect from '../../components/LabProviderSelect.vue';
 import type { ProviderOption } from '../../components/LabProviderSelect.vue';
@@ -70,6 +72,7 @@ interface Turn {
 const props = defineProps<{
     howItWorks: GuideStep[];
     guideHref: string;
+    teach: Teach;
     askUrl: string;
     runUrl: string;
     idPlaceholder: string;
@@ -363,8 +366,6 @@ onBeforeUnmount(() => {
         Ask about cars in plain words. The model decides when to search the listings, calls a read-only search tool and answers from what the tool returned. Each tool call appears in the timeline.
     </p>
 
-    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="eventTypes" :state="stream.status.value" />
-
     <section v-if="showExamples" aria-labelledby="assistant-empty-title" class="mt-6" data-state="empty">
         <h2 id="assistant-empty-title" class="m-0 text-[18px]">Nothing asked yet</h2>
         <p class="mt-1 text-[13px] text-muted">Pick an example or write your own question below.</p>
@@ -372,6 +373,7 @@ onBeforeUnmount(() => {
             <li v-for="example in examples" :key="example">
                 <button
                     type="button"
+                    data-example
                     class="min-h-10 rounded-sm border border-rule px-3 text-left text-[13px] text-ink"
                     @click="useExample(example)"
                 >
@@ -504,4 +506,10 @@ onBeforeUnmount(() => {
             </section>
         </div>
     </Teleport>
+
+    <LabTeach :teach="teach">
+        <template #works>
+            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="eventTypes" :state="stream.status.value" />
+        </template>
+    </LabTeach>
 </template>

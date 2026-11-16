@@ -165,4 +165,24 @@ return [
         ],
     ],
     'related' => ['docs', 'describe'],
+    'build' => [
+        ['step' => 'Retrieve before you generate', 'detail' => 'Search the chunks first and give the model only what came back, with each chunk numbered for citation.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],
+        ['step' => 'Gate on relevance', 'detail' => 'If no chunk passes a minimum score, answer that the docs do not cover it, without calling the model.', 'tab' => 'recipes'],
+        ['step' => 'Guard both sides', 'detail' => 'Check the question on the way in and watch the streamed answer for a leaked instruction on the way out.', 'tab' => 'support'],
+        ['step' => 'Cache answers by meaning', 'detail' => 'Compare the question vector to earlier ones and reuse an answer above a strict threshold.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/cache'],
+        ['step' => 'Make Stop real', 'detail' => 'Cancel the upstream request when the user stops, not only the display, so no tokens are paid for after that.', 'tab' => 'support'],
+        ['step' => 'Resolve citations in code', 'detail' => 'Turn citation markers into links to the chunks you retrieved, and drop any marker that does not match one.', 'tab' => 'support'],
+    ],
+    'watch' => [
+        ['point' => 'Wrong cached answer', 'detail' => 'A threshold that is too loose reuses an answer for a different question. Tune it on real pairs.', 'tab' => 'failures'],
+        ['point' => 'The model answers beyond the docs', 'detail' => 'Without a gate it fills gaps from memory. Tell it to say it does not know.', 'tab' => 'failures'],
+        ['point' => 'Prompt injection through documents', 'detail' => 'A chunk can contain instructions. Present chunks as data and guard the output.', 'tab' => 'support'],
+        ['point' => 'Follow-ups lose context', 'detail' => 'A short follow-up searches badly. Rewrite it into a full question before retrieval.', 'tab' => 'failures'],
+        ['point' => 'Cost per question', 'detail' => 'Every answer carries its chunks as input tokens. Limit chunk count and size.', 'tab' => 'failures'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Customer support', 'problem' => 'Customers ask questions the help centre already answers.', 'how' => 'Retrieve the matching articles, answer with citations and hand over to a person when the gate fails.'],
+        ['domain' => 'Employee onboarding', 'problem' => 'New hires ask about policies.', 'how' => 'Answer from the policy documents with links to the exact section.'],
+        ['domain' => 'Product documentation', 'problem' => 'Developers want a direct answer, not a page list.', 'how' => 'Retrieve the chunks, answer briefly and cite them.'],
+    ],
 ];

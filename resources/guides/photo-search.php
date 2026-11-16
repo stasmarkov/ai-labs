@@ -106,4 +106,22 @@ return [
         ],
     ],
     'related' => ['similar-photos', 'photos', 'providers'],
+    'build' => [
+        ['step' => 'Pick a joint text and image encoder', 'detail' => 'Use a model such as CLIP that puts words and pictures in the same vector space.', 'tab' => 'recipes'],
+        ['step' => 'Embed every photo once', 'detail' => 'Run the image side on a queue and store the vectors with the model name.', 'tab' => 'support', 'doc' => 'https://laravel.com/docs/queues'],
+        ['step' => 'Embed the query with the text side', 'detail' => 'Wrap the words in a short template and encode them with the matching text model.', 'tab' => 'recipes'],
+        ['step' => 'Search the index with a minimum score', 'detail' => 'Return the nearest photos above a cutoff, and say why a page is empty when nothing passes.', 'tab' => 'recipes', 'doc' => 'https://github.com/pgvector/pgvector'],
+        ['step' => 'Cache by query hash', 'detail' => 'Store the result list under a hash of the normalised query, so repeats cost nothing.', 'tab' => 'support', 'doc' => 'https://laravel.com/docs/cache'],
+    ],
+    'watch' => [
+        ['point' => 'Encoder and index must match', 'detail' => 'Searching with another model gives plausible nonsense. Store the model name and compare it.', 'tab' => 'failures'],
+        ['point' => 'Short words match badly', 'detail' => 'A single word like red gives weak vectors. A template around the query helps.', 'tab' => 'failures'],
+        ['point' => 'Empty results are normal', 'detail' => 'A cutoff that is too high returns nothing for every query. Tune it on known searches.', 'tab' => 'failures'],
+        ['point' => 'Guard the input', 'detail' => 'Limit length and reject odd input before encoding, even though no model writes text here.', 'tab' => 'failures'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Stock photo library', 'problem' => 'Buyers describe what they need in words.', 'how' => 'Embed the library once and return the nearest images for each description.'],
+        ['domain' => 'Retail', 'problem' => 'Shoppers want items that look like a phrase such as a green summer dress.', 'how' => 'Search product images by text with the same encoder and filter by stock.'],
+        ['domain' => 'Newsrooms', 'problem' => 'Editors search an archive of photos by what they show.', 'how' => 'Encode the archive and search by caption-like text.'],
+    ],
 ];

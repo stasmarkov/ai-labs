@@ -20,6 +20,12 @@ final readonly class GuidePageService
         'plan' => 'Plan',
     ];
 
+    private const TEACH_TABS = [
+        'build' => 'Build it yourself',
+        'watch' => 'Watch out for',
+        'elsewhere' => 'Elsewhere',
+    ];
+
     public function __construct(
         private GuideRepository $guides,
         private GuideRenderer $renderer,
@@ -56,6 +62,16 @@ final readonly class GuidePageService
     }
 
     /**
+     * What a live page teaches below its form: how it works, how to build it, what to watch and the same pattern elsewhere.
+     *
+     * @return array{key: string, title: string, works: list<array{title: string, summary: string}>, build: list<array{step: string, detail: string, tab: string|null, doc: string|null}>, watch: list<array{point: string, detail: string, tab: string}>, elsewhere: list<array{domain: string, problem: string, how: string}>}
+     */
+    public function teach(string $key): array
+    {
+        return $this->guides->teach($key)->toArray();
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function show(string $key): array
@@ -76,6 +92,7 @@ final readonly class GuidePageService
             array_filter($guide['related'], fn (string $related): bool => $this->guides->has($related)),
         ));
         $guide['tabs'] = $this->tabs($guide);
+        $guide['teachTabs'] = $this->teachTabs($guide);
 
         return $guide;
     }
@@ -99,6 +116,24 @@ final readonly class GuidePageService
         $tabs = [];
         foreach (self::TABS as $tab => $label) {
             if ($contents[$tab] !== []) {
+                $tabs[] = ['key' => $tab, 'label' => $label];
+            }
+        }
+
+        return $tabs;
+    }
+
+    /**
+     * The teach sections come after the six tabs, in a prop of their own so the six stay as they were.
+     *
+     * @param  array<string, mixed>  $guide
+     * @return list<array{key: string, label: string}>
+     */
+    private function teachTabs(array $guide): array
+    {
+        $tabs = [];
+        foreach (self::TEACH_TABS as $tab => $label) {
+            if ($guide[$tab] !== []) {
                 $tabs[] = ['key' => $tab, 'label' => $label];
             }
         }

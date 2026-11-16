@@ -135,4 +135,23 @@ return [
         ],
     ],
     'related' => ['photos', 'photo-search', 'photo-duplicates', 'providers'],
+    'build' => [
+        ['step' => 'Embed each photo with an image encoder', 'detail' => 'Run a local encoder on a queue and store normalised vectors with the model name.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/queues'],
+        ['step' => 'Query the nearest photos', 'detail' => 'Order by cosine distance in pgvector, excluding photos of the same listing.', 'tab' => 'recipes', 'doc' => 'https://github.com/pgvector/pgvector'],
+        ['step' => 'Drop near duplicates and weak matches', 'detail' => 'Apply a maximum and a minimum score, so the strip shows useful variety.', 'tab' => 'recipes'],
+        ['step' => 'Explain an empty strip', 'detail' => 'Return a reason such as index not built or no match, and show it.', 'tab' => 'support'],
+        ['step' => 'Add the caption signal', 'detail' => 'Combine image similarity with text similarity from captions, for a hybrid score.', 'tab' => 'recipes'],
+        ['step' => 'Cache plain arrays', 'detail' => 'Store results as simple arrays, not models, so cached data survives code changes.', 'tab' => 'support', 'doc' => 'https://laravel.com/docs/cache'],
+    ],
+    'watch' => [
+        ['point' => 'Index and model must match', 'detail' => 'A strip built with another model is wrong. Store the model name and check it.', 'tab' => 'failures'],
+        ['point' => 'Title leakage', 'detail' => 'If captions repeat the title, hybrid looks perfect for the wrong reason. Test on held-out data.', 'tab' => 'failures'],
+        ['point' => 'Many empty strips', 'detail' => 'A high minimum score hides most results. Tune it on real photos.', 'tab' => 'failures'],
+        ['point' => 'Queue work', 'detail' => 'Embedding every photo takes time. Run it on a queue and show progress.', 'tab' => 'support'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Online shops', 'problem' => 'Shoppers want items that look like the one they view.', 'how' => 'Embed product images and show the nearest ones from other products.'],
+        ['domain' => 'Real estate', 'problem' => 'Buyers want similar homes.', 'how' => 'Compare listing photos by vector and show other listings that look alike.'],
+        ['domain' => 'Art catalogues', 'problem' => 'Curators look for works with the same style.', 'how' => 'Use image vectors to suggest related pieces.'],
+    ],
 ];

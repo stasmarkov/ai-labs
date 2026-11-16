@@ -10,7 +10,10 @@ import { parseServerTiming } from '../../composables/useSearchRequest';
 import { presetQuery } from '../../composables/usePresetQuery';
 import type { ServerTimings } from '../../composables/useSearchRequest';
 import type { GuideRunState, GuideStep } from '../../composables/useGuideSteps';
+import LabExamples from '../../components/LabExamples.vue';
 import LabHowItWorks from '../../components/LabHowItWorks.vue';
+import LabTeach from '../../components/LabTeach.vue';
+import type { Teach } from '../../components/LabTeach.vue';
 import LabButton from '../../components/LabButton.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabSegmented from '../../components/LabSegmented.vue';
@@ -90,6 +93,7 @@ interface Body {
 const props = defineProps<{
     howItWorks: GuideStep[];
     guideHref: string;
+    teach: Teach;
     searchUrl: string;
     runUrl: string;
     idPlaceholder: string;
@@ -97,6 +101,8 @@ const props = defineProps<{
     models: string[];
     enabledTextProviders: ProviderOption[];
 }>();
+
+const EXAMPLES = ['diesel BMW after 2018 under 20k in Munich', 'automatic hatchback under 10k', 'electric SUV with low mileage'];
 
 const query = ref(presetQuery());
 const model = ref(props.models[0] ?? '');
@@ -257,8 +263,6 @@ function outcomeLabel(outcome: Outcome): string {
         A model turns your sentence into six listing filters. The filters are validated like a normal listings request before any query runs.
     </p>
 
-    <LabHowItWorks :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
-
     <form class="mt-6 flex flex-col gap-4" @submit.prevent="search">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-end">
             <div class="min-w-0 flex-1">
@@ -266,6 +270,7 @@ function outcomeLabel(outcome: Outcome): string {
             </div>
             <LabButton type="submit" :disabled="!canSearch">{{ loading ? 'Searching…' : 'Search' }}</LabButton>
         </div>
+        <LabExamples label="Example queries" :examples="EXAMPLES" :disabled="loading" @pick="query = $event" />
         <LabProviderSelect id="nl-provider" v-model="provider" :providers="enabledTextProviders" :disabled="loading" />
         <div v-if="models.length > 1 && providerOverride === null" class="flex min-w-0 flex-col gap-1">
             <span class="text-[13px] font-medium text-muted">Model</span>
@@ -362,4 +367,10 @@ function outcomeLabel(outcome: Outcome): string {
             </dl>
         </section>
     </Teleport>
+
+    <LabTeach :teach="teach">
+        <template #works>
+            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
+        </template>
+    </LabTeach>
 </template>

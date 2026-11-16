@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\DTOs\PlaygroundPromptSummary;
 use App\DTOs\PlaygroundRunSummary;
 use App\Http\Middleware\EnsureLocalLab;
+use App\Services\GuidePageService;
 use App\Services\PlaygroundPromptService;
 use App\Services\PlaygroundRunner;
 use App\Services\PlaygroundRunService;
@@ -18,11 +19,13 @@ final class ShowLabPlaygroundController extends Controller
 {
     private const ID_PLACEHOLDER = 'ITEM_ID';
 
-    public function __invoke(PlaygroundRunService $runs, PlaygroundPromptService $prompts, PlaygroundTargetCatalog $targets, ?string $id = null): Response
+    public function __invoke(PlaygroundRunService $runs, PlaygroundPromptService $prompts, PlaygroundTargetCatalog $targets, GuidePageService $guides, ?string $id = null): Response
     {
         $run = $id === null ? null : ($runs->find($id) ?? abort(404));
 
         return Inertia::render('Lab/Playground', [
+            'guideKey' => 'playground',
+            'teach' => $guides->teach('playground'),
             'run' => $run?->toArray(),
             'recent' => array_map(fn (PlaygroundRunSummary $item): array => $item->toArray(), $runs->recent()),
             'prompts' => array_map(fn (PlaygroundPromptSummary $item): array => $item->toArray(), $prompts->all()),

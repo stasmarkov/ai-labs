@@ -115,4 +115,23 @@ return [
         ],
     ],
     'related' => ['admin-assistant', 'guards'],
+    'build' => [
+        ['step' => 'Create a server and list tools', 'detail' => 'Use the Laravel MCP package to define a server with a name, instructions and its tools.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/mcp'],
+        ['step' => 'Wrap existing tools', 'detail' => 'Reuse the same tool classes your own assistant uses, so one validation path serves both.', 'tab' => 'recipes'],
+        ['step' => 'Start over stdio', 'detail' => 'Register the server as a local command that the client launches.', 'tab' => 'recipes'],
+        ['step' => 'Make writes proposals', 'detail' => 'A write tool stores a pending change and returns it, and never applies it.', 'tab' => 'recipes'],
+        ['step' => 'Confirm out of band', 'detail' => 'Apply the change from a separate screen with a one-time nonce and an expiry.', 'tab' => 'support'],
+        ['step' => 'Test with an inspector', 'detail' => 'Use the MCP Inspector to call each tool before connecting a client.', 'tab' => 'recipes'],
+    ],
+    'watch' => [
+        ['point' => 'The client is not trusted', 'detail' => 'Treat tool arguments from a client as untrusted input, like any request.', 'tab' => 'failures'],
+        ['point' => 'The model may claim success', 'detail' => 'A model can say a change happened after only proposing it. Check the confirm screen.', 'tab' => 'failures'],
+        ['point' => 'Local only', 'detail' => 'A server with write proposals does not belong on a public host.', 'tab' => 'support'],
+        ['point' => 'Expiry', 'detail' => 'A pending change that never expires is a risk. Set a short life.', 'tab' => 'support'],
+    ],
+    'elsewhere' => [
+        ['domain' => 'Developer tooling', 'problem' => 'A developer wants an IDE assistant to read project data.', 'how' => 'Publish read tools over MCP and keep writes behind a confirmation.'],
+        ['domain' => 'Operations', 'problem' => 'An engineer asks an assistant for service status.', 'how' => 'Expose read-only status tools to the client and log each call.'],
+        ['domain' => 'Data teams', 'problem' => 'Analysts query a warehouse through a client.', 'how' => 'Offer prepared read tools with limits instead of raw SQL.'],
+    ],
 ];

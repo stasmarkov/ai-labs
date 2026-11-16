@@ -13,6 +13,9 @@ final readonly class Guide
      * @param  list<GuideSupport>  $support
      * @param  list<GuideNumber>  $numbers
      * @param  list<GuideExperiment>  $experiments
+     * @param  list<GuideBuildStep>  $build
+     * @param  list<GuideWatchPoint>  $watch
+     * @param  list<GuideElsewhere>  $elsewhere
      * @param  list<string>  $plan
      * @param  list<string>  $related
      */
@@ -28,6 +31,9 @@ final readonly class Guide
         public array $support,
         public array $numbers,
         public array $experiments,
+        public array $build,
+        public array $watch,
+        public array $elsewhere,
         public array $plan,
         public array $related,
         public string $contentHash,

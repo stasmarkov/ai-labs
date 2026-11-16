@@ -13,7 +13,7 @@ final readonly class GuideRenderer
     private const MARKDOWN = ['html_input' => 'escape', 'allow_unsafe_links' => false];
 
     /** Bump when build() changes shape, so cached payloads of the old shape are never read again. */
-    private const VERSION = 2;
+    private const VERSION = 3;
 
     /** Cached renders expire, so keys of edited guides do not pile up in a store without eviction. */
     private const TTL_SECONDS = 86400;
@@ -127,6 +127,22 @@ final readonly class GuideRenderer
                 'page' => $experiment->page,
                 'params' => $experiment->params,
             ], $guide->experiments),
+            'build' => array_map(fn ($row): array => [
+                'step' => $row->step,
+                'detail' => $row->detail,
+                'tab' => $row->tab,
+                'doc' => $row->doc,
+            ], $guide->build),
+            'watch' => array_map(fn ($row): array => [
+                'point' => $row->point,
+                'detail' => $row->detail,
+                'tab' => $row->tab,
+            ], $guide->watch),
+            'elsewhere' => array_map(fn ($row): array => [
+                'domain' => $row->domain,
+                'problem' => $row->problem,
+                'how' => $row->how,
+            ], $guide->elsewhere),
             'plan' => array_map(fn (string $bullet): string => $this->markdown($bullet), $guide->plan),
             'related' => $guide->related,
         ];
