@@ -1,0 +1,166 @@
+{
+  "server": "frankenphp-worker",
+  "workload": "sse",
+  "label": "frankenphp-worker-4",
+  "commit": "dcca93a",
+  "concurrency": "4 workers, max-requests 1000000",
+  "base_url": "https://ai-lab.ddev.site",
+  "date": "2026-11-16",
+  "quick": false,
+  "users": 30,
+  "probe_connections": 50,
+  "probe_qps": 5,
+  "probe_timeout_s": 10,
+  "warmup_s": 30,
+  "measure_s": 60,
+  "repeats": 3,
+  "load_image": "grafana/k6:1.0.0",
+  "load_image_digest": "grafana/k6@sha256:f21270290d702cbf0a7d6ba5d7ed100b63bcb233b558b885ed787547b3488279",
+  "probe_image": "ai-lab-oha:1.16.0",
+  "probe_image_digest": "sha256:175097c9d0be7dd96622486efb63ee310a68fa5798331cbe79cb632fdf108f43",
+  "health_starved_repeats": 3,
+  "load_no_stream_repeats": 0,
+  "median": {
+    "health_502": 0,
+    "health_504": 0,
+    "health_error_percent": 100,
+    "health_errors": 300,
+    "health_other_5xx": 0,
+    "health_other_non_2xx": 0,
+    "health_p50_ms": null,
+    "health_p95_answered_ms": null,
+    "health_p95_ms": 10000,
+    "health_p99_ms": null,
+    "health_rps": 4.296979925060161,
+    "health_timeouts": 300,
+    "load_error_percent": 0,
+    "load_errors": 0,
+    "load_p50_ms": 43404.3368705,
+    "load_p95_ms": 49769.72370649999,
+    "load_p99_ms": 49844.99798785,
+    "load_rps": 0.6221781032687435,
+    "health_starved": true,
+    "load_no_stream_completed": false
+  },
+  "spread_percent": {
+    "health_502": 0,
+    "health_504": 0,
+    "health_error_percent": 0,
+    "health_errors": 0,
+    "health_other_5xx": 0,
+    "health_other_non_2xx": 0,
+    "health_p50_ms": null,
+    "health_p95_answered_ms": null,
+    "health_p95_ms": 0,
+    "health_p99_ms": null,
+    "health_rps": 0.005684246858114153,
+    "health_timeouts": 0,
+    "load_error_percent": 0,
+    "load_errors": 0,
+    "load_p50_ms": 0.5700715984631697,
+    "load_p95_ms": 1.0289280105710652,
+    "load_p99_ms": 1.1137578293920618,
+    "load_rps": 0.003288108136034098,
+    "health_p95": 0
+  },
+  "spread_limit_percent": 20,
+  "flagged": false,
+  "runs": [
+    {
+      "repeat": 1,
+      "id_offset": 10007,
+      "load": {
+        "rps": 0.6221710455083088,
+        "p50_ms": 43303.160544,
+        "p95_ms": 49457.945047249996,
+        "p99_ms": 49484.887006850004,
+        "no_stream_completed": false,
+        "requests": 56,
+        "errors": 0,
+        "error_percent": 0
+      },
+      "health": {
+        "rps": 4.297007800458409,
+        "p50_ms": null,
+        "p95_ms": 10000,
+        "p99_ms": null,
+        "starved": true,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 300
+        },
+        "errors": 300,
+        "requests": 300,
+        "error_percent": 100,
+        "p95_answered_ms": null
+      }
+    },
+    {
+      "repeat": 2,
+      "id_offset": 20014,
+      "load": {
+        "rps": 0.6221781032687435,
+        "p50_ms": 43404.3368705,
+        "p95_ms": 49769.72370649999,
+        "p99_ms": 49844.99798785,
+        "no_stream_completed": false,
+        "requests": 56,
+        "errors": 0,
+        "error_percent": 0
+      },
+      "health": {
+        "rps": 4.296979925060161,
+        "p50_ms": null,
+        "p95_ms": 10000,
+        "p99_ms": null,
+        "starved": true,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 300
+        },
+        "errors": 300,
+        "requests": 300,
+        "error_percent": 100,
+        "p95_answered_ms": null
+      }
+    },
+    {
+      "repeat": 3,
+      "id_offset": 30021,
+      "load": {
+        "rps": 0.622191503397143,
+        "p50_ms": 43550.596341,
+        "p95_ms": 49970.03967525,
+        "p99_ms": 50040.0395745,
+        "no_stream_completed": false,
+        "requests": 56,
+        "errors": 0,
+        "error_percent": 0
+      },
+      "health": {
+        "rps": 4.296763549512025,
+        "p50_ms": null,
+        "p95_ms": 10000,
+        "p99_ms": null,
+        "starved": true,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 300
+        },
+        "errors": 300,
+        "requests": 300,
+        "error_percent": 100,
+        "p95_answered_ms": null
+      }
+    }
+  ]
+}

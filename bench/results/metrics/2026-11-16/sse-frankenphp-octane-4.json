@@ -1,0 +1,23 @@
+{
+  "cell": "sse-frankenphp-octane-4",
+  "server": "frankenphp-octane",
+  "commit": "dcca93a",
+  "from_ms": 1794849491000,
+  "to_ms": 1794850100000,
+  "window_s": 609,
+  "load_from_ms": 1794849577000,
+  "load_to_ms": 1794850033000,
+  "load_s": 456,
+  "scrape_coverage": 1,
+  "metrics": {
+    "max_busy_threads": 4,
+    "max_total_threads": 14,
+    "max_busy_workers": 80,
+    "total_workers": 4,
+    "max_queue_depth": 0,
+    "max_memory_bytes": 181805056,
+    "p95_seconds": ">10 (bucket cap)",
+    "p95_capped": true
+  },
+  "counted": "one handler per mode (vars, php, subroute): load, warm-up and health probe; not the scrape"
+}

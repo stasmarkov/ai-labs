@@ -1,0 +1,166 @@
+{
+  "server": "frankenphp-octane",
+  "workload": "sse",
+  "label": "frankenphp-octane-4",
+  "commit": "dcca93a",
+  "concurrency": "4 workers, max-requests 1000000",
+  "base_url": "https://ai-lab.ddev.site",
+  "date": "2026-11-16",
+  "quick": false,
+  "users": 30,
+  "probe_connections": 50,
+  "probe_qps": 5,
+  "probe_timeout_s": 10,
+  "warmup_s": 30,
+  "measure_s": 60,
+  "repeats": 3,
+  "load_image": "grafana/k6:1.0.0",
+  "load_image_digest": "grafana/k6@sha256:f21270290d702cbf0a7d6ba5d7ed100b63bcb233b558b885ed787547b3488279",
+  "probe_image": "ai-lab-oha:1.16.0",
+  "probe_image_digest": "sha256:175097c9d0be7dd96622486efb63ee310a68fa5798331cbe79cb632fdf108f43",
+  "health_starved_repeats": 2,
+  "load_no_stream_repeats": 0,
+  "median": {
+    "health_502": 0,
+    "health_504": 0,
+    "health_error_percent": 100,
+    "health_errors": 300,
+    "health_other_5xx": 0,
+    "health_other_non_2xx": 0,
+    "health_p50_ms": 30.314531,
+    "health_p95_answered_ms": 30.314531,
+    "health_p95_ms": 10000,
+    "health_p99_ms": 30.314531,
+    "health_rps": 4.296603066078617,
+    "health_timeouts": 300,
+    "load_error_percent": 0,
+    "load_errors": 0,
+    "load_p50_ms": 43551.072387,
+    "load_p95_ms": 49799.0719405,
+    "load_p99_ms": 49826.6579328,
+    "load_rps": 0.6221875190704189,
+    "health_starved": true,
+    "load_no_stream_completed": false
+  },
+  "spread_percent": {
+    "health_502": 0,
+    "health_504": 0,
+    "health_error_percent": 0.3333333333333286,
+    "health_errors": 0.33333333333333337,
+    "health_other_5xx": 0,
+    "health_other_non_2xx": 0,
+    "health_p50_ms": 0,
+    "health_p95_answered_ms": 0,
+    "health_p95_ms": 0,
+    "health_p99_ms": 0,
+    "health_rps": 0.0015291063694458872,
+    "health_timeouts": 0.33333333333333337,
+    "load_error_percent": 0,
+    "load_errors": 0,
+    "load_p50_ms": 0.3020347899384049,
+    "load_p95_ms": 0.2934329477557103,
+    "load_p99_ms": 0.3083400861587124,
+    "load_rps": 0.0021810303177489717,
+    "health_p95": 0
+  },
+  "spread_limit_percent": 20,
+  "flagged": false,
+  "runs": [
+    {
+      "repeat": 1,
+      "id_offset": 10007,
+      "load": {
+        "rps": 0.6221819654590364,
+        "p50_ms": 43545.87393,
+        "p95_ms": 49799.0719405,
+        "p99_ms": 49826.6579328,
+        "no_stream_completed": false,
+        "requests": 56,
+        "errors": 0,
+        "error_percent": 0
+      },
+      "health": {
+        "rps": 4.296579942638356,
+        "p50_ms": null,
+        "p95_ms": 10000,
+        "p99_ms": null,
+        "starved": true,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 300
+        },
+        "errors": 300,
+        "requests": 300,
+        "error_percent": 100,
+        "p95_answered_ms": null
+      }
+    },
+    {
+      "repeat": 2,
+      "id_offset": 20014,
+      "load": {
+        "rps": 0.6221875190704189,
+        "p50_ms": 43677.41332,
+        "p95_ms": 49887.88296225,
+        "p99_ms": 49921.13522,
+        "no_stream_completed": false,
+        "requests": 56,
+        "errors": 0,
+        "error_percent": 0
+      },
+      "health": {
+        "rps": 4.296603066078617,
+        "p50_ms": 30.314531,
+        "p95_ms": 10000,
+        "p99_ms": 30.314531,
+        "starved": false,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 299
+        },
+        "errors": 299,
+        "requests": 300,
+        "error_percent": 99.66666666666667,
+        "p95_answered_ms": 30.314531
+      }
+    },
+    {
+      "repeat": 3,
+      "id_offset": 30021,
+      "load": {
+        "rps": 0.6221955355574605,
+        "p50_ms": 43551.072387,
+        "p95_ms": 49741.7560775,
+        "p99_ms": 49767.499659999994,
+        "no_stream_completed": false,
+        "requests": 56,
+        "errors": 0,
+        "error_percent": 0
+      },
+      "health": {
+        "rps": 4.296645642269509,
+        "p50_ms": null,
+        "p95_ms": 10000,
+        "p99_ms": null,
+        "starved": true,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 300
+        },
+        "errors": 300,
+        "requests": 300,
+        "error_percent": 100,
+        "p95_answered_ms": null
+      }
+    }
+  ]
+}
