@@ -80,7 +80,8 @@ it('AC-3 changes the cache key when the guide file changes and serves a hit othe
     expect($renderer->render('demo'))->toBe($first);
 
     file_put_contents($this->root.'/resources/guides/demo.php', guideFixture('Changed', 'Hi', 'app/code.php'));
-    expect($renderer->render('demo')['title'])->toBe('Changed');
+    $nextRequest = new GuideRenderer(new GuideRepository($this->root.'/resources/guides'), new SnippetResolver($this->root), $this->cache, new GuideFacts($this->root.'/bench/results'));
+    expect($nextRequest->render('demo')['title'])->toBe('Changed');
 });
 
 it('rejects an invalid guide and an unknown key', function (): void {
@@ -122,21 +123,10 @@ it('AC-4 rejects a planned guide with no plan and renders plan bullets as markdo
     expect(($this->renderer)()->render('demo')['plan'][0])->toContain('<strong>this</strong>');
 });
 
-it('MNC-2 serves the live-page steps even when a snippet or number reference is broken', function (): void {
-    file_put_contents($this->root.'/resources/guides/demo.php', guideFixture('Demo', 'Hello **world**', 'app/missing.php'));
-
-    expect(fn () => ($this->renderer)()->render('demo'))->toThrow(InvalidGuideException::class);
-
-    $steps = ($this->renderer)()->steps('demo');
-
-    expect($steps)->toBe([['title' => 'Step', 'html' => "<p>Hello <strong>world</strong></p>\n", 'event' => 'token']]);
-});
-
 it('NFR-1 caches renders under a versioned key that expires', function (): void {
     ($this->renderer)()->render('demo');
-    ($this->renderer)()->steps('demo');
 
     $keys = array_keys((fn (): array => $this->storage)->call($this->cache->getStore()));
 
-    expect($keys)->each->toMatch('/^guide(-steps)?:\d+:demo:/');
+    expect($keys)->each->toMatch('/^guide:\d+:demo:/');
 });

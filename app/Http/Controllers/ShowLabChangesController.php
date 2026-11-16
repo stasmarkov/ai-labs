@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\DTOs\GuideTeach;
 use App\Services\GuidePageService;
 use App\Services\PendingChangePageService;
 use Inertia\Inertia;
@@ -16,8 +17,7 @@ final class ShowLabChangesController extends Controller
         return Inertia::render('Lab/Changes', [
             ...$pages->lists(),
             'change' => null,
-            'guideKey' => 'mcp',
-            'teach' => $guides->teach('mcp'),
+            'teach' => fn (): GuideTeach => $guides->teach('mcp'),
             ...ShowLabChangeController::urls(),
         ]);
     }

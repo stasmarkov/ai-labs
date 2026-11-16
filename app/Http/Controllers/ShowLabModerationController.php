@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\DTOs\GuideTeach;
 use App\DTOs\LabModerationListing;
 use App\Http\Requests\ModerateListingRequest;
 use App\Services\GuidePageService;
@@ -19,10 +20,7 @@ final class ShowLabModerationController extends Controller
     public function __invoke(LabModerationService $moderation, GuidePageService $guides, LabProviderService $providers): Response
     {
         return Inertia::render('Lab/Moderation', [
-            'howItWorks' => $guides->howItWorks('moderation'),
-            'guideHref' => route('ai.guides.show', ['key' => 'moderation'], false),
-            'guideKey' => 'moderation',
-            'teach' => $guides->teach('moderation'),
+            'teach' => fn (): GuideTeach => $guides->teach('moderation'),
             'moderateUrl' => route('moderation.moderate', [], false),
             'runUrl' => route('ai.runs.show', ['invocationId' => self::ID_PLACEHOLDER], false),
             'enabledTextProviders' => $providers->textOptions('moderation'),

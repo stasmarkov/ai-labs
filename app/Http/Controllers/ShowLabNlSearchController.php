@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\DTOs\GuideTeach;
 use App\Http\Requests\NlSearchRequest;
 use App\Services\GuidePageService;
 use App\Services\LabProviderService;
@@ -18,10 +19,7 @@ final class ShowLabNlSearchController extends Controller
     public function __invoke(GuidePageService $guides, LabProviderService $providers): Response
     {
         return Inertia::render('Lab/NlSearch', [
-            'howItWorks' => $guides->howItWorks('nl-search'),
-            'guideHref' => route('ai.guides.show', ['key' => 'nl-search'], false),
-            'guideKey' => 'nl-search',
-            'teach' => $guides->teach('nl-search'),
+            'teach' => fn (): GuideTeach => $guides->teach('nl-search'),
             'searchUrl' => route('listings.nl', [], false),
             'runUrl' => route('ai.runs.show', ['invocationId' => self::ID_PLACEHOLDER], false),
             'enabledTextProviders' => $providers->textOptions('nl-search'),

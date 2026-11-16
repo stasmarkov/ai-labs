@@ -11,9 +11,9 @@ it('AC-5 each live page carries the guide steps for its panel', function (string
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component($component)
-            ->has('howItWorks', fn (Assert $steps) => $steps->each(fn (Assert $step) => $step
+            ->has('teach.works', fn (Assert $steps) => $steps->each(fn (Assert $step) => $step
                 ->has('title')
-                ->has('html')
+                ->has('summary')
                 ->has('event')
                 ->missing('snippet'))));
 })->with([
@@ -25,7 +25,7 @@ it('AC-5 each live page carries the guide steps for its panel', function (string
 ]);
 
 it('AC-5 every panel step event is a known protocol event', function (string $path): void {
-    $steps = $this->get($path)->viewData('page')['props']['howItWorks'];
+    $steps = $this->get($path)->viewData('page')['props']['teach']['works'];
 
     expect($steps)->not->toBeEmpty();
 
@@ -70,7 +70,7 @@ it('MNC-2 the live pages still declare their own props next to the panel', funct
 });
 
 it('AC-5 each live page links to its full guide', function (string $path, string $key): void {
-    $href = $this->get($path)->assertOk()->viewData('page')['props']['guideHref'] ?? null;
+    $href = $this->get($path)->assertOk()->viewData('page')['props']['teach']['href'] ?? null;
 
     expect($href)->toBe('/ai/guides/'.$key);
     $this->get($href)->assertOk();
@@ -97,7 +97,7 @@ it('AC-5 the panel renders failed, stopped and refused end states and the full g
 });
 
 it('AC-5 the NL search guard step lights up on a refusal', function (): void {
-    $steps = app(GuidePageService::class)->howItWorks('nl-search');
+    $steps = app(GuidePageService::class)->teach('nl-search')->works;
 
     expect(array_column($steps, 'event'))->toContain('refused')
         ->and((string) file_get_contents(base_path('resources/js/ai/Pages/Lab/NlSearch.vue')))->toContain("return 'refused';");

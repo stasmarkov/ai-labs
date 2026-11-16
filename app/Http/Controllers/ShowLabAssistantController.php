@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\DTOs\GuideTeach;
 use App\Http\Requests\AssistantAskRequest;
 use App\Services\GuidePageService;
 use App\Services\LabProviderService;
@@ -25,10 +26,7 @@ final class ShowLabAssistantController extends Controller
     public function __invoke(GuidePageService $guides, LabProviderService $providers): Response
     {
         return Inertia::render('Lab/Assistant', [
-            'howItWorks' => $guides->howItWorks('assistant'),
-            'guideHref' => route('ai.guides.show', ['key' => 'assistant'], false),
-            'guideKey' => 'assistant',
-            'teach' => $guides->teach('assistant'),
+            'teach' => fn (): GuideTeach => $guides->teach('assistant'),
             'askUrl' => route('assistant.ask', [], false),
             'runUrl' => route('ai.runs.show', ['invocationId' => self::ID_PLACEHOLDER], false),
             'enabledTextProviders' => $providers->textOptions('assistant'),

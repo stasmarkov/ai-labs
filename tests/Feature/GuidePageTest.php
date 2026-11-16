@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Guides\GuideRepository;
+use App\Services\GuidePageService;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -158,7 +159,7 @@ it('AC-6 the experiment props carry predictions and the answer HTML, and the car
 });
 
 it('AC-5 a guide page shows the build, watch and elsewhere sections with the same text as the page data', function (string $key): void {
-    $teach = app(GuideRepository::class)->teach($key);
+    $teach = app(GuidePageService::class)->teach($key)->toArray();
 
     $this->get('/ai/guides/'.$key)
         ->assertOk()
@@ -167,10 +168,10 @@ it('AC-5 a guide page shows the build, watch and elsewhere sections with the sam
             ->where('guide.tabs', fn ($tabs): bool => collect($tabs)->pluck('key')->all() === ['works', 'implementation', 'modify', 'support', 'numbers', 'experiments'])
             ->where('guide.teachTabs', fn ($tabs): bool => collect($tabs)->pluck('key')->all() === ['build', 'watch', 'elsewhere'])
             ->where('guide.build', fn ($rows): bool => collect($rows)->map(fn (array $row): array => [$row['step'], $row['detail'], $row['tab'], $row['doc']])->all()
-                === collect($teach->build)->map(fn (array $row): array => [$row['step'], $row['detail'], $row['tab'], $row['doc']])->all())
-            ->where('guide.watch', fn ($rows): bool => collect($rows)->pluck('point')->all() === collect($teach->watch)->pluck('point')->all())
-            ->where('guide.elsewhere', fn ($rows): bool => collect($rows)->pluck('domain')->all() === collect($teach->elsewhere)->pluck('domain')->all()
-                && collect($rows)->pluck('how')->all() === collect($teach->elsewhere)->pluck('how')->all())
+                === collect($teach['build'])->map(fn (array $row): array => [$row['step'], $row['detail'], $row['tab'], $row['doc']])->all())
+            ->where('guide.watch', fn ($rows): bool => collect($rows)->pluck('point')->all() === collect($teach['watch'])->pluck('point')->all())
+            ->where('guide.elsewhere', fn ($rows): bool => collect($rows)->pluck('domain')->all() === collect($teach['elsewhere'])->pluck('domain')->all()
+                && collect($rows)->pluck('how')->all() === collect($teach['elsewhere'])->pluck('how')->all())
         );
 })->with(['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation', 'research', 'playground', 'admin-assistant', 'providers', 'mcp']);
 

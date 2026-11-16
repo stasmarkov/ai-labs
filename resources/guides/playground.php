@@ -29,8 +29,8 @@ return [
             'snippet' => 'App\Services\PlaygroundRunner::validateTargets',
         ],
         [
-            'title' => 'The targets run one after another',
-            'body' => 'Each target is one non-streaming chat call with the same system prompt, input, temperature and maximum tokens. They run in turn, not in parallel, because a local model server answers one request at a time: parallel calls would only make the latency figures wrong. The response comes back when all targets are finished.',
+            'title' => 'The targets run one after another, and a bad input is only flagged',
+            'body' => 'Each target is one non-streaming chat call with the same system prompt, input, temperature and maximum tokens. They run in turn, not in parallel, because a local model server answers one request at a time: parallel calls would only make the latency figures wrong. The response comes back when all targets are finished. The input is matched against the same injection patterns as the other features, but a match does not stop the run: the playground exists to see how a model handles such text. The names of the matching patterns are stored on the run and shown as a badge, so the result is read with that in mind.',
             'event' => 'request_sent',
             'snippet' => 'App\Services\PlaygroundRunner::run',
         ],
@@ -39,11 +39,6 @@ return [
             'body' => 'A result stores the output, tokens in and out, and the wall time around the call. Every call is also a row in the run log with the provider, model, the version label (`playground:name@v3`, or `playground:unsaved`) and the same figures, and the column links to it. Time to first token is not shown: it needs streaming, and a plain call has only a total.',
             'event' => 'response_received',
             'snippet' => 'App\Services\PlaygroundRunner::call',
-        ],
-        [
-            'title' => 'A bad input is flagged, not refused',
-            'body' => 'The input is matched against the same injection patterns as the other features, but a match does not stop the run: the playground exists to see how a model handles such text. The names of the matching patterns are stored on the run and shown as a badge, so the result is read with that in mind.',
-            'snippet' => 'App\Services\PlaygroundRunner::run',
         ],
     ],
     'failures' => [

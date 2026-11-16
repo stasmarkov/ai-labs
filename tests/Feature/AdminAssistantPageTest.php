@@ -31,11 +31,11 @@ it('AC-12 the admin assistant page gets the three endpoints, the limits, the exa
             ->where('actionPlaceholder', 'ACTIONID')
             ->where('runUrl', '/ai/runs/RUN_ID')
             ->where('idPlaceholder', 'RUN_ID')
-            ->where('guideHref', '/ai/guides/admin-assistant')
+            ->where('teach.href', '/ai/guides/admin-assistant')
             ->where('maxQuestionLength', 500)
             ->where('maxSteps', 4)
             ->has('model')
-            ->has('howItWorks', 6)
+            ->has('teach.works', 6)
             ->has('examples', 4));
 });
 

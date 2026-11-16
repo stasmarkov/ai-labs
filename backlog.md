@@ -742,7 +742,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-27
 - **Depends on:** SL-52
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261116-2004-lab-pages-teach
 - **Source:** owner request 2026-11-16 (Stanislav Markov: the Moderation page layout was broken; every page should have examples, explain how it works, link the guides, show how to build it yourself, what to take into account, and examples from other domains)
 - **Run:** `/sdd spec-20261116-2004-lab-pages-teach`

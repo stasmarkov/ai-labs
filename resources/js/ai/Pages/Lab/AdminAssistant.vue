@@ -7,11 +7,9 @@ export default { layout: LabLayout };
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue';
 import LabButton from '../../components/LabButton.vue';
-import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabTeach from '../../components/LabTeach.vue';
 import type { Teach } from '../../components/LabTeach.vue';
 import LabTag from '../../components/LabTag.vue';
-import type { GuideStep } from '../../composables/useGuideSteps';
 import { presetQuery } from '../../composables/usePresetQuery';
 
 interface StepReport {
@@ -58,8 +56,6 @@ interface Entry {
 }
 
 const props = defineProps<{
-    howItWorks: GuideStep[];
-    guideHref: string;
     teach: Teach;
     askUrl: string;
     confirmUrl: string;
@@ -390,9 +386,5 @@ function newChat(): void {
     </form>
     <p v-if="tooLong" role="alert" class="mt-2 text-[13px] text-danger">The question is limited to {{ maxQuestionLength }} characters.</p>
 
-    <LabTeach :teach="teach">
-        <template #works>
-            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="eventTypes" state="idle" />
-        </template>
-    </LabTeach>
+    <LabTeach :teach="teach" :events="eventTypes" state="idle" />
 </template>

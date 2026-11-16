@@ -8,7 +8,7 @@ const props = defineProps<{
     steps: GuideStep[];
     events: string[];
     state: GuideRunState;
-    guideHref: string;
+    guideHref?: string;
     bare?: boolean;
 }>();
 
@@ -43,7 +43,7 @@ function marker(index: number): string {
         return '✓';
     }
 
-    return isCurrent(index) ? '▶' : '○';
+    return isCurrent(index) ? '▶' : String(index + 1);
 }
 
 function endNote(index: number): string | null {
@@ -80,11 +80,10 @@ function endNote(index: number): string | null {
                         {{ step.title }}
                         <span v-if="endNote(index) !== null" class="text-[13px] font-normal">({{ endNote(index) }})</span>
                     </p>
-                    <!-- eslint-disable-next-line vue/no-v-html -->
-                    <div class="mt-1 font-normal [&_p]:m-0" v-html="step.html" />
+                    <p class="m-0 mt-1 font-normal">{{ step.summary }}</p>
                 </div>
             </li>
         </ol>
-        <Link v-if="!bare" :href="guideHref" class="mt-3 inline-block text-[13px] text-ink underline">Open the full guide</Link>
+        <Link v-if="!bare && guideHref" :href="guideHref" class="mt-3 inline-block text-[13px] text-ink underline">Open the full guide</Link>
     </component>
 </template>

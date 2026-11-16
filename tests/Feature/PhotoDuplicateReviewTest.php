@@ -95,7 +95,7 @@ it('AC-6 the page shows each group with similarities, tags, the pick, reasons, i
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('Lab/PhotoDuplicates')
-            ->has('howItWorks')
+            ->has('teach.works')
             ->where('guideHref', '/ai/guides/photo-duplicates')
             ->where('label', REVIEW_LABEL)
             ->where('cutoff', 0.98)
@@ -173,7 +173,7 @@ it('AC-6 an empty database shows the empty state facts', function (): void {
 it('AC-6 the page source shows the cards, pick, actions, summary bar, how it works and empty state', function (): void {
     $source = (string) file_get_contents(resource_path('js/ai/Pages/Lab/PhotoDuplicates.vue'));
 
-    expect($source)->toContain('LabHowItWorks')
+    expect($source)->toContain('LabTeach')
         ->toContain('LabTag')
         ->toContain('Keep this one, remove')
         ->toContain('Pick another')

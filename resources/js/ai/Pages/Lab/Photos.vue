@@ -8,14 +8,13 @@ export default { layout: LabLayout };
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import LabButton from '../../components/LabButton.vue';
-import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabTeach from '../../components/LabTeach.vue';
 import type { Teach } from '../../components/LabTeach.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabSimilarityBar from '../../components/LabSimilarityBar.vue';
 import LabTag from '../../components/LabTag.vue';
 import { csrfToken } from '../../composables/csrfToken';
-import type { GuideRunState, GuideStep } from '../../composables/useGuideSteps';
+import type { GuideRunState } from '../../composables/useGuideSteps';
 
 interface PhotoItem {
     id: number;
@@ -63,7 +62,6 @@ interface PhotoDetail extends PhotoItem {
 }
 
 const props = defineProps<{
-    howItWorks: GuideStep[];
     guideHref: string;
     teach: Teach;
     photos: PhotoItem[];
@@ -485,9 +483,5 @@ ddev artisan photos:import</pre>
         </section>
     </div>
 
-    <LabTeach :teach="teach">
-        <template #works>
-            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="guideEvents" :state="guideState" />
-        </template>
-    </LabTeach>
+    <LabTeach :teach="teach" :events="guideEvents" :state="guideState" />
 </template>

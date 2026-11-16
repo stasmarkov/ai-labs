@@ -5,6 +5,13 @@ declare(strict_types=1);
 namespace App\Guides;
 
 use App\DTOs\Guide;
+use App\DTOs\GuideExperiment;
+use App\DTOs\GuideItem;
+use App\DTOs\GuideNumber;
+use App\DTOs\GuideRecipe;
+use App\DTOs\GuideStep;
+use App\DTOs\GuideSupport;
+use App\DTOs\GuideTeach;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Support\Str;
 
@@ -13,7 +20,7 @@ final readonly class GuideRenderer
     private const MARKDOWN = ['html_input' => 'escape', 'allow_unsafe_links' => false];
 
     /** Bump when build() changes shape, so cached payloads of the old shape are never read again. */
-    private const VERSION = 3;
+    private const VERSION = 4;
 
     /** Cached renders expire, so keys of edited guides do not pile up in a store without eviction. */
     private const TTL_SECONDS = 86400;
@@ -45,27 +52,6 @@ final readonly class GuideRenderer
         return $rendered;
     }
 
-    /**
-     * The "How it works" steps only: no snippets, numbers or facts, so a live page never depends on a
-     * source file or a result file a guide refers to.
-     *
-     * @return list<array{title: string, html: string, event: string|null}>
-     */
-    public function steps(string $key): array
-    {
-        $guide = $this->guides->find($key);
-
-        return $this->cache->remember(
-            'guide-steps:'.self::VERSION.':'.$guide->key.':'.$guide->contentHash,
-            self::TTL_SECONDS,
-            fn (): array => array_map(fn ($step): array => [
-                'title' => $step->title,
-                'html' => $this->markdown($step->body),
-                'event' => $step->event,
-            ], $guide->works),
-        );
-    }
-
     public function cacheKey(Guide $guide): string
     {
         $mtimes = [];
@@ -89,35 +75,36 @@ final readonly class GuideRenderer
             'summary' => $guide->summary,
             'kind' => $guide->kind,
             'planned' => $guide->planned,
-            'works' => array_map(fn ($step): array => [
+            'works' => array_map(fn (GuideStep $step): array => [
                 'title' => $step->title,
                 'html' => $this->markdown($step->body),
                 'event' => $step->event,
                 'snippet' => $this->snippet($step->snippet),
+                'moreSnippets' => array_map(fn (string $reference): array => $this->snippets->resolve($reference), $step->moreSnippets),
             ], $guide->works),
-            'failures' => array_map(fn ($item): array => [
+            'failures' => array_map(fn (GuideItem $item): array => [
                 'title' => $item->title,
                 'html' => $this->markdown($item->body),
                 'snippet' => $this->snippet($item->snippet),
             ], $guide->failures),
-            'recipes' => array_map(fn ($recipe): array => [
+            'recipes' => array_map(fn (GuideRecipe $recipe): array => [
                 'title' => $recipe->title,
                 'html' => $this->markdown($recipe->body),
                 'snippet' => $this->snippet($recipe->snippet),
             ], $guide->recipes),
-            'support' => array_map(fn ($row): array => [
+            'support' => array_map(fn (GuideSupport $row): array => [
                 'name' => $row->name,
                 'status' => $row->status,
                 'html' => $this->markdown($row->note),
             ], $guide->support),
-            'numbers' => array_map(fn ($number): array => [
+            'numbers' => array_map(fn (GuideNumber $number): array => [
                 'label' => $number->label,
                 'unit' => $number->unit,
                 'file' => $number->file,
                 'path' => $number->path,
                 'pending' => $number->pending,
             ], $guide->numbers),
-            'experiments' => array_map(fn ($experiment): array => [
+            'experiments' => array_map(fn (GuideExperiment $experiment): array => [
                 'title' => $experiment->title,
                 'predictions' => $experiment->predictions,
                 'answer' => [
@@ -127,22 +114,7 @@ final readonly class GuideRenderer
                 'page' => $experiment->page,
                 'params' => $experiment->params,
             ], $guide->experiments),
-            'build' => array_map(fn ($row): array => [
-                'step' => $row->step,
-                'detail' => $row->detail,
-                'tab' => $row->tab,
-                'doc' => $row->doc,
-            ], $guide->build),
-            'watch' => array_map(fn ($row): array => [
-                'point' => $row->point,
-                'detail' => $row->detail,
-                'tab' => $row->tab,
-            ], $guide->watch),
-            'elsewhere' => array_map(fn ($row): array => [
-                'domain' => $row->domain,
-                'problem' => $row->problem,
-                'how' => $row->how,
-            ], $guide->elsewhere),
+            ...GuideTeach::rows($guide),
             'plan' => array_map(fn (string $bullet): string => $this->markdown($bullet), $guide->plan),
             'related' => $guide->related,
         ];

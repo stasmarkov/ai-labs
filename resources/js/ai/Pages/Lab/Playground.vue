@@ -8,6 +8,7 @@ export default { layout: LabLayout };
 import { computed, ref } from 'vue';
 import LabButton from '../../components/LabButton.vue';
 import LabMetric from '../../components/LabMetric.vue';
+import LabExamples from '../../components/LabExamples.vue';
 import LabTeach from '../../components/LabTeach.vue';
 import type { Teach } from '../../components/LabTeach.vue';
 import LabTag from '../../components/LabTag.vue';
@@ -446,18 +447,7 @@ const DIFF_MARKS = { same: '  ', added: '+ ', removed: '- ' } as const;
                     <label for="playground-input" class="text-[13px] font-medium text-muted">Input</label>
                     <textarea id="playground-input" v-model="input" rows="3" :maxlength="limits.input * 2" placeholder="e.g. 2019 BMW 320d, 84,000 km, one owner, full service history." class="w-full min-w-0 rounded-sm border border-field bg-white px-3 py-2 text-[15px] text-ink" />
                     <p class="m-0 text-[13px] text-muted">{{ inputLength }} of {{ limits.input }} characters.</p>
-                    <div role="group" aria-label="Example inputs" class="flex flex-wrap gap-2">
-                        <button
-                            v-for="example in EXAMPLES"
-                            :key="example.label"
-                            type="button"
-                            data-example
-                            class="min-h-10 rounded-sm border border-rule px-3 text-left text-[13px] text-ink"
-                            @click="input = example.text"
-                        >
-                            {{ example.label }}
-                        </button>
-                    </div>
+                    <LabExamples label="Example inputs" :examples="EXAMPLES" @pick="input = $event" />
                 </div>
 
                 <fieldset class="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">

@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Ai\AdminAssistantLoop;
 use App\Ai\AiProviders;
+use App\DTOs\GuideTeach;
 use App\Http\Requests\AskAdminAssistantRequest;
 use App\Services\GuidePageService;
 use Inertia\Inertia;
@@ -30,10 +31,7 @@ final class ShowLabAdminAssistantController extends Controller
         $choice = $providers->configured(AiProviders::ADMIN_ASSISTANT);
 
         return Inertia::render('Lab/AdminAssistant', [
-            'howItWorks' => $guides->howItWorks('admin-assistant'),
-            'guideHref' => route('ai.guides.show', ['key' => 'admin-assistant'], false),
-            'guideKey' => 'admin-assistant',
-            'teach' => $guides->teach('admin-assistant'),
+            'teach' => fn (): GuideTeach => $guides->teach('admin-assistant'),
             'askUrl' => route('admin-assistant.ask', [], false),
             'confirmUrl' => route('admin-assistant.confirm', ['actionId' => self::ACTION_PLACEHOLDER], false),
             'rejectUrl' => route('admin-assistant.reject', ['actionId' => self::ACTION_PLACEHOLDER], false),

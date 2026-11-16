@@ -7,7 +7,6 @@ export default { layout: LabLayout };
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import LabButton from '../../components/LabButton.vue';
-import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabTeach from '../../components/LabTeach.vue';
 import type { Teach } from '../../components/LabTeach.vue';
 import LabMetric from '../../components/LabMetric.vue';
@@ -17,7 +16,7 @@ import LabTextInput from '../../components/LabTextInput.vue';
 import { searchJson } from '../../composables/useSearchRequest';
 import { presetQuery } from '../../composables/usePresetQuery';
 import type { ServerTimings } from '../../composables/useSearchRequest';
-import type { GuideRunState, GuideStep } from '../../composables/useGuideSteps';
+import type { GuideRunState } from '../../composables/useGuideSteps';
 
 interface PhotoMatch {
     photo_id: number;
@@ -30,8 +29,6 @@ interface PhotoMatch {
 }
 
 const props = defineProps<{
-    howItWorks: GuideStep[];
-    guideHref: string;
     teach: Teach;
     searchUrl: string;
     minQueryLength: number;
@@ -185,9 +182,5 @@ function useExample(example: string): void {
         </section>
     </Teleport>
 
-    <LabTeach :teach="teach">
-        <template #works>
-            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
-        </template>
-    </LabTeach>
+    <LabTeach :teach="teach" :events="panelEvents" :state="panelState" />
 </template>

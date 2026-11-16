@@ -13,13 +13,9 @@ return [
             'snippet' => 'App\Ai\PhotoEncoderClient::embed',
         ],
         [
-            'title' => 'Embedding runs on a queue',
-            'body' => 'One command queues batches of 16 photos on the `ai-vision` queue, so a web request never waits for the encoder. A batch that fails writes a failed run row and leaves its photos without a vector; the other batches go on.',
+            'title' => 'Embedding runs on a queue, and vectors are normalised and labelled',
+            'body' => 'One command queues batches of 16 photos on the `ai-vision` queue, so a web request never waits for the encoder. A batch that fails writes a failed run row and leaves its photos without a vector; the other batches go on. Each vector is scaled to length one before it is stored, so cosine similarity is a plain dot product. The row also keeps the model label it was made with. A vector made by another model is never compared with the current one.',
             'snippet' => 'App\Services\PhotoEmbeddingService::embedBatch',
-        ],
-        [
-            'title' => 'Vectors are normalised and labelled',
-            'body' => 'Each vector is scaled to length one before it is stored, so cosine similarity is a plain dot product. The row also keeps the model label it was made with. A vector made by another model is never compared with the current one.',
         ],
         [
             'title' => 'The nearest photos of other listings',

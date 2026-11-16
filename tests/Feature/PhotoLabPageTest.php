@@ -34,7 +34,7 @@ it('AC-5 the page shows the empty state when there are no photos', function (): 
             ->has('photos', 0)
             ->where('pagination.total', 0)
             ->where('selected', null)
-            ->has('howItWorks')
+            ->has('teach.works')
             ->where('guideHref', '/ai/guides/photos'));
 });
 

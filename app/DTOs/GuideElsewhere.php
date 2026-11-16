@@ -11,4 +11,16 @@ final readonly class GuideElsewhere
         public string $problem,
         public string $how,
     ) {}
+
+    /**
+     * @return array{domain: string, problem: string, how: string}
+     */
+    public function toArray(): array
+    {
+        return [
+            'domain' => $this->domain,
+            'problem' => $this->problem,
+            'how' => $this->how,
+        ];
+    }
 }

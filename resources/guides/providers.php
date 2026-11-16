@@ -8,14 +8,9 @@ return [
     'summary' => 'Which AI service answers, which model it runs, and how to change either one without touching code.',
     'works' => [
         [
-            'title' => 'One list of providers',
-            'body' => 'Every provider the app can use is one entry in a single list: its driver, its address, its limits and the model for each job (text and embeddings). A fake provider sits in the same list, so tests and demos run without a real model.',
-            'snippet' => 'config/ai.php#provider-ollama',
-        ],
-        [
-            'title' => 'A key switches a cloud provider on',
-            'body' => 'Claude, OpenAI and Gemini sit in the same list, but each one is enabled only when its key is set in the environment (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`). With no key the provider is simply absent: it is not offered in the lab and a request that names it is refused before any model call. The table above shows which keys are set, never their values.',
-            'snippet' => 'config/ai.php#provider-cloud',
+            'title' => 'One list of providers, and a key switches a cloud one on',
+            'body' => 'Every provider the app can use is one entry in a single list: its driver, its address, its limits and the model for each job (text and embeddings). A fake provider sits in the same list, so tests and demos run without a real model. Claude, OpenAI and Gemini sit in the same list, but each one is enabled only when its key is set in the environment (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`). With no key the provider is simply absent: it is not offered in the lab and a request that names it is refused before any model call. The table above shows which keys are set, never their values.',
+            'snippet' => ['config/ai.php#provider-ollama', 'config/ai.php#provider-cloud'],
         ],
         [
             'title' => 'Each feature asks one resolver',
@@ -38,14 +33,9 @@ return [
             'snippet' => 'App\Services\ListingEmbeddingService::assertDimensions',
         ],
         [
-            'title' => 'Options travel with the call',
-            'body' => 'The entry\'s request options (thinking on or off, how long the model stays loaded, context size), the token cap and the timeout are read from the active entry on every call, so a change in the environment is enough.',
-            'snippet' => 'App\Ai\UsesActiveProvider::providerOptions',
-        ],
-        [
-            'title' => 'Every run names its provider and model',
-            'body' => 'The run row stores the provider and the model that actually answered, so a later comparison never has to guess which setup produced a number.',
-            'snippet' => 'App\Ai\AiRunRecorder::started',
+            'title' => 'Options travel with the call, and every run names its provider and model',
+            'body' => 'The entry\'s request options (thinking on or off, how long the model stays loaded, context size), the token cap and the timeout are read from the active entry on every call, so a change in the environment is enough. The run row stores the provider and the model that actually answered, so a later comparison never has to guess which setup produced a number.',
+            'snippet' => ['App\Ai\UsesActiveProvider::providerOptions', 'App\Ai\AiRunRecorder::started'],
         ],
     ],
     'failures' => [

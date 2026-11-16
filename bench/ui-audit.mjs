@@ -12,15 +12,23 @@
 //   no-guide    no [data-guide-link]
 //   no-hint     a text, search, number, url, email or textarea field with no placeholder and no aria-describedby pointing at
 //               visible text, or a select with no visible label or with neither an empty option nor aria-describedby
-// Pages without a teach block by design (overview, guides, guide page) get the layout checks only. Gated pages that answer 404
+//   chips       a page with a main input shows fewer than 2 or more than 4 [data-example] chips (pages that had more than 4
+//               before the teach slice keep them: CHIPS_GRANDFATHERED)
+// Detail pages (changes, research, playground) and the run page are opened with a real id: first from a list-page link, then from
+// the dev database (latest row, through `ddev artisan tinker`, only for a *.ddev.site base), or skipped with a note when there is none.
+// The run page answers JSON, so for it only the status and the content type are checked.
+// Pages without a teach block by design (overview, guides, guide page, details, run) get the layout checks only. Gated pages that answer 404
 // (admin assistant, changes, playground) are skipped with a note. Only the first render is checked: nothing is submitted.
-// <details> elements are opened before checking. Viewport height 1000, HTTPS errors ignored (DDEV certificate).
+// <details> elements are opened before checking. Viewport height 1000. HTTPS errors are ignored only for a *.ddev.site base (DDEV's
+// local certificate); any other base must present a valid certificate.
 // Screenshots go to bench/results/raw/ui-audit/ (gitignored). Exit 0 when no page has a finding, 1 otherwise, 2 on a setup error.
-// Playwright: PW (path to a playwright package), else the newest ~/.npm/_npx/*/node_modules/playwright; otherwise exits 2 with
-// "run: npx playwright@1.55 --version". Browser: the installed Chrome channel, Playwright Chromium as a fallback.
+// Playwright: PW (path to a playwright package you chose), else the ~/.npm/_npx/*/node_modules/playwright entry whose version is
+// the pinned PLAYWRIGHT_PIN (1.55.x); otherwise exits 2 with "run: npx playwright@1.55 --version". No other cache entry is loaded.
+// Browser: the installed Chrome channel, Playwright Chromium as a fallback.
 
+import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,38 +41,84 @@ const TEACH_PAGES = [
   'assistant', 'moderation', 'research', 'playground', 'admin-assistant', 'changes', 'settings',
 ];
 const LAYOUT_ONLY_PAGES = ['', 'guides', 'guides/describe'];
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+const DETAIL_PAGES = [
+  { list: 'changes', prefix: 'changes', gated: true },
+  { list: 'research', prefix: 'research', gated: false },
+  { list: 'playground', prefix: 'playground', gated: true },
+];
+const RUN_SOURCES = ['research', 'moderation', 'describe', 'semantic', 'nl-search', 'chat', 'assistant', 'playground'];
 const LISTING_SELECTS = ['#moderation-pick', '#describe-listing'];
+const PLAYWRIGHT_PIN = /^1\.55\./;
+/** Pages whose main input gets 2 to 4 example chips. Photos, photo duplicates, changes and settings have no main input. */
+const CHIP_PAGES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photo-search', 'assistant', 'moderation', 'research', 'playground', 'admin-assistant'];
+/** Pages that already had more than 4 chips before the teach slice; they keep them (C-4). */
+const CHIPS_GRANDFATHERED = [];
 
 function option(name, fallback) {
   const index = process.argv.indexOf(`--${name}`);
-  return index === -1 ? fallback : process.argv[index + 1];
+  if (index === -1) {
+    return fallback;
+  }
+  const value = process.argv[index + 1];
+  if (value === undefined || value.startsWith('--')) {
+    console.error(`Usage: --${name} needs a value`);
+    process.exit(2);
+  }
+  return value;
 }
 
 function loadPlaywright() {
-  const candidates = [];
+  const require = createRequire(import.meta.url);
   if (process.env.PW) {
-    candidates.push(process.env.PW);
-  }
-  const npx = join(homedir(), '.npm', '_npx');
-  if (existsSync(npx)) {
-    const found = readdirSync(npx)
-      .map((dir) => join(npx, dir, 'node_modules', 'playwright'))
-      .filter((path) => existsSync(path))
-      .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
-    candidates.push(...found);
-  }
-  for (const path of candidates) {
     try {
-      return createRequire(import.meta.url)(path);
-    } catch {
-      // try the next candidate
+      return require(process.env.PW);
+    } catch (error) {
+      console.error(`PW=${process.env.PW} is not a playwright package: ${error.message.split('\n')[0]}`);
+      process.exit(2);
     }
   }
-  console.error('Playwright not found; run: npx playwright@1.55 --version');
+  const npx = join(homedir(), '.npm', '_npx');
+  const pinned = existsSync(npx)
+    ? readdirSync(npx)
+      .map((dir) => join(npx, dir, 'node_modules', 'playwright'))
+      .filter((path) => {
+        try {
+          return PLAYWRIGHT_PIN.test(JSON.parse(readFileSync(join(path, 'package.json'), 'utf8')).version);
+        } catch {
+          return false;
+        }
+      })
+    : [];
+  for (const path of pinned) {
+    try {
+      return require(path);
+    } catch {
+      // try the next pinned entry
+    }
+  }
+  console.error('Playwright 1.55.x not found; run: npx playwright@1.55 --version');
   process.exit(2);
 }
 
-function inPage({ listingSelects, expectTeach }) {
+/** The latest ids in the dev database, for detail pages no list page links to. Empty when DDEV or a row is missing. */
+function databaseIds() {
+  const code = 'echo json_encode(['
+    + '"runs" => App\\Models\\AiRun::query()->latest("id")->value("invocation_id"), '
+    + '"research" => App\\Models\\ResearchRun::query()->latest("created_at")->value("id"), '
+    + '"playground" => App\\Models\\PlaygroundRun::query()->latest("created_at")->value("id"), '
+    + '"changes" => App\\Models\\PendingChange::query()->latest("created_at")->value("id")]);';
+  try {
+    const output = execFileSync('ddev', ['artisan', 'tinker', '--execute', code], { cwd: resolve(HERE, '..'), encoding: 'utf8', timeout: 60000, stdio: ['ignore', 'pipe', 'ignore'] });
+    const line = output.trim().split('\n').pop() ?? '{}';
+    const ids = JSON.parse(line);
+    return Object.fromEntries(Object.entries(ids).filter(([, id]) => typeof id === 'string' && new RegExp(`^${UUID}$`, 'i').test(id)));
+  } catch {
+    return {};
+  }
+}
+
+function inPage({ listingSelects, expectTeach, chips }) {
   const FIELD = 'input[type=text],input[type=search],input[type=number],input[type=url],input[type=email],input:not([type]),textarea';
   const CONTROL = `${FIELD},select`;
   const OVERLAP = 'label,button,a,input,select,textarea,h1,h2,h3';
@@ -137,6 +191,13 @@ function inPage({ listingSelects, expectTeach }) {
     add('scroll', `scrollWidth ${document.documentElement.scrollWidth} > innerWidth ${window.innerWidth}`);
   }
 
+  if (chips !== null) {
+    const count = [...document.querySelectorAll('[data-example]')].filter(visible).length;
+    if (count < chips.min || count > chips.max) {
+      add('chips', `${count} example chip(s), needs ${chips.min} to ${chips.max}`);
+    }
+  }
+
   if (expectTeach) {
     const teach = document.querySelector('[data-lab-teach]');
     if (!teach) {
@@ -183,16 +244,72 @@ function inPage({ listingSelects, expectTeach }) {
   return findings;
 }
 
-const { chromium } = loadPlaywright();
 const base = option('base', 'https://ai-lab.ddev.site').replace(/\/$/, '');
 const widths = option('widths', '1440,1024').split(',').map(Number);
-const only = option('only') ? option('only').split(',').map((p) => p.replace(/^\/?(ai\/?)?/, '')) : null;
+const onlyOption = option('only', null);
+const only = onlyOption === null ? null : onlyOption.split(',').map((p) => p.replace(/^\/?(ai\/?)?/, ''));
+let baseUrl;
+try {
+  baseUrl = new URL(base);
+} catch {
+  console.error(`Usage: --base needs an absolute URL, got ${base}`);
+  process.exit(2);
+}
+/** DDEV signs its sites with a local certificate; only those may skip TLS checks. */
+const isDdev = baseUrl.protocol === 'https:' && baseUrl.hostname.endsWith('.ddev.site');
+const contextOptions = (width) => ({ viewport: { width, height: 1000 }, ignoreHTTPSErrors: isDdev });
+const { chromium } = loadPlaywright();
 const pages = [
-  ...TEACH_PAGES.map((path) => ({ path, teach: true })),
-  ...LAYOUT_ONLY_PAGES.map((path) => ({ path, teach: false })),
+  ...TEACH_PAGES.map((path) => ({ path, teach: true, chips: CHIP_PAGES.includes(path) ? (CHIPS_GRANDFATHERED.includes(path) ? { min: 2, max: Infinity } : { min: 2, max: 4 }) : null })),
+  ...LAYOUT_ONLY_PAGES.map((path) => ({ path, teach: false, chips: null })),
 ].filter((page) => only === null || only.includes(page.path));
 
 mkdirSync(OUT, { recursive: true });
+
+async function firstLinkId(page, base, listPath, prefix) {
+  const response = await page.goto(`${base}/ai/${listPath}`, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => null);
+  if (!response || response.status() >= 400) {
+    return null;
+  }
+  return page.evaluate(({ prefix: segment, uuid }) => {
+    const pattern = new RegExp(`/ai/${segment}/(${uuid})(?:[/?#]|$)`, 'i');
+    for (const a of document.querySelectorAll('a[href]')) {
+      const match = pattern.exec(a.getAttribute('href') || '');
+      if (match) {
+        return match[1];
+      }
+    }
+    return null;
+  }, { prefix, uuid: UUID });
+}
+
+async function resolveExtraPages(browser) {
+  const context = await browser.newContext(contextOptions(1440));
+  const page = await context.newPage();
+  const fromLinks = {};
+  for (const detail of DETAIL_PAGES) {
+    fromLinks[detail.prefix] = await firstLinkId(page, base, detail.list, detail.prefix);
+  }
+  for (const source of RUN_SOURCES) {
+    fromLinks.runs = fromLinks.runs ?? await firstLinkId(page, base, source, 'runs');
+  }
+  await context.close();
+
+  const missing = Object.keys(fromLinks).filter((prefix) => !fromLinks[prefix]);
+  const fromDatabase = missing.length > 0 && isDdev ? databaseIds() : {};
+  const extra = [];
+  const skipped = [];
+  for (const prefix of [...DETAIL_PAGES.map((detail) => detail.prefix), 'runs']) {
+    const id = fromLinks[prefix] ?? fromDatabase[prefix];
+    const label = `/ai/${prefix}/{id}`;
+    if (id) {
+      extra.push({ path: `${prefix}/${id}`, teach: false, chips: null, json: prefix === 'runs', label, source: fromLinks[prefix] ? 'link' : 'database' });
+    } else {
+      skipped.push(`${label}: no row in the lab pages or the dev database`);
+    }
+  }
+  return { extra, skipped };
+}
 
 let browser;
 try {
@@ -206,14 +323,25 @@ try {
   }
 }
 
+if (only === null) {
+  const { extra, skipped } = await resolveExtraPages(browser);
+  pages.push(...extra);
+  for (const target of extra) {
+    console.log(`id   ${target.label}: ${target.path.split('/').pop()} (from ${target.source})`);
+  }
+  for (const note of skipped) {
+    console.log(`SKIP ${note}`);
+  }
+}
+
 let failing = 0;
 let checked = 0;
 for (const width of widths) {
-  const context = await browser.newContext({ viewport: { width, height: 1000 }, ignoreHTTPSErrors: true });
+  const context = await browser.newContext(contextOptions(width));
   const page = await context.newPage();
   for (const target of pages) {
     const url = `${base}/ai${target.path ? `/${target.path}` : ''}`;
-    const label = `/ai${target.path ? `/${target.path}` : ''} @${width}`;
+    const label = `${target.label ?? `/ai${target.path ? `/${target.path}` : ''}`} @${width}`;
     let response;
     try {
       response = await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
@@ -231,11 +359,22 @@ for (const width of widths) {
       failing++;
       continue;
     }
-    const findings = await page.evaluate(inPage, { listingSelects: LISTING_SELECTS, expectTeach: target.teach }).catch((error) => {
+    if (target.json) {
+      const type = response.headers()['content-type'] ?? '';
+      checked++;
+      if (type.includes('application/json')) {
+        console.log(`ok   ${label} (JSON endpoint: status and content type only)`);
+      } else {
+        console.log(`FAIL ${label}: expected JSON, got ${type || 'no content type'}`);
+        failing++;
+      }
+      continue;
+    }
+    const findings = await page.evaluate(inPage, { listingSelects: LISTING_SELECTS, expectTeach: target.teach, chips: target.chips }).catch((error) => {
       console.log(`       ${error.message.split('\n')[0]}`);
       return null;
     });
-    const slug = `${target.path.replace(/\//g, '-') || 'overview'}-${width}`;
+    const slug = `${target.path.replace(/\//g, '-').slice(0, 40) || 'overview'}-${width}`;
     await page.screenshot({ path: join(OUT, `${slug}.png`), fullPage: true });
     checked++;
     if (findings === null) {

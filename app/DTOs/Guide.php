@@ -52,6 +52,10 @@ final readonly class Guide
             }
         }
 
+        foreach ($this->works as $step) {
+            array_push($references, ...$step->moreSnippets);
+        }
+
         return $references;
     }
 }

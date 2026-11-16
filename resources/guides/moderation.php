@@ -31,13 +31,8 @@ return [
             'snippet' => 'App\Rules\ModerationRules::rules',
         ],
         [
-            'title' => 'A rejected answer is asked for once more',
-            'body' => 'An answer that fails the checks triggers one retry. Two rejected answers end as `invalid` and nothing is classified. A transport error is one attempt with no retry. Every attempt is a logged run, and rejected ones are flagged.',
-            'snippet' => 'App\Services\ModerationService::moderate',
-        ],
-        [
-            'title' => 'PHP sets a floor under the risk',
-            'body' => 'Two signals are found by code, not by the model: an injection pattern in the text and a VIN from the register of reported vehicles. Either one lifts the risk to at least 0.7 and adds the reason `other` or `reported_vin`, whatever the model answered. A model that was talked into rating the listing 0 still ends risky. The result keeps the model\'s own risk next to the final one, and the page says when a floor was applied.',
+            'title' => 'A rejected answer is asked for once more and PHP sets a floor under the risk',
+            'body' => 'An answer that fails the checks triggers one retry. Two rejected answers end as `invalid` and nothing is classified. A transport error is one attempt with no retry. Every attempt is a logged run, and rejected ones are flagged. Two signals are found by code, not by the model: an injection pattern in the text and a VIN from the register of reported vehicles. Either one lifts the risk to at least 0.7 and adds the reason `other` or `reported_vin`, whatever the model answered. A model that was talked into rating the listing 0 still ends risky. The result keeps the model\'s own risk next to the final one, and the page says when a floor was applied.',
             'snippet' => 'App\Services\ModerationService::moderate',
         ],
         [

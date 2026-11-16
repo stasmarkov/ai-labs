@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\DTOs\GuideTeach;
+use App\Services\GuidePageService;
 use App\Services\PendingChangePageService;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -12,7 +14,7 @@ final class ShowLabChangeController extends Controller
 {
     private const ID_PLACEHOLDER = 'CHANGEID';
 
-    public function __invoke(string $id, PendingChangePageService $pages): Response
+    public function __invoke(string $id, PendingChangePageService $pages, GuidePageService $guides): Response
     {
         $change = $pages->find($id) ?? abort(404);
         $lists = $pages->lists();
@@ -20,6 +22,7 @@ final class ShowLabChangeController extends Controller
         return Inertia::render('Lab/Changes', [
             ...$lists,
             'change' => $change,
+            'teach' => fn (): GuideTeach => $guides->teach('mcp'),
             'confirmUrl' => route('changes.confirm', ['id' => $id], false),
             'rejectUrl' => route('changes.reject', ['id' => $id], false),
             ...self::urls(),

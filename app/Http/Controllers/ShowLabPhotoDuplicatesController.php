@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\DTOs\DuplicateReviewGroup;
+use App\DTOs\GuideTeach;
 use App\Services\DuplicateReviewService;
 use App\Services\GuidePageService;
 use Illuminate\Http\Request;
@@ -20,10 +21,8 @@ final class ShowLabPhotoDuplicatesController extends Controller
         $page = $review->page($request->integer('page', 1));
 
         return Inertia::render('Lab/PhotoDuplicates', [
-            'howItWorks' => $guides->howItWorks('photo-duplicates'),
             'guideHref' => route('ai.guides.show', ['key' => 'photo-duplicates'], absolute: false),
-            'guideKey' => 'photo-duplicates',
-            'teach' => $guides->teach('photo-duplicates'),
+            'teach' => fn (): GuideTeach => $guides->teach('photo-duplicates'),
             'label' => $review->label(),
             'cutoff' => $review->cutoff(),
             'summary' => $review->summary()->toArray(),

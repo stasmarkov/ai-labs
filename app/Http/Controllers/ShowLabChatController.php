@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\DTOs\GuideTeach;
 use App\Http\Requests\DocsAskRequest;
 use App\Services\GuidePageService;
 use App\Services\LabProviderService;
@@ -17,10 +18,7 @@ final class ShowLabChatController extends Controller
     public function __invoke(GuidePageService $guides, LabProviderService $providers): Response
     {
         return Inertia::render('Lab/Chat', [
-            'howItWorks' => $guides->howItWorks('chat'),
-            'guideHref' => route('ai.guides.show', ['key' => 'chat'], false),
-            'guideKey' => 'chat',
-            'teach' => $guides->teach('chat'),
+            'teach' => fn (): GuideTeach => $guides->teach('chat'),
             'askUrl' => route('docs.ask', [], false),
             'runUrl' => route('ai.runs.show', ['invocationId' => self::ID_PLACEHOLDER], false),
             'enabledTextProviders' => $providers->textOptions('docs-answer'),

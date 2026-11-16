@@ -4,7 +4,7 @@ title: Lab pages that teach, with no broken layouts
 type: improvement
 size: M
 priority: P1
-status: in-progress
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-16; standing approval)

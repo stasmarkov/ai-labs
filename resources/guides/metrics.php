@@ -17,12 +17,8 @@ return [
             'snippet' => 'App\Http\Controllers\HealthzController',
         ],
         [
-            'title' => 'Workers: busy against total',
-            'body' => '`frankenphp_busy_workers`, `frankenphp_ready_workers` and `frankenphp_total_workers` exist only in worker and Octane mode; classic shows "No data". Busy workers counts the requests handed to the workers, running or waiting for one. When it is above total the workers are saturated, and busy minus total are the requests waiting.',
-        ],
-        [
-            'title' => 'Queue depth',
-            'body' => '`frankenphp_queue_depth` counts regular requests waiting for a free thread. It is the number that rises in classic mode while the health check gets slow. It does **not** count requests waiting for a worker, so in worker and Octane mode it stays at 0 while the workers are saturated.',
+            'title' => 'Workers and queue depth',
+            'body' => '`frankenphp_busy_workers`, `frankenphp_ready_workers` and `frankenphp_total_workers` exist only in worker and Octane mode; classic shows "No data". Busy workers counts the requests handed to the workers, running or waiting for one. When it is above total the workers are saturated, and busy minus total are the requests waiting. `frankenphp_queue_depth` counts regular requests waiting for a free thread. It is the number that rises in classic mode while the health check gets slow. It does **not** count requests waiting for a worker, so in worker and Octane mode it stays at 0 while the workers are saturated.',
         ],
         [
             'title' => 'Requests, latency, status codes and memory',

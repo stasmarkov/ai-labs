@@ -118,7 +118,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(DocsIndexRepositoryInterface::class, EloquentDocsIndexRepository::class);
         $this->app->bind(DocsSearchRepositoryInterface::class, EloquentDocsSearchRepository::class);
         $this->app->bind(DocsAnswerCacheRepositoryInterface::class, EloquentDocsAnswerCacheRepository::class);
-        $this->app->bind(GuideRepository::class, fn (): GuideRepository => new GuideRepository(resource_path('guides')));
+        $this->app->scoped(GuideRepository::class, fn (): GuideRepository => new GuideRepository(resource_path('guides')));
         $this->app->bind(GuideFacts::class, fn (): GuideFacts => new GuideFacts(base_path('bench/results')));
         $this->app->bind(SnippetResolver::class, fn (): SnippetResolver => new SnippetResolver(base_path()));
         $this->app->bind(DocsBenchRepositoryInterface::class, EloquentDocsBenchRepository::class);

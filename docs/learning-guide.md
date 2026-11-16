@@ -1336,23 +1336,51 @@ Not measured: the server calls no model, and a tool call is a database read or a
 
 ## II-23. In-app guides and the homescreen
 
-**What it is.** Two pieces that sit around every other section. The in-app guides (SL-48) are the "How it works" panel on each lab page: one PHP file per guide in [`resources/guides/`](../resources/guides/), rendered at `/ai/guides/{key}` and shown beside a live run. The homescreen (SL-49) is the landing page at `/`: what the lab teaches, how to run it, a map of the capabilities that links into `/ai`, and where the numbers live. The same slice renamed the project to ai-lab.
+**What it is.** Two pieces that sit around every other section. The in-app guides (SL-48) are one PHP file per guide in [`resources/guides/`](../resources/guides/), rendered at `/ai/guides/{key}`. Each lab page shows the same text below its form, in a teach block with four parts (SL-53). The homescreen (SL-49) is the landing page at `/`: what the lab teaches, how to run it, a map of the capabilities that links into `/ai`, and where the numbers live. The same slice renamed the project to ai-lab.
 
 **One guide, step by step** (`/ai/guides/streaming`):
 
-1. [`GuideRepository`](../app/Guides/GuideRepository.php) loads `resources/guides/streaming.php` and validates its shape: steps, failures, recipes, support rows and numbers.
+1. [`GuideRepository`](../app/Guides/GuideRepository.php) loads `resources/guides/streaming.php` and validates its shape: steps, failures, recipes, support rows, numbers and the three teach sections (build, watch, elsewhere).
 2. [`GuideFacts`](../app/Guides/GuideFacts.php) fills the numbers from the committed result files, so a number on a page is read from the same committed file this guide quotes.
 3. [`GuideRenderer`](../app/Guides/GuideRenderer.php) renders the Markdown and any code snippet ([`SnippetResolver`](../app/Guides/SnippetResolver.php) reads only `app/`, `config/`, `resources/`, `routes/` and `database/`), and caches the result.
-4. The page shows the steps in a collapsible panel and highlights a step while a run streams its event.
+4. [`GuidePageService`](../app/Services/GuidePageService.php) builds the tabs. The regular tabs (How it works, Implementation, Modify, Support, Numbers, Experiments, Plan) come first, then "Build it yourself", "Watch out for" and "Elsewhere", each shown only when the guide has rows for it. A `#tab` in the URL opens that tab.
+
+**The teach block on a lab page (SL-53).** Each of the 15 lab pages renders [`LabTeach`](../resources/js/ai/components/LabTeach.vue) below its form. The block has four collapsible `<details>` parts: How it works (open at first), Build it yourself, Watch out for and Same pattern elsewhere. The text is written once, in the guide file, and the page reads it:
+
+1. The page's `ShowLab*Controller` passes `teach` as a closure, so Inertia builds it only when the page needs it: a partial reload (Changes refreshes its lists this way) never builds it. The closure calls [`GuidePageService::teach($key)`](../app/Services/GuidePageService.php), which returns a [`GuideTeach`](../app/DTOs/GuideTeach.php): the guide's key, title and URL (built with `route()`), every "How it works" step cut to its title and first sentence (links and Markdown marks stripped, at most 240 characters, cut at a word or hard at the limit) with the event that marks it, and the `build`, `watch` and `elsewhere` rows. `GuideTeach::rows()` is the one mapping of those rows; the guide page uses it too.
+   - Nothing is cut silently: [`GuideRepository`](../app/Guides/GuideRepository.php) refuses a guide with teach sections and more than 6 works steps, and a build or watch row that links to a tab the guide page does not show. A long guide merges steps instead; a merged step can list several snippets (`'snippet' => [..., ...]`), and the Implementation tab shows them all.
+   - The repository is bound per request (scoped) and keeps each parsed guide, so a request parses a guide file once.
+2. Changes uses the `mcp` guide, Settings uses `providers`, and every other page uses its own guide.
+3. Each part ends with a link to `/ai/guides/<key>#<part>`. A build row can link on to the guide's Modify or Support tab, or to a public docs page. Every watch row links on to the Support tab.
+4. The How it works part always renders `teach.works` through [`LabHowItWorks`](../resources/js/ai/components/LabHowItWorks.vue). A page with a live run passes its `events` and `state`, so the step of the latest event is highlighted while the run streams; the other pages show numbered steps. The Build, Watch and Elsewhere parts are memoised on `teach` (`v-memo`), so streamed tokens never re-render them.
+
+The same slice gave every field a placeholder or a hint line, and every select a first option or a hint that explains the choice. Pages with a main input got 2 to 4 example chips: [`LabExamples`](../resources/js/ai/components/LabExamples.vue) buttons that fill the form. The Moderation and Describe listing selects now have a row of their own and are at least 160 px wide.
 
 A guide never links to this learning guide or to a repository path: the in-app text is for someone using the page, this document is for someone reading the code. [`GuideContentTest`](../tests/Feature/GuideContentTest.php) and [`NoReferencesInUiTest`](../tests/Feature/NoReferencesInUiTest.php) enforce it.
+
+**Checking the layout in a browser.** `node bench/ui-audit.mjs` opens every lab page with Playwright against `https://ai-lab.ddev.site` at 1440 and 1024 px. Playwright is loaded from the npx cache or from the `PW` path, and the repo has no Playwright dependency. Before checking, the script opens every `<details>`. It reports these findings:
+
+- **overlap:** two labels, buttons, links, fields or headings overlap.
+- **narrow:** a field or select is under 120 px wide. The two listing selects must be at least 160 px.
+- **scroll:** the page scrolls sideways.
+- **no-teach:** the teach block or one of its four parts is missing.
+- **no-guide:** there is no guide link.
+- **no-hint:** a field has no placeholder or hint.
+- **chips:** a page with a main input shows fewer than 2 or more than 4 example chips (`[data-example]`).
+
+The overview, the guide pages and the detail pages (one change, one research run, one playground run) get the layout checks only. The script takes a detail id from a link on a list page, then from the latest row of the dev database (through `ddev artisan tinker`, for a `*.ddev.site` base only), and prints `SKIP` when there is none. The run page `/ai/runs/{id}` answers JSON, so only its status and content type are checked. The gated pages (admin assistant, changes and playground) count as skipped when they answer 404.
+
+Playwright comes from `PW` or from the npx cache entry of the pinned version (1.55.x); no other cache entry is loaded. TLS errors are ignored only for a `*.ddev.site` base, whose certificate is DDEV's local one.
+
+Screenshots go to the gitignored `bench/results/raw/ui-audit/`. `--only <path>,<path>`, `--widths` and `--base` narrow a run. The script exits 0 when clean, 1 on any finding and 2 on a setup error. Run it after any change to a lab page.
 
 **The homescreen.** [`ShowLabHomeController`](../app/Http/Controllers/ShowLabHomeController.php) renders the `Home` page through the lab entry, with [`LabHomeService`](../app/Services/LabHomeService.php) supplying the run steps (`ddev setup`, the Ollama models, the local-model switch) and the capability list. The list of guide files and how to add a guide is in the code map ([II-24](#ii-24-how-the-ai-features-are-built-a-map-of-the-code), "In-app guides").
 
 **In this repo.**
 - Guides: [`resources/guides/`](../resources/guides/), [`app/Guides/`](../app/Guides/) and the page [`ShowLabGuideController`](../app/Http/Controllers/ShowLabGuideController.php).
+- Teach block: [`LabTeach.vue`](../resources/js/ai/components/LabTeach.vue), [`LabExamples.vue`](../resources/js/ai/components/LabExamples.vue), [`GuidePageService`](../app/Services/GuidePageService.php), [`LabTeachTest`](../tests/Feature/LabTeachTest.php) (every page carries a full `teach` prop and no separate steps prop, the How it works part holds every works step of the guide, every part links its guide tab, a partial reload never builds `teach`, fields have a placeholder or hint, and pages offer 2 to 4 example chips), [`GuideContentTest`](../tests/Feature/GuideContentTest.php) (row counts, tabs, doc hosts, short teach text with no references), [`GuidePageTest`](../tests/Feature/GuidePageTest.php) (the guide page shows the same text and opens the tab named in the URL hash), [`LabLayoutTest`](../tests/Feature/LabLayoutTest.php) and [`bench/ui-audit.mjs`](../bench/ui-audit.mjs).
 - Homescreen: [`ShowLabHomeController`](../app/Http/Controllers/ShowLabHomeController.php) and [`HomeLandingTest`](../tests/Feature/HomeLandingTest.php).
-- Specs: [in-app guides (SL-48)](../.ai/specs/spec-20261110-1149-in-app-guides/) and [rename and homescreen (SL-49)](../.ai/specs/spec-20261110-1014-rename-ai-lab/).
+- Specs: [in-app guides (SL-48)](../.ai/specs/spec-20261110-1149-in-app-guides/), [rename and homescreen (SL-49)](../.ai/specs/spec-20261110-1014-rename-ai-lab/) and [lab pages that teach (SL-53)](../.ai/specs/spec-20261116-2004-lab-pages-teach/).
 
 Not measured: these are pages, not a mechanism with a speed; the numbers a guide shows come from the sections that measured them.
 
@@ -1613,6 +1641,8 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`NlEvalCommand`](../app/Console/Commands/NlEvalCommand.php) | `nl:eval`: score the 40 queries per model and write one JSON file atomically | SL-23 |
 | [`LabOverviewService`](../app/Services/LabOverviewService.php), [`LabDescribeService`](../app/Services/LabDescribeService.php), `ShowLab*Controller` | Props for the lab pages: capabilities, navigation, recent runs, one run's detail | SL-46 |
 | [`useEventStream.ts`](../resources/js/ai/composables/useEventStream.ts) | Reads SSE with `fetch` + `ReadableStream`, Stop via `AbortController`, TTFT and tokens/s | SL-46 |
+| [`LabTeach.vue`](../resources/js/ai/components/LabTeach.vue), [`LabExamples.vue`](../resources/js/ai/components/LabExamples.vue), [`LabHowItWorks.vue`](../resources/js/ai/components/LabHowItWorks.vue) | The four-part teach block below every lab page's form, the example chips that fill a form, and the live step list (its `bare` mode renders inside the teach block) | SL-53, SL-48 |
+| [`bench/ui-audit.mjs`](../bench/ui-audit.mjs) | Playwright layout and teaching check of every lab page at 1440 and 1024 px; exit 0 clean, 1 findings, 2 setup error | SL-53 |
 | [`Pages/Lab/`](../resources/js/ai/Pages/Lab/) | Overview, Describe, Semantic, Docs, Chat, NlSearch, Photos | SL-46, SL-45, SL-23 |
 | [`LlmBenchCommand`](../app/Console/Commands/LlmBenchCommand.php), [`LlmSpeedBench`](../app/Support/LlmSpeedBench.php), [`LlmContextBench`](../app/Support/LlmContextBench.php), [`LlmFailoverBench`](../app/Support/LlmFailoverBench.php), [`LlmBenchRedactor`](../app/Support/LlmBenchRedactor.php), [`LlmEvalFigures`](../app/Services/LlmEvalFigures.php), [`LlmSpeedSample`](../app/DTOs/LlmSpeedSample.php), [`LlmBenchException`](../app/Exceptions/LlmBenchException.php) | `llm:bench`: load time, TTFT, tokens/s and memory straight from Ollama, the context-window check, the failover matrix through the HTTP kernel, and the eval figures copied from the latest committed runs; secrets are stripped from everything written | SL-28 |
 | [`llm-load.sh`](../bench/llm-load.sh), [`k6-sse.js`](../bench/k6-sse.js) | `concurrency` (1, 4 and 16 real describe streams) and `search-under-load` (search latency per server mode with and without 4 open streams); `.env` and the active server are restored on any exit | SL-28 |
@@ -1694,7 +1724,7 @@ Now a chapter of its own: [II-21](#ii-21-prompt-playground-with-versions).
 | "Allow another model on the NL search" | `ai.nl_search.models` in `config/ai.php`; `nl:eval --models=` accepts only names in that list. | an `allowedModels()` case |
 | "Switch the embedding model" | `config('ai.embeddings')`, then re-index everything: vectors from two models cannot be compared, and the stored `embedding_model` keeps them apart | `docs:search-bench` and `rag:eval` before and after |
 | "Log something new about each call" | A nullable column on `ai_runs`, a field on `AiRunRecord`, set it from the recorder (`annotate()` for per-request data) | a feature test on the row |
-| "Show it in the lab" | A Vue page in `resources/js/ai/Pages/Lab/`, a `ShowLab*Controller` returning `Inertia::render`, a capability in `LabOverviewService` (navigation follows) | a page props test like `AiLabChatTest`; typecheck and build |
+| "Show it in the lab" | A Vue page in `resources/js/ai/Pages/Lab/`, a `ShowLab*Controller` returning `Inertia::render` with a `teach` closure, a capability in `LabOverviewService` (navigation follows), a `LabTeach` block below the form, 2 to 4 example chips (`LabExamples`) and a placeholder or hint on every field | a page props test like `AiLabChatTest`, the page added to `LabTeachTest`; typecheck and build; `node bench/ui-audit.mjs --only <path>` exits 0 |
 | "Stop doesn't stop" / "Stop button / cancel" | The client aborts with `AbortController`; the server side lives in `SseProtocol` and `AbortWatcher` (section [II-14](#ii-14-stop-that-really-stops-and-conversations)). Check `ai_runs` for a `stopped` row first, then run `bench/chat-stop.sh` for the mode in question. A new stream type must go through `SseProtocol` to get the cancel. | a case in `StreamCancelTest` with a fake watcher; a `bench/chat-stop.sh` run per mode |
 | "Notify the browser when something changes" | Fire a domain event after commit, publish from a listener through `MercurePublisher`, subscribe with `EventSource` in `resources/js/app.js`. The page never holds a PHP worker. Details in section [I-10](#i-10-live-updates-with-mercure). | a listener test with `Http::fake` for the hub; a `ListingLivePriceTest` case for the markup |
 | "Let the chat remember earlier turns" | `history` in the request (`DocsChatTurn`, `max_history_turns`), prompt `docs-answer.v2.md`. Never add history to the output guard's allowed texts, and never cache a turn that has history. A follow-up that retrieves badly needs query rewriting, not a bigger history (section [II-14](#ii-14-stop-that-really-stops-and-conversations)). | `DocsChatHistoryTest`: validation, escaping, a forged turn |
@@ -1705,16 +1735,23 @@ Now a chapter of its own: [II-21](#ii-21-prompt-playground-with-versions).
 
 ### In-app guides
 
-Every lab page has a guide at `/ai/guides/{key}`, and the live pages show its steps in a collapsible "How it works" panel. A guide is one PHP file in [`resources/guides/`](../resources/guides/) that returns an array; the key is the file name.
+Every lab page has a guide at `/ai/guides/{key}`, and the page shows the same guide text below its form in the [`LabTeach`](../resources/js/ai/components/LabTeach.vue) block ([II-23](#ii-23-in-app-guides-and-the-homescreen)). A guide is one PHP file in [`resources/guides/`](../resources/guides/) that returns an array; the key is the file name.
 
-- **Format.** `title`, `summary`, then lists: `works` (steps, each with `title`, `body` in Markdown, an optional `event` to highlight while a run streams and an optional `snippet`), `failures`, `recipes` (same shape without `event`), `support` (`name`, `status` of `logged`, `guarded` or `runbook`, `note`), `numbers` (`label` plus a `file` and `path` read from the measurement results, or `pending`; a key in the path may itself contain dots, such as a model id `summary.qwen3.5:9b.at_threshold.recall`, and the longest matching key wins), `experiments` (`title`, `predictions` as 2 to 4 `{id, text}` choices, an `answer` of `{id, body}` whose id is one of the predictions and whose body is Markdown, an optional `numbers` label, `page`, `params` with only `q`) and `plan` (a list of Markdown bullets, required when `planned: true`) and `related` (other guide keys). `planned: true` marks a guide for a feature that is not built.
+- **Format.** `title`, `summary`, then lists: `works` (steps, each with `title`, `body` in Markdown, an optional `event` to highlight while a run streams and an optional `snippet`), `failures`, `recipes` (same shape without `event`), `support` (`name`, `status` of `logged`, `guarded` or `runbook`, `note`), `numbers` (`label` plus a `file` and `path` read from the measurement results, or `pending`; a key in the path may itself contain dots, such as a model id `summary.qwen3.5:9b.at_threshold.recall`, and the longest matching key wins), `experiments` (`title`, `predictions` as 2 to 4 `{id, text}` choices, an `answer` of `{id, body}` whose id is one of the predictions and whose body is Markdown, an optional `numbers` label, `page`, `params` with only `q`), `plan` (a list of Markdown bullets, required when `kind` is `planned`) and `related` (other guide keys). `kind` is `capability`, `foundation` or `planned`; a planned guide explains a feature that is not built.
+- **Teach sections.** Three optional lists that the lab page and the guide page both show. Each list, when present, must hold a set number of rows:
+  - `build`: 4 to 8 rows of `step` and `detail`, with an optional `tab` (`recipes` or `support`, shown as the Modify or Support tab) and an optional `doc`. A `doc` must be an https link on `laravel.com`, `frankenphp.dev`, `ollama.com` or `github.com`.
+  - `watch`: 3 to 6 rows of `point`, `detail` and a required `tab` (`failures` or `support`, both shown as the Support tab).
+  - `elsewhere`: 2 or 3 rows of `domain`, `problem` and `how`.
+
+  All 22 guides have all three. `GuideContentTest` keeps each teach text at 240 characters or fewer, with no slice id, Markdown file or repository path, and keeps app class names out of the feature guides' teach rows.
 - **Reference forms.** A `snippet` is `App\Class`, `App\Class::method`, a whole file of 80 lines or fewer (`app/File.php`), or a range between `guide:start name` and `guide:end name` comments (`config/ai.php#name`). Only `app/`, `config/`, `resources/`, `routes/` and `database/` can be read ([`SnippetResolver`](../app/Guides/SnippetResolver.php)).
-- **Adding a guide.** Create `resources/guides/{key}.php`, add the key to the capability in [`LabOverviewService`](../app/Services/LabOverviewService.php) as `guideKey`, and run `GuideContentTest`: it checks that every snippet resolves, every number renders, every related key exists and no prose names a slice, a Markdown file or a repository path (`NoReferencesInUiTest` checks the pages).
-- **Engine.** [`GuideRepository`](../app/Guides/GuideRepository.php) loads and validates, [`GuideRenderer`](../app/Guides/GuideRenderer.php) renders and caches, [`GuideFacts`](../app/Guides/GuideFacts.php) fills numbers and live facts.
+- **Adding a guide.** Create `resources/guides/{key}.php` with the three teach sections. Add the key to the capability in [`LabOverviewService`](../app/Services/LabOverviewService.php) as `guideKey`. Keep its works steps to 3 to 6 (merge steps; a step may list several snippets). In the page's `ShowLab*Controller`, pass `'teach' => fn (): GuideTeach => $guides->teach($key)`, and render `<LabTeach :teach="teach" />` below the form (add `:events` and `:state` when the page streams a run). Then add the page to `LabTeachTest` and run `GuideContentTest`: it checks that every snippet resolves, every number renders, every related key exists and no prose names a slice, a Markdown file or a repository path (`NoReferencesInUiTest` checks the pages).
+- **Engine.** [`GuideRepository`](../app/Guides/GuideRepository.php) loads and validates, [`GuideRenderer`](../app/Guides/GuideRenderer.php) renders and caches, [`GuideFacts`](../app/Guides/GuideFacts.php) fills numbers and live facts. [`GuidePageService`](../app/Services/GuidePageService.php) builds the guide page's tabs, and its `teach()` builds the [`GuideTeach`](../app/DTOs/GuideTeach.php) for a lab page's teach block. The rows are the DTOs [`GuideBuildStep`](../app/DTOs/GuideBuildStep.php), [`GuideWatchPoint`](../app/DTOs/GuideWatchPoint.php) and [`GuideElsewhere`](../app/DTOs/GuideElsewhere.php).
 
 The guide files:
 
 - [`admin-assistant.php`](../resources/guides/admin-assistant.php): the hand-written tool loop with confirmed writes
+- [`assistant.php`](../resources/guides/assistant.php): the buyer assistant that decides when to search
 - [`chat.php`](../resources/guides/chat.php): answering with citations
 - [`describe.php`](../resources/guides/describe.php): streaming a description
 - [`docs.php`](../resources/guides/docs.php): docs search
@@ -1722,6 +1759,8 @@ The guide files:
 - [`mcp.php`](../resources/guides/mcp.php): the listing tools as an MCP server with a browser confirmation
 - [`metrics.php`](../resources/guides/metrics.php): the thread pool on the metrics dashboard
 - [`nl-search.php`](../resources/guides/nl-search.php): words to filters
+- [`photo-duplicates.php`](../resources/guides/photo-duplicates.php): finding duplicate photos and picking the best one
+- [`photo-search.php`](../resources/guides/photo-search.php): searching photos by text
 - [`photos.php`](../resources/guides/photos.php): reading a car photo with a vision model
 - [`playground.php`](../resources/guides/playground.php): one prompt run on several models side by side
 - [`prompts.php`](../resources/guides/prompts.php): versioned prompts

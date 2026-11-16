@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\DTOs\GuideTeach;
 use App\Services\DocsSearchService;
 use App\Services\GuidePageService;
 use App\Services\LabProviderService;
@@ -15,10 +16,7 @@ final class ShowLabDocsController extends Controller
     public function __invoke(DocsSearchService $service, GuidePageService $guides, LabProviderService $providers): Response
     {
         return Inertia::render('Lab/Docs', [
-            'howItWorks' => $guides->howItWorks('docs'),
-            'guideHref' => route('ai.guides.show', ['key' => 'docs'], false),
-            'guideKey' => 'docs',
-            'teach' => $guides->teach('docs'),
+            'teach' => fn (): GuideTeach => $guides->teach('docs'),
             'searchUrl' => route('docs.search', [], false),
             'embeddingsProvider' => $providers->embeddings('embeddings-docs'),
             'maxQueryLength' => DocsSearchService::MAX_QUERY_LENGTH,

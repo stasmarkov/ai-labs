@@ -15,7 +15,10 @@ use App\DTOs\GuideStep;
 use App\DTOs\GuideSupport;
 use App\DTOs\GuideWatchPoint;
 
-final readonly class GuideRepository
+/**
+ * Loads and validates the guide files. Bound per request (scoped), so a page that asks for the same guide twice parses it once.
+ */
+final class GuideRepository
 {
     /** The guide kinds; capability guides back a live lab page, a planned guide only explains what is coming. */
     public const KINDS = ['capability', 'foundation', 'planned'];
@@ -30,11 +33,16 @@ final readonly class GuideRepository
 
     private const ELSEWHERE_ROWS = [2, 3];
 
-    private const WORKS_ROWS = 6;
+    /** A guide that teaches a lab page shows every works step there, so it holds at most this many. */
+    public const TEACH_WORKS_MAX = 6;
 
-    private const SUMMARY_LENGTH = 240;
+    /** The hosts a build row may link to for public docs. */
+    private const DOC_HOSTS = ['laravel.com', 'frankenphp.dev', 'ollama.com', 'github.com'];
 
-    public function __construct(private string $directory) {}
+    /** @var array<string, Guide> */
+    private array $loaded = [];
+
+    public function __construct(private readonly string $directory) {}
 
     public function has(string $key): bool
     {
@@ -54,6 +62,11 @@ final readonly class GuideRepository
 
     public function find(string $key): Guide
     {
+        return $this->loaded[$key] ??= $this->load($key);
+    }
+
+    private function load(string $key): Guide
+    {
         if (! $this->has($key)) {
             throw new InvalidGuideException("Unknown guide [{$key}].");
         }
@@ -66,55 +79,6 @@ final readonly class GuideRepository
         }
 
         return $this->build($key, $data, (string) sha1_file($path));
-    }
-
-    /**
-     * What a live lab page teaches: the steps of "How it works" as a title and first sentence, then the
-     * build, watch and elsewhere rows, all read from the guide file so a page and its guide never differ.
-     */
-    public function teach(string $key): GuideTeach
-    {
-        $guide = $this->find($key);
-
-        return new GuideTeach(
-            key: $guide->key,
-            title: $guide->title,
-            works: array_map(fn ($step): array => [
-                'title' => $step->title,
-                'summary' => $this->firstSentence($step->body),
-            ], array_slice($guide->works, 0, self::WORKS_ROWS)),
-            build: array_map(fn (GuideBuildStep $row): array => [
-                'step' => $row->step,
-                'detail' => $row->detail,
-                'tab' => $row->tab,
-                'doc' => $row->doc,
-            ], $guide->build),
-            watch: array_map(fn (GuideWatchPoint $row): array => [
-                'point' => $row->point,
-                'detail' => $row->detail,
-                'tab' => $row->tab,
-            ], $guide->watch),
-            elsewhere: array_map(fn (GuideElsewhere $row): array => [
-                'domain' => $row->domain,
-                'problem' => $row->problem,
-                'how' => $row->how,
-            ], $guide->elsewhere),
-        );
-    }
-
-    private function firstSentence(string $body): string
-    {
-        $plain = trim((string) preg_replace('/\s+/', ' ', str_replace(['`', '**', '*'], '', $body)));
-
-        $sentence = preg_match('/^.+?[.!?](?=\s|$)/u', $plain, $match) === 1 ? $match[0] : $plain;
-
-        if (mb_strlen($sentence) <= self::SUMMARY_LENGTH) {
-            return $sentence;
-        }
-
-        $cut = mb_substr($sentence, 0, self::SUMMARY_LENGTH - 1);
-
-        return rtrim(mb_substr($cut, 0, (int) mb_strrpos($cut, ' ')), ' ,;:').'…';
     }
 
     private function path(string $key): string
@@ -135,18 +99,13 @@ final readonly class GuideRepository
 
         $planned = $kind === 'planned';
 
-        return new Guide(
+        $guide = new Guide(
             key: $key,
             title: $this->string($key, $data, 'title'),
             summary: $this->string($key, $data, 'summary'),
             kind: $kind,
             planned: $planned,
-            works: $this->rows($key, $data, 'works', fn (array $row): GuideStep => new GuideStep(
-                $this->string($key, $row, 'title'),
-                $this->string($key, $row, 'body'),
-                $this->optional($row, 'event'),
-                $this->optional($row, 'snippet'),
-            )),
+            works: $this->rows($key, $data, 'works', fn (array $row): GuideStep => $this->step($key, $row)),
             failures: $this->rows($key, $data, 'failures', fn (array $row): GuideItem => new GuideItem(
                 $this->string($key, $row, 'title'),
                 $this->string($key, $row, 'body'),
@@ -181,7 +140,7 @@ final readonly class GuideRepository
                 $this->string($key, $row, 'step'),
                 $this->string($key, $row, 'detail'),
                 $this->tab($key, $row, ['recipes', 'support'], false),
-                $this->optional($row, 'doc'),
+                $this->doc($key, $row),
             )),
             watch: $this->counted($key, $data, 'watch', self::WATCH_ROWS, fn (array $row): GuideWatchPoint => new GuideWatchPoint(
                 $this->string($key, $row, 'point'),
@@ -196,6 +155,70 @@ final readonly class GuideRepository
             plan: $this->plan($key, $data, $planned),
             related: array_values(array_map('strval', is_array($data['related'] ?? null) ? $data['related'] : [])),
             contentHash: $hash,
+        );
+
+        $this->assertTeachable($guide);
+
+        return $guide;
+    }
+
+    /**
+     * A guide with teach sections feeds a lab page: every works step is shown there, so there may be no more than six,
+     * and every build or watch row must link to a tab the guide page really shows.
+     */
+    private function assertTeachable(Guide $guide): void
+    {
+        if ($guide->build === [] && $guide->watch === [] && $guide->elsewhere === []) {
+            return;
+        }
+
+        if (count($guide->works) > self::TEACH_WORKS_MAX) {
+            throw new InvalidGuideException("Guide [{$guide->key}] teaches a lab page and may hold at most ".self::TEACH_WORKS_MAX.' works steps, not '.count($guide->works).'; merge steps instead.');
+        }
+
+        $tabs = [
+            ...array_map(fn (GuideBuildStep $row): ?string => $row->tab, $guide->build),
+            ...array_map(fn (GuideWatchPoint $row): string => $row->tab, $guide->watch),
+        ];
+
+        foreach (array_unique(array_filter($tabs, fn (?string $tab): bool => $tab !== null)) as $tab) {
+            $shown = match ($tab) {
+                'modify' => $guide->recipes !== [],
+                default => $guide->failures !== [] || $guide->support !== [],
+            };
+
+            if (! $shown) {
+                throw new InvalidGuideException("Guide [{$guide->key}] links a teach row to the [{$tab}] tab, which the guide page does not show.");
+            }
+        }
+    }
+
+    /**
+     * A works step; its snippet is one reference or a list of them when the step covers more than one piece of code.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function step(string $key, array $row): GuideStep
+    {
+        $snippets = $row['snippet'] ?? null;
+
+        if (is_array($snippets)) {
+            $references = array_values(array_filter($snippets, fn (mixed $reference): bool => is_string($reference) && $reference !== ''));
+
+            if ($references === [] || count($references) !== count($snippets)) {
+                throw new InvalidGuideException("Guide [{$key}] step snippet list must hold non-empty strings only.");
+            }
+        } else {
+            $single = $this->optional($row, 'snippet');
+            $references = $single === null ? [] : [$single];
+        }
+
+        return new GuideStep(
+            $this->string($key, $row, 'title'),
+            $this->string($key, $row, 'body'),
+            $this->optional($row, 'event'),
+            $references[0] ?? null,
+            array_slice($references, 1),
         );
     }
 
@@ -337,6 +360,22 @@ final readonly class GuideRepository
         }
 
         return $value;
+    }
+
+    /**
+     * A public docs link must be https on an allowed host, so it is safe to bind as an href.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function doc(string $key, array $row): ?string
+    {
+        $doc = $this->optional($row, 'doc');
+
+        if ($doc !== null && (parse_url($doc, PHP_URL_SCHEME) !== 'https' || ! in_array(parse_url($doc, PHP_URL_HOST), self::DOC_HOSTS, true))) {
+            throw new InvalidGuideException("Guide [{$key}] build doc must be an https link on an allowed host.");
+        }
+
+        return $doc;
     }
 
     /**

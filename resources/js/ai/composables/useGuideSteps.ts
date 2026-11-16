@@ -1,6 +1,7 @@
+/** A "How it works" step as a lab page gets it: the title, its first sentence as plain text and the event that marks it. */
 export interface GuideStep {
     title: string;
-    html: string;
+    summary: string;
     event: string | null;
 }
 

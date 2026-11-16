@@ -26,15 +26,10 @@ return [
             'snippet' => 'App\Services\ResearchRunner::searchPhase',
         ],
         [
-            'title' => 'A note agent reads chunks as data',
-            'body' => 'The note agent gets the sub-question and the chunks, each wrapped as `<chunk id="...">` data of at most 1200 characters, and returns facts with the chunk ids each one relies on. PHP drops any id the search did not return, and a fact left with no valid id is dropped, so the model cannot cite a source it was not given.',
+            'title' => 'A note agent reads chunks as data, and its notes wait in Redis',
+            'body' => 'The note agent gets the sub-question and the chunks, each wrapped as `<chunk id="...">` data of at most 1200 characters, and returns facts with the chunk ids each one relies on. PHP drops any id the search did not return, and a fact left with no valid id is dropped, so the model cannot cite a source it was not given. While the run goes, each note is kept in a Redis hash for the run with a 24 hour life, and the report phase reads them back from there. When the run ends the notes are already in the stored note steps, so the page and a replay never need Redis.',
             'event' => 'response_received',
-            'snippet' => 'App\Services\ResearchRunner::notePhase',
-        ],
-        [
-            'title' => 'Notes wait in Redis, then move to the steps',
-            'body' => 'While the run goes, each note is kept in a Redis hash for the run with a 24 hour life, and the report phase reads them back from there. When the run ends the notes are already in the stored note steps, so the page and a replay never need Redis.',
-            'snippet' => 'App\Support\RedisResearchNotesStore',
+            'snippet' => ['App\Services\ResearchRunner::notePhase', 'App\Support\RedisResearchNotesStore'],
         ],
         [
             'title' => 'The report cites sources, and only sources',

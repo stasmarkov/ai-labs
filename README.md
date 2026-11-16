@@ -58,6 +58,17 @@ ddev artisan nl:eval                        # natural-language search turned int
 
 Both evals need Ollama running with the models above.
 
+To check the lab pages in a browser, run `node bench/ui-audit.mjs` on the host. It needs Playwright in the npx cache (`npx playwright@1.55 --version` puts it there). The script opens every `/ai` page at 1440 and 1024 px and reports these findings:
+
+- overlapping controls;
+- a field narrower than 120 px;
+- sideways scroll;
+- a missing teach block or guide link;
+- a field with no placeholder or hint;
+- fewer than 2 or more than 4 example chips on a page with a main input.
+
+It loads only the pinned Playwright 1.55.x (or the package `PW` points to). It exits 0 when clean, 1 on findings and 2 on a setup error. `--only moderation,describe` checks some pages only. Screenshots go to the gitignored `bench/results/raw/ui-audit/`. How it works: [II-23 of the learning guide](docs/learning-guide.md#ii-23-in-app-guides-and-the-homescreen).
+
 ## Metrics dashboard
 
 Prometheus and Grafana are opt-in: a plain `ddev start` does not start them, and a restart or a server switch stops them again. Every FrankenPHP mode serves metrics on port 9180 inside `ddev_default` (the Caddy admin API is not exposed). Grafana is anonymous and read-only, with no login. How to read the graphs: `/ai/guides/metrics` and [I-11 of the learning guide](docs/learning-guide.md#i-11-metrics-watching-the-thread-pool). The numbers are in [BENCHMARKS.md](BENCHMARKS.md#metrics-during-slow-io-2026-11-16).

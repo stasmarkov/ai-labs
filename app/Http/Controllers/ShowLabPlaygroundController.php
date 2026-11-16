@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\DTOs\GuideTeach;
 use App\DTOs\PlaygroundPromptSummary;
 use App\DTOs\PlaygroundRunSummary;
 use App\Http\Middleware\EnsureLocalLab;
@@ -24,8 +25,7 @@ final class ShowLabPlaygroundController extends Controller
         $run = $id === null ? null : ($runs->find($id) ?? abort(404));
 
         return Inertia::render('Lab/Playground', [
-            'guideKey' => 'playground',
-            'teach' => $guides->teach('playground'),
+            'teach' => fn (): GuideTeach => $guides->teach('playground'),
             'run' => $run?->toArray(),
             'recent' => array_map(fn (PlaygroundRunSummary $item): array => $item->toArray(), $runs->recent()),
             'prompts' => array_map(fn (PlaygroundPromptSummary $item): array => $item->toArray(), $prompts->all()),

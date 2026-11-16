@@ -8,7 +8,6 @@ export default { layout: LabLayout };
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import LabButton from '../../components/LabButton.vue';
 import LabEventRow from '../../components/LabEventRow.vue';
-import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabTeach from '../../components/LabTeach.vue';
 import type { Teach } from '../../components/LabTeach.vue';
 import LabMetric from '../../components/LabMetric.vue';
@@ -17,7 +16,6 @@ import type { ProviderOption } from '../../components/LabProviderSelect.vue';
 import LabTag from '../../components/LabTag.vue';
 import { useEventStream } from '../../composables/useEventStream';
 import type { StreamEvent } from '../../composables/useEventStream';
-import type { GuideStep } from '../../composables/useGuideSteps';
 import { presetQuery } from '../../composables/usePresetQuery';
 import { useProviderChoice } from '../../composables/useProviderChoice';
 
@@ -70,8 +68,6 @@ interface Turn {
 }
 
 const props = defineProps<{
-    howItWorks: GuideStep[];
-    guideHref: string;
     teach: Teach;
     askUrl: string;
     runUrl: string;
@@ -507,9 +503,5 @@ onBeforeUnmount(() => {
         </div>
     </Teleport>
 
-    <LabTeach :teach="teach">
-        <template #works>
-            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="eventTypes" :state="stream.status.value" />
-        </template>
-    </LabTeach>
+    <LabTeach :teach="teach" :events="eventTypes" :state="stream.status.value" />
 </template>

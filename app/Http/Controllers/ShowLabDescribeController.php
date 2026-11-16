@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\DTOs\GuideTeach;
 use App\DTOs\LabListingOption;
 use App\Services\GuidePageService;
 use App\Services\LabDescribeService;
@@ -18,10 +19,7 @@ final class ShowLabDescribeController extends Controller
     public function __invoke(LabDescribeService $service, GuidePageService $guides, LabProviderService $providers): Response
     {
         return Inertia::render('Lab/Describe', [
-            'howItWorks' => $guides->howItWorks('describe'),
-            'guideHref' => route('ai.guides.show', ['key' => 'describe'], false),
-            'guideKey' => 'describe',
-            'teach' => $guides->teach('describe'),
+            'teach' => fn (): GuideTeach => $guides->teach('describe'),
             'listings' => array_map(fn (LabListingOption $option): array => $option->toArray(), $service->listingOptions()),
             'describeUrl' => route('listings.describe', ['id' => self::ID_PLACEHOLDER], false),
             'runUrl' => route('ai.runs.show', ['invocationId' => self::ID_PLACEHOLDER], false),

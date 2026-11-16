@@ -8,7 +8,6 @@ export default { layout: LabLayout };
 import { computed, ref } from 'vue';
 import LabButton from '../../components/LabButton.vue';
 import LabExamples from '../../components/LabExamples.vue';
-import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabTeach from '../../components/LabTeach.vue';
 import type { Teach } from '../../components/LabTeach.vue';
 import LabMetric from '../../components/LabMetric.vue';
@@ -17,7 +16,7 @@ import LabTextInput from '../../components/LabTextInput.vue';
 import { searchJson } from '../../composables/useSearchRequest';
 import { presetQuery } from '../../composables/usePresetQuery';
 import type { ServerTimings } from '../../composables/useSearchRequest';
-import type { GuideRunState, GuideStep } from '../../composables/useGuideSteps';
+import type { GuideRunState } from '../../composables/useGuideSteps';
 
 interface ListingMatch {
     id: number;
@@ -33,8 +32,6 @@ interface ListingMatch {
 }
 
 const props = defineProps<{
-    howItWorks: GuideStep[];
-    guideHref: string;
     teach: Teach;
     searchUrl: string;
     maxQueryLength: number;
@@ -137,9 +134,5 @@ async function search(): Promise<void> {
         </section>
     </Teleport>
 
-    <LabTeach :teach="teach">
-        <template #works>
-            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
-        </template>
-    </LabTeach>
+    <LabTeach :teach="teach" :events="panelEvents" :state="panelState" />
 </template>

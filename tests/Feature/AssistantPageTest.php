@@ -18,11 +18,11 @@ it('AC-5 the assistant page gets the ask endpoint, the run lookup, the limits an
             ->where('askUrl', '/api/assistant/ask')
             ->where('runUrl', '/ai/runs/RUN_ID')
             ->where('idPlaceholder', 'RUN_ID')
-            ->where('guideHref', '/ai/guides/assistant')
+            ->where('teach.href', '/ai/guides/assistant')
             ->where('maxQuestionLength', AssistantAskRequest::MAX_QUESTION_LENGTH)
             ->where('maxTurnLength', AssistantAskRequest::MAX_TURN_LENGTH)
             ->where('maxHistoryTurns', (int) config('ai.docs.chat.max_history_turns'))
-            ->has('howItWorks')
+            ->has('teach.works')
             ->has('enabledTextProviders')
             ->has('examples', 4));
 });

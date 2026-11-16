@@ -71,6 +71,7 @@ ddev artisan test --compact tests/Feature/PingTest.php        # one file
 ddev artisan test --compact --filter=BR-03                    # by name
 ddev exec vendor/bin/pint --dirty --format agent              # formatter
 ddev exec vendor/bin/phpstan analyse                          # Larastan (config in phpstan.neon)
+node bench/ui-audit.mjs                                       # on the host: layout and teach-block check of every lab page at 1440 and 1024 px (exit 0 clean, 1 findings, 2 setup error)
 ```
 
 ## optimized caches (required for benchmark runs)

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\DTOs\GuideStep;
+use App\DTOs\GuideTeach;
 use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -25,6 +27,9 @@ final readonly class GuidePageService
         'watch' => 'Watch out for',
         'elsewhere' => 'Elsewhere',
     ];
+
+    /** A "How it works" step on a live page is cut to a first sentence of at most this length. */
+    private const TEACH_SUMMARY_LENGTH = 240;
 
     public function __construct(
         private GuideRepository $guides,
@@ -52,23 +57,50 @@ final readonly class GuidePageService
     }
 
     /**
-     * The "How it works" steps shown beside a live page: title, rendered body and the event type that marks the step.
-     *
-     * @return list<array{title: string, html: string, event: string|null}>
+     * What a live page teaches below its form: every "How it works" step cut to its first sentence (with the event that
+     * marks it during a run), how to build it, what to watch and the same pattern elsewhere. The guide file is the one
+     * source; the repository already refused a teaching guide with more than six works steps, so nothing is cut here.
      */
-    public function howItWorks(string $key): array
+    public function teach(string $key): GuideTeach
     {
-        return $this->renderer->steps($key);
+        $guide = $this->guides->find($key);
+        $rows = GuideTeach::rows($guide);
+
+        return new GuideTeach(
+            key: $guide->key,
+            title: $guide->title,
+            href: route('ai.guides.show', ['key' => $guide->key], false),
+            works: array_map(fn (GuideStep $step): array => [
+                'title' => $step->title,
+                'summary' => $this->firstSentence($step->body),
+                'event' => $step->event,
+            ], $guide->works),
+            build: $rows['build'],
+            watch: $rows['watch'],
+            elsewhere: $rows['elsewhere'],
+        );
     }
 
     /**
-     * What a live page teaches below its form: how it works, how to build it, what to watch and the same pattern elsewhere.
-     *
-     * @return array{key: string, title: string, works: list<array{title: string, summary: string}>, build: list<array{step: string, detail: string, tab: string|null, doc: string|null}>, watch: list<array{point: string, detail: string, tab: string}>, elsewhere: list<array{domain: string, problem: string, how: string}>}
+     * The first sentence of a markdown body as plain text. A sentence over the limit is cut at the last word boundary
+     * inside it, or hard at the limit when there is none, and always keeps some text before the ellipsis.
      */
-    public function teach(string $key): array
+    private function firstSentence(string $body): string
     {
-        return $this->guides->teach($key)->toArray();
+        $text = (string) preg_replace('/\[([^\]]*)\]\([^)]*\)/', '$1', $body);
+        $plain = trim((string) preg_replace('/\s+/', ' ', str_replace(['`', '**', '*'], '', $text)));
+
+        $sentence = preg_match('/^.+?[.!?](?=\s|$)/u', $plain, $match) === 1 ? $match[0] : $plain;
+
+        if (mb_strlen($sentence) <= self::TEACH_SUMMARY_LENGTH) {
+            return $sentence;
+        }
+
+        $cut = mb_substr($sentence, 0, self::TEACH_SUMMARY_LENGTH - 1);
+        $space = mb_strrpos($cut, ' ');
+        $atWord = $space === false || $space === 0 ? '' : rtrim(mb_substr($cut, 0, $space), ' ,;:');
+
+        return ($atWord === '' ? $cut : $atWord).'…';
     }
 
     /**
@@ -83,7 +115,7 @@ final readonly class GuidePageService
         $guide = $this->renderer->render($key);
 
         $guide['implementation'] = array_values(array_filter($guide['works'], fn (array $step): bool => $step['snippet'] !== null));
-        $guide['works'] = array_map(fn (array $step): array => array_diff_key($step, ['snippet' => true]), $guide['works']);
+        $guide['works'] = array_map(fn (array $step): array => array_diff_key($step, ['snippet' => true, 'moreSnippets' => true]), $guide['works']);
         $guide['experiments'] = array_map(fn (array $experiment): array => array_diff_key($experiment, ['page' => true, 'params' => true]) + [
             'href' => $this->experimentHref($experiment['page'], $experiment['params']),
         ], $guide['experiments']);

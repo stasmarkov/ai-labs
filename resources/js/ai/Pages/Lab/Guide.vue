@@ -26,6 +26,7 @@ interface Step {
     html: string;
     event: string | null;
     snippet?: Snippet | null;
+    moreSnippets?: Snippet[];
 }
 
 interface Item {
@@ -209,6 +210,7 @@ const statusLabel: Record<string, string> = {
                 <h3 class="m-0 text-[16px] font-semibold">{{ step.title }}</h3>
                 <div class="lab-prose" v-html="step.html" />
                 <LabCode v-if="step.snippet" v-bind="step.snippet" />
+                <LabCode v-for="(more, moreIndex) in step.moreSnippets ?? []" :key="moreIndex" v-bind="more" />
             </article>
         </template>
 

@@ -7,9 +7,9 @@ use App\Guides\GuideEventTypes;
 use App\Guides\GuideFacts;
 use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
-use App\Guides\GuideTeach;
 use App\Guides\InvalidGuideException;
 use App\Guides\SnippetResolver;
+use App\Services\GuidePageService;
 
 const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation', 'admin-assistant', 'research', 'playground'];
 
@@ -528,10 +528,10 @@ const TEACH_FEATURE_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat
 /**
  * @return list<string>
  */
-function teachTexts(GuideTeach $teach): array
+function teachTexts(array $teach): array
 {
     $texts = [];
-    foreach ([...$teach->works, ...$teach->build, ...$teach->watch, ...$teach->elsewhere] as $row) {
+    foreach ([...$teach['works'], ...$teach['build'], ...$teach['watch'], ...$teach['elsewhere']] as $row) {
         foreach ($row as $value) {
             if (is_string($value)) {
                 $texts[] = $value;
@@ -543,31 +543,32 @@ function teachTexts(GuideTeach $teach): array
 }
 
 it('AC-6 every feature and foundation guide teaches how to build it, what to watch and where else it applies', function (string $key): void {
-    $teach = app(GuideRepository::class)->teach($key);
+    $teach = app(GuidePageService::class)->teach($key)->toArray();
 
-    expect($teach->key)->toBe($key)
-        ->and($teach->title)->not->toBe('')
-        ->and(count($teach->works))->toBeBetween(3, 6)
-        ->and(count($teach->build))->toBeBetween(4, 8)
-        ->and(count($teach->watch))->toBeBetween(3, 6)
-        ->and(count($teach->elsewhere))->toBeBetween(2, 3);
+    expect($teach['key'])->toBe($key)
+        ->and($teach['title'])->not->toBe('')
+        ->and(count($teach['works']))->toBeBetween(3, 6)
+        ->and(count($teach['build']))->toBeBetween(4, 8)
+        ->and(count($teach['watch']))->toBeBetween(3, 6)
+        ->and(count($teach['elsewhere']))->toBeBetween(2, 3);
 
-    foreach ($teach->works as $row) {
+    foreach ($teach['works'] as $row) {
         expect($row['title'])->not->toBe('')->and($row['summary'])->not->toBe('')->and($row['summary'])->not->toMatch('/[`*]/');
     }
-    foreach ($teach->build as $row) {
+    foreach ($teach['build'] as $row) {
         expect($row['tab'])->toBeIn([null, 'modify', 'support']);
         if ($row['doc'] !== null) {
-            expect(parse_url($row['doc'], PHP_URL_HOST))->toBeIn(['laravel.com', 'frankenphp.dev', 'ollama.com', 'github.com']);
+            expect(parse_url($row['doc'], PHP_URL_SCHEME))->toBe('https')
+                ->and(parse_url($row['doc'], PHP_URL_HOST))->toBeIn(['laravel.com', 'frankenphp.dev', 'ollama.com', 'github.com']);
         }
     }
-    foreach ($teach->watch as $row) {
+    foreach ($teach['watch'] as $row) {
         expect($row['tab'])->toBeIn(['support']);
     }
 })->with(ALL_FILLED_GUIDES);
 
 it('AC-6 keeps every teach row short and free of slice ids, markdown files and repo paths', function (string $key): void {
-    foreach (teachTexts(app(GuideRepository::class)->teach($key)) as $text) {
+    foreach (teachTexts(app(GuidePageService::class)->teach($key)->toArray()) as $text) {
         expect(mb_strlen($text))->toBeLessThanOrEqual(240)
             ->and($text)->not->toMatch('/\bSL-\d+/')
             ->not->toMatch('/\.md\b/')
@@ -576,7 +577,7 @@ it('AC-6 keeps every teach row short and free of slice ids, markdown files and r
 })->with(ALL_FILLED_GUIDES);
 
 it('AC-6 teach rows never name an app class', function (string $key): void {
-    foreach (teachTexts(app(GuideRepository::class)->teach($key)) as $text) {
+    foreach (teachTexts(app(GuidePageService::class)->teach($key)->toArray()) as $text) {
         expect($text)->not->toMatch('/\bApp\\\\/')->not->toMatch('/\b[A-Z]\w+(Agent|Service|Controller|Repository)\b/');
     }
 })->with(TEACH_FEATURE_GUIDES);
@@ -588,12 +589,12 @@ it('AC-6 the teach sections stay optional and a guide without them still loads',
 
     $repository = new GuideRepository($directory);
     $guide = $repository->find('plain');
-    $teach = $repository->teach('plain');
+    $teach = (new GuidePageService($repository, app(GuideRenderer::class)))->teach('plain')->toArray();
 
     expect($guide->build)->toBe([])
-        ->and($teach->build)->toBe([])
-        ->and($teach->watch)->toBe([])
-        ->and($teach->elsewhere)->toBe([]);
+        ->and($teach['build'])->toBe([])
+        ->and($teach['watch'])->toBe([])
+        ->and($teach['elsewhere'])->toBe([]);
 
     unlink($directory.'/plain.php');
     rmdir($directory);
@@ -616,5 +617,173 @@ it('AC-6 rejects a build section outside 4 to 8 rows and a watch row with an unk
 });
 
 it('AC-6 asking for the teach data of an unknown guide fails', function (): void {
-    expect(fn () => app(GuideRepository::class)->teach('nope'))->toThrow(InvalidGuideException::class);
+    expect(fn () => app(GuidePageService::class)->teach('nope'))->toThrow(InvalidGuideException::class);
+});
+
+it('AC-6 rejects a build doc link that is not https on an allowed host', function (string $doc): void {
+    $directory = sys_get_temp_dir().'/guides-'.bin2hex(random_bytes(4));
+    mkdir($directory);
+    $row = fn (string $link): string => "['step' => 'Do it', 'detail' => 'Like this.', 'doc' => '{$link}']";
+    file_put_contents($directory.'/bad.php', "<?php\nreturn ['kind' => 'foundation', 'title' => 'T', 'summary' => 'S', 'build' => [".implode(', ', array_fill(0, 4, $row($doc))).']];');
+
+    expect(fn () => (new GuideRepository($directory))->find('bad'))->toThrow(InvalidGuideException::class);
+
+    unlink($directory.'/bad.php');
+    rmdir($directory);
+})->with(['javascript://laravel.com/%0aalert(1)', 'http://laravel.com/docs', 'https://example.com/docs']);
+
+it('AC-6 a long first sentence without spaces is cut instead of turning into an ellipsis, and links show their text', function (): void {
+    $directory = sys_get_temp_dir().'/guides-'.bin2hex(random_bytes(4));
+    mkdir($directory);
+    $steps = [
+        ['title' => 'Long', 'body' => str_repeat('a', 300)],
+        ['title' => 'Link', 'body' => 'Read [the docs](https://laravel.com/docs) first. Then go on.'],
+        ['title' => 'Plain', 'body' => 'Plain step.'],
+    ];
+    file_put_contents($directory.'/cut.php', '<?php return '.var_export(['kind' => 'foundation', 'title' => 'T', 'summary' => 'S', 'works' => $steps], true).';');
+
+    $teach = (new GuidePageService(new GuideRepository($directory), app(GuideRenderer::class)))->teach('cut')->toArray();
+
+    expect($teach['works'][0]['summary'])->toBe(str_repeat('a', 239).'…')
+        ->and($teach['works'][1]['summary'])->toBe('Read the docs first.');
+
+    unlink($directory.'/cut.php');
+    rmdir($directory);
+});
+
+/**
+ * Writes one guide file into a fresh temp directory and returns the directory.
+ *
+ * @param  array<string, mixed>  $data
+ */
+function teachGuideDirectory(string $key, array $data): string
+{
+    $directory = sys_get_temp_dir().'/guides-'.bin2hex(random_bytes(4));
+    mkdir($directory);
+    file_put_contents($directory.'/'.$key.'.php', '<?php return '.var_export($data, true).';');
+
+    return $directory;
+}
+
+/**
+ * A minimal guide with valid teach sections and the given works steps, recipes and failures.
+ *
+ * @param  list<array<string, mixed>>  $works
+ * @param  list<array<string, mixed>>  $build
+ * @param  list<array<string, mixed>>  $watch
+ * @return array<string, mixed>
+ */
+function teachGuideData(array $works, array $build = [], array $watch = [], bool $recipes = true, bool $failures = true): array
+{
+    return [
+        'kind' => 'foundation',
+        'title' => 'T',
+        'summary' => 'S',
+        'works' => $works,
+        'failures' => $failures ? [['title' => 'F', 'body' => 'Fails.']] : [],
+        'recipes' => $recipes ? [['title' => 'R', 'body' => 'Recipe.']] : [],
+        'build' => $build !== [] ? $build : array_fill(0, 4, ['step' => 'Do it', 'detail' => 'Like this.', 'tab' => 'recipes']),
+        'watch' => $watch !== [] ? $watch : array_fill(0, 3, ['point' => 'Careful', 'detail' => 'Because.', 'tab' => 'failures']),
+        'elsewhere' => array_fill(0, 2, ['domain' => 'Shop', 'problem' => 'P.', 'how' => 'H.']),
+    ];
+}
+
+it('F1 the moderation implementation tab shows both the agent instructions and the moderation service snippets', function (): void {
+    $implementation = app(GuidePageService::class)->show('moderation')['implementation'];
+    $code = collect($implementation)->flatMap(fn (array $step): array => array_column([$step['snippet'], ...$step['moreSnippets']], 'code'))->implode("\n");
+
+    expect($code)->toContain('function instructions')
+        ->toContain('function moderate');
+});
+
+it('F2 a guide with teach sections holds 3 to 6 works steps, so a page shows every step', function (string $key): void {
+    $guide = app(GuideRepository::class)->find($key);
+
+    if ($guide->build === []) {
+        expect(true)->toBeTrue();
+
+        return;
+    }
+
+    expect(count($guide->works))->toBeBetween(3, 6);
+})->with(ALL_FILLED_GUIDES);
+
+it('F2 merging works steps keeps every snippet of the merged guides', function (string $key, array $references): void {
+    $kept = app(GuideRepository::class)->find($key)->snippetReferences();
+
+    foreach ($references as $reference) {
+        expect($kept)->toContain($reference);
+    }
+})->with([
+    'playground' => ['playground', ['App\Services\PlaygroundPromptService::create', 'App\Repositories\EloquentPlaygroundPromptRepository::addVersion', 'App\Services\PlaygroundPromptService::addVersion', 'App\Services\PlaygroundRunner::validateTargets', 'App\Services\PlaygroundRunner::run', 'App\Services\PlaygroundRunner::call']],
+    'research' => ['research', ['App\Services\ResearchRunner::start', 'App\Services\ResearchRunner::plan', 'App\Services\ResearchRunner::searchPhase', 'App\Services\ResearchRunner::notePhase', 'App\Support\RedisResearchNotesStore', 'App\Ai\ResearchCitations', 'App\Services\ResearchRunner::guardCaps']],
+    'providers' => ['providers', ['config/ai.php#provider-ollama', 'config/ai.php#provider-cloud', 'App\Ai\AiProviders::forFeature', 'App\Http\Middleware\LimitCloudAi::handle', 'App\Ai\AiProviders::resolve', 'App\Services\ListingEmbeddingService::assertDimensions', 'App\Ai\UsesActiveProvider::providerOptions', 'App\Ai\AiRunRecorder::started']],
+    'metrics' => ['metrics', ['App\Http\Controllers\HealthzController', 'App\Services\VinReportService::reportFor', 'App\Http\Controllers\DescribeListingController']],
+    'similar-photos' => ['similar-photos', ['App\Ai\PhotoEncoderClient::embed', 'App\Services\PhotoEmbeddingService::embedBatch', 'App\Services\SimilarPhotosService::rank', 'App\Services\SimilarPhotosService::for', 'App\Services\SimilarPhotosService::blend']],
+    'moderation' => ['moderation', ['App\Services\ModerationFacts::compute', 'App\Ai\ModerationAgent::instructions', 'App\Ai\ModerationAgent::schema', 'App\Rules\ModerationRules::rules', 'App\Services\ModerationService::moderate', 'App\Services\ModerationService::thresholdFor']],
+]);
+
+it('F2 rejects a guide with teach sections and more than 6 works steps instead of cutting them', function (): void {
+    $works = array_fill(0, 7, ['title' => 'Step', 'body' => 'Body.']);
+    $directory = teachGuideDirectory('long', teachGuideData($works));
+
+    expect(fn () => (new GuideRepository($directory))->find('long'))->toThrow(InvalidGuideException::class, 'at most 6');
+
+    exec('rm -rf '.escapeshellarg($directory));
+});
+
+it('F2 a works step can carry a list of snippets, and the implementation tab shows them all', function (): void {
+    $works = [
+        ['title' => 'One', 'body' => 'First.', 'snippet' => ['app/a.php', 'app/b.php']],
+        ['title' => 'Two', 'body' => 'Second.'],
+        ['title' => 'Three', 'body' => 'Third.'],
+    ];
+    $guide = (new GuideRepository(teachGuideDirectory('multi', teachGuideData($works))))->find('multi');
+
+    expect($guide->works[0]->snippet)->toBe('app/a.php')
+        ->and($guide->works[0]->moreSnippets)->toBe(['app/b.php'])
+        ->and($guide->snippetReferences())->toBe(['app/a.php', 'app/b.php']);
+});
+
+it('F5 rejects a build or watch row whose tab target the guide does not have', function (array $data): void {
+    $directory = teachGuideDirectory('target', $data);
+
+    expect(fn () => (new GuideRepository($directory))->find('target'))->toThrow(InvalidGuideException::class, 'tab');
+
+    exec('rm -rf '.escapeshellarg($directory));
+})->with([
+    'build to recipes without recipes' => [teachGuideData(array_fill(0, 3, ['title' => 'S', 'body' => 'B.']), recipes: false)],
+    'watch to failures without failures or support' => [teachGuideData(array_fill(0, 3, ['title' => 'S', 'body' => 'B.']), build: array_fill(0, 4, ['step' => 'Do', 'detail' => 'It.']), failures: false)],
+]);
+
+it('F11 the repository parses a guide once per request and is shared within it', function (): void {
+    $repository = app(GuideRepository::class);
+
+    expect($repository->find('moderation'))->toBe($repository->find('moderation'))
+        ->and(app(GuideRepository::class))->toBe($repository);
+});
+
+it('F2 the teach works of a guide are its works steps in order, each cut to its first sentence', function (string $key): void {
+    $guide = app(GuideRepository::class)->find($key);
+    $teach = app(GuidePageService::class)->teach($key)->toArray();
+
+    expect(array_column($teach['works'], 'title'))->toBe(array_map(fn ($step): string => $step->title, $guide->works))
+        ->and(array_column($teach['works'], 'event'))->toBe(array_map(fn ($step): ?string => $step->event, $guide->works));
+
+    foreach ($teach['works'] as $row) {
+        expect(mb_strlen($row['summary']))->toBeLessThanOrEqual(240)->and($row['summary'])->not->toBe('…');
+    }
+})->with(ALL_FILLED_GUIDES);
+
+it('MNC-2 a lab page still gets its How it works steps when a snippet reference of the guide is broken', function (): void {
+    $works = [
+        ['title' => 'Step', 'body' => 'Hello **world**. More.', 'event' => 'token', 'snippet' => 'app/missing.php'],
+        ['title' => 'Two', 'body' => 'Second.'],
+        ['title' => 'Three', 'body' => 'Third.'],
+    ];
+    $repository = new GuideRepository(teachGuideDirectory('broken', ['kind' => 'foundation', 'title' => 'T', 'summary' => 'S', 'works' => $works]));
+
+    $teach = (new GuidePageService($repository, app(GuideRenderer::class)))->teach('broken');
+
+    expect($teach->works[0])->toBe(['title' => 'Step', 'summary' => 'Hello world.', 'event' => 'token']);
 });

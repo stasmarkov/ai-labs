@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\DTOs\GuideTeach;
 use App\Services\GuidePageService;
 use App\Services\LabProviderService;
 use App\Services\ResearchRunner;
@@ -20,8 +21,7 @@ final class ShowLabResearchController extends Controller
         $run = $id === null ? null : ($service->find($id) ?? abort(404));
 
         return Inertia::render('Lab/Research', [
-            'guideKey' => 'research',
-            'teach' => $guides->teach('research'),
+            'teach' => fn (): GuideTeach => $guides->teach('research'),
             'run' => $run,
             'recent' => $service->recent(),
             'startUrl' => route('research.start', [], false),

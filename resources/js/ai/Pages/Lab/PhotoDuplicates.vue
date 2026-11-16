@@ -8,14 +8,12 @@ export default { layout: LabLayout };
 import { ref, watch } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import LabButton from '../../components/LabButton.vue';
-import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabTeach from '../../components/LabTeach.vue';
 import type { Teach } from '../../components/LabTeach.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabSimilarityBar from '../../components/LabSimilarityBar.vue';
 import LabTag from '../../components/LabTag.vue';
 import { csrfToken } from '../../composables/csrfToken';
-import type { GuideStep } from '../../composables/useGuideSteps';
 
 interface GroupPhoto {
     id: number;
@@ -63,7 +61,6 @@ interface Summary {
 }
 
 const props = defineProps<{
-    howItWorks: GuideStep[];
     guideHref: string;
     teach: Teach;
     label: string;
@@ -286,9 +283,5 @@ function undo(group: Group): Promise<void> {
         </nav>
     </template>
 
-    <LabTeach :teach="teach">
-        <template #works>
-            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="[]" state="idle" />
-        </template>
-    </LabTeach>
+    <LabTeach :teach="teach" />
 </template>

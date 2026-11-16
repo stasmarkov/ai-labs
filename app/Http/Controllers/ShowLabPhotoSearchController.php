@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\DTOs\GuideTeach;
 use App\Services\GuidePageService;
 use App\Services\LabProviderService;
 use App\Services\PhotoTextSearchService;
@@ -20,10 +21,7 @@ final class ShowLabPhotoSearchController extends Controller
     public function __invoke(GuidePageService $guides, LabProviderService $providers, PhotoTextSearchService $search): Response
     {
         return Inertia::render('Lab/PhotoSearch', [
-            'howItWorks' => $guides->howItWorks('photo-search'),
-            'guideHref' => route('ai.guides.show', ['key' => 'photo-search'], false),
-            'guideKey' => 'photo-search',
-            'teach' => $guides->teach('photo-search'),
+            'teach' => fn (): GuideTeach => $guides->teach('photo-search'),
             'searchUrl' => route('photos.search', [], false),
             'embeddingsProvider' => $providers->embeddings('embeddings-photos'),
             'minQueryLength' => PhotoTextSearchService::MIN_QUERY_LENGTH,

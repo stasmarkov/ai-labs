@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\DTOs\GuideTeach;
 use App\DTOs\PhotoLabItem;
 use App\Jobs\ExtractPhotoJob;
 use App\Services\GuidePageService;
@@ -24,10 +25,8 @@ final class ShowLabPhotosController extends Controller
         $extraction = $lab->request();
 
         return Inertia::render('Lab/Photos', [
-            'howItWorks' => $guides->howItWorks('photos'),
             'guideHref' => route('ai.guides.show', ['key' => 'photos'], absolute: false),
-            'guideKey' => 'photos',
-            'teach' => $guides->teach('photos'),
+            'teach' => fn (): GuideTeach => $guides->teach('photos'),
             'photos' => array_map(fn (PhotoLabItem $photo): array => $photo->toArray(), $page->items()),
             'pagination' => [
                 'page' => $page->currentPage(),

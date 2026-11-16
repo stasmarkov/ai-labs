@@ -19,9 +19,9 @@ it('AC-6 the lab page offers the query field, the search endpoint, example chips
             ->where('promptTemplate', fn (string $template) => str_contains($template, '{query}'))
             ->where('promptVersion', 'photo-search@v1')
             ->where('minScore', fn ($score) => (float) $score === (float) config('ai.photo_search.min_score'))
-            ->where('guideHref', '/ai/guides/photo-search')
+            ->where('teach.href', '/ai/guides/photo-search')
             ->where('examples', fn ($examples) => count($examples) >= 3)
-            ->has('howItWorks')
+            ->has('teach.works')
             ->has('embeddingsProvider.provider')
             ->has('embeddingsProvider.model')
             ->where('photoUrlPrefix', fn (string $prefix) => str_starts_with($prefix, '/'))
@@ -32,7 +32,7 @@ it('AC-6 the page sources show the field, chips, grid, tags, how it works panel 
     $source = (string) file_get_contents(resource_path('js/ai/Pages/Lab/PhotoSearch.vue'));
 
     expect($source)->toContain('ref(presetQuery())')
-        ->toContain('LabHowItWorks')
+        ->toContain('LabTeach')
         ->toContain('LabTag')
         ->toContain('searchJson')
         ->toContain('examples')

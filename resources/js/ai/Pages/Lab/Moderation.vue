@@ -6,7 +6,6 @@ export default { layout: LabLayout };
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue';
-import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabTeach from '../../components/LabTeach.vue';
 import type { Teach } from '../../components/LabTeach.vue';
 import LabButton from '../../components/LabButton.vue';
@@ -16,7 +15,7 @@ import type { ProviderOption } from '../../components/LabProviderSelect.vue';
 import LabTag from '../../components/LabTag.vue';
 import LabTextInput from '../../components/LabTextInput.vue';
 import { useProviderChoice } from '../../composables/useProviderChoice';
-import type { GuideRunState, GuideStep } from '../../composables/useGuideSteps';
+import type { GuideRunState } from '../../composables/useGuideSteps';
 
 interface FormListing {
     id: number | null;
@@ -86,8 +85,6 @@ type Outcome =
     | { kind: 'failed'; message: string; invocationIds: string[] };
 
 const props = defineProps<{
-    howItWorks: GuideStep[];
-    guideHref: string;
     teach: Teach;
     moderateUrl: string;
     runUrl: string;
@@ -457,9 +454,5 @@ onBeforeUnmount(() => {
         </div>
     </Teleport>
 
-    <LabTeach :teach="teach">
-        <template #works>
-            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="panelEvents" :state="panelState" />
-        </template>
-    </LabTeach>
+    <LabTeach :teach="teach" :events="panelEvents" :state="panelState" />
 </template>

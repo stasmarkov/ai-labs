@@ -7,7 +7,6 @@ export default { layout: LabLayout };
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import LabExamples from '../../components/LabExamples.vue';
-import LabHowItWorks from '../../components/LabHowItWorks.vue';
 import LabTeach from '../../components/LabTeach.vue';
 import type { Teach } from '../../components/LabTeach.vue';
 import LabButton from '../../components/LabButton.vue';
@@ -18,7 +17,6 @@ import LabProviderSelect from '../../components/LabProviderSelect.vue';
 import type { ProviderOption } from '../../components/LabProviderSelect.vue';
 import { useProviderChoice } from '../../composables/useProviderChoice';
 import { useEventStream } from '../../composables/useEventStream';
-import type { GuideStep } from '../../composables/useGuideSteps';
 
 interface ListingOption {
     id: number;
@@ -41,8 +39,6 @@ interface RunRow {
 }
 
 const props = defineProps<{
-    howItWorks: GuideStep[];
-    guideHref: string;
     teach: Teach;
     listings: ListingOption[];
     describeUrl: string;
@@ -187,7 +183,7 @@ onBeforeUnmount(() => {
             </div>
             <LabProviderSelect id="describe-provider" v-model="provider" :providers="enabledTextProviders" :disabled="isStreaming" />
         </div>
-        <LabExamples label="Example listing ids" :examples="exampleIds" :disabled="isStreaming" @pick="freeId = $event" />
+        <LabExamples label="Example listing ids" :examples="exampleIds" :disabled="isStreaming" @pick="selectedId = $event; freeId = ''" />
         <div class="flex gap-2">
             <LabButton type="submit" :disabled="!canStart">Start</LabButton>
             <LabButton variant="secondary" :disabled="!isStreaming" @click="stream.stop()">Stop</LabButton>
@@ -257,9 +253,5 @@ onBeforeUnmount(() => {
         </div>
     </Teleport>
 
-    <LabTeach :teach="teach">
-        <template #works>
-            <LabHowItWorks bare :steps="howItWorks" :guide-href="guideHref" :events="eventTypes" :state="stream.status.value" />
-        </template>
-    </LabTeach>
+    <LabTeach :teach="teach" :events="eventTypes" :state="stream.status.value" />
 </template>

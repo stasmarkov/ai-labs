@@ -8,13 +8,9 @@ return [
     'summary' => 'Send a stored listing photo to a vision model and get a checked caption, tags, colours, body type, damage and people count back.',
     'works' => [
         [
-            'title' => 'Photos come from a public dataset',
-            'body' => 'A download script fetches the Stanford Cars photos after you accept their terms. The import keeps only the classes whose make and model are in the catalogue and gives each photo to the listing of that model with the nearest year, one photo per listing.',
+            'title' => 'Photos come from a public dataset and are stored small',
+            'body' => 'A download script fetches the Stanford Cars photos after you accept their terms. The import keeps only the classes whose make and model are in the catalogue and gives each photo to the listing of that model with the nearest year, one photo per listing. Each photo is cut to at most 1024 pixels on the long side and saved as a JPEG, which bounds the tokens and the time of every model call. The same file is never imported twice, because its hash is unique.',
             'snippet' => 'App\Services\PhotoMatcher::nearest',
-        ],
-        [
-            'title' => 'A photo is stored small',
-            'body' => 'Each photo is cut to at most 1024 pixels on the long side and saved as a JPEG. That bounds the tokens and the time of every model call. The same file is never imported twice, because its hash is unique.',
         ],
         [
             'title' => 'One photo travels with the instructions',
