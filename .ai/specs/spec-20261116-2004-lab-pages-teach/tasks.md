@@ -166,3 +166,4 @@
     ```
     `node bench/ui-audit.mjs --only` and `PW=/nonexistent node bench/ui-audit.mjs` both exit 2.
   - [x] 11.2 **Verify**: gates. Full suite, Pint, PHPStan, typecheck and build pass; fingerprint `app-DNob7CFE.css` / `app-PTzu1QaN.js`; parity capture differs only on `captured=` (restored with `git checkout -- bench/parity`).
+- Clean-tree bench: after commit 8f64e60, `bench/run.sh ping --quick` exited 0 on frankenphp.
