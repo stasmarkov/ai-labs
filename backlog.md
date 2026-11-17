@@ -225,8 +225,8 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-26
 - **Depends on:** SL-04
 - **Blocked by:** none
-- **Status:** approved
-- **Spec:** —
+- **Status:** specced
+- **Spec:** spec-20261117-1422-worker-dx
 - **Source:** brief (Phase 7)
 - **Run:** `/sdd "SL-17: worker watch patterns and FrankenPHP hot reload, Xdebug on the Octane overlay, and recorded edit-to-reload times for classic, Octane without watch, Octane with watch, and hot reload (BR-26). Rules in product-brief.md."`
 
