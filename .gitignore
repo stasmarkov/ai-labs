@@ -38,6 +38,8 @@ Thumbs.db
 
 .env.bench-backup
 .env.llm-load-backup
+# Any .env backup a bench or tool script leaves (they hold every secret of .env)
+.env*backup*
 /bench/results/raw/
 .ddev/php/zz-bench-timeouts.ini
 .ddev/web-entrypoint.d/zz-bench-fpm.sh

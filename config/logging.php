@@ -1,5 +1,6 @@
 <?php
 
+use App\Logging\FrankenphpJsonFormatter;
 use App\Logging\FrankenphpLogHandler;
 use App\Logging\RequestContextProcessor;
 use Monolog\Handler\NullHandler;
@@ -132,6 +133,7 @@ return [
             'driver' => 'monolog',
             'level' => env('LOG_LEVEL', 'debug'),
             'handler' => FrankenphpLogHandler::class,
+            'formatter' => FrankenphpJsonFormatter::class,
             'processors' => [RequestContextProcessor::class],
         ],
 

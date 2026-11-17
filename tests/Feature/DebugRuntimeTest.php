@@ -2,6 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\DebugRuntimeController;
+
+/**
+ * The shape of FrankenPHP's frankenphp_log(), which exists only inside a FrankenPHP request.
+ *
+ * @param  array<string, mixed>  $context
+ */
+function frankenphpLogShapedProbe(string $message, int $level = 0, array $context = []): void {}
+
 it('AC-6 returns runtime info when enabled', function (): void {
     config()->set('app.debug_routes', true);
 
@@ -53,4 +62,14 @@ it('AC-3 runtime reports whether xdebug is loaded in the serving SAPI', function
     $this->getJson('/debug/runtime')
         ->assertOk()
         ->assertJsonPath('data.xdebug_loaded', extension_loaded('xdebug'));
+});
+
+it('gap 12 reports the frankenphp_log signature, null outside a FrankenPHP request', function (): void {
+    config(['app.debug_routes' => true]);
+
+    $this->getJson('/debug/runtime')->assertOk()->assertJsonPath('data.frankenphp_log', null);
+
+    expect(DebugRuntimeController::signatureOf('str_contains'))->toBe('str_contains(string $haystack, string $needle): bool')
+        ->and(DebugRuntimeController::signatureOf('array_slice'))->toBe('array_slice(array $array, int $offset, ?int $length = null, bool $preserve_keys = false): array')
+        ->and(DebugRuntimeController::signatureOf('frankenphpLogShapedProbe'))->toBe('frankenphpLogShapedProbe(string $message, int $level = 0, array $context = []): void');
 });

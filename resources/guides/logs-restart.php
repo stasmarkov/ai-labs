@@ -14,21 +14,21 @@ return [
         ],
         [
             'title' => 'The request fields on every entry',
-            'body' => "A Monolog processor adds the request id, method, path (never the query string), route name, server mode, a worker flag and the milliseconds since the request started. The start time is the request's own `REQUEST_TIME_FLOAT`, which is new for each request in worker mode too. In a console command or a queue worker there is no request: the fields are empty and the context says `cli`.",
+            'body' => "A Monolog processor adds the request id, method, path (never the query string), route name, server mode, a worker flag and the milliseconds since the request started. The start time is the request's own `REQUEST_TIME_FLOAT`, which is new for each request in worker mode too. In a console command there is no request: the fields are empty and the context says `cli`. A job run by a queue worker says `queue`, and so does the exception the worker reports when that job fails. A line written in a request before the id exists says `http` with an empty id.",
             'snippet' => 'App\Logging\RequestContextProcessor::requestFields',
         ],
         [
             'title' => 'frankenphp_log() inside a request, stderr outside',
-            'body' => "The handler of the `frankenphp` channel calls `frankenphp_log()` when the function exists. That function only exists inside a request served by FrankenPHP, and the entry then lands in Caddy's own structured log stream, next to the access log, at the matching level (debug, info, warn or error). In the console, in a queue worker, or when the function is missing, the same entry is written as one JSON line to stderr. The level, the channel, the request fields and the context travel either way.",
+            'body' => "The handler of the `frankenphp` channel calls `frankenphp_log()` when the function exists. That function only exists inside a request served by FrankenPHP, and the entry then lands in Caddy's own structured log stream, next to the access log, at the matching level (debug, info, warn or error). The server prints a nested PHP array as a pair of `Map` and `Order` objects, so the handler passes flat keys such as `request.request_id` and `context.user.id`, which print as plain fields. In the console, in a queue worker, or when the function is missing, the same entry is written as one JSON line to stderr. Monolog's normalizer builds it either way, so an exception arrives as its class, message, code and file with the line, not as an empty object.",
             'snippet' => 'App\Logging\FrankenphpLogHandler::write',
         ],
         [
             'title' => 'Redaction before writing',
-            'body' => 'Keys of the context and the extra data that contain `password`, `token`, `secret`, `authorization`, `api_key`, `apikey` or `cookie` are replaced by `[redacted]`, at any depth and in any letter case. Only the values under those keys are checked: a secret written into the message text itself is not, so do not put one there.',
+            'body' => 'A key of the context or the extra data that equals or ends with `password`, `passwd`, `secret`, `token`, `authorization`, `api_key`, `apikey`, `access_key`, `private_key`, `cookie` or `bearer` has its value replaced by `[redacted]`, at any depth, inside objects too, and in any letter case or spelling (`X-Api-Key`, `Set-Cookie`, `accessToken`). Counters such as `tokens_in` or `prompt_tokens` do not end with `token` and stay readable. Only the values under those keys are checked: a secret written into the message text itself is not, so do not put one there.',
         ],
         [
             'title' => 'Restarting the workers',
-            'body' => 'On worker mode the command sends one POST to the Caddy admin API on `localhost:2019` and prints how long it took. The admin API listens on localhost only and no port is published, so the command works inside the web container, which is where `ddev artisan` runs it. On Octane mode it runs `octane:reload` and passes on its exit code. On classic mode it says there are no workers to restart and exits 0. An unknown mode, a refused connection, a timeout or a non-2xx answer exits 1.',
+            'body' => 'On worker mode the command sends one POST to the Caddy admin API on `localhost:2019` and prints how long it took. The admin API listens on localhost only and no port is published, so the command works inside the web container, which is where `ddev artisan` runs it. Outside the container (no `IS_DDEV_PROJECT=true`) it refuses before it sends anything, because a `localhost:2019` there would be some other server; inside, it first checks that the admin API answers. On Octane mode it runs `octane:reload` and passes on its exit code. On classic mode it says there are no workers to restart and exits 0. An unknown mode, a refused connection, a timeout or a non-2xx answer exits 1.',
             'snippet' => 'App\Console\Commands\FrankenphpWorkersRestartCommand::restartThroughAdminApi',
         ],
     ],
@@ -65,7 +65,7 @@ return [
         ],
         [
             'title' => 'Compare the two restarts under load',
-            'body' => "Keep a steady load on one route, restart once in the middle, and count the failed requests and the slowest answers in the seconds around the restart. Do it on worker mode (admin API) and on Octane mode (`octane:reload`) with the same load. The numbers tab shows the committed result.\n\n**Check:** both runs have the same load and the same window.",
+            'body' => "Keep a steady load of 50 connections on one route for 60 s, restart at 15, 30 and 45 s, and compare the seconds from each restart to 2 s after it with the rest. The load tool only stores the requests that got an answer, so a second, light probe sends 20 requests a second and logs each one with its start time and outcome: a refused connection shows up there. Do it on worker mode (admin API) and on Octane mode (`octane:reload`) with the same load, three times each. The numbers tab shows the committed result.\n\n**Check:** both runs have the same load, the same restart times and the same window.",
         ],
         [
             'title' => 'Change the log destination or the provider of the logs',

@@ -11,7 +11,8 @@
 ## Env: BENCH_WARMUP, BENCH_MEASURE (seconds), BENCH_REPEATS, BENCH_SETTLE (seconds after restart),
 ##      BENCH_APPROOT (project root), BENCH_BASE_URL (default: `ddev server --url`),
 ##      BENCH_READY_TIMEOUT (seconds to wait for /debug/runtime after a worker-server reload, default 120),
-##      BENCH_OHA_IMAGE, BENCH_K6_IMAGE.
+##      BENCH_OHA_IMAGE, BENCH_K6_IMAGE, BENCH_PING_PATH (the ping route, default /api/ping; the log-channel overhead run
+##      points it at /debug/log-ping).
 
 set -Eeuo pipefail
 
@@ -24,6 +25,8 @@ OHA_IMAGE="${BENCH_OHA_IMAGE:-ai-lab-oha:1.16.0}"   # built locally from bench/o
 K6_IMAGE="${BENCH_K6_IMAGE:-grafana/k6:1.0.0}"
 SPREAD_LIMIT=5
 CONNECTIONS=50
+PING_PATH="${BENCH_PING_PATH:-/api/ping}"
+[[ "$PING_PATH" =~ ^/[A-Za-z0-9/_-]*$ ]] || { echo "Invalid BENCH_PING_PATH '$PING_PATH'." >&2; exit 2; }
 
 usage() {
   echo "Usage: $0 <ping|search> [--quick] [--label <text>]" >&2
@@ -192,7 +195,7 @@ generate() {
   local seconds="$1"
   if [[ "$scenario" == "ping" ]]; then
     # -w waits for requests still in flight at the deadline instead of counting them as errors.
-    docker_load "$OHA_IMAGE" -c "$CONNECTIONS" -z "${seconds}s" -w -t 30s --no-tui --insecure --output-format json "$BASE_URL/api/ping"
+    docker_load "$OHA_IMAGE" -c "$CONNECTIONS" -z "${seconds}s" -w -t 30s --no-tui --insecure --output-format json "$BASE_URL$PING_PATH"
   else
     rm -f "$WORK/k6.json"
     if ! docker_load -v "$SCRIPT_DIR:/bench:ro" -v "$WORK:/out" -e "BASE_URL=$BASE_URL" -e "DURATION=${seconds}s" \

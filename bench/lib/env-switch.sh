@@ -2,11 +2,11 @@
 ## Shared .env backup and restore for the bench scripts that need a temporary setting (compression.sh, lcp.sh), the same
 ## convention as slow-load.sh and export-load.sh: copy .env to .env.bench-backup, change keys, and on exit copy it back and
 ## clear the config cache. Source it; it defines functions and runs nothing.
-## A caller sets before use: APPROOT. Call `env_switch_begin` once, `env_set KEY VALUE` for each key, and
+## A caller sets before use: APPROOT, and optionally ENV_SWITCH_BACKUP (the backup path) when another bench script it runs keeps its own .env.bench-backup. Call `env_switch_begin` once, `env_set KEY VALUE` for each key, and
 ## `env_switch_restore` from the EXIT trap (it does nothing when env_switch_begin was never reached).
 
 ENV_FILE="${APPROOT:?}/.env"
-ENV_BACKUP="$APPROOT/.env.bench-backup"
+ENV_BACKUP="${ENV_SWITCH_BACKUP:-$APPROOT/.env.bench-backup}"
 ENV_SWITCHED=0
 
 env_switch_begin() {
@@ -16,6 +16,7 @@ env_switch_begin() {
   fi
   [[ -f "$ENV_FILE" ]] || { echo "No .env at $ENV_FILE" >&2; exit 2; }
   cp -p "$ENV_FILE" "$ENV_BACKUP"
+  chmod 600 "$ENV_BACKUP"
   ENV_SWITCHED=1
 }
 

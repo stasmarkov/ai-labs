@@ -12,6 +12,8 @@ final class RequestContextProcessor implements ProcessorInterface
 {
     public const string REQUEST_ID_KEY = 'request_id';
 
+    public const string QUEUE_JOB_KEY = 'queue_job';
+
     public function __invoke(LogRecord $record): LogRecord
     {
         $record->extra['request'] = $this->requestFields();
@@ -28,16 +30,24 @@ final class RequestContextProcessor implements ProcessorInterface
         $serverMode = (string) config('ai.server.mode', 'unknown');
         $worker = isset($_SERVER['FRANKENPHP_WORKER']) || isset($_SERVER['LARAVEL_OCTANE']);
 
-        if (! is_string($requestId) || $requestId === '') {
+        $inQueueJob = Context::hasHidden(self::QUEUE_JOB_KEY);
+
+        if ($inQueueJob || ! is_string($requestId) || $requestId === '') {
+            // Outside a queue job and without an id, a served request is still HTTP: the entry was written before
+            // AssignRequestId ran (bootstrap, an earlier global middleware), so only the id and request fields are missing.
             return [
-                'request_id' => null,
+                'request_id' => is_string($requestId) && $requestId !== '' ? $requestId : null,
                 'method' => null,
                 'path' => null,
                 'route' => null,
                 'server_mode' => $serverMode,
                 'worker' => $worker,
                 'elapsed_ms' => null,
-                'context' => 'cli',
+                'context' => match (true) {
+                    $inQueueJob => 'queue',
+                    app()->runningInConsole() => 'cli',
+                    default => 'http',
+                },
             ];
         }
 

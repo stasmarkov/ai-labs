@@ -4,25 +4,29 @@ declare(strict_types=1);
 
 namespace App\Logging;
 
+use Illuminate\Support\Arr;
+use Monolog\Formatter\FormatterInterface;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;
 use Monolog\LogRecord;
 
+/**
+ * Writes the entry FrankenphpJsonFormatter builds: through frankenphp_log() inside a FrankenPHP request, so it lands in
+ * Caddy's structured log next to the access log, or as one JSON line on stderr everywhere else (CLI, queue workers).
+ */
 final class FrankenphpLogHandler extends AbstractProcessingHandler
 {
-    private const string REDACTED = '[redacted]';
-
-    private const array SENSITIVE_KEYS = ['password', 'token', 'secret', 'authorization', 'api_key', 'apikey', 'cookie'];
-
     /** @var (callable(string, int, array<string, mixed>): void)|null */
     private $writer;
 
     /** @var resource|null */
     private $stderr;
 
+    private ?FrankenphpJsonFormatter $entryFormatter = null;
+
     /**
-     * @param  (callable(string, int, array<string, mixed>): void)|null  $writer
-     * @param  resource|null  $stderr
+     * @param  (callable(string, int, array<string, mixed>): void)|null  $writer  defaults to frankenphp_log when it exists
+     * @param  resource|null  $stderr  defaults to php://stderr
      */
     public function __construct(?callable $writer = null, $stderr = null, int|string|Level $level = Level::Debug, bool $bubble = true)
     {
@@ -32,46 +36,63 @@ final class FrankenphpLogHandler extends AbstractProcessingHandler
         $this->stderr = $stderr;
     }
 
+    protected function getDefaultFormatter(): FormatterInterface
+    {
+        return new FrankenphpJsonFormatter;
+    }
+
     protected function write(LogRecord $record): void
     {
-        $extra = $this->redact($record->extra);
-        $request = $extra['request'] ?? [];
-        unset($extra['request']);
-
-        $context = $this->redact($record->context);
-        if ($extra !== []) {
-            $context['extra'] = $extra;
+        $formatter = $this->getFormatter();
+        if (! $formatter instanceof FrankenphpJsonFormatter) {
+            // A channel config that sets another formatter (Laravel gives monolog channels a line formatter unless
+            // told otherwise) would hand write() a string; the entry shape is this channel's contract, so it wins.
+            $formatter = $this->entryFormatter ??= new FrankenphpJsonFormatter;
+            $record->formatted = $formatter->format($record);
         }
 
-        $writer = $this->writer ?? (function_exists('frankenphp_log') ? 'frankenphp_log' : null);
+        /** @var array<string, mixed> $entry */
+        $entry = $record->formatted;
+        $writer = $this->writer ?? (function_exists('frankenphp_log')
+            ? static function (string $message, int $level, array $context): void {
+                call_user_func('frankenphp_log', $message, $level, self::slogAttributes($context));
+            }
+            : null);
 
         if ($writer !== null) {
             $writer($record->message, $this->slogLevel($record->level), [
-                'level_name' => $record->level->getName(),
-                'channel' => $record->channel,
-                'request' => $request,
-                'context' => $context,
+                'level_name' => $entry['level_name'],
+                'channel' => $entry['channel'],
+                'request' => $entry['request'],
+                'context' => $entry['context'],
             ]);
 
             return;
         }
 
-        $line = json_encode([
-            'time' => $record->datetime->format('Y-m-d\TH:i:s.vP'),
-            'level' => strtolower($record->level->getName()),
-            'message' => $record->message,
-            'channel' => $record->channel,
-            'context' => $context,
-            'request' => $request,
-        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+        $this->stderr ??= fopen('php://stderr', 'wb') ?: null;
 
-        $this->stderr ??= fopen('php://stderr', 'w');
-
-        if ($this->stderr !== false) {
-            fwrite($this->stderr, $line."\n");
+        if ($this->stderr !== null) {
+            fwrite($this->stderr, $formatter->toJsonLine($entry));
         }
     }
 
+    /**
+     * frankenphp_log() hands the context to Go's slog, and FrankenPHP 1.13 turns a nested PHP array into an ordered map
+     * that slog prints as {"Map": {...}, "Order": [...]}. Flat dotted keys (request.request_id, context.user.id) print as
+     * plain JSON attributes; empty arrays carry nothing and are left out.
+     *
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
+    public static function slogAttributes(array $context): array
+    {
+        return array_filter(Arr::dot($context), static fn (mixed $value): bool => $value !== []);
+    }
+
+    /**
+     * FrankenPHP takes slog levels: debug -4, info 0, warn 4, error 8. Notice has no slog level and goes to info.
+     */
     private function slogLevel(Level $level): int
     {
         return match (true) {
@@ -80,35 +101,5 @@ final class FrankenphpLogHandler extends AbstractProcessingHandler
             $level === Level::Warning => 4,
             default => 8,
         };
-    }
-
-    /**
-     * @param  array<array-key, mixed>  $values
-     * @return array<array-key, mixed>
-     */
-    private function redact(array $values): array
-    {
-        foreach ($values as $key => $value) {
-            if (is_string($key) && $this->isSensitive($key)) {
-                $values[$key] = self::REDACTED;
-            } elseif (is_array($value)) {
-                $values[$key] = $this->redact($value);
-            }
-        }
-
-        return $values;
-    }
-
-    private function isSensitive(string $key): bool
-    {
-        $key = strtolower($key);
-
-        foreach (self::SENSITIVE_KEYS as $needle) {
-            if (str_contains($key, $needle)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

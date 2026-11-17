@@ -2,6 +2,16 @@
 
 return [
 
+    /*
+    |--------------------------------------------------------------------------
+    | Web Server
+    |--------------------------------------------------------------------------
+    |
+    | The FrankenPHP mode the app runs in and the Caddy admin API the restart
+    | command talks to. Read by frankenphp:workers:restart and the log processor.
+    |
+    */
+
     'server' => [
         'mode' => env('AI_SERVER_MODE', 'unknown'),
         'in_container' => filter_var(env('IS_DDEV_PROJECT', false), FILTER_VALIDATE_BOOLEAN),

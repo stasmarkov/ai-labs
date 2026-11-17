@@ -53,7 +53,7 @@ Two server-side lessons:
    - **Handler behaviour:**
      - **Inside a request:** if `function_exists('frankenphp_log')`, it calls `frankenphp_log($message, $level, $context)`, mapping Monolog levels to FrankenPHP's levels as documented for v1.13.
      - **Otherwise:** it writes one line of JSON to `php://stderr`.
-     - **Redaction:** sensitive keys in the context (`password`, `token`, `authorization`, `api_key`, `cookie`) are redacted before writing.
+     - **Redaction:** sensitive keys in the context and extra (C-4) are redacted before writing.
    - **Worker mode:** the request context is reset per request (scoped or terminating), so worker mode never leaks one request's id into the next (the SL-07 lesson).
    - **Middleware:** `AssignRequestId` sets the id early for web and API routes.
 2. **Restart command:** `frankenphp:workers:restart {--timeout=10}`.
@@ -67,7 +67,7 @@ Two server-side lessons:
    - **Modes:** for `frankenphp-worker` and `frankenphp-octane`.
    - **The load:** oha holds a steady load on `GET /api/ping` and on `/listings?make=BMW` (50 connections, the BR-21 warm-up of 30 s and measure of 60 s, 3 repeats).
    - **The restarts:** during each measured window it triggers 3 restarts at fixed offsets (15, 30, 45 s).
-   - **Recorded:** total requests, non-2xx, connection errors, timeouts and p99 latency across the restart seconds against the other seconds, plus each restart's duration.
+   - **Recorded:** failed requests (non-2xx, connection errors, timeouts, from a timestamped probe), the load's completed requests, non-2xx and p99 latency, each inside the restart windows against outside them, plus each restart's duration (C-7).
    - **Output:** `bench/results/restart/<date>/<mode>-<route>.json`.
 4. **Results and docs**:
    - **BENCHMARKS.md:** a section "Worker restart under load" (the table, What the numbers say, Surprises, interview story with measured numbers).
@@ -110,7 +110,7 @@ Two server-side lessons:
 | ID | Attribute | Requirement | Verified by |
 |----|-----------|-------------|-------------|
 | **NFR-1** | Privacy | No password, token, cookie or authorization value appears in any log entry; the request id is validated before reuse | `tests/Feature/StructuredLogTest.php` |
-| **NFR-2** | Overhead | The processor adds < 5 % to `/api/ping` p95 on worker mode (`bench/run.sh ping --quick` with and without the channel) | `manual-test.md#step-4` |
+| **NFR-2** | Overhead | The `frankenphp` channel adds < 5 % to the p95 of a request that logs one entry, on worker mode (`bench/log-overhead.sh`: `/debug/log-ping` with `LOG_STACK=single` against `single,frankenphp`, full BR-21 method, C-8) | `manual-test.md#step-4` |
 
 ## Boundaries
 
@@ -162,7 +162,7 @@ All 27 items from the clarity gate on 2026-11-17 are answered below in C-1 to C-
 - **C-1 Mode:**
   - **Where the mode comes from:** each stash server config (`.ddev/servers/<mode>/config.<mode>.yaml`) gets `web_environment: [AI_SERVER_MODE=<mode>]`. `ddev server` copies it into `.ddev/`, and `.ddev/config.yaml` is never touched.
   - **Reading it:** `config('ai.server.mode')` reads `env('AI_SERVER_MODE', 'unknown')`. The command and the processor use the same value.
-  - **The container check:** "outside the web container" means `IS_DDEV_PROJECT` is not `true` and `localhost:2019` does not answer within 1 s. The test sets that env to false and fakes the HTTP call, to prove the refusal.
+  - **The container check (amended 2026-11-17, review F8/F11):** the command goes on only when `IS_DDEV_PROJECT` is `true` (config `ai.server.in_container`) **and** the admin API answers a `GET /config/` with 2xx within 1 s. When `IS_DDEV_PROJECT` is not `true` it refuses before any probe, so it never calls a `localhost:2019` on the host, which would be some other Caddy. Inside the container a probe that fails exits 1 with `admin API: no answer from <url>`. Tests: `in_container` false with every HTTP call faked as 200 sends nothing; `in_container` true with the probe faked as a connection error sends no restart POST. The admin calls live in `App\Support\AdminApiClient`.
   - **`worker`:** true when `$_SERVER['FRANKENPHP_WORKER']` is set, or Octane is running (`$_SERVER['LARAVEL_OCTANE']`). So it is true on both worker modes.
 - **C-2 FrankenPHP log:**
   - **Signature:** `frankenphp_log(string $message, int $level = 0, array $context = []): void`, using slog levels: debug -4, info 0, warn 4, error 8.
@@ -176,11 +176,14 @@ All 27 items from the clarity gate on 2026-11-17 are answered below in C-1 to C-
   - **`route`:** the route name, or the URI pattern when the route has no name.
   - **`path`:** the path only, never the query string.
   - **`context`:** `"http"` inside a request, `"cli"` for commands, and `"queue"` for queue jobs run by a worker. A sync job inside a request counts as `"http"`.
+    - **Queue (amended, review F1/F6):** the queue flag is set when a worker starts a non-sync job and cleared only when the worker loops to the next job or stops. So the job's `JobProcessed` listeners and, for a failed job, the exception the worker reports afterwards log `"queue"`. A sync job inside a queued job neither sets nor clears it, so the rest of the outer job stays `"queue"`.
+    - **Before the middleware (amended, review F7):** an entry written in a served request before `AssignRequestId` runs (bootstrap, an earlier global middleware) has `context: "http"` with `request_id` and the request fields null. HTTP is detected by `app()->runningInConsole()` being false.
 - **C-4 Entry and redaction:**
   - **The JSON line:** `{"time": RFC3339 with ms, "level": "info", "message": "...", "channel": "...", "context": {...}, "request": {request_id, method, path, route, server_mode, worker, elapsed_ms, context}}`.
-  - **Redaction:**
-    - **Keys:** case-insensitive substring match on `password`, `token`, `secret`, `authorization`, `api_key`, `apikey` and `cookie`.
-    - **Depth:** applied recursively in `context` and `extra`.
+  - **Formatting (amended, review F4/F17):** the entry is built by `App\Logging\FrankenphpJsonFormatter`, a Monolog `NormalizerFormatter`. Exceptions become `class`, `message`, `code`, `file` (`path:line`) and a trace of at most 20 frames; other objects become `{Class: their JSON form}`; dates become strings. The handler sends that array to `frankenphp_log()` or writes it as one JSON line to stderr.
+  - **Redaction (amended, review F5/F12):**
+    - **Keys:** the key is normalized (lowercase, `-` and camelCase turned into `_`) and is sensitive when it equals or ends with `password`, `passwd`, `secret`, `token`, `authorization`, `api_key`, `apikey`, `access_key`, `private_key`, `cookie` or `bearer`. That covers `X-Api-Key`, `Set-Cookie`, `access_token`, `clientSecret` and `csrftoken`, and leaves counters alone: `tokens`, `tokens_in`, `tokens_out`, `token_count` and `*_tokens` do not end with `token`.
+    - **Depth:** applied recursively in `context` and `extra`, after normalization, so values inside objects are covered too.
     - **Replacement:** the value becomes `"[redacted]"`.
     - **Limit:** values inside the message text are not inspected. NFR-1 is narrowed to context and extra values, and the guide says why.
   - **Scope:** the processor and the redaction attach only to the `frankenphp` channel, so the `single` file is unchanged (MNC-1).
@@ -195,21 +198,26 @@ All 27 items from the clarity gate on 2026-11-17 are answered below in C-1 to C-
     - Octane: `octane:reload` is run through `Artisan::call`, its output is shown, and its exit code is propagated;
     - classic: `classic mode has no workers to restart`;
     - unknown mode: exit 1 with `server mode unknown`.
-- **C-7 Load script:**
-  - **Triggering:** `bench/restart-load.sh` switches servers with `ddev server`, restores the starting one, and triggers each restart with `ddev exec php artisan frankenphp:workers:restart`, logging the host wall-clock start and end in ms.
-  - **Data:** oha runs with `--output-format json` and per-request data (`--latency-correction`, and `-o` to sqlite or csv, whichever the pinned oha supports).
+- **C-7 Load script (amended 2026-11-17, review F2/F15 and gap 13):**
+  - **Triggering:** `bench/restart-load.sh` switches servers with `ddev server`, restores the starting one, and triggers each restart with `ddev artisan frankenphp:workers:restart`, logging the host wall-clock start and end in ms. `.env` is switched only through `bench/lib/env-switch.sh`.
+  - **Load start:** the moment the oha container is running (`docker inspect` polled every 50 ms). oha writes its `--db-url` file only when the run ends, so the file cannot mark the start. The offsets count from that moment.
+  - **Two sources, because oha's request database stores only answered requests:**
+    - **The load:** oha's sqlite database, aggregated in sqlite (never loaded whole into jq): completed requests, non-2xx and nearest-rank p99, each inside against outside the windows, placed by oha's own `start` column.
+    - **The probe:** `bench/lib/request-probe.pl` sends GET on the same route from the host at 20 requests per second for the whole measure window, one curl process per request, and logs each with its host ms start, status and curl exit. Its failures (non-2xx, connection errors, curl exit 28 timeouts) inside against outside the windows are the `failures` the result reports. Connection errors only show up here.
+    - oha's whole-run error count, not split by window, is kept as `oha_errors_whole_run`.
   - **Restart window:** from the trigger to 2 s after the command returns.
   - **Inside vs outside:**
-    - per repeat: the failed requests and the p99 latency inside the restart windows against outside them;
+    - per repeat: the probe failures and the load p99 inside the restart windows against outside them;
     - over the 3 repeats: the median of the p99 values and the sum of the failures.
   - **`--quick`:** warm-up 5 s, measure 30 s, 1 repeat, one restart at 15 s.
-- **C-8 NFR-2:**
-  - **What is compared:** `/api/ping` writes one info entry when the channel is on (a debug log line added for this measurement only, behind the `LOG_PING` env var, default off).
-  - **The two runs:** with `LOG_STACK=single` against `LOG_STACK=single,frankenphp` and `LOG_PING=true`, set through `bench/lib/env-switch.sh` and restored afterwards.
-  - **Method:** the full BR-21 method on worker mode, not `--quick`.
+- **C-8 NFR-2 (amended 2026-11-17, review F3/F13/F14/F23):**
+  - **What is compared:** `/debug/log-ping`, a debug-only route (hidden unless `DEBUG_ROUTES=true`, like the other `/debug/*` routes) that answers like `/api/ping` and writes one info entry to the default channel. `/api/ping` stays a plain public endpoint that never logs; the earlier `LOG_PING` switch is removed.
+  - **The two runs:** `LOG_STACK=single` against `LOG_STACK=single,frankenphp`, set through `bench/lib/env-switch.sh` and restored afterwards. Both runs write the entry to the file, so the difference is the `frankenphp` channel alone.
+  - **Method:** the full BR-21 method on worker mode, not `--quick` (`bench/run.sh ping` with `BENCH_PING_PATH=/debug/log-ping`).
+  - **Log growth:** the file channel grows `storage/logs/laravel.log` by one line per request; the script cuts it back to its starting size on exit.
   - **Threshold:** < 5 % p95. A difference within the spread is reported as "no measurable cost".
-  - **Traceability:** points to task 3.
-- **C-9 Manual step 1:** uses `bench/lib/env-switch.sh`-style steps: set `LOG_STACK=single,frankenphp` and `LOG_PING=true`, run `ddev restart`, curl `/api/ping`, read `ddev logs -s web`, then restore. The manual test is rewritten to these exact commands.
+  - **Traceability:** manual-test step 4 and task 3.
+- **C-9 Manual step 1 (amended):** uses the `bench/lib/env-switch.sh` functions: set `LOG_STACK=single,frankenphp` and `DEBUG_ROUTES=true`, run `ddev restart`, curl `/debug/log-ping`, read `ddev logs -s web`, then restore with `env_switch_restore`. The manual test is rewritten to these exact commands.
 - **C-10 Caddyfiles:** no Caddyfile change is expected. `frankenphp_log` writes to Caddy's default logger at the given level. If entries don't show at info, the build adds `log { level INFO }` to the global options, records it, and checks parity.
 - **C-11 Guide terms:**
   - **The tabs:** the six engine tabs are works, failures, recipes, support, numbers and experiments. The teach sections are build, watch and elsewhere (SL-53).

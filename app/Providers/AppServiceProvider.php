@@ -38,6 +38,7 @@ use App\Contracts\SimilarPhotosRepositoryInterface;
 use App\Guides\GuideFacts;
 use App\Guides\GuideRepository;
 use App\Guides\SnippetResolver;
+use App\Logging\RequestContextProcessor;
 use App\Repositories\EloquentAdminListingRepository;
 use App\Repositories\EloquentAiSettingsRepository;
 use App\Repositories\EloquentAiToolStepRepository;
@@ -76,6 +77,11 @@ use App\Support\ServerTiming;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Queue\Events\Looping;
+use Illuminate\Queue\Events\WorkerStopping;
+use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -134,9 +140,36 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->markQueueJobExecution();
+
         Model::preventLazyLoading(! $this->app->isProduction());
 
         // Each download holds bandwidth and, in stream mode, a PHP worker on purpose, so callers are limited per IP.
         RateLimiter::for('exports', fn (Request $request): Limit => Limit::perMinute((int) config('exports.per_minute'))->by((string) $request->ip()));
+    }
+
+    /**
+     * Hydrated request context reaches a worker with every job; the flag lets the log processor report "queue" for it.
+     * It is set when a worker starts a job and stays for everything that job causes: its JobProcessed listeners and,
+     * for a failed job, the exception the worker reports afterwards. It is cleared only when the worker loops to the
+     * next job or stops (the next job sets it again). A sync-driver job runs inside whatever dispatched it, so it
+     * neither sets nor clears the flag: a sync job in a request stays "http", one inside a queued job stays "queue".
+     */
+    private function markQueueJobExecution(): void
+    {
+        $isSync = static fn (string $connectionName): bool => $connectionName === 'sync'
+            || config("queue.connections.{$connectionName}.driver") === 'sync';
+
+        Event::listen(function (JobProcessing $event) use ($isSync): void {
+            if (! $isSync($event->connectionName)) {
+                Context::addHidden(RequestContextProcessor::QUEUE_JOB_KEY, true);
+            }
+        });
+
+        $clear = static function (): void {
+            Context::forgetHidden(RequestContextProcessor::QUEUE_JOB_KEY);
+        };
+        Event::listen(Looping::class, $clear);
+        Event::listen(WorkerStopping::class, $clear);
     }
 }

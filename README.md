@@ -90,6 +90,7 @@ The `frankenphp` log channel writes every PHP log entry as one JSON object with 
 LOG_STACK=single,frankenphp                  # in .env, then ddev restart: JSON entries in `ddev logs -s web`
 ddev artisan frankenphp:workers:restart      # --timeout=10 seconds for the admin API call; prints the time taken
 bench/restart-load.sh [--quick]              # failed requests and latency while the workers restart, worker and Octane
+bench/log-overhead.sh                        # p95 of a request that logs one entry (/debug/log-ping), worker mode, LOG_STACK=single vs single,frankenphp
 ```
 
 ## Local models

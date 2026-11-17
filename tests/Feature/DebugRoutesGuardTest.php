@@ -16,6 +16,8 @@ it('MNC-1 every debug route answers like an unknown path for any method while di
     ['DELETE', '/debug/sleep/1'],
     ['GET', '/debug/worker'],
     ['POST', '/debug/worker'],
+    ['GET', '/debug/log-ping'],
+    ['POST', '/debug/log-ping'],
     ['GET', '/debug/leaks/dealer-scope'],
     ['PUT', '/debug/leaks/dealer-scope'],
 ]);
