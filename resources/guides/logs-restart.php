@@ -50,6 +50,10 @@ return [
             'body' => "**Cause:** the server is not in worker mode, the admin API did not answer within `--timeout` seconds, or it answered with an error status.\n\n**Fix:** check `ddev server` for the current mode, then try again with a longer `--timeout`.",
         ],
         [
+            'title' => 'Requests fail or hang while Octane reloads',
+            'body' => "**Cause:** measured here, every `octane:reload` under load cost a few requests: some answered with a 5xx, and some connections got no answer at all until the load tool gave up after 30 seconds. The native worker restart lost none in the same test.\n\n**Fix:** on Octane mode, reload when the traffic is low or behind a load balancer that drains the instance first, and give clients a retry for idempotent calls. On worker mode the admin API restart is the safer choice.",
+        ],
+        [
             'title' => 'A secret shows up in the log',
             'body' => "**Cause:** it was written into the message text, or under a key the redaction does not know.\n\n**Fix:** put values in the context under a clear key, never in the message, and add the key name to the redaction list if it is new.",
         ],
@@ -94,9 +98,16 @@ return [
         ],
     ],
     'numbers' => [
-        ['label' => 'Requests that failed during a worker restart under load, worker mode', 'pending' => true],
-        ['label' => 'Requests that failed during a reload under load, Octane mode', 'pending' => true],
-        ['label' => 'Time the restart command took, worker mode (ms)', 'pending' => true],
+        ['label' => 'Worker mode, ping under 50 connections, 9 restarts: probe requests that failed inside the restart windows', 'file' => 'restart/2026-11-17/frankenphp-worker-api-ping.json', 'path' => 'failures.inside'],
+        ['label' => 'Worker mode, ping: probe requests sent inside the restart windows', 'file' => 'restart/2026-11-17/frankenphp-worker-api-ping.json', 'path' => 'probe_requests.inside'],
+        ['label' => 'Worker mode, BMW listing search: probe requests that failed inside the restart windows', 'file' => 'restart/2026-11-17/frankenphp-worker-listings-make-BMW.json', 'path' => 'failures.inside'],
+        ['label' => 'Worker mode: what the restart command printed for the first restart under load', 'file' => 'restart/2026-11-17/frankenphp-worker-api-ping.json', 'path' => 'restarts.0.output'],
+        ['label' => 'Octane mode, ping, 9 reloads: probe requests that failed inside the reload windows', 'file' => 'restart/2026-11-17/frankenphp-octane-api-ping.json', 'path' => 'failures.inside'],
+        ['label' => 'Octane mode, ping: probe requests sent inside the reload windows', 'file' => 'restart/2026-11-17/frankenphp-octane-api-ping.json', 'path' => 'probe_requests.inside'],
+        ['label' => 'Octane mode, ping: load requests answered with a 5xx inside the reload windows', 'file' => 'restart/2026-11-17/frankenphp-octane-api-ping.json', 'path' => 'load_non_2xx.inside'],
+        ['label' => 'Octane mode, ping: load errors over the whole run, 30-second timeouts included', 'file' => 'restart/2026-11-17/frankenphp-octane-api-ping.json', 'path' => 'oha_errors_whole_run'],
+        ['label' => 'Octane mode, BMW listing search: probe requests that failed inside the reload windows', 'file' => 'restart/2026-11-17/frankenphp-octane-listings-make-BMW.json', 'path' => 'failures.inside'],
+        ['label' => 'Cost of the frankenphp channel on a request that logs one line, worker mode: p95 difference (%)', 'file' => 'restart/2026-11-17/log-overhead.json', 'path' => 'difference_percent'],
     ],
     'experiments' => [
         [

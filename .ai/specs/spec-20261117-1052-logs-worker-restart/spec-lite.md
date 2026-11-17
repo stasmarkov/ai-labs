@@ -4,7 +4,7 @@ title: Structured logs and worker restart
 type: feature
 size: M
 priority: P2
-status: in-progress
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-17; standing approval)
@@ -217,6 +217,7 @@ All 27 items from the clarity gate on 2026-11-17 are answered below in C-1 to C-
   - **Log growth:** the file channel grows `storage/logs/laravel.log` by one line per request; the script cuts it back to its starting size on exit.
   - **Threshold:** < 5 % p95. A difference within the spread is reported as "no measurable cost".
   - **Traceability:** manual-test step 4 and task 3.
+  - **Result (2026-11-17):** +8 % p95 (8.96 to 9.67 ms), outside the spread. NFR-2 is not met; the channel stays opt-in, and the decision on the budget is open for the owner.
 - **C-9 Manual step 1 (amended):** uses the `bench/lib/env-switch.sh` functions: set `LOG_STACK=single,frankenphp` and `DEBUG_ROUTES=true`, run `ddev restart`, curl `/debug/log-ping`, read `ddev logs -s web`, then restore with `env_switch_restore`. The manual test is rewritten to these exact commands.
 - **C-10 Caddyfiles:** no Caddyfile change is expected. `frankenphp_log` writes to Caddy's default logger at the given level. If entries don't show at info, the build adds `log { level INFO }` to the global options, records it, and checks parity.
 - **C-11 Guide terms:**

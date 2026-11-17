@@ -1514,28 +1514,57 @@ I put Prometheus and Grafana on a slow-I/O benchmark that had only given me befo
 
 ## Worker restart under load
 
-`ddev artisan frankenphp:workers:restart` replaces the PHP workers on worker mode through the Caddy admin API and, on Octane mode, runs `octane:reload`. `bench/restart-load.sh` holds 50 connections on `/api/ping` and `/listings/1` and restarts once in the middle of the window, then records the failed requests and the latency. How to read it: [I-12 of the learning guide](docs/learning-guide.md#i-12-logs-and-worker-restart) and `/ai/guides/logs-restart`.
+`ddev artisan frankenphp:workers:restart` replaces the PHP workers. On worker mode it calls the Caddy admin API (`POST localhost:2019/frankenphp/workers/restart`), and on Octane mode it runs `octane:reload`. `bench/restart-load.sh` holds a steady load while the command runs and compares the seconds around each restart with the rest of the run. How to read it: [I-12 of the learning guide](docs/learning-guide.md#i-12-logs-and-worker-restart) and `/ai/guides/logs-restart`. Results: `bench/results/restart/2026-11-17/` (commit 492fdd0, measured 2026-11-17).
 
-Method:
-- **The load:** oha in a pinned container, 50 connections, one cell per mode and route.
-- **The restart:** one command call at the middle of the measure window, with its output and exit code recorded.
-- **Overhead of the channel:** `bench/run.sh ping` with `LOG_STACK=single` against `LOG_STACK=single,frankenphp` on worker mode.
+Method (BR-21):
+- **The load:** oha 1.16 in a pinned container, 50 connections, on `/api/ping` and on `/listings?make=BMW`. A 30 s warm-up, then 3 repeats of 60 s, one cell per mode and route. Production settings, caches built.
+- **The restarts:** 3 per repeat at 15, 30 and 45 s, counted from the moment the load container runs, so 9 per cell. A restart window runs from the trigger to 2 s after the command returns.
+- **Two sources:** oha's request database keeps only the requests that got an answer, so a refused connection or a timeout cannot be placed on the timeline from it. Two sources are used:
+  - **The probe** sends 20 requests per second on the same route from the host, one curl per request, and logs each with its start time, status and curl exit. Its failures (non-2xx, connection errors and timeouts at 5 s) are the "failed" columns.
+  - **The load** gives the non-2xx answers and the p99 of the answered requests inside and outside the windows, aggregated in sqlite. Its whole-run error count, with oha's 30 s timeouts, is not split by window.
+- **Restart time:** host wall-clock of the `ddev artisan` call. That includes the `docker exec` and an app boot, about 1.3 s, around the admin call itself, which the command reports as "workers restarted in N ms".
+- **Channel overhead (NFR-2):** `bench/log-overhead.sh` runs the full BR-21 `bench/run.sh ping` on worker mode against `/debug/log-ping`, a debug-only copy of the ping that writes one info entry. It runs once with `LOG_STACK=single` and once with `LOG_STACK=single,frankenphp`. Both runs write the entry to the file, so the difference is the `frankenphp` channel alone.
 
 ### Results per cell
 
-Not measured yet: the runs are recorded under `bench/results/restart/` when the measurement task is done, and this section then gets its table, what the numbers say, the surprises and the story.
+Failed = probe requests that failed inside / outside the restart windows (all 3 repeats summed). p99 = median over the repeats of the answered load requests' p99.
+
+| Mode | Route | Failed inside | Failed outside | Load 5xx inside | Load errors whole run | p99 inside | p99 outside | Load rps per repeat | Restart call (median, min to max) | Admin call |
+|------|-------|---------------|----------------|-----------------|-----------------------|-----------|-------------|---------------------|-----------------------------------|------------|
+| frankenphp-worker | `/api/ping` | **0** / 658 | 0 / 2942 | 0 | 0 | 11.4 ms | 10.9 ms | 8955, 9039, 9260 | 1469 ms (1303 to 3015) | 51 to 85 ms |
+| frankenphp-worker | `/listings?make=BMW` | **0** / 624 | 0 / 2976 | 0 | 0 | 244.5 ms | 44.4 ms | 1430, 1435, 1435 | 1443 ms (1334 to 1650) | 52 to 73 ms |
+| frankenphp-octane | `/api/ping` | **31** / 665 | 0 / 2935 | 526 | 776 (250 timeouts) | 14.6 ms | 11.0 ms | 4480, 1883, 1891 | 1571 ms (1359 to 3327) | n/a |
+| frankenphp-octane | `/listings?make=BMW` | **35** / 658 | 0 / 2942 | 94 | 294 (200 timeouts) | 56.7 ms | 51.5 ms | 716, 678, 295 | 1610 ms (1426 to 1995) | n/a |
+
+The Octane probe failures split into 23 non-2xx and 8 timeouts on the ping, and 25 non-2xx and 10 timeouts on the listing search. There were no refused connections in any cell: Caddy keeps the port open in both modes.
+
+Channel overhead, worker mode, `/debug/log-ping` (`log-overhead.json`):
+
+| `LOG_STACK` | p95 per repeat | Median p95 | rps per repeat |
+|-------------|----------------|------------|----------------|
+| `single` | 8.55, 8.96, 9.28 ms | 8.96 ms | 8736, 8670, 8312 |
+| `single,frankenphp` | 9.71, 9.52, 9.67 ms | 9.67 ms | 7073, 7210, 7117 |
+
+The difference is **+8 % p95** (0.71 ms) and about -17 % requests per second. Every repeat with the channel is slower than every repeat without it, so this is not inside the spread. **NFR-2 (< 5 %) is not met.**
 
 ### What the numbers say
 
-- Pending the measured runs.
+- **The native restart loses nothing.** 18 restarts under 50 connections, on a 9 000 rps ping and a 1 430 rps database search, and not one failed probe or load request. Caddy keeps the port open and the requests that arrive during the swap are answered by the new workers (observed, not traced). The admin call itself returns in 51 to 85 ms.
+- **The cost of the native restart is latency, not errors.** On the listing search the p99 inside the windows is 244.5 ms against 44.4 ms outside, 5.5 times higher: the fresh workers boot the app again and start with cold caches. On the ping the boot is cheap and the p99 hardly moves (11.4 against 10.9 ms).
+- **`octane:reload` drops requests.** Each reload cost about 3 to 4 failed probe requests out of about 70 inside its window (31 and 35 over 9 reloads). The load also saw 5xx answers, 526 on the ping in the first repeat, and connections that hung until oha's 30 s timeout: 50 to 100 per repeat.
+- **Hung connections hide in the latency figures.** A request that never answers is not in oha's database, so the Octane p99 of the answered requests looks harmless (14.6 against 11.0 ms). The damage shows in the probe, in the timeouts and in the throughput: Octane's ping fell from 4 480 rps in the first repeat to about 1 890 in the next two, because connections sat out their 30 s timeouts. Measuring only the answered requests would have called Octane's reload almost free.
+- **The JSON channel is not free.** Writing each entry through `frankenphp_log()` into Caddy's log stream adds 0.7 ms to the p95 of a request that does almost nothing else, about 8 %. A request that does real work (the 44 ms listing search) would barely notice it, but on a ping-sized request it is over the 5 % budget. The channel stays opt-in (D-1).
 
 ### Surprises
 
-- Pending the measured runs.
+- **FrankenPHP prints nested arrays as Go maps.** The first live entry through `frankenphp_log()` printed the request fields as `{"Map": {...}, "Order": [...]}`: FrankenPHP 1.13.5 passes a nested PHP array to slog as an ordered map. The handler now passes flat dotted keys (`request.request_id`). The unit tests could not catch this, because the function only exists inside a served request.
+- **oha's database cannot see failures.** The first version of the script counted failures from oha's `--db-url` database and would have reported Octane as clean: the database stores only answered requests, and oha writes it only when the run ends. The timestamped probe was added for that.
+- **The restart call takes 1.4 s, the restart 60 ms.** Most of the command's wall-clock time is `ddev artisan` itself: a `docker exec` and a Laravel boot. Run directly inside the container, the call would cost one artisan boot plus the 51 to 85 ms admin call.
+- **Octane's reload got worse after the first repeat.** The 5xx answers came in the first repeat only, the 30 s timeouts in all three, and throughput stayed low after the first reload.
 
 ### Interview story
 
-Pending the measured runs: the story is written with the failed-request counts of both restarts.
+"We run Laravel in FrankenPHP's worker mode, so a deploy has to replace workers that keep the app in memory. I made one Artisan command for both worker flavours and measured it under 50 connections, with three restarts a minute, repeated three times. A timestamped probe counted the failed requests, because the load tool records only the requests that got an answer. FrankenPHP's own restart through the Caddy admin API lost 0 of about 1 280 probe requests inside 18 restart windows. The price was latency: the p99 of a database search went from 44 to 245 ms for the two seconds after a restart while the new workers warmed up. Octane's `octane:reload` on the same load lost 66 of 1 323 probe requests inside its windows, 5 %. Some were 5xx answers, and some connections simply hung until a 30 second timeout, which never shows in the latency percentiles. So: native restart for deploys, Octane reload only behind a drain. On the logging side, structured JSON logs with a request id through `frankenphp_log()` cost 0.7 ms at p95 per logged request, 8 % on a trivial endpoint. That is over our 5 % budget, so the channel stays opt-in for development."
 
 ## Response parity
 

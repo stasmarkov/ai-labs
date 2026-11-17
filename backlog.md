@@ -212,7 +212,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-70, BR-71, BR-26
 - **Depends on:** SL-15
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261117-1052-logs-worker-restart
 - **Source:** brief (Phase 6)
 - **Run:** `/sdd "SL-16: a Monolog handler using frankenphp_log() with stderr-JSON fallback, and an Artisan command restarting FrankenPHP workers via the Caddy admin API, verified to drop zero requests under load and compared with octane:reload (BR-70, BR-71, BR-26). Rules in product-brief.md."`

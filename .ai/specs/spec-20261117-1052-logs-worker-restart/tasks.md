@@ -23,10 +23,14 @@
 
 ## Phase 2: Measure and document
 
-- [ ] 3. Restart under load (checks)
+- [x] 3. Restart under load (checks)
   Covers: AC-7, NFR-2
-  - [ ] 3.1 Add `bench/restart-load.sh`, run it on worker and Octane with the full method on a clean tree, and do the channel overhead ping.
-  - [ ] 3.2 **Verify**: the result files exist; `.env` and the server are restored.
+  - [x] 3.1 Add `bench/restart-load.sh`, run it on worker and Octane with the full method on a clean tree, and do the channel overhead ping.
+  - [x] 3.2 **Verify**: the result files exist; `.env` and the server are restored.
+  - **Record (2026-11-17):** run on the clean tree at commit 492fdd0, results committed in 87f2f8f (`bench/results/restart/2026-11-17/`, 4 cells plus `log-overhead.json`). Both scripts exited 0. `.env` was byte-identical to the copy taken before, the server was back on `frankenphp`, no `.env*backup*` was left, and `storage/logs/laravel.log` was cut back to its starting size.
+    - **Worker:** probe failures inside 0/658 (ping) and 0/624 (BMW), load errors 0, admin call 51 to 85 ms, p99 inside/outside 11.4/10.9 and 244.5/44.4 ms.
+    - **Octane:** 31/665 and 35/658 inside, 0 outside, load 5xx inside 526 and 94, load errors whole run 776 and 294 (250 and 200 timeouts at 30 s).
+    - **NFR-2:** p95 8.96 ms with `single` against 9.67 ms with `single,frankenphp`: **+8 %, not within the 5 % threshold** (every log-on repeat is slower than every log-off repeat). Reported as measured; the channel stays opt-in (D-1). Whether to raise the budget, sample entries or accept the cost is the owner's call.
 
 - [x] 4. Docs and guide (docs)
   Covers: AC-8
@@ -64,9 +68,9 @@
 
 ## Done when
 
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [ ] Every Traceability row has a passing test or a manual step that was run (NFR-2 was run and **fails**: +8 % against < 5 %)
+- [x] Gates green
 
 ## Phase: Gaps (converge round 1)
 
@@ -86,10 +90,11 @@
   Covers: AC-4, AC-1
   - The AC-4 test in `tests/Feature/StructuredLogTest.php` sends two requests to the same route. The middleware overwrites the id on each request, so the test would still pass if Context were never reset between worker requests. It never sets `$_SERVER['FRANKENPHP_WORKER']`, so `worker` is only checked to be a bool. The test should simulate worker mode and send two requests to different routes. Between them it should run the scoped-instance flush that the worker runs (`app()->forgetScopedInstances()`, as Octane's worker does) and log once there. That entry must have a null `request_id` and `context: "cli"`, and the second entry must carry its own path and route.
   - **Verify**: `ddev artisan test --compact tests/Feature/StructuredLogTest.php --filter=AC-4` passes, with `worker === true` asserted and no field of request 1 found in the later entries.
-- [ ] 10. Fill the BENCHMARKS section and the guide numbers from the result files (docs)
+- [x] 10. Fill the BENCHMARKS section and the guide numbers from the result files (docs)
   Covers: AC-7, AC-8
   - `BENCHMARKS.md` "Worker restart under load" is a placeholder ("Not measured yet", "Pending the measured runs"), and its Method text describes the old method: one restart in the middle, on `/listings/1`. The `numbers` in `resources/guides/logs-restart.php` are all `pending: true`. The spec needs the table, What the numbers say, Surprises and the story with measured numbers, and guide numbers taken from the result files. Do this after tasks 3, 6 and 7 have produced the committed results.
   - **Verify**: the BENCHMARKS table values match `bench/results/restart/<date>/*.json`, and the NFR-2 overhead is reported against the 5 % threshold. The guide has no `pending` rows. `GuideContentTest`, `DocsLinksTest` and `NoReferencesInUiTest` pass.
+  - **Record:** BENCHMARKS "Worker restart under load" has the table, overhead table, What the numbers say, Surprises and the story. The guide has 10 numbers read from the result files and no `pending` rows. Learning guide I-12 has the measured numbers.
 - [x] 11. Run the UI audit on the logs-restart guide page itself (node)
   Covers: AC-8
   - Task 4's `bench/ui-audit.mjs --only /ai/guides` matched only the guides list page, so `/ai/guides/logs-restart` was never audited (C-11).
@@ -131,3 +136,7 @@ Every behaviour fix had a failing test first.
 - [x] F10/F16/F18/F24 bench `.env` handling: `restart-load.sh` uses `bench/lib/env-switch.sh` only. `.gitignore` gains `.env*backup*`. `log-overhead.sh` cuts `laravel.log` back to its starting size (removes it if the run created it). Its dead trap is gone. Tests: `F18 restart-load switches .env only through…`, `F10 every .env backup name…`, and the two `F16` tests.
 - [x] F2/F15/gap 13 restart timing and failures. The load start is taken from the running oha container. Failures come from the timestamped probe `bench/lib/request-probe.pl` (20 rps, one curl per request, connection errors and timeouts included). The load rows are aggregated in sqlite (C-7 amended). Tests: `F2 restart-load counts connection errors inside the restart windows…` (a stub that refuses connections while the restart runs), `F15 restart-load aggregates the request rows in sqlite…`, and the load-ends-later ordering test. A live `--quick` run on frankenphp-worker gave `window_from_s` 15.016, 33 400 load requests inside, and 77 probe requests inside.
 - [x] Gaps 6/9/11/15/F9: the method is BR-21 30/60 ×3 with restarts at 15/30/45 s and `--quick` at 5/30 ×1 with one restart at 15 s (`BenchRestartLoadTest`). The AC-4 worker test sets `FRANKENPHP_WORKER` and uses different routes with a reset between them. The ui-audit covers `/ai/guides/logs-restart`. README, learning guide I-12 and manual-test step 4 name `bench/log-overhead.sh`, and the NFR-2 row points at step 4.
+
+## Orchestrator decision (2026-11-17)
+
+- NFR-2 missed: the opt-in `frankenphp` channel costs +8 % p95 (8.96 → 9.67 ms) against the 5 % budget. The slice ships with the miss recorded, not hidden, and the threshold is not moved. The channel stays opt-in (D-1), so default logging (MNC-1) has no cost. Lowering it (fewer fields, sampling, async writes) is a follow-up for the owner to choose.
