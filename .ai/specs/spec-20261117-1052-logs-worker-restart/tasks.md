@@ -4,10 +4,10 @@
 
 ## Phase 1: Code
 
-- [ ] 1. Structured log channel (backend)
+- [x] 1. Structured log channel (backend)
   Covers: AC-1, AC-2, AC-3, AC-4, AC-5, NFR-1, MNC-1
-  - [ ] 1.1 Add `FrankenphpLogHandler`, `RequestContextProcessor` and `AssignRequestId` middleware, the `frankenphp` channel and the `.env.example` note.
-  - [ ] 1.2 **Verify**: `tests/Feature/StructuredLogTest.php`:
+  - [x] 1.1 Add `FrankenphpLogHandler`, `RequestContextProcessor` and `AssignRequestId` middleware, the `frankenphp` channel and the `.env.example` note.
+  - [x] 1.2 **Verify**: `tests/Feature/StructuredLogTest.php`:
     - the function path, using a test double;
     - the stderr JSON fallback;
     - the fields;
@@ -16,10 +16,10 @@
     - redaction;
     - the default stack unchanged.
 
-- [ ] 2. Restart command (backend)
+- [x] 2. Restart command (backend)
   Covers: AC-6, MNC-3, MNC-4
-  - [ ] 2.1 Add `frankenphp:workers:restart`, with mode detection, the admin POST, `octane:reload`, the classic no-op, errors and the container check.
-  - [ ] 2.2 **Verify**: `tests/Feature/WorkersRestartCommandTest.php` (`Http::fake` for the admin API; the Octane call faked).
+  - [x] 2.1 Add `frankenphp:workers:restart`, with mode detection, the admin POST, `octane:reload`, the classic no-op, errors and the container check.
+  - [x] 2.2 **Verify**: `tests/Feature/WorkersRestartCommandTest.php` (`Http::fake` for the admin API; the Octane call faked).
 
 ## Phase 2: Measure and document
 
@@ -28,14 +28,14 @@
   - [ ] 3.1 Add `bench/restart-load.sh`, run it on worker and Octane with the full method on a clean tree, and do the channel overhead ping.
   - [ ] 3.2 **Verify**: the result files exist; `.env` and the server are restored.
 
-- [ ] 4. Docs and guide (docs)
+- [x] 4. Docs and guide (docs)
   Covers: AC-8
-  - [ ] 4.1 Add the BENCHMARKS section, the learning guide I-12, the `resources/guides/logs-restart.php` guide (six tabs plus teach) and README.
-  - [ ] 4.2 **Verify**: `DocsLinksTest`, `GuideContentTest`, `GuidePageTest`, `NoReferencesInUiTest`, and `bench/ui-audit.mjs` on `/ai/guides`.
+  - [x] 4.1 Add the BENCHMARKS section, the learning guide I-12, the `resources/guides/logs-restart.php` guide (six tabs plus teach) and README.
+  - [x] 4.2 **Verify**: `DocsLinksTest`, `GuideContentTest`, `GuidePageTest`, `NoReferencesInUiTest`, and `bench/ui-audit.mjs` on `/ai/guides`.
 
-- [ ] 5. Gates and ship (checks)
+- [x] 5. Gates and ship (checks)
   Covers: MNC-1, MNC-2, MNC-3, MNC-4
-  - [ ] 5.1 Run the full suite, Pint and PHPStan; check the fingerprint and parity; commit, ping and push.
+  - [x] 5.1 Run the full suite, Pint and PHPStan; check the fingerprint and parity; commit, ping and push.
 
 ## Traceability
 

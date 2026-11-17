@@ -247,7 +247,7 @@ test('AC-3 no bare section number references remain in the covered docs', functi
 
 test('AC-1 the guide has two parts and the sections follow the learning order', function (): void {
     $expected = [
-        'I' => ['one request', 'run PHP', 'Switching servers', 'Worker mode', 'Measuring fairly', 'Slow I/O', 'send the file', 'Early Hints', 'HTTP/3', 'Mercure', 'Metrics', 'Coming next'],
+        'I' => ['one request', 'run PHP', 'Switching servers', 'Worker mode', 'Measuring fairly', 'Slow I/O', 'send the file', 'Early Hints', 'HTTP/3', 'Mercure', 'Metrics', 'Logs and worker restart'],
         'II' => ['LLM call', 'Streaming', 'locally', 'providers', 'limits', 'structured output', 'Rating', 'Vision', 'Embeddings', 'Chunking', 'citations', 'Measuring RAG', 'Caching answers', 'Stop', 'Similar', 'Duplicate', 'tool calling', 'tool loop', 'MCP', 'research agent', 'playground', 'lab UI', 'guides', 'map of the code'],
     ];
 
@@ -403,17 +403,17 @@ test('AC-4 the guide, README and BENCHMARKS present no removed server as current
     expect($found)->toBe([]);
 });
 
-test('AC-4 the guide has no Planned sections list and reserves the places for SL-16 and SL-17', function (): void {
+test('AC-4 the guide has no Planned sections list, explains SL-16 in I-12 and reserves the place for SL-17 at its end', function (): void {
     $guide = docsLinksRead('docs/learning-guide.md');
 
     expect($guide)->not->toContain('## Planned sections')
-        ->and($guide)->toMatch('/^## I-12\. Coming next: logs and developer experience$/m');
+        ->and($guide)->toMatch('/^## I-12\. Logs and worker restart$/m')
+        ->and($guide)->not->toContain('## I-13.');
 
-    $reserved = docsLinksGuideSections()['I-12. Coming next: logs and developer experience'] ?? '';
+    $sections = docsLinksGuideSections();
 
-    foreach (['SL-16', 'SL-17'] as $slice) {
-        expect($reserved)->toContain($slice);
-    }
+    expect($sections['I-12. Logs and worker restart'] ?? '')->toContain('frankenphp:workers:restart')
+        ->and($sections['I-12. Logs and worker restart'] ?? '')->toContain('SL-17');
 });
 
 /**

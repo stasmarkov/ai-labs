@@ -13,7 +13,7 @@ use App\Services\GuidePageService;
 
 const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation', 'admin-assistant', 'research', 'playground'];
 
-const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards', 'local-models', 'mcp', 'metrics'];
+const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards', 'local-models', 'mcp', 'metrics', 'logs-restart'];
 
 const ALL_FILLED_GUIDES = [...CAPABILITY_GUIDES, ...FOUNDATION_GUIDES];
 
@@ -521,6 +521,41 @@ it('AC-5 the metrics guide has six non-empty tabs, no references, answers 200 an
     $this->withoutVite();
     $this->get('/ai/guides/metrics')->assertOk();
     $this->get('/ai/guides')->assertOk()->assertSee('Metrics: watching the thread pool');
+});
+
+it('AC-8 the logs-restart guide has six non-empty tabs and the teach sections, no references, answers 200 and is in the learning guide and the README', function (): void {
+    $guide = app(GuideRepository::class)->find('logs-restart');
+    $rendered = app(GuideRenderer::class)->render('logs-restart');
+    $text = mb_strtolower(implode("\n", guideTexts($guide)));
+
+    expect($guide->kind)->toBe('foundation')
+        ->and($guide->planned)->toBeFalse()
+        ->and($rendered['works'])->not->toBeEmpty()
+        ->and($rendered['failures'])->not->toBeEmpty()
+        ->and($rendered['recipes'])->not->toBeEmpty()
+        ->and($rendered['support'])->not->toBeEmpty()
+        ->and($rendered['numbers'])->not->toBeEmpty()
+        ->and($rendered['experiments'])->not->toBeEmpty()
+        ->and($guide->build)->not->toBeEmpty()
+        ->and($guide->watch)->not->toBeEmpty()
+        ->and($guide->elsewhere)->not->toBeEmpty();
+
+    foreach (['frankenphp_log', 'log_stack', 'x-request-id', 'stderr', 'redacted', 'frankenphp:workers:restart', 'octane:reload', 'admin api', 'localhost'] as $needle) {
+        expect($text)->toContain($needle);
+    }
+
+    $this->withoutVite();
+    $this->get('/ai/guides/logs-restart')->assertOk();
+    $this->get('/ai/guides')->assertOk()->assertSee('Logs and worker restart');
+
+    $learning = file_get_contents(base_path('docs/learning-guide.md'));
+    $readme = file_get_contents(base_path('README.md'));
+    $benchmarks = file_get_contents(base_path('BENCHMARKS.md'));
+
+    expect($learning)->toContain('## I-12. Logs and worker restart')->toContain('/ai/guides/logs-restart')
+        ->and($learning)->not->toContain('Coming next: logs and developer experience')
+        ->and($readme)->toContain('## Structured logs and worker restart')->toContain('frankenphp:workers:restart')->toContain('LOG_STACK=single,frankenphp')
+        ->and($benchmarks)->toContain('## Worker restart under load');
 });
 
 const TEACH_FEATURE_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation', 'research', 'playground', 'admin-assistant'];

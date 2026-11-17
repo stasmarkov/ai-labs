@@ -2,6 +2,12 @@
 
 return [
 
+    'server' => [
+        'mode' => env('AI_SERVER_MODE', 'unknown'),
+        'in_container' => filter_var(env('IS_DDEV_PROJECT', false), FILTER_VALIDATE_BOOLEAN),
+        'admin_url' => 'http://localhost:2019',
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Default AI Provider

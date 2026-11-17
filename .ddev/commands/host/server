@@ -21,6 +21,11 @@ APPROOT="${DDEV_APPROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}
 OVERLAY="$APPROOT/.ddev/config.zz-server.yaml"
 STASH="$APPROOT/.ddev/servers"
 
+# Prints the web_environment entry that tells the app which server mode it runs under (config('ai.server.mode')).
+mode_environment() {
+  printf 'web_environment:\n  - AI_SERVER_MODE=%s\n' "$1"
+}
+
 # Prints the overlay content for a server. The "# server:" marker names the server even
 # when several servers share a webserver_type (e.g. generic for FrankenPHP and Octane).
 overlay_for() {
@@ -28,14 +33,17 @@ overlay_for() {
     frankenphp)
       printf '# server: frankenphp\n'
       cat "$STASH/frankenphp/config.frankenphp.yaml"
+      mode_environment frankenphp
       ;;
     frankenphp-octane)
       printf '# server: frankenphp-octane\n'
       cat "$STASH/frankenphp-octane/config.frankenphp-octane.yaml"
+      mode_environment frankenphp-octane
       ;;
     frankenphp-worker)
       printf '# server: frankenphp-worker\n'
       cat "$STASH/frankenphp/config.frankenphp.yaml"
+      mode_environment frankenphp-worker
       ;;
     *) return 1 ;;
   esac

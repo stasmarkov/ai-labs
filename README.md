@@ -82,6 +82,16 @@ bench/metrics-snapshot.sh <cell> <from-ms> <to-ms> [--load-window <from>-<to>]  
 docker volume rm ddev-ai-lab-prometheus-data # reset the stored samples (stack off first; nothing does this for you)
 ```
 
+## Structured logs and worker restart
+
+The `frankenphp` log channel writes every PHP log entry as one JSON object with the request id, method, path, route, server mode and elapsed time: through `frankenphp_log()` inside a request, to stderr elsewhere. It is opt-in; the default `LOG_STACK=single` is unchanged. Every response carries `X-Request-Id`. One command restarts the PHP workers through the Caddy admin API (worker mode) or `octane:reload` (Octane mode); it runs inside the web container, and classic mode has nothing to restart. How it works: `/ai/guides/logs-restart` and [I-12 of the learning guide](docs/learning-guide.md#i-12-logs-and-worker-restart). The numbers are in [BENCHMARKS.md](BENCHMARKS.md#worker-restart-under-load).
+
+```sh
+LOG_STACK=single,frankenphp                  # in .env, then ddev restart: JSON entries in `ddev logs -s web`
+ddev artisan frankenphp:workers:restart      # --timeout=10 seconds for the admin API call; prints the time taken
+bench/restart-load.sh [--quick]              # failed requests and latency while the workers restart, worker and Octane
+```
+
 ## Local models
 
 How fast the local models are, what they cost in memory, what a too-long prompt or a stopped server does, and what happens to the site under AI load. How to read the numbers: `/ai/guides/local-models` and [II-5 of the learning guide](docs/learning-guide.md#ii-5-local-models-and-their-limits).

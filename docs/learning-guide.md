@@ -4,7 +4,7 @@ This guide explains how everything in this project works. It reads from top to b
 
 It is a living document: every slice adds or updates its section when it ships (rule BR-27 in [`product-brief.md`](../product-brief.md)). The plan is in [`backlog.md`](../backlog.md); the slice id (`SL-nn`) in a section's spec link shows when it was built.
 
-**Status (2026-11-16):** the guide is in learning order. Part I (I-1 to I-11) covers the shipped server slices SL-01 to SL-13, SL-15, SL-47 and SL-50; I-11 explains the metrics dashboard (SL-15) and I-12 holds the places for SL-16 and SL-17, which are not built yet. Part II (II-1 to II-24) covers the shipped AI slices from SL-20 on, including SL-48, SL-49, SL-51 and SL-52, and II-24 maps every AI file.
+**Status (2026-11-16):** the guide is in learning order. Part I (I-1 to I-12) covers the shipped server slices SL-01 to SL-13, SL-15, SL-16, SL-47 and SL-50; I-11 explains the metrics dashboard (SL-15) and I-12 explains structured logs and the worker restart command (SL-16) and ends with the place for SL-17, which is not built yet. Part II (II-1 to II-24) covers the shipped AI slices from SL-20 on, including SL-48, SL-49, SL-51 and SL-52, and II-24 maps every AI file.
 
 ## How to read this guide
 
@@ -39,7 +39,7 @@ It is a living document: every slice adds or updates its section when it ships (
 - [I-9. HTTP/3 and QUIC](#i-9-http3-and-quic)
 - [I-10. Live updates with Mercure](#i-10-live-updates-with-mercure)
 - [I-11. Metrics: watching the thread pool](#i-11-metrics-watching-the-thread-pool)
-- [I-12. Coming next: logs and developer experience](#i-12-coming-next-logs-and-developer-experience)
+- [I-12. Logs and worker restart](#i-12-logs-and-worker-restart)
 
 **Part II — AI**
 
@@ -562,14 +562,26 @@ Compare that with section [I-6](#i-6-slow-io-worker-pools-and-a-health-check-tha
 
 **Read next.** [FrankenPHP: metrics](https://frankenphp.dev/docs/metrics/) · [Prometheus: histograms and summaries](https://prometheus.io/docs/practices/histograms/) · [Grafana: provisioning](https://grafana.com/docs/grafana/latest/administration/provisioning/)
 
-## I-12. Coming next: logs and developer experience
+## I-12. Logs and worker restart
 
-These places are reserved. Each slice replaces its bullet with its own numbered section when it ships (rule BR-27); none of them is built yet.
+**What it is.** Two server-side habits. The first is **structured logs**: every PHP log call becomes one JSON entry that carries the request id, method, path, route, the server mode and the time since the request started. The second is **a restart without a stop**: one Artisan command replaces the PHP workers while the server keeps its port open. In worker mode ([I-4](#i-4-worker-mode-boot-once-serve-many-and-the-state-leaks)) the app is booted once and kept in memory, so a code change is not seen until the workers are replaced.
 
-- **SL-16, structured logs and worker restart.** Logs written from PHP as structured JSON with request fields in the server log stream, and one Artisan command that restarts the workers through the admin API, compared with Octane's reload ([I-4](#i-4-worker-mode-boot-once-serve-many-and-the-state-leaks)).
-- **SL-17, worker-mode developer experience.** How fast a code edit takes effect in worker mode (watch or hot reload) and how an Xdebug breakpoint works inside a worker request.
+**How it works.**
 
-The order and the rules are in [`backlog.md`](../backlog.md).
+1. A global middleware, `AssignRequestId`, reuses an incoming `X-Request-Id` when it matches `^[A-Za-z0-9-]{8,64}$` and otherwise makes a ULID. The id is stored in Laravel's hidden context, which the framework resets for every request, so a worker never carries one request's id into the next. The id is also set on the response.
+2. A processor, `RequestContextProcessor`, adds the request fields to the entry. Outside a request (a command, a queue worker) the fields are empty and the context says `cli`.
+3. The handler, `FrankenphpLogHandler`, calls `frankenphp_log($message, $level, $context)` when that function exists, which is inside a request served by FrankenPHP. The entry then lands in Caddy's structured log stream next to the access log. Otherwise it writes the same entry as one JSON line to stderr. Levels map to slog levels: debug -4, info and notice 0, warning 4, and error and above 8.
+4. Context and extra values under keys that contain `password`, `token`, `secret`, `authorization`, `api_key`, `apikey` or `cookie` are replaced by `[redacted]`. Text inside the message is not inspected.
+5. The channel is opt-in: `LOG_STACK=single,frankenphp` in `.env`, then `ddev restart`. With the default `LOG_STACK=single` the logging is exactly as before.
+6. `ddev artisan frankenphp:workers:restart` reads the server mode from `AI_SERVER_MODE`. On `frankenphp-worker` it POSTs to `http://localhost:2019/frankenphp/workers/restart` and prints the time taken. On `frankenphp-octane` it runs `octane:reload`. On classic it says there are no workers and exits 0. A failure exits 1. It runs inside the web container only, because the admin API listens on localhost and no port is published for it.
+
+**What was measured.** The restart under load and the cost of the channel are measured with `bench/restart-load.sh` and `bench/run.sh ping`. The table and the story are in the [Worker restart under load](../BENCHMARKS.md#worker-restart-under-load) section of `BENCHMARKS.md`, and the same numbers are on the numbers tab of `/ai/guides/logs-restart`.
+
+**In this repo.** Code: [`FrankenphpLogHandler`](../app/Logging/FrankenphpLogHandler.php), [`RequestContextProcessor`](../app/Logging/RequestContextProcessor.php), [`AssignRequestId`](../app/Http/Middleware/AssignRequestId.php), [`FrankenphpWorkersRestartCommand`](../app/Console/Commands/FrankenphpWorkersRestartCommand.php), the `frankenphp` channel in [`logging.php`](../config/logging.php), and the in-app guide [`logs-restart.php`](../resources/guides/logs-restart.php). Tests: [`StructuredLogTest`](../tests/Feature/StructuredLogTest.php), [`WorkersRestartCommandTest`](../tests/Feature/WorkersRestartCommandTest.php). Bench: [`bench/restart-load.sh`](../bench/restart-load.sh). Spec: [`.ai/specs/spec-20261117-1052-logs-worker-restart/`](../.ai/specs/spec-20261117-1052-logs-worker-restart/).
+
+**Coming next.** Reserved for SL-17 (rule BR-27 replaces this line when it ships): how fast a code edit takes effect in worker mode (watch or hot reload) and how an Xdebug breakpoint works inside a worker request. The order and the rules are in [`backlog.md`](../backlog.md).
+
+**Read next.** [FrankenPHP: worker mode](https://frankenphp.dev/docs/worker/) · [FrankenPHP: logging](https://frankenphp.dev/docs/config/) · [Monolog: handlers and processors](https://seldaek.github.io/monolog/doc/02-handlers-formatters-processors.html)
 
 # Part II — AI
 
@@ -1545,6 +1557,7 @@ One rule runs through all of it: **a model call is just another I/O call.** It s
 | [`admin-assistant.php`](../resources/guides/admin-assistant.php) | The capability guide behind `/ai/guides/admin-assistant` | SL-34 |
 | [`mcp.php`](../resources/guides/mcp.php) | The foundation guide behind `/ai/guides/mcp` | SL-35 |
 | [`metrics.php`](../resources/guides/metrics.php) | The foundation guide behind `/ai/guides/metrics`: the thread pool on the metrics dashboard | SL-15 |
+| [`logs-restart.php`](../resources/guides/logs-restart.php) | The foundation guide behind `/ai/guides/logs-restart`: structured logs with a request id and the worker restart command | SL-16 |
 | [`assistant.php`](../resources/guides/assistant.php) | The capability guide behind `/ai/guides/assistant` | SL-25 |
 | [`moderation.php`](../resources/guides/moderation.php) | The capability guide behind `/ai/guides/moderation` | SL-26 |
 | [`ModerationService`](../app/Services/ModerationService.php), [`ModerationFacts`](../app/Services/ModerationFacts.php), [`ModerationRules`](../app/Rules/ModerationRules.php), [`ModerationInput`](../app/DTOs/ModerationInput.php), [`ModerationResult`](../app/DTOs/ModerationResult.php), [`ModerationFactsResult`](../app/DTOs/ModerationFactsResult.php) | Moderation: compute the facts (median, ratio, VINs, injection pattern), ask the model, check the answer in PHP, retry once, apply the PHP floor for an injection pattern or a reported VIN, and apply the per-model threshold | SL-26 |
@@ -1758,6 +1771,7 @@ The guide files:
 - [`guards.php`](../resources/guides/guards.php): the guards around a model call
 - [`mcp.php`](../resources/guides/mcp.php): the listing tools as an MCP server with a browser confirmation
 - [`metrics.php`](../resources/guides/metrics.php): the thread pool on the metrics dashboard
+- [`logs-restart.php`](../resources/guides/logs-restart.php): structured logs with a request id and the worker restart command
 - [`nl-search.php`](../resources/guides/nl-search.php): words to filters
 - [`photo-duplicates.php`](../resources/guides/photo-duplicates.php): finding duplicate photos and picking the best one
 - [`photo-search.php`](../resources/guides/photo-search.php): searching photos by text
@@ -1800,6 +1814,6 @@ Part I showed that a PHP request is served by a web server that is chosen, measu
 - Similar photos at cutoff 0.75: make-and-model precision `0.677`. See [II-15](#ii-15-similar-photos-and-searching-photos-by-text) and [the similar photos results](../BENCHMARKS.md#similar-car-photos-2026-11-11).
 - Search p95 with 4 describe streams open: from `64` ms to `2724` ms on frankenphp-worker. See [II-5](#ii-5-local-models-and-their-limits) and [the local models results](../BENCHMARKS.md#local-models-and-limits-2026-11-13).
 
-**Read next.** Pick one section and change something in it: a prompt in [II-21](#ii-21-prompt-playground-with-versions), a threshold in [II-16](#ii-16-hybrid-similarity-and-duplicate-photos), the worker count in [I-6](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast). Then run the matching command and compare with the numbers quoted there. The plan for what is next is in [`backlog.md`](../backlog.md), starting with the reserved [I-12](#i-12-coming-next-logs-and-developer-experience).
+**Read next.** Pick one section and change something in it: a prompt in [II-21](#ii-21-prompt-playground-with-versions), a threshold in [II-16](#ii-16-hybrid-similarity-and-duplicate-photos), the worker count in [I-6](#i-6-slow-io-worker-pools-and-a-health-check-that-stays-fast). Then run the matching command and compare with the numbers quoted there. The plan for what is next is in [`backlog.md`](../backlog.md), starting with the reserved [the end of I-12](#i-12-logs-and-worker-restart).
 
 This guide was put in learning order and finished in SL-44 (spec [`spec-20261115-1539-learning-guide-final`](../.ai/specs/spec-20261115-1539-learning-guide-final/)); from here on, each slice adds or updates its own section (BR-27).

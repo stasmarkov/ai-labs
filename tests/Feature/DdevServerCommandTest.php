@@ -69,6 +69,14 @@ it('AC-1 switching between the three modes works', function (): void {
     }
 });
 
+it('AC-6 each server overlay hands the app its mode through AI_SERVER_MODE', function (): void {
+    foreach (['frankenphp', 'frankenphp-worker', 'frankenphp-octane'] as $server) {
+        ($this->server)($server);
+
+        expect(file_get_contents($this->overlay))->toContain("web_environment:\n  - AI_SERVER_MODE=".$server."\n");
+    }
+});
+
 it('AC-1 no argument lists exactly the three modes without restarting', function (): void {
     $process = ($this->server)();
 
@@ -265,7 +273,7 @@ it('AC-1 frankenphp activates the stash and writes its overlay', function (): vo
     $process = ($this->server)('frankenphp');
 
     expect($process->getExitCode())->toBe(0)
-        ->and(file_get_contents($this->overlay))->toBe("# server: frankenphp\n#ddev-generated\nwebserver_type: generic\n")
+        ->and(file_get_contents($this->overlay))->toBe("# server: frankenphp\n#ddev-generated\nwebserver_type: generic\nweb_environment:\n  - AI_SERVER_MODE=frankenphp\n")
         ->and(file_get_contents($this->root.'/ddev-calls.log'))->toContain('restart')
         ->and(trim(($this->server)('--current')->getOutput()))->toBe('frankenphp');
 
@@ -413,7 +421,7 @@ describe('worker servers', function (): void {
 
         expect($octane->getExitCode())->toBe(0)
             ->and($octane->getOutput())->toContain('Active: frankenphp-octane')
-            ->and(file_get_contents($this->overlay))->toBe("# server: frankenphp-octane\nwebserver_type: generic\nweb_extra_daemons: octane\n")
+            ->and(file_get_contents($this->overlay))->toBe("# server: frankenphp-octane\nwebserver_type: generic\nweb_extra_daemons: octane\nweb_environment:\n  - AI_SERVER_MODE=frankenphp-octane\n")
             ->and(file_get_contents($this->root.'/ddev-calls.log'))->toContain('restart')
             ->and(trim(($this->server)('--current')->getOutput()))->toBe('frankenphp-octane');
 
@@ -425,7 +433,7 @@ describe('worker servers', function (): void {
 
         expect($worker->getExitCode())->toBe(0)
             ->and($worker->getOutput())->toContain('Active: frankenphp-worker')
-            ->and(file_get_contents($this->overlay))->toBe("# server: frankenphp-worker\n#ddev-generated\nwebserver_type: generic\n")
+            ->and(file_get_contents($this->overlay))->toBe("# server: frankenphp-worker\n#ddev-generated\nwebserver_type: generic\nweb_environment:\n  - AI_SERVER_MODE=frankenphp-worker\n")
             ->and(trim(($this->server)('--current')->getOutput()))->toBe('frankenphp-worker')
             ->and(file_get_contents($this->caddyfile))->toBe("worker caddyfile\n")
             ->and(file_get_contents($this->root.'/.ddev/docker-compose.frankenphp.yaml'))->toBe("stash docker-compose.frankenphp.yaml\n")

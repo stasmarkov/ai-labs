@@ -1,5 +1,7 @@
 <?php
 
+use App\Logging\FrankenphpLogHandler;
+use App\Logging\RequestContextProcessor;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -124,6 +126,13 @@ return [
             'driver' => 'errorlog',
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
+        ],
+
+        'frankenphp' => [
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'debug'),
+            'handler' => FrankenphpLogHandler::class,
+            'processors' => [RequestContextProcessor::class],
         ],
 
         'null' => [

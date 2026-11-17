@@ -1512,6 +1512,31 @@ Each PNG covers the whole cell, restarts included (`bench/metrics-screenshot.mjs
 
 I put Prometheus and Grafana on a slow-I/O benchmark that had only given me before-and-after numbers, and first checked the stack itself: health check p95 2358 ms with it on and 2358 ms with it off, so watching was free. The graphs explained the old number: on 14 threads, 112 requests were inside PHP at once and 98 of them were queued, the health check among them. Worker mode was the lesson: the health check took 7.9 s, yet busy threads read 4 and queue depth read 0, so the usual panels said "idle", and only busy workers, at 140 against 4, showed the saturation. I also caught two gauges that lie by omission: total threads stayed at 14 while autoscale ran about 60 threads, and the histogram p95 said 4.02 s where the load generator measured 2.7 s. Now I check what a metric counts before it goes on a dashboard.
 
+## Worker restart under load
+
+`ddev artisan frankenphp:workers:restart` replaces the PHP workers on worker mode through the Caddy admin API and, on Octane mode, runs `octane:reload`. `bench/restart-load.sh` holds 50 connections on `/api/ping` and `/listings/1` and restarts once in the middle of the window, then records the failed requests and the latency. How to read it: [I-12 of the learning guide](docs/learning-guide.md#i-12-logs-and-worker-restart) and `/ai/guides/logs-restart`.
+
+Method:
+- **The load:** oha in a pinned container, 50 connections, one cell per mode and route.
+- **The restart:** one command call at the middle of the measure window, with its output and exit code recorded.
+- **Overhead of the channel:** `bench/run.sh ping` with `LOG_STACK=single` against `LOG_STACK=single,frankenphp` on worker mode.
+
+### Results per cell
+
+Not measured yet: the runs are recorded under `bench/results/restart/` when the measurement task is done, and this section then gets its table, what the numbers say, the surprises and the story.
+
+### What the numbers say
+
+- Pending the measured runs.
+
+### Surprises
+
+- Pending the measured runs.
+
+### Interview story
+
+Pending the measured runs: the story is written with the failed-request counts of both restarts.
+
 ## Response parity
 
 `bench/parity/` holds one snapshot per remaining server: `frankenphp.txt`, `frankenphp-octane.txt` and `frankenphp-worker.txt`. `bench/parity.sh compare frankenphp <server>` compares a worker mode with classic FrankenPHP; the paragraphs below record how the snapshots were taken and re-baselined.
