@@ -140,3 +140,4 @@ Every behaviour fix had a failing test first.
 ## Orchestrator decision (2026-11-17)
 
 - NFR-2 missed: the opt-in `frankenphp` channel costs +8 % p95 (8.96 → 9.67 ms) against the 5 % budget. The slice ships with the miss recorded, not hidden, and the threshold is not moved. The channel stays opt-in (D-1), so default logging (MNC-1) has no cost. Lowering it (fewer fields, sampling, async writes) is a follow-up for the owner to choose.
+- Clean-tree bench: after commit 5ac7690, `bench/run.sh ping --quick` exited 0 on frankenphp.
