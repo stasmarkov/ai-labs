@@ -1,0 +1,370 @@
+{
+  "server": "frankenphp-octane",
+  "route": "/api/ping",
+  "commit": "492fdd0",
+  "date": "2026-11-17",
+  "base_url": "https://ai-lab.ddev.site",
+  "quick": false,
+  "connections": 50,
+  "warmup_s": 30,
+  "measure_s": 60,
+  "repeats": 3,
+  "restart_offsets_s": [
+    15,
+    30,
+    45
+  ],
+  "window_tail_s": 2,
+  "probe_rps": 20,
+  "load_image": "ai-lab-oha:1.16.0",
+  "load_image_digest": "sha256:175097c9d0be7dd96622486efb63ee310a68fa5798331cbe79cb632fdf108f43",
+  "runs": [
+    {
+      "repeat": 1,
+      "load_start_ms": 1794916047652,
+      "restarts": [
+        {
+          "offset_s": 15,
+          "start_ms": 1794916062675,
+          "end_ms": 1794916066002,
+          "duration_ms": 3327,
+          "exit_code": 0,
+          "output": "\n   INFO  Reloading workers...  ",
+          "window_from_s": 15.023,
+          "window_to_s": 20.35
+        },
+        {
+          "offset_s": 30,
+          "start_ms": 1794916077677,
+          "end_ms": 1794916079122,
+          "duration_ms": 1445,
+          "exit_code": 0,
+          "output": "\n   INFO  Reloading workers...  ",
+          "window_from_s": 30.025,
+          "window_to_s": 33.47
+        },
+        {
+          "offset_s": 45,
+          "start_ms": 1794916092676,
+          "end_ms": 1794916094156,
+          "duration_ms": 1480,
+          "exit_code": 0,
+          "output": "\n   INFO  Reloading workers...  ",
+          "window_from_s": 45.024,
+          "window_to_s": 48.504
+        }
+      ],
+      "inside": {
+        "requests": 29381,
+        "non_2xx": 526,
+        "p99_ms": 13.78105500000000027
+      },
+      "outside": {
+        "requests": 239455,
+        "non_2xx": 0,
+        "p99_ms": 11.03650200000000047
+      },
+      "probe": {
+        "inside": {
+          "requests": 243,
+          "failures": 10,
+          "connection_errors": 0,
+          "timeouts": 2,
+          "non_2xx": 8
+        },
+        "outside": {
+          "requests": 957,
+          "failures": 0,
+          "connection_errors": 0,
+          "timeouts": 0,
+          "non_2xx": 0
+        }
+      },
+      "load": {
+        "rps": 4480.842739216723,
+        "p50_ms": 5.369313,
+        "p95_ms": 8.895660999999999,
+        "p99_ms": 11.335711,
+        "starved": false,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 526,
+          "other_non_2xx": 0,
+          "timeouts": 50
+        },
+        "errors": 576,
+        "requests": 268886,
+        "error_percent": 0.21421717753992398
+      }
+    },
+    {
+      "repeat": 2,
+      "load_start_ms": 1794916109232,
+      "restarts": [
+        {
+          "offset_s": 15,
+          "start_ms": 1794916124248,
+          "end_ms": 1794916125823,
+          "duration_ms": 1575,
+          "exit_code": 0,
+          "output": "\n   INFO  Reloading workers...  ",
+          "window_from_s": 15.016,
+          "window_to_s": 18.591
+        },
+        {
+          "offset_s": 30,
+          "start_ms": 1794916139257,
+          "end_ms": 1794916140640,
+          "duration_ms": 1383,
+          "exit_code": 0,
+          "output": "\n   INFO  Reloading workers...  ",
+          "window_from_s": 30.025,
+          "window_to_s": 33.408
+        },
+        {
+          "offset_s": 45,
+          "start_ms": 1794916154256,
+          "end_ms": 1794916155827,
+          "duration_ms": 1571,
+          "exit_code": 0,
+          "output": "\n   INFO  Reloading workers...  ",
+          "window_from_s": 45.024,
+          "window_to_s": 48.595
+        }
+      ],
+      "inside": {
+        "requests": 7892,
+        "non_2xx": 0,
+        "p99_ms": 14.6144740000000013
+      },
+      "outside": {
+        "requests": 135171,
+        "non_2xx": 0,
+        "p99_ms": 10.98446000000000033
+      },
+      "probe": {
+        "inside": {
+          "requests": 209,
+          "failures": 10,
+          "connection_errors": 0,
+          "timeouts": 3,
+          "non_2xx": 7
+        },
+        "outside": {
+          "requests": 991,
+          "failures": 0,
+          "connection_errors": 0,
+          "timeouts": 0,
+          "non_2xx": 0
+        }
+      },
+      "load": {
+        "rps": 1883.2358554530604,
+        "p50_ms": 5.38023,
+        "p95_ms": 8.895327,
+        "p99_ms": 11.121044,
+        "starved": false,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 100
+        },
+        "errors": 100,
+        "requests": 143163,
+        "error_percent": 0.06985045018615145
+      }
+    },
+    {
+      "repeat": 3,
+      "load_start_ms": 1794916186338,
+      "restarts": [
+        {
+          "offset_s": 15,
+          "start_ms": 1794916201361,
+          "end_ms": 1794916202951,
+          "duration_ms": 1590,
+          "exit_code": 0,
+          "output": "\n   INFO  Reloading workers...  ",
+          "window_from_s": 15.023,
+          "window_to_s": 18.613
+        },
+        {
+          "offset_s": 30,
+          "start_ms": 1794916216358,
+          "end_ms": 1794916217717,
+          "duration_ms": 1359,
+          "exit_code": 0,
+          "output": "\n   INFO  Reloading workers...  ",
+          "window_from_s": 30.02,
+          "window_to_s": 33.379000000000005
+        },
+        {
+          "offset_s": 45,
+          "start_ms": 1794916231360,
+          "end_ms": 1794916233051,
+          "duration_ms": 1691,
+          "exit_code": 0,
+          "output": "\n   INFO  Reloading workers...  ",
+          "window_from_s": 45.022,
+          "window_to_s": 48.713
+        }
+      ],
+      "inside": {
+        "requests": 8352,
+        "non_2xx": 0,
+        "p99_ms": 15.42439899999999931
+      },
+      "outside": {
+        "requests": 135515,
+        "non_2xx": 0,
+        "p99_ms": 11.08777399999999958
+      },
+      "probe": {
+        "inside": {
+          "requests": 213,
+          "failures": 11,
+          "connection_errors": 0,
+          "timeouts": 3,
+          "non_2xx": 8
+        },
+        "outside": {
+          "requests": 987,
+          "failures": 0,
+          "connection_errors": 0,
+          "timeouts": 0,
+          "non_2xx": 0
+        }
+      },
+      "load": {
+        "rps": 1891.9705270191464,
+        "p50_ms": 5.36051,
+        "p95_ms": 8.853086,
+        "p99_ms": 11.319193,
+        "starved": false,
+        "breakdown": {
+          "502": 0,
+          "504": 0,
+          "other_5xx": 0,
+          "other_non_2xx": 0,
+          "timeouts": 100
+        },
+        "errors": 100,
+        "requests": 143967,
+        "error_percent": 0.06946036244417124
+      }
+    }
+  ],
+  "restarts": [
+    {
+      "offset_s": 15,
+      "start_ms": 1794916062675,
+      "end_ms": 1794916066002,
+      "duration_ms": 3327,
+      "exit_code": 0,
+      "output": "\n   INFO  Reloading workers...  ",
+      "window_from_s": 15.023,
+      "window_to_s": 20.35
+    },
+    {
+      "offset_s": 30,
+      "start_ms": 1794916077677,
+      "end_ms": 1794916079122,
+      "duration_ms": 1445,
+      "exit_code": 0,
+      "output": "\n   INFO  Reloading workers...  ",
+      "window_from_s": 30.025,
+      "window_to_s": 33.47
+    },
+    {
+      "offset_s": 45,
+      "start_ms": 1794916092676,
+      "end_ms": 1794916094156,
+      "duration_ms": 1480,
+      "exit_code": 0,
+      "output": "\n   INFO  Reloading workers...  ",
+      "window_from_s": 45.024,
+      "window_to_s": 48.504
+    },
+    {
+      "offset_s": 15,
+      "start_ms": 1794916124248,
+      "end_ms": 1794916125823,
+      "duration_ms": 1575,
+      "exit_code": 0,
+      "output": "\n   INFO  Reloading workers...  ",
+      "window_from_s": 15.016,
+      "window_to_s": 18.591
+    },
+    {
+      "offset_s": 30,
+      "start_ms": 1794916139257,
+      "end_ms": 1794916140640,
+      "duration_ms": 1383,
+      "exit_code": 0,
+      "output": "\n   INFO  Reloading workers...  ",
+      "window_from_s": 30.025,
+      "window_to_s": 33.408
+    },
+    {
+      "offset_s": 45,
+      "start_ms": 1794916154256,
+      "end_ms": 1794916155827,
+      "duration_ms": 1571,
+      "exit_code": 0,
+      "output": "\n   INFO  Reloading workers...  ",
+      "window_from_s": 45.024,
+      "window_to_s": 48.595
+    },
+    {
+      "offset_s": 15,
+      "start_ms": 1794916201361,
+      "end_ms": 1794916202951,
+      "duration_ms": 1590,
+      "exit_code": 0,
+      "output": "\n   INFO  Reloading workers...  ",
+      "window_from_s": 15.023,
+      "window_to_s": 18.613
+    },
+    {
+      "offset_s": 30,
+      "start_ms": 1794916216358,
+      "end_ms": 1794916217717,
+      "duration_ms": 1359,
+      "exit_code": 0,
+      "output": "\n   INFO  Reloading workers...  ",
+      "window_from_s": 30.02,
+      "window_to_s": 33.379000000000005
+    },
+    {
+      "offset_s": 45,
+      "start_ms": 1794916231360,
+      "end_ms": 1794916233051,
+      "duration_ms": 1691,
+      "exit_code": 0,
+      "output": "\n   INFO  Reloading workers...  ",
+      "window_from_s": 45.022,
+      "window_to_s": 48.713
+    }
+  ],
+  "median_p99_ms": {
+    "inside": 14.6144740000000013,
+    "outside": 11.03650200000000047
+  },
+  "failures": {
+    "inside": 31,
+    "outside": 0
+  },
+  "probe_requests": {
+    "inside": 665,
+    "outside": 2935
+  },
+  "load_non_2xx": {
+    "inside": 526,
+    "outside": 0
+  },
+  "oha_errors_whole_run": 776,
+  "failures_note": "failures are probe requests (non-2xx, connection errors, timeouts) by window; load_non_2xx and the p99 values come from the load, whose db holds answered requests only; oha_errors_whole_run counts every load error, not split by window"
+}
