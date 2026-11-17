@@ -161,3 +161,4 @@ Gate record (2026-11-18, after the review fix pass): full suite 3468 passed, 3 s
 - [ ] Task 8 checked when the owner records the pick (spec then `done`)
 - [x] Every Traceability row has a passing test or a manual step that was run
 - [x] Gates green (record below)
+- Clean-tree bench: after commit 7b10067, `bench/run.sh ping --quick` exited 0 on frankenphp.
