@@ -102,3 +102,4 @@
 - [x] 16. Reload bench measurement (F10, F11, F12): `BENCH_NEVER_CAP_S`, `BENCH_ROWS`, `BENCH_JITTER_S` (random 0–2 s before each edit, against phase lock with `opcache.revalidate_freq=2`), Mutagen as a separate pass, `restart_ms` end to end plus `restart_call_ms`; the restart command prints its time on Octane too. **Verify**: `BenchReloadLatencyTest` (< 5 s for the file), `WorkersRestartCommandTest`; full rerun of `bench/reload-latency.sh`.
 - [x] 17. BENCHMARKS conclusion from the data (F5). **Verify**: `BenchmarksDocTest` (table incl. reload-call column, sync sentence quotes per-row medians).
 - [x] 18. F15: the controller has no own `debug_routes` guard (route group only). **Verify**: `BenchReloadLatencyTest` 404 case.
+- Clean-tree bench: after commit 4602000, `bench/run.sh ping --quick` exited 0 on frankenphp.
