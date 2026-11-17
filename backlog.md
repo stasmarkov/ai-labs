@@ -733,6 +733,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 | 2026-11-10 | Stanislav Markov | In-app interactive guides instead of md links on the site; no slice ids, `.md` or repo-path references in the UI | Revised slice | SL-48 rewritten and specced (spec-20261110-1149-in-app-guides); moved forward to run right after SL-49 so every later AI slice adds a `resources/guides/` file instead of links; order SL-49 → SL-48 → SL-50 → SL-51 → AI slices → SL-28 → SL-44 |
 | 2026-11-10 | Stanislav Markov | Switch the LLM or other models via the UI, no login, local only | New slice | SL-52 local settings page (spec-20261110-2155-model-settings-ui), after SL-51; BR-91 to be revised in that slice; order SL-51 → SL-52 → SL-25 … |
 | 2026-11-11 | Stanislav Markov | Photos next: import Stanford Cars, vision extraction with the local models | Revised slice | SL-27 widened with the photo import (spec-20261111-0000-photo-vision), taken before SL-52 and SL-25 at the owner's request; SL-52 spec reads features from AiProviders so it covers photo-vision |
+| 2026-11-17 | Stanislav Markov | Five interactive guide formats to compare on the photos guide, pick the best teacher | New slice | SL-54 (specced) |
 
 ### SL-53 · Lab pages that teach, with no broken layouts
 
@@ -746,3 +747,16 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Spec:** spec-20261116-2004-lab-pages-teach
 - **Source:** owner request 2026-11-16 (Stanislav Markov: the Moderation page layout was broken; every page should have examples, explain how it works, link the guides, show how to build it yourself, what to take into account, and examples from other domains)
 - **Run:** `/sdd spec-20261116-2004-lab-pages-teach`
+
+### SL-54 · Five interactive guide formats, trialled on the photos guide
+
+- **Outcome:** The owner can try five teaching formats for the same topic (Build-along, Follow one photo, Predict and check, Break and fix, Code tour) next to the current guide on a compare page with shared learning outcomes, and pick the format that best teaches implementing a feature. The photos guide stays unchanged as the baseline; the winner is rolled out in a later slice.
+- **Entry point:** `/ai/guides/photos/formats`, the trial card on `/ai/guides`
+- **Size:** L
+- **BRs:** BR-27
+- **Depends on:** SL-48, SL-53
+- **Blocked by:** none
+- **Status:** specced
+- **Spec:** spec-20261117-2243-guide-format-variants
+- **Source:** owner request 2026-11-17 (Stanislav Markov: "create 5 different variants of new interactive guides, for example for implementing /ai/guides/photos, so I will pick the best type of guide that will teach the best")
+- **Run:** `/sdd spec-20261117-2243-guide-format-variants`
