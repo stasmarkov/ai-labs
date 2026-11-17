@@ -47,6 +47,7 @@ it('AC-4 finds no removed server name in tracked files outside the allowlist', f
         'tests/Feature/BenchTimeoutsTest.php' => 'asserts the removal message',
         'tests/Feature/BenchScriptsTest.php' => 'asserts the removal message',
         'tests/Feature/BenchSuiteServersTest.php' => 'asserts the removal message',
+        'tests/Feature/BenchRestartLoadTest.php' => 'asserts the removal message',
         'tests/Feature/BenchRunConditionsTest.php' => 'asserts the removal message',
         'tests/Feature/DdevServerCommandTest.php' => 'asserts the removal message',
         'tests/Feature/ServerDefaultCommandTest.php' => 'asserts the removal message',

@@ -4,7 +4,7 @@ title: Worker-mode developer experience
 type: feature
 size: M
 priority: P2
-status: approved
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-17; standing approval)
@@ -166,9 +166,10 @@ All 27 items from the clarity gate on 2026-11-17 are answered below in C-1 to C-
   - **Octane:** the overlay holds a copy of the stash's `web_extra_daemons` Octane command with `--watch` added. The stash command lives in `.ddev/servers/frankenphp-octane/config.frankenphp-octane.yaml`. The overlay sets `override_config: true` only for that key, the same way `bench/concurrency.sh` does.
   - **Turning it off:** `ddev dev-watch off` deletes the overlay and runs `ddev restart`.
   - **Server switches:** `ddev server` already removes `config.zzz-*` overlays when it switches, so dev-watch is off after a server switch. `status` says so, and `on` must be run again.
+  - **Bench overlays (review fix F1, F14):** a bench overlay and the dev-watch overlay both set the Octane daemon command, so they are never active together. `dev-watch on` on Octane exits 2 while a `config.zz*-bench-*.yaml` exists; `bench/concurrency.sh` (all forms but `--show`) and `bench/leaks.sh` exit 2 while the dev-watch overlay exists. The overlay name is `DEV_WATCH_OVERLAY_NAME` in `bench/lib/servers.sh`; `ddev server` removes bench overlays (`bench_overlays`) and the dev-watch overlay (`switch_overlays`).
 - **C-3 Patterns:**
-  - **Worker mode:** the `watch` directive takes globs; the patterns are written as `./app/**/*.php`, `./config/**/*.php`, `./routes/**/*.php`, `./resources/**/*.php` and `./.env`. The separate Blade pattern is dropped, because `resources/**/*.php` covers `*.blade.php`.
-  - **Octane:** `config/octane.php` `watch` uses Octane's format (`app`, `config`, `routes`, `resources/**/*.php`, `.env`). Octane turns it into the FrankenPHP snippet only when `--watch` is passed, so the config change has no effect while dev-watch is off.
+  - **Worker mode:** the `watch` directive takes globs, one `watch` line each, as absolute paths in the container: `app/**/*.php`, `config/**/*.php`, `routes/**/*.php`, `resources/**/*.php`, `bootstrap/**/*.php`, `composer.lock` and `.env`. The separate Blade pattern is dropped, because `resources/**/*.php` covers `*.blade.php`. `bootstrap/**/*.php` covers `bootstrap/app.php` and `bootstrap/providers.php`, which are read only at boot, and `composer.lock` changes with every dependency change (review fix F3, 2026-11-17).
+  - **Octane:** `config/octane.php` `watch` lists the same seven paths (`app/**/*.php`, `config/**/*.php`, `routes/**/*.php`, `resources/**/*.php`, `bootstrap/**/*.php`, `composer.lock`, `.env`). Octane turns it into the FrankenPHP snippet only when `--watch` is passed, so the config change has no effect while dev-watch is off.
   - **Caching:** the measurement and dev-watch need uncached config and routes (the dev default). If the app is cached, `dev-watch on` prints a warning, and `.env` edits then need `config:clear`.
 - **C-4 Probe:**
   - **The file:** `app/Support/ReloadProbe.php`, committed, a small class whose constant `MARKER` is `'initial'`. It is in a watched path.
@@ -184,10 +185,11 @@ All 27 items from the clarity gate on 2026-11-17 are answered below in C-1 to C-
     4. worker with no watch;
     5. worker with watch.
   - **No-watch rows:** a trial polls for at most 30 s and records `never`. Only 3 trials are run, not 10, to save time. The row reports `never` and is excluded from median, p90 and max.
-  - **Restart time:** each no-watch row also records 10 trials of the time from `ddev artisan frankenphp:workers:restart` to the new code. On Octane that command runs `octane:reload` (SL-16 C-6).
+  - **Restart time:** each no-watch row also records 10 trials of the time from `ddev artisan frankenphp:workers:restart` to the new code (`restart_ms`, end to end: docker exec and Artisan boot included). On Octane that command runs `octane:reload` (SL-16 C-6). `restart_call_ms` is the admin call or `octane:reload` alone, read from the command's own `workers restarted in N ms` line (review fix F12).
   - **Statistics:** computed over the numeric trials only.
   - **AC-1:** the 2 s median is end to end, from save to the new response, so it includes the Mutagen delay. If it fails, the result is reported honestly and the guide explains which part, Mutagen or the watcher, dominates.
-  - **Mutagen:** the delay is measured per trial, as the time until `ddev exec cat` sees the marker. If `ddev describe` does not show `Perf mode: mutagen`, which it does today, the delay is recorded as `n/a`.
+  - **Mutagen:** the delay is measured per trial, in a separate pass after the timed poll (review fix F11): one `ddev exec` polls the file every 10 ms in the container and prints `ready`, the host then writes a new marker and times until it prints `seen`, so the docker exec start-up is not counted and nothing runs during the timed poll. If `ddev describe` does not show `Perf mode: mutagen`, which it does today, the delay is recorded as `n/a`.
+  - **Caps (review fix F10):** `BENCH_CAP_S` (30) for rows that reload and `BENCH_NEVER_CAP_S` (30) for the no-watch trials, decimals allowed; `BENCH_ROWS` limits a run to some rows. Every row starts with `ddev server`; watch rows then run `ddev dev-watch on` (F1).
 - **C-6 Xdebug:**
   - **Settings:** `.ddev/php/xdebug-trigger.ini`, committed, with `xdebug.start_with_request=trigger` and `xdebug.client_host=host.docker.internal`. DDEV loads it in every mode, which is acceptable: trigger mode only changes when a session starts. MNC-2 is about `config.yaml` and `.env` only.
   - **Turning it on:** `ddev xdebug on|off` enables the extension, then the web container is restarted, so the long-lived workers start with or without it. `dev-watch` does not touch Xdebug.
@@ -198,6 +200,8 @@ All 27 items from the clarity gate on 2026-11-17 are answered below in C-1 to C-
     2. an untriggered request, with a 3 s wait, expecting no connection;
     3. `ddev xdebug off` and a restart;
     4. a triggered request, expecting no connection (MNC-3).
+  - **Ending the session (review fix F2, F7, F9):** a session opened by the middleware lasts as long as the worker script. The request that opened it calls `WorkerRecycle::request()`; `public/frankenphp-worker.php` (Octane's worker script with its loop replaced by `WorkerRecycle::loop()`, used by both worker modes) leaves the loop after that response and FrankenPHP starts a fresh worker. The middleware acts only inside that loop (`WorkerRecycle::isInWorkerLoop()`), so classic mode is left to native Xdebug (F13). Triggers: `XDEBUG_TRIGGER`, `XDEBUG_SESSION`, `XDEBUG_SESSION_START` in the query, POST body, cookie or request environment, compared with `xdebug.trigger_value` by `hash_equals` when set (F4, F6). Proof: `bench/xdebug-check.php --follow` sends `run` after `init` and reports `ended=1` when the script ends; checked live with one worker on both modes, with a disabled-recycle control giving `ended=0`.
+  - **Listener address (F8):** 127.0.0.1 by default; `host.docker.internal` reaches it on OrbStack (checked live). `--host` overrides it for Linux Docker.
   - **The `xdebug_info()` dry check:** dropped. The DBGp check is enough.
 - **C-7 `dev-watch`:**
   - **`status`:** prints `dev-watch: on|off (server: <mode>)`.
@@ -221,7 +225,7 @@ All 27 items from the clarity gate on 2026-11-17 are answered below in C-1 to C-
 - **C-11 Learning guide:** `docs/learning-guide.md` has `## I-13. Coming next…`, a reserved section left after SL-15 and SL-16. It is replaced by `## I-13. Worker-mode developer experience`, and the reserved section is removed, because no reserved items remain. `DocsLinksTest` and the order list are updated.
 - **C-12 Results:**
   - **Files:** `bench/results/reload/<UTC YYYY-MM-DD>/<row>.json`, named `classic`, `octane-nowatch`, `octane-watch`, `worker-nowatch` and `worker-watch`.
-  - **Fields:** `{mode, watch, trials: [{ms|null, mutagen_ms}], median_ms, p90_ms, max_ms, never: n, restart_ms: {median, p90, max}|null, commit, frankenphp_version}`.
+  - **Fields:** `{mode, watch, row, trials: [{ms|null, mutagen_ms}], median_ms, p90_ms, max_ms, never: n, mutagen_median_ms, restart_ms: {median, p90, max}|null, restart_call_ms: {median, p90, max}|null, commit, frankenphp_version}`.
   - **BENCHMARKS columns:** way of working, median, p90, max, never, restart median, Mutagen median.
 - **C-13 Manual steps and shipping:**
   - **Manual step 2:** edits `app/Support/ReloadProbe.php` through the script, not routes. It restores the file with `git checkout -- app/Support/ReloadProbe.php`.

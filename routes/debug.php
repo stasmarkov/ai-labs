@@ -3,6 +3,7 @@
 use App\Debug\Leaks\LeakScenario;
 use App\Http\Controllers\DebugLeakController;
 use App\Http\Controllers\DebugLogPingController;
+use App\Http\Controllers\DebugReloadProbeController;
 use App\Http\Controllers\DebugRuntimeController;
 use App\Http\Controllers\DebugSleepController;
 use App\Http\Controllers\DebugWorkerController;
@@ -17,4 +18,5 @@ Route::middleware(EnsureDebugRoutes::class)->group(function (): void {
     Route::any('/debug/leaks/{scenario}', DebugLeakController::class)->whereIn('scenario', LeakScenario::values())->name('debug.leaks');
     Route::any('/debug/worker', DebugWorkerController::class)->name('debug.worker');
     Route::any('/debug/log-ping', DebugLogPingController::class)->name('debug.log-ping');
+    Route::any('/debug/reload-probe', DebugReloadProbeController::class)->name('debug.reload-probe');
 });

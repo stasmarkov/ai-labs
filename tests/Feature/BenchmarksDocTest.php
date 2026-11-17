@@ -871,3 +871,69 @@ test('AC-5 BENCHMARKS.md has the metrics during slow I/O section with its method
     expect(count($sentences))->toBeGreaterThanOrEqual(3)->toBeLessThanOrEqual(7)
         ->and($story[1] ?? '')->toContain('2358 ms')->toContain('140');
 });
+
+test('AC-6 BENCHMARKS.md edit-to-reload table quotes the committed result files', function (): void {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+    preg_match('/^## Edit to reload in worker modes\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->toContain('not available in FrankenPHP v1.13.5')->toContain('### What the numbers say')->toContain('### Surprises')->toContain('### Interview story');
+
+    $directories = glob(base_path('bench/results/reload/*'), GLOB_ONLYDIR);
+    sort($directories);
+    $latest = end($directories);
+
+    $labels = [
+        'classic' => 'classic `frankenphp`',
+        'octane-nowatch' => '`frankenphp-octane`, no watch',
+        'octane-watch' => '`frankenphp-octane`, `--watch`',
+        'worker-nowatch' => '`frankenphp-worker`, no watch',
+        'worker-watch' => '`frankenphp-worker`, `watch`',
+    ];
+
+    foreach ($labels as $row => $label) {
+        $result = json_decode((string) file_get_contents($latest.'/'.$row.'.json'), true);
+        preg_match('/^\| '.preg_quote($label, '/').' \| (.*?) \|$/m', $section, $line);
+        $cells = array_map('trim', explode('|', $line[1] ?? ''));
+
+        expect($line)->not->toBeEmpty();
+
+        if ($result['median_ms'] === null) {
+            expect($cells[0])->toBe('never');
+        } else {
+            expect($cells[0])->toBe(round($result['median_ms']).' ms')
+                ->and($cells[1])->toBe($result['p90_ms'].' ms')
+                ->and($cells[2])->toBe($result['max_ms'].' ms');
+        }
+
+        expect($cells[6])->toBe(round($result['mutagen_median_ms']).' ms');
+
+        if ($result['restart_ms'] !== null) {
+            expect($cells[4])->toStartWith(round($result['restart_ms']['median']).' ms')
+                ->and($cells[5])->toBe(round($result['restart_call_ms']['median']).' ms');
+        }
+    }
+
+    // F5: the sync conclusion compares, per watched row, the Mutagen median with the end-to-end median.
+    preg_match('/\*\*The file sync[^\n]*/', $section, $sync);
+    expect($sync)->not->toBeEmpty();
+    foreach (['classic', 'octane-watch', 'worker-watch'] as $row) {
+        $result = json_decode((string) file_get_contents($latest.'/'.$row.'.json'), true);
+        expect($sync[0])->toContain(round($result['median_ms']).' ms')->toContain(round($result['mutagen_median_ms']).' ms');
+    }
+});
+
+test('NFR-2 the BENCHMARKS reload section records the watcher idle CPU off and on, under 5 percentage points apart', function () {
+    $doc = file_get_contents(base_path('BENCHMARKS.md'));
+    preg_match('/^## Edit to reload in worker modes\n(.*?)(?=^## |\z)/ms', $doc, $matches);
+    $section = $matches[1] ?? '';
+
+    expect($section)->not->toContain('Not measured: idle CPU');
+
+    preg_match('/Idle CPU of the watcher:.*?off ([0-9.]+) %.*?on ([0-9.]+) %.*?difference (-?[0-9.]+) pp/s', $section, $cpu);
+
+    expect($cpu)->not->toBeEmpty()
+        ->and(round((float) $cpu[2] - (float) $cpu[1], 2))->toBe(round((float) $cpu[3], 2))
+        ->and(abs((float) $cpu[3]))->toBeLessThan(5.0)
+        ->and($section)->toContain('30 one-second');
+});

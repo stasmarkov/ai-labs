@@ -9,6 +9,7 @@
 ## --max-requests <n> (frankenphp-octane only) restarts the daemon with --max-requests=<n> through the
 ## gitignored overlay .ddev/config.zzz-bench-leaks.yaml, a copy of the stash's daemon config with the
 ## value changed; the overlay is removed and DDEV restarted again on exit, restoring the stash's value.
+## Refuses (exit 2) while `ddev dev-watch` is on: run `ddev dev-watch off` first.
 ## Env: BENCH_APPROOT (project root), BENCH_BASE_URL (default: `ddev server --url`),
 ##      BENCH_SETTLE (seconds to wait for the server after a restart, default 60).
 
@@ -51,6 +52,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 cd "$APPROOT"
+refuse_when_dev_watch "$APPROOT" || exit 2
 command -v jq >/dev/null 2>&1 || { echo "jq is required on the host (brew install jq)." >&2; exit 2; }
 WORK=""
 env_switched=0

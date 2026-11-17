@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+
+## Description: Reload the workers when a PHP file changes (frankenphp-worker and frankenphp-octane)
+## Usage: dev-watch [on|off|status]
+## Example: ddev dev-watch on
+## Example: ddev dev-watch status
+
+set -Eeuo pipefail
+
+# Both worker modes use FrankenPHP's native watcher. The switch is one gitignored overlay in .ddev/, removed by "off"
+# and by "ddev server"; .ddev/config.yaml and .env are never touched.
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../../../bench/lib/servers.sh
+source "$SELF_DIR/../../../bench/lib/servers.sh"
+APPROOT="${DDEV_APPROOT:-$(cd "$SELF_DIR/../../.." && pwd)}"
+DDEV_DIR="$APPROOT/.ddev"
+OVERLAY="$(dev_watch_overlay "$APPROOT")"
+OCTANE_SOURCE="$DDEV_DIR/servers/frankenphp-octane/config.frankenphp-octane.yaml"
+CONTAINER_ROOT=/var/www/html
+# Keep in sync with the watch list in config/octane.php.
+# bootstrap/app.php and bootstrap/providers.php are read only at boot; composer.lock changes with every composer require.
+WATCH_PATHS=(app config routes resources bootstrap)
+WATCH_FILES=(composer.lock)
+
+usage() {
+  echo "Usage: ddev dev-watch [on|off|status]" >&2
+  exit 2
+}
+
+# One "watch <glob>" line per directory, plus .env; the worker Caddyfile expands {$WORKER_WATCH} to these lines.
+worker_directives() {
+  local path out=""
+  for path in "${WATCH_PATHS[@]}"; do
+    out+="watch $CONTAINER_ROOT/$path/**/*.php\\n"
+  done
+  for path in "${WATCH_FILES[@]}"; do
+    out+="watch $CONTAINER_ROOT/$path\\n"
+  done
+  printf '%swatch %s/.env' "$out" "$CONTAINER_ROOT"
+}
+
+write_worker_overlay() {
+  printf '# dev-watch: frankenphp-worker\nweb_environment:\n  - "WORKER_WATCH=%s"\n' "$(worker_directives)" > "$OVERLAY"
+}
+
+# The Octane daemon command of the stash with --watch. A bench overlay replaces the same daemon command, so "on" refuses
+# while one exists, and the bench scripts refuse while this overlay exists.
+write_octane_overlay() {
+  local source="$OCTANE_SOURCE"
+  {
+    echo "# dev-watch: frankenphp-octane"
+    echo "override_config: true"
+    grep -v '^override_config:' "$source" | sed -E 's/octane:frankenphp( |$)/octane:frankenphp --watch /'
+  } > "$OVERLAY"
+}
+
+warn_when_cached() {
+  if [[ -f "$APPROOT/bootstrap/cache/config.php" || -n "$(compgen -G "$APPROOT/bootstrap/cache/routes-*.php" || true)" ]]; then
+    echo "Warning: config or routes are cached; edits to them are not seen until you run: ddev artisan optimize:clear" >&2
+  fi
+}
+
+# On Octane a bench overlay (bench/concurrency.sh, bench/leaks.sh) replaces the daemon command, --watch included.
+bench_daemon_overlays() {
+  compgen -G "$DDEV_DIR/config.zz*-bench-*.yaml" >/dev/null
+}
+
+state() {
+  if [[ -f "$OVERLAY" ]]; then echo on; else echo off; fi
+}
+
+case "${1:-status}" in
+  status|on|off) ;;
+  *) usage ;;
+esac
+
+server="$(current_server "$APPROOT")" || exit 2
+
+case "${1:-status}" in
+  status)
+    echo "dev-watch: $(state) (server: $server)"
+    ;;
+  off)
+    if [[ -f "$OVERLAY" ]]; then
+      rm -f "$OVERLAY"
+      (cd "$APPROOT" && ddev restart >/dev/null)
+    fi
+    echo "dev-watch: off (server: $server)"
+    ;;
+  on)
+    case "$server" in
+      frankenphp)
+        echo "classic mode reloads on every request; nothing to watch"
+        exit 0
+        ;;
+      frankenphp-worker) write_worker_overlay ;;
+      frankenphp-octane)
+        if bench_daemon_overlays; then
+          echo "A bench overlay replaces the Octane daemon command, so --watch would not run. Run ddev server frankenphp-octane to clear it, then ddev dev-watch on." >&2
+          exit 2
+        fi
+        write_octane_overlay
+        ;;
+    esac
+    warn_when_cached
+    (cd "$APPROOT" && ddev restart >/dev/null)
+    echo "dev-watch: on (server: $server)"
+    ;;
+esac

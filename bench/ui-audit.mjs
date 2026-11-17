@@ -40,7 +40,7 @@ const TEACH_PAGES = [
   'describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'photo-search', 'photos/duplicates',
   'assistant', 'moderation', 'research', 'playground', 'admin-assistant', 'changes', 'settings',
 ];
-const LAYOUT_ONLY_PAGES = ['', 'guides', 'guides/describe', 'guides/logs-restart'];
+const LAYOUT_ONLY_PAGES = ['', 'guides', 'guides/describe', 'guides/logs-restart', 'guides/worker-dx'];
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const DETAIL_PAGES = [
   { list: 'changes', prefix: 'changes', gated: true },

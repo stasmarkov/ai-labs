@@ -65,6 +65,26 @@ test('AC-6 octane mode runs octane:reload and propagates its exit code', functio
     Http::assertNotSent(fn (Request $request) => $request->method() === 'POST');
 })->with([0, 1]);
 
+test('F12 octane mode reports how long octane:reload took when it succeeds', function () {
+    config(['ai.server.mode' => 'frankenphp-octane']);
+    Http::fake();
+    Artisan::command('octane:reload', fn () => 0);
+
+    $this->artisan('frankenphp:workers:restart')
+        ->expectsOutputToContain('workers restarted in')
+        ->assertExitCode(0);
+});
+
+test('F12 a failing octane:reload reports no time', function () {
+    config(['ai.server.mode' => 'frankenphp-octane']);
+    Http::fake();
+    Artisan::command('octane:reload', fn () => 1);
+
+    $this->artisan('frankenphp:workers:restart')
+        ->doesntExpectOutputToContain('workers restarted in')
+        ->assertExitCode(1);
+});
+
 test('AC-6 classic mode has nothing to restart and exits 0', function () {
     config(['ai.server.mode' => 'frankenphp']);
     Http::fake();

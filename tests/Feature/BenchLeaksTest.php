@@ -189,3 +189,16 @@ it('AC-8 a failed A phase is reported instead of reading as a clean row', functi
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
         ->and($process->getOutput())->toContain('A phase: 20 errors');
 });
+
+it('F1 leaks.sh refuses to run while the dev-watch overlay exists and leaves .env alone', function (): void {
+    file_put_contents($this->root.'/app/.ddev/config.zzz-dev-watch.yaml', "# dev-watch\n");
+
+    $process = ($this->leaks)('frankenphp-octane', ['--max-requests', '5']);
+
+    expect($process->getExitCode())->toBe(2)
+        ->and($process->getErrorOutput())->toContain('dev-watch is on', 'ddev dev-watch off')
+        ->and(($this->calls)())->not->toContain('ddev restart')
+        ->and(($this->calls)())->not->toContain('DEBUG_ROUTES seen')
+        ->and($this->root.'/app/.ddev/config.zzz-bench-leaks.yaml')->not->toBeFile()
+        ->and(file_get_contents($this->root.'/app/.env'))->toBe($this->envBefore);
+});

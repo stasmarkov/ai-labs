@@ -17,6 +17,7 @@
 ## autoscale (frankenphp only): num_threads n, max_threads m (m > n) and max_wait_time s seconds (default 5) in the
 ## same FRANKENPHP_CONFIG overlay, so FrankenPHP starts n threads and adds up to m under load; other servers get an error.
 ## A removed server name in the active overlay is refused with the removal message (exit 2).
+## While `ddev dev-watch` is on (its overlay exists) every form but --show is refused (exit 2): run `ddev dev-watch off` first.
 ## --show prints "<n> workers" or "default" ("autoscale <n> to <m> threads, max-wait <s>s" after autoscale); on frankenphp-octane and frankenphp-worker it prints
 ## "<n> workers, max-requests <m>" read from the active configuration. Env: BENCH_APPROOT.
 
@@ -112,6 +113,9 @@ show() {
 write_autoscale() {
   printf '# bench: autoscale %s to %s threads, max-wait %ss\nweb_environment:\n  - "FRANKENPHP_CONFIG=num_threads %s\\nmax_threads %s\\nmax_wait_time %ss"\n' "$1" "$2" "$3" "$1" "$2" "$3" > "$FRANKEN_OVERLAY"
 }
+
+# --show only reads; every other form writes an overlay that must not meet the dev-watch overlay.
+[[ "${1:-}" == "--show" ]] || refuse_when_dev_watch "$APPROOT" || exit 2
 
 if [[ "${1:-}" == "autoscale" ]]; then
   shift

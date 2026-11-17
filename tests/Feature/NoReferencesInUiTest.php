@@ -70,9 +70,20 @@ it('AC-1 no lab page shows a slice id, a markdown file name or a repository path
     foreach ([$props, $html] as $text) {
         expect($text)->not->toMatch('/SL-\d+/')
             ->not->toMatch('/\.md\b/')
-            ->not->toMatch('#\b(?:app|resources|config|routes|database|bench)/#');
+            ->not->toMatch('#\b(?:app|resources|config|routes|database|bench)/#')
+            ->not->toMatch('#\.ddev/#');
     }
 })->with(fn (): array => array_combine(labUiPaths(), array_map(fn (string $path): array => [$path], labUiPaths())));
+
+it('AC-7 the worker-dx guide names no .ddev path in its props or HTML', function (): void {
+    app()->detectEnvironment(fn (): string => 'local');
+    $response = $this->get('/ai/guides/worker-dx')->assertOk();
+
+    $props = json_encode($response->viewData('page')['props'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+    expect($props)->not->toMatch('#\.ddev/#')
+        ->and(file_get_contents(resource_path('guides/worker-dx.php')))->not->toContain('.ddev/');
+});
 
 it('AC-1 the run detail route shows no slice id, markdown file name or repository path', function (): void {
     AiRun::create([

@@ -1,0 +1,36 @@
+{
+  "mode": "frankenphp-octane",
+  "watch": false,
+  "row": "octane-nowatch",
+  "trials": [
+    {
+      "ms": null,
+      "mutagen_ms": 207
+    },
+    {
+      "ms": null,
+      "mutagen_ms": 219
+    },
+    {
+      "ms": null,
+      "mutagen_ms": 161
+    }
+  ],
+  "median_ms": null,
+  "p90_ms": null,
+  "max_ms": null,
+  "never": 3,
+  "mutagen_median_ms": 207,
+  "restart_ms": {
+    "median": 1675.5,
+    "p90": 1986,
+    "max": 2022
+  },
+  "restart_call_ms": {
+    "median": 222.5,
+    "p90": 252,
+    "max": 253
+  },
+  "commit": "b2b453a",
+  "frankenphp_version": "v1.13.5"
+}

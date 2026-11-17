@@ -93,6 +93,18 @@ bench/restart-load.sh [--quick]              # failed requests and latency while
 bench/log-overhead.sh                        # p95 of a request that logs one entry (/debug/log-ping), worker mode, LOG_STACK=single vs single,frankenphp
 ```
 
+## Worker-mode developer experience
+
+Worker modes keep the app in memory, so a saved PHP file is served only after the workers are replaced. `ddev dev-watch on` turns on FrankenPHP's native watcher for `frankenphp-worker` and `frankenphp-octane` through a gitignored overlay; `.ddev/config.yaml` and `.env` are never changed. With it on, an edit was served after a median of 527 ms in worker mode and 597 ms in Octane. Xdebug works in trigger mode: only a request with `XDEBUG_TRIGGER` connects to the IDE, and in a worker mode that request's worker is replaced after the response, so the session ends with it (one worker boot per debugged request). `dev-watch` and the bench scripts that tune the server (`bench/concurrency.sh`, `bench/leaks.sh`) refuse to run together. How to read the numbers: `/ai/guides/worker-dx`
+
+```sh
+ddev dev-watch on|off|status                  # watch app, config, routes, resources, bootstrap, composer.lock and .env; classic mode has nothing to watch
+ddev xdebug on                                # then request any page with ?XDEBUG_TRIGGER=1; ddev xdebug off when done (a restart switches it off)
+php bench/xdebug-check.php [--port=9003] [--wait=10] [--follow]   # a DBGp listener on 127.0.0.1: prints connections=N init=N (--follow: ended=1 when the session ends)
+ddev artisan frankenphp:workers:restart       # without watch: replace the workers by hand
+bench/reload-latency.sh                       # edit-to-reload for classic, Octane and worker, with and without watch (needs DEBUG_ROUTES, set by the script)
+```
+
 ## Local models
 
 How fast the local models are, what they cost in memory, what a too-long prompt or a stopped server does, and what happens to the site under AI load. How to read the numbers: `/ai/guides/local-models` and [II-5 of the learning guide](docs/learning-guide.md#ii-5-local-models-and-their-limits).

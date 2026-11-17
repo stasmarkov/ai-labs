@@ -51,5 +51,6 @@ Thumbs.db
 .ddev/docker-compose.bench-timeouts.yaml
 .ddev/bench-timeouts/
 .ddev/config.zzz-bench-leaks.yaml
+.ddev/config.zzz-dev-watch.yaml
 /.ai/tmp/
 /.ddev/metrics/prometheus.generated.yml

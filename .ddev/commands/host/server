@@ -164,18 +164,27 @@ bench_overlays() {
   return 0
 }
 
-clear_bench_overlays() {
+# What a switch removes: the bench overlays plus the dev-watch overlay, which is written for one server too.
+switch_overlays() {
+  local watch
+  bench_overlays
+  watch="$(dev_watch_overlay "$APPROOT")"
+  [[ -e "$watch" ]] && printf '%s\n' "$watch"
+  return 0
+}
+
+clear_switch_overlays() {
   local path
   while IFS= read -r path; do
     [[ -z "$path" ]] && continue
     rm -rf "$path"
-  done < <(bench_overlays)
+  done < <(switch_overlays)
 }
 
 # True when the overlay and every activated file already match what the server would write.
 is_current() {
   local file
-  [[ -z "$(bench_overlays)" ]] || return 1
+  [[ -z "$(switch_overlays)" ]] || return 1
   [[ -f "$OVERLAY" ]] || return 1
   [[ "$(cat "$OVERLAY")" == "$2" ]] || return 1
   while IFS= read -r file; do
@@ -296,7 +305,7 @@ abort_switch() {
 }
 trap abort_switch ERR INT TERM
 
-clear_bench_overlays
+clear_switch_overlays
 deactivate_others "$target"
 activate "$target"
 printf '%s\n' "$content" > "$OVERLAY"

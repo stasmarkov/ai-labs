@@ -221,3 +221,17 @@ it('AC-2 concurrency refuses a removed server with the removal message and chang
     'apache-fpm' => ['apache-fpm', ['default']],
     'openlitespeed' => ['openlitespeed', ['autoscale', '--threads', '8', '--max-threads', '32']],
 ]);
+
+it('F1 concurrency refuses to run while the dev-watch overlay exists and changes nothing', function (string $server, array $args): void {
+    file_put_contents($this->root.'/app/.ddev/config.zzz-dev-watch.yaml', "# dev-watch\n");
+
+    $process = ($this->concurrency)($server, ...$args);
+
+    expect($process->getExitCode())->toBe(2)
+        ->and($process->getErrorOutput())->toContain('dev-watch is on', 'ddev dev-watch off')
+        ->and(($this->overlayFiles)())->toBe([])
+        ->and(($this->ddevCalls)())->not->toContain('ddev restart');
+})->with([
+    'octane, n' => ['frankenphp-octane', ['8']],
+    'worker, default' => ['frankenphp-worker', ['default']],
+]);

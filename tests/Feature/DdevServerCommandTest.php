@@ -586,6 +586,15 @@ it('switching servers removes bench overlays so they never carry over to another
         ->and(file_exists($this->root.'/.ddev/web-entrypoint.d/zz-bench-fpm.sh'))->toBeFalse();
 });
 
+it('F14 switching servers also removes the dev-watch overlay, so dev-watch is off on the next server', function (): void {
+    file_put_contents($this->root.'/.ddev/config.zzz-dev-watch.yaml', "# dev-watch: frankenphp-worker\n");
+
+    $process = ($this->server)('frankenphp');
+
+    expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
+        ->and(file_exists($this->root.'/.ddev/config.zzz-dev-watch.yaml'))->toBeFalse();
+});
+
 it('re-running the active server with a leftover bench overlay resets it instead of saying already active', function (): void {
     ($this->server)('frankenphp');
     file_put_contents($this->root.'/.ddev/config.zzz-bench-concurrency.yaml', "override_config: true\n");

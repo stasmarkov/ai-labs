@@ -44,7 +44,23 @@ final class FrankenphpWorkersRestartCommand extends Command
 
         return $mode === 'frankenphp-worker'
             ? $this->restartThroughAdminApi($adminApi)
-            : $this->call('octane:reload');
+            : $this->reloadOctane();
+    }
+
+    /**
+     * Prints the same "workers restarted in N ms" line as the admin API path, so bench/reload-latency.sh can record the
+     * reload itself apart from the docker exec and the Artisan boot around it.
+     */
+    private function reloadOctane(): int
+    {
+        $started = hrtime(true);
+        $exitCode = $this->call('octane:reload');
+
+        if ($exitCode === self::SUCCESS) {
+            $this->line('workers restarted in '.(int) round((hrtime(true) - $started) / 1_000_000).' ms');
+        }
+
+        return $exitCode;
     }
 
     /**

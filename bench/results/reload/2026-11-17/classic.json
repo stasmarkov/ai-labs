@@ -1,0 +1,56 @@
+{
+  "mode": "frankenphp",
+  "watch": false,
+  "row": "classic",
+  "trials": [
+    {
+      "ms": 1055,
+      "mutagen_ms": 240
+    },
+    {
+      "ms": 3051,
+      "mutagen_ms": 154
+    },
+    {
+      "ms": 1210,
+      "mutagen_ms": 128
+    },
+    {
+      "ms": 1406,
+      "mutagen_ms": 125
+    },
+    {
+      "ms": 1787,
+      "mutagen_ms": 119
+    },
+    {
+      "ms": 2242,
+      "mutagen_ms": 140
+    },
+    {
+      "ms": 389,
+      "mutagen_ms": 116
+    },
+    {
+      "ms": 2834,
+      "mutagen_ms": 128
+    },
+    {
+      "ms": 1848,
+      "mutagen_ms": 114
+    },
+    {
+      "ms": 965,
+      "mutagen_ms": 112
+    }
+  ],
+  "median_ms": 1596.5,
+  "p90_ms": 2834,
+  "max_ms": 3051,
+  "never": 0,
+  "mutagen_median_ms": 126.5,
+  "restart_ms": null,
+  "restart_call_ms": null,
+  "commit": "b2b453a",
+  "frankenphp_version": "v1.13.5"
+}

@@ -68,6 +68,8 @@
 			env LARAVEL_OCTANE 1
 			env MAX_REQUESTS {$WORKER_MAX_REQUESTS:500}
 			env REQUEST_MAX_EXECUTION_TIME 30
+			# `ddev dev-watch on` sets WORKER_WATCH to "watch <glob>" lines; empty means nothing is watched.
+			{$WORKER_WATCH}
 		}
 	}
 }

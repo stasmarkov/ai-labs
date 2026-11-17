@@ -1,0 +1,56 @@
+{
+  "mode": "frankenphp-octane",
+  "watch": true,
+  "row": "octane-watch",
+  "trials": [
+    {
+      "ms": 646,
+      "mutagen_ms": 357
+    },
+    {
+      "ms": 443,
+      "mutagen_ms": 397
+    },
+    {
+      "ms": 944,
+      "mutagen_ms": 436
+    },
+    {
+      "ms": 608,
+      "mutagen_ms": 417
+    },
+    {
+      "ms": 938,
+      "mutagen_ms": 83
+    },
+    {
+      "ms": 585,
+      "mutagen_ms": 405
+    },
+    {
+      "ms": 551,
+      "mutagen_ms": 87
+    },
+    {
+      "ms": 472,
+      "mutagen_ms": 174
+    },
+    {
+      "ms": 549,
+      "mutagen_ms": 297
+    },
+    {
+      "ms": 817,
+      "mutagen_ms": 106
+    }
+  ],
+  "median_ms": 596.5,
+  "p90_ms": 938,
+  "max_ms": 944,
+  "never": 0,
+  "mutagen_median_ms": 327,
+  "restart_ms": null,
+  "restart_call_ms": null,
+  "commit": "b2b453a",
+  "frankenphp_version": "v1.13.5"
+}
