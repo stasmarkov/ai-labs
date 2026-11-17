@@ -17,8 +17,15 @@ interface GuideCard {
     group: 'capability' | 'foundation';
 }
 
+interface TrialCard {
+    title: string;
+    summary: string;
+    href: string;
+}
+
 const props = defineProps<{
     guides: GuideCard[];
+    trial: TrialCard | null;
 }>();
 
 const groups = computed(() => [
@@ -30,6 +37,16 @@ const groups = computed(() => [
 <template>
     <h1 class="m-0 text-[28px] font-semibold">Guides</h1>
     <p class="mt-2 text-[15px] text-muted">How each part of the lab works, how to change it, and what to check when it breaks.</p>
+
+    <section v-if="trial" aria-labelledby="guides-trial" class="mt-6">
+        <h2 id="guides-trial" class="m-0 text-[18px]">Trial</h2>
+        <div class="mt-3 min-w-0 rounded-sm border border-rule p-4">
+            <h3 class="m-0 text-[16px] font-semibold">
+                <Link :href="trial.href" class="text-ink underline">{{ trial.title }}</Link>
+            </h3>
+            <p class="mb-0 mt-2 text-[15px]">{{ trial.summary }}</p>
+        </div>
+    </section>
 
     <section v-for="group in groups" :key="group.id" :aria-labelledby="`guides-${group.id}`" class="mt-6">
         <h2 :id="`guides-${group.id}`" class="m-0 text-[18px]">{{ group.label }}</h2>

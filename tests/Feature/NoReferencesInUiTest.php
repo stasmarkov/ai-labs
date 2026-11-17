@@ -57,10 +57,12 @@ function labUiPaths(): array
         '/ai/photos/duplicates',
         '/ai/guides',
         ...array_map(fn (string $key): string => '/ai/guides/'.$key, $keys),
+        '/ai/guides/photos/formats',
+        ...array_map(fn (string $format): string => '/ai/guides/photos/formats/'.$format, ['build-along', 'trace', 'quiz', 'debug', 'tour']),
     ];
 }
 
-it('AC-1 no lab page shows a slice id, a markdown file name or a repository path', function (string $path): void {
+it('AC-1 MNC-3 no lab page shows a slice id, a markdown file name or a repository path', function (string $path): void {
     app()->detectEnvironment(fn (): string => 'local');
     $response = $this->get($path)->assertOk();
 

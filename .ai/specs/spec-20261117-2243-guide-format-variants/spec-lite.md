@@ -4,7 +4,7 @@ title: Five interactive guide formats, trialled on the photos guide
 type: feature
 size: L
 priority: P2
-status: approved
+status: in-progress
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-17; standing approval)

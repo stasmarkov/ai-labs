@@ -1,0 +1,335 @@
+{
+    "key": "photos",
+    "title": "Read a car photo",
+    "summary": "Send a stored listing photo to a vision model and get a checked caption, tags, colours, body type, damage and people count back.",
+    "kind": "capability",
+    "planned": false,
+    "works": [
+        {
+            "title": "Photos come from a public dataset and are stored small",
+            "html": "<p>A download script fetches the Stanford Cars photos after you accept their terms. The import keeps only the classes whose make and model are in the catalogue and gives each photo to the listing of that model with the nearest year, one photo per listing. Each photo is cut to at most 1024 pixels on the long side and saved as a JPEG, which bounds the tokens and the time of every model call. The same file is never imported twice, because its hash is unique.</p>\n",
+            "event": null
+        },
+        {
+            "title": "One photo travels with the instructions",
+            "html": "<p>The agent attaches the stored file to a versioned prompt and asks for a fixed set of fields. The path always comes from the database, never from the request.</p>\n",
+            "event": "request_sent"
+        },
+        {
+            "title": "The model answers in a schema",
+            "html": "<p>The reply must be a caption, tags, up to three colours from a fixed list, a body type, a damage level and a people count. The answer is read as structured output, not as free text.</p>\n",
+            "event": "response_received"
+        },
+        {
+            "title": "The answer is checked again",
+            "html": "<p>The schema is a request, not a promise. The same limits are enforced in PHP, and an answer that fails them is asked for again, up to three times, with one run row per attempt.</p>\n",
+            "event": "validation_failed"
+        },
+        {
+            "title": "The server may not answer",
+            "html": "<p>If the model server is down or the call times out, the photo is marked failed after one attempt with no retry, so a stopped server cannot hide behind repeated tries.</p>\n",
+            "event": "request_failed"
+        },
+        {
+            "title": "The work runs on its own queue",
+            "html": "<p>The command queues one job per photo on a queue of its own (<code>ai-vision</code>), worked by one process you start with <code>ddev artisan queue:work --queue=ai-vision</code>, so slow image calls never hold up the other AI features. The result is stored with the attempts and the time it took.</p>\n",
+            "event": null
+        }
+    ],
+    "failures": [
+        {
+            "title": "The extraction command refuses the model",
+            "html": "<p><strong>Cause:</strong> the model is not installed on the local server, or it cannot read images.</p>\n<p><strong>Fix:</strong> pull a vision model, or pick one from the list the command prints.</p>\n",
+            "snippet": null
+        },
+        {
+            "title": "An answer keeps failing the checks",
+            "html": "<p><strong>Cause:</strong> the model returns a colour or a body type that is not in the fixed lists, or a caption that is too long. After three attempts the row is marked failed with the reasons.</p>\n<p><strong>Fix:</strong> try a larger model, or tighten the prompt and raise its version so old and new rows stay apart.</p>\n",
+            "snippet": null
+        },
+        {
+            "title": "The call times out or the server is down",
+            "html": "<p><strong>Cause:</strong> the model server is not running, or the first call is loading the model.</p>\n<p><strong>Fix:</strong> start the server and queue the photo again. A transport error is one attempt with no retry, so it cannot hide a down server.</p>\n",
+            "snippet": null
+        },
+        {
+            "title": "Few photos are imported",
+            "html": "<p><strong>Cause:</strong> most dataset classes are makes the catalogue does not sell, and each listing takes one photo.</p>\n<p><strong>Fix:</strong> raise the limit or the per-model cap, or add listings for more models.</p>\n",
+            "snippet": null
+        }
+    ],
+    "recipes": [
+        {
+            "title": "Change the vision model",
+            "html": "<p>Set <code>AI_PHOTO_VISION_MODEL</code>, or pass a model to the extraction command for one run. The provider is set with <code>AI_PHOTO_VISION_PROVIDER</code>.</p>\n<p><strong>Check:</strong> the next run row names the new model.</p>\n",
+            "snippet": {
+                "file": "app/Ai/PhotoVisionAgent.php"
+            }
+        },
+        {
+            "title": "Add a field to the schema",
+            "html": "<p>Add the field to the agent schema, add its limit to <code>PhotoExtractionRules</code> so PHP checks it too, then save the prompt under a new prompt version and set <code>AI_PROMPT_PHOTO_VISION</code>. Old extractions keep their version.</p>\n<p><strong>Check:</strong> a new extraction stores the field, and an answer without it is asked for again.</p>\n",
+            "snippet": {
+                "file": "app/Ai/PhotoVisionAgent.php"
+            }
+        },
+        {
+            "title": "Change what is asked for",
+            "html": "<p>Edit the prompt file, save it under a new version name and set <code>AI_PROMPT_PHOTO_VISION</code>. Extractions are kept per model and prompt version, so the old answers stay.</p>\n<p><strong>Check:</strong> the run rows show the new prompt version.</p>\n",
+            "snippet": null
+        }
+    ],
+    "support": [
+        {
+            "name": "Run rows and extraction status",
+            "status": "logged",
+            "html": "<p>Every model call writes an <code>ai_runs</code> row with the model, prompt version, tokens, time and whether validation failed. The extraction row keeps the attempts and the final errors.</p>\n"
+        },
+        {
+            "name": "Rules, size cap and queue",
+            "status": "guarded",
+            "html": "<p>The PHP rules reject any answer outside the schema, the photo is at most 1024 pixels, and the work uses its own queue. The tests run offline with a faked agent.</p>\n"
+        },
+        {
+            "name": "Extractions look wrong",
+            "status": "runbook",
+            "html": "<ol>\n<li>Open the photo in the lab and read the stored answer and its attempts.</li>\n<li>Check the run rows for failed or invalid attempts.</li>\n<li>Run the eval command and compare body type agreement with the last result file.</li>\n<li>If one model is worse, switch the model before changing the prompt.</li>\n</ol>\n"
+        }
+    ],
+    "numbers": [
+        {
+            "label": "gemma4:12b, valid on the first attempt",
+            "unit": null,
+            "value": "1"
+        },
+        {
+            "label": "qwen3.5:9b, valid on the first attempt",
+            "unit": null,
+            "value": "0.86"
+        },
+        {
+            "label": "gemma4:12b, latency per photo, median",
+            "unit": "ms",
+            "value": "3697"
+        },
+        {
+            "label": "qwen3.5:9b, latency per photo, median",
+            "unit": "ms",
+            "value": "2572"
+        },
+        {
+            "label": "gemma4:12b, body type agreement",
+            "unit": null,
+            "value": "0.74"
+        },
+        {
+            "label": "qwen3.5:9b, body type agreement",
+            "unit": null,
+            "value": "0.82"
+        }
+    ],
+    "experiments": [
+        {
+            "title": "A body type against the real class",
+            "predictions": [
+                {
+                    "id": "a",
+                    "text": "The model names the body type of most photos the way the dataset class does."
+                },
+                {
+                    "id": "b",
+                    "text": "The model almost never agrees with the dataset class."
+                },
+                {
+                    "id": "c",
+                    "text": "The model always answers unknown."
+                }
+            ],
+            "answer": {
+                "id": "a",
+                "html": "<p>Open a photo and compare its body type with the class name. Most agree; the eval command measures how many.</p>\n"
+            },
+            "href": "/ai/photos"
+        }
+    ],
+    "build": [
+        {
+            "step": "Store a small copy of each image",
+            "detail": "Resize before sending, because image tokens and upload time grow with size.",
+            "tab": "modify",
+            "doc": null
+        },
+        {
+            "step": "Ask for a schema, not prose",
+            "detail": "Request caption, tags, colours and counts as structured output with fixed types and allowed values.",
+            "tab": "modify",
+            "doc": "https://laravel.com/docs/ai-sdk"
+        },
+        {
+            "step": "Validate the answer again in PHP",
+            "detail": "Check types, ranges and allowed values after the model, and treat a failure as a rejected answer.",
+            "tab": "modify",
+            "doc": "https://laravel.com/docs/validation"
+        },
+        {
+            "step": "Run on a queue",
+            "detail": "Dispatch one job per photo with a timeout and a retry limit, so a slow model never blocks a request.",
+            "tab": "support",
+            "doc": "https://laravel.com/docs/queues"
+        },
+        {
+            "step": "Handle a server that does not answer",
+            "detail": "Map timeouts and refused connections to a clear state on the photo, and retry later.",
+            "tab": "support",
+            "doc": null
+        },
+        {
+            "step": "Log every call",
+            "detail": "Record model, tokens and duration per photo, so you can compare vision models on the same set.",
+            "tab": "support",
+            "doc": null
+        }
+    ],
+    "watch": [
+        {
+            "point": "Vision models are slow",
+            "detail": "A local model can take seconds per photo. Plan the batch size and the queue timeout.",
+            "tab": "support"
+        },
+        {
+            "point": "The model sees what it sees",
+            "detail": "Damage or people counts are guesses. Show them as model output, not as facts.",
+            "tab": "support"
+        },
+        {
+            "point": "Privacy",
+            "detail": "Photos can show faces and plates. Decide what leaves your server before using a cloud model.",
+            "tab": "support"
+        },
+        {
+            "point": "Schema drift",
+            "detail": "Adding a field changes the prompt and the checks. Change both together and re-run a sample.",
+            "tab": "support"
+        }
+    ],
+    "elsewhere": [
+        {
+            "domain": "Insurance",
+            "problem": "Claim photos need a damage description.",
+            "how": "Send each photo with a schema for damaged parts and severity, and let an adjuster confirm."
+        },
+        {
+            "domain": "Marketplaces",
+            "problem": "Sellers upload photos with no tags.",
+            "how": "Extract category, colour and condition as tags so search can use them."
+        },
+        {
+            "domain": "Property management",
+            "problem": "Inspection photos need an inventory.",
+            "how": "Extract visible items and defects into a checklist for review."
+        }
+    ],
+    "plan": [],
+    "related": [
+        {
+            "key": "describe",
+            "title": "Describe a car"
+        },
+        {
+            "key": "providers",
+            "title": "Providers and models"
+        },
+        {
+            "key": "similar-photos",
+            "title": "Find similar car photos"
+        },
+        {
+            "key": "photo-search",
+            "title": "Search car photos by text"
+        },
+        {
+            "key": "photo-duplicates",
+            "title": "Find duplicate car photos and pick the best one"
+        }
+    ],
+    "facts": [],
+    "table": null,
+    "implementation": [
+        {
+            "title": "Photos come from a public dataset and are stored small",
+            "html": "<p>A download script fetches the Stanford Cars photos after you accept their terms. The import keeps only the classes whose make and model are in the catalogue and gives each photo to the listing of that model with the nearest year, one photo per listing. Each photo is cut to at most 1024 pixels on the long side and saved as a JPEG, which bounds the tokens and the time of every model call. The same file is never imported twice, because its hash is unique.</p>\n",
+            "event": null,
+            "snippet": {
+                "file": "app/Services/PhotoMatcher.php"
+            },
+            "moreSnippets": []
+        },
+        {
+            "title": "One photo travels with the instructions",
+            "html": "<p>The agent attaches the stored file to a versioned prompt and asks for a fixed set of fields. The path always comes from the database, never from the request.</p>\n",
+            "event": "request_sent",
+            "snippet": {
+                "file": "app/Ai/PhotoVisionAgent.php"
+            },
+            "moreSnippets": []
+        },
+        {
+            "title": "The answer is checked again",
+            "html": "<p>The schema is a request, not a promise. The same limits are enforced in PHP, and an answer that fails them is asked for again, up to three times, with one run row per attempt.</p>\n",
+            "event": "validation_failed",
+            "snippet": {
+                "file": "app/Rules/PhotoExtractionRules.php"
+            },
+            "moreSnippets": []
+        },
+        {
+            "title": "The work runs on its own queue",
+            "html": "<p>The command queues one job per photo on a queue of its own (<code>ai-vision</code>), worked by one process you start with <code>ddev artisan queue:work --queue=ai-vision</code>, so slow image calls never hold up the other AI features. The result is stored with the attempts and the time it took.</p>\n",
+            "event": null,
+            "snippet": {
+                "file": "app/Services/PhotoExtractionService.php"
+            },
+            "moreSnippets": []
+        }
+    ],
+    "tabs": [
+        {
+            "key": "works",
+            "label": "How it works"
+        },
+        {
+            "key": "implementation",
+            "label": "Implementation"
+        },
+        {
+            "key": "modify",
+            "label": "Modify"
+        },
+        {
+            "key": "support",
+            "label": "Support"
+        },
+        {
+            "key": "numbers",
+            "label": "Numbers"
+        },
+        {
+            "key": "experiments",
+            "label": "Experiments"
+        }
+    ],
+    "teachTabs": [
+        {
+            "key": "build",
+            "label": "Build it yourself"
+        },
+        {
+            "key": "watch",
+            "label": "Watch out for"
+        },
+        {
+            "key": "elsewhere",
+            "label": "Elsewhere"
+        }
+    ]
+}

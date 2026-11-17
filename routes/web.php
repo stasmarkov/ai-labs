@@ -15,6 +15,8 @@ use App\Http\Controllers\ShowLabChatController;
 use App\Http\Controllers\ShowLabDescribeController;
 use App\Http\Controllers\ShowLabDocsController;
 use App\Http\Controllers\ShowLabGuideController;
+use App\Http\Controllers\ShowLabGuideFormatController;
+use App\Http\Controllers\ShowLabGuideFormatsController;
 use App\Http\Controllers\ShowLabGuidesController;
 use App\Http\Controllers\ShowLabHomeController;
 use App\Http\Controllers\ShowLabModerationController;
@@ -76,6 +78,8 @@ Route::middleware(HandleInertiaRequests::class)->prefix('ai')->group(function ()
     });
     Route::get('/guides', ShowLabGuidesController::class)->name('ai.guides.index');
     Route::get('/guides/{key}', ShowLabGuideController::class)->name('ai.guides.show');
+    Route::get('/guides/{key}/formats', ShowLabGuideFormatsController::class)->name('ai.guides.formats');
+    Route::get('/guides/{key}/formats/{format}', ShowLabGuideFormatController::class)->name('ai.guides.format');
     Route::get('/runs/{invocationId}', ShowLabRunController::class)->name('ai.runs.show');
 
     Route::middleware(EnsureLocalSettings::class)->prefix('settings')->where(['feature' => implode('|', array_keys([...AiProviders::features(), AiProviders::ADMIN_ASSISTANT => 'text']))])->group(function (): void {

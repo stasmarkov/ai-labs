@@ -36,6 +36,7 @@ use App\Contracts\ShutdownScheduler;
 use App\Contracts\SimilarEvalRepositoryInterface;
 use App\Contracts\SimilarPhotosRepositoryInterface;
 use App\Guides\GuideFacts;
+use App\Guides\GuideFormatRepository;
 use App\Guides\GuideRepository;
 use App\Guides\SnippetResolver;
 use App\Logging\RequestContextProcessor;
@@ -125,6 +126,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(DocsSearchRepositoryInterface::class, EloquentDocsSearchRepository::class);
         $this->app->bind(DocsAnswerCacheRepositoryInterface::class, EloquentDocsAnswerCacheRepository::class);
         $this->app->scoped(GuideRepository::class, fn (): GuideRepository => new GuideRepository(resource_path('guides')));
+        $this->app->scoped(GuideFormatRepository::class, fn (): GuideFormatRepository => new GuideFormatRepository(resource_path('guides/formats'), $this->app->make(SnippetResolver::class)));
         $this->app->bind(GuideFacts::class, fn (): GuideFacts => new GuideFacts(base_path('bench/results')));
         $this->app->bind(SnippetResolver::class, fn (): SnippetResolver => new SnippetResolver(base_path()));
         $this->app->bind(DocsBenchRepositoryInterface::class, EloquentDocsBenchRepository::class);
