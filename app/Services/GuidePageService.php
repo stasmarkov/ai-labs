@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\DTOs\Guide;
 use App\DTOs\GuideStep;
 use App\DTOs\GuideTeach;
 use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
+use App\Lessons\LessonService;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final readonly class GuidePageService
 {
-    private const TABS = [
+    public const TABS = [
         'works' => 'How it works',
         'implementation' => 'Implementation',
         'modify' => 'Modify',
@@ -22,7 +24,7 @@ final readonly class GuidePageService
         'plan' => 'Plan',
     ];
 
-    private const TEACH_TABS = [
+    public const TEACH_TABS = [
         'build' => 'Build it yourself',
         'watch' => 'Watch out for',
         'elsewhere' => 'Elsewhere',
@@ -34,6 +36,7 @@ final readonly class GuidePageService
     public function __construct(
         private GuideRepository $guides,
         private GuideRenderer $renderer,
+        private LessonService $lessons,
     ) {}
 
     /**
@@ -104,6 +107,31 @@ final readonly class GuidePageService
     }
 
     /**
+     * The keys of the tabs and teach sections a guide page shows: those with content, in page order. The one source for
+     * the page and for anything that links to a tab, such as a lesson's "Go deeper".
+     *
+     * @return list<string>
+     */
+    public static function tabKeys(Guide $guide): array
+    {
+        $contents = [
+            'works' => $guide->works,
+            'implementation' => array_filter($guide->works, fn (GuideStep $step): bool => $step->snippet !== null),
+            'modify' => $guide->recipes,
+            'support' => [...$guide->support, ...$guide->failures],
+            'numbers' => $guide->numbers,
+            'experiments' => $guide->experiments,
+            'plan' => $guide->plan,
+            ...GuideTeach::rows($guide),
+        ];
+
+        return array_values(array_filter(
+            array_keys([...self::TABS, ...self::TEACH_TABS]),
+            fn (string $tab): bool => $contents[$tab] !== [],
+        ));
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function show(string $key): array
@@ -123,49 +151,33 @@ final readonly class GuidePageService
             fn (string $related): array => ['key' => $related, 'title' => $this->guides->find($related)->title],
             array_filter($guide['related'], fn (string $related): bool => $this->guides->has($related)),
         ));
-        $guide['tabs'] = $this->tabs($guide);
-        $guide['teachTabs'] = $this->teachTabs($guide);
+        $lessons = array_map(fn (array $lesson): array => [
+            'title' => $lesson['title'],
+            'href' => route('ai.learn.show', ['module' => $lesson['module'], 'lesson' => $lesson['slug']], absolute: false),
+        ], $this->lessons->titles($guide['lessons']));
+        unset($guide['lessons']);
+        if ($lessons !== []) {
+            $guide['lessons'] = $lessons;
+        }
+        $shown = self::tabKeys($this->guides->find($key));
+        $guide['tabs'] = $this->labelled(self::TABS, $shown);
+        $guide['teachTabs'] = $this->labelled(self::TEACH_TABS, $shown);
 
         return $guide;
     }
 
     /**
-     * @param  array<string, mixed>  $guide
-     * @return list<array{key: string, label: string}>
-     */
-    private function tabs(array $guide): array
-    {
-        $contents = [
-            'works' => $guide['works'],
-            'implementation' => $guide['implementation'],
-            'modify' => $guide['recipes'],
-            'support' => [...$guide['support'], ...$guide['failures']],
-            'numbers' => $guide['numbers'],
-            'experiments' => $guide['experiments'],
-            'plan' => $guide['plan'],
-        ];
-
-        $tabs = [];
-        foreach (self::TABS as $tab => $label) {
-            if ($contents[$tab] !== []) {
-                $tabs[] = ['key' => $tab, 'label' => $label];
-            }
-        }
-
-        return $tabs;
-    }
-
-    /**
      * The teach sections come after the six tabs, in a prop of their own so the six stay as they were.
      *
-     * @param  array<string, mixed>  $guide
+     * @param  array<string, string>  $labels
+     * @param  list<string>  $shown
      * @return list<array{key: string, label: string}>
      */
-    private function teachTabs(array $guide): array
+    private function labelled(array $labels, array $shown): array
     {
         $tabs = [];
-        foreach (self::TEACH_TABS as $tab => $label) {
-            if ($guide[$tab] !== []) {
+        foreach ($labels as $tab => $label) {
+            if (in_array($tab, $shown, true)) {
                 $tabs[] = ['key' => $tab, 'label' => $label];
             }
         }

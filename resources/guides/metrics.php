@@ -121,6 +121,7 @@ return [
         ],
     ],
     'related' => ['streaming', 'local-models'],
+    'lessons' => ['running-models/one-model-many-users'],
     'build' => [
         ['step' => 'Expose server counters', 'detail' => 'Enable the server metrics endpoint, so threads, workers, queue and memory can be scraped.', 'tab' => 'recipes', 'doc' => 'https://frankenphp.dev/docs/'],
         ['step' => 'Scrape every second', 'detail' => 'Run a time series store with a short interval and keep it local for labs.', 'tab' => 'recipes'],

@@ -20,7 +20,7 @@ final readonly class GuideRenderer
     private const MARKDOWN = ['html_input' => 'escape', 'allow_unsafe_links' => false];
 
     /** Bump when build() changes shape, so cached payloads of the old shape are never read again. */
-    private const VERSION = 4;
+    private const VERSION = 5;
 
     /** Cached renders expire, so keys of edited guides do not pile up in a store without eviction. */
     private const TTL_SECONDS = 86400;
@@ -117,6 +117,7 @@ final readonly class GuideRenderer
             ...GuideTeach::rows($guide),
             'plan' => array_map(fn (string $bullet): string => $this->markdown($bullet), $guide->plan),
             'related' => $guide->related,
+            'lessons' => $guide->lessons,
         ];
     }
 

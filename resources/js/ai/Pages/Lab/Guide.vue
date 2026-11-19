@@ -80,6 +80,7 @@ interface Guide {
     facts: Array<{ label: string; value: string }>;
     table: { columns: string[]; rows: Array<Record<string, string>> } | null;
     related: Array<{ key: string; title: string }>;
+    lessons?: Array<{ title: string; href: string }>;
 }
 
 const props = defineProps<{
@@ -289,6 +290,13 @@ const statusLabel: Record<string, string> = {
             </ul>
         </template>
     </section>
+
+    <nav v-if="guide.lessons?.length" aria-label="Lessons" class="mt-8 flex flex-wrap items-baseline gap-3 text-[15px]">
+        <span class="text-muted">Learn it step by step</span>
+        <Link v-for="lesson in guide.lessons" :key="lesson.href" :href="lesson.href" class="text-signal underline">
+            {{ lesson.title }}
+        </Link>
+    </nav>
 
     <nav v-if="guide.related.length" aria-label="Related guides" class="mt-8 flex flex-wrap items-baseline gap-3 text-[15px]">
         <span class="text-muted">Related</span>

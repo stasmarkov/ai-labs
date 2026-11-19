@@ -154,3 +154,15 @@ it('AC-6 renders the capability table with the key set or not and never a key va
 it('AC-6 shows the table on the providers guide only', function (): void {
     expect(($this->render)('run-log')['table'])->toBeNull();
 });
+
+it('F22 one path syntax reads a dotted key bare or quoted, and the decoded file is shared with lessons', function (): void {
+    file_put_contents($this->root.'/bench/results/run/models.json', json_encode(['models' => ['qwen3.5:9b' => ['speed' => ['ttft' => 286.1]]]]));
+    $facts = new GuideFacts($this->root.'/bench/results');
+
+    expect($facts->number('run/models.json', 'models.qwen3.5:9b.speed.ttft', false))->toBe('286.1')
+        ->and($facts->number('run/models.json', 'models."qwen3.5:9b".speed.ttft', false))->toBe('286.1')
+        ->and($facts->at($facts->document('run/models.json'), 'models."qwen3.5:9b".speed.ttft'))->toBe(286.1)
+        ->and($facts->at($facts->document('run/models.json'), 'models."qwen3.5:9b".nope'))->toBeNull();
+
+    expect(fn () => $facts->document('run/none.json'))->toThrow(InvalidGuideException::class, 'was not found');
+});

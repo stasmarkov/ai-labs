@@ -128,6 +128,7 @@ final readonly class LabOverviewService
         return [
             ['href' => route('ai.overview', absolute: false), 'label' => 'Overview'],
             ['href' => route('ai.guides.index', absolute: false), 'label' => 'Guides'],
+            ['href' => route('ai.learn.index', absolute: false), 'label' => 'Learn'],
             ...array_map(fn (array $page): array => ['href' => route($page[2], absolute: false), 'label' => $page[1]], $this->pages()),
             ...($this->providers->mcpServerAvailable() ? [['href' => route('ai.changes', absolute: false), 'label' => 'Changes']] : []),
             ...($this->providers->settingsAvailable() ? [['href' => route('ai.settings', absolute: false), 'label' => 'Settings']] : []),

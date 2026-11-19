@@ -105,6 +105,12 @@ ddev artisan frankenphp:workers:restart       # without watch: replace the worke
 bench/reload-latency.sh                       # edit-to-reload for classic, Octane and worker, with and without watch (needs DEBUG_ROUTES, set by the script)
 ```
 
+## Lessons
+
+`/ai/learn` is a course of animated step-by-step lessons: each step moves a live scene, a strip of measured numbers and a list of what changed together. The pilot is "One model, many users" at `/ai/learn/running-models/one-model-many-users`; the other lessons are listed as coming soon. Arrow keys move between steps, R replays and Space pauses; reduced motion is respected.
+
+To write a lesson, add an entry to `resources/lessons/course.php`, create `resources/lessons/<module>/<lesson>.php` with the outcomes, the scene and the steps, and point every number at a file under `bench/results`. A broken file is reported with the rule it broke, and the lesson tests load every lesson. How it works: `/ai/guides/lessons` and [II-23 of the learning guide](docs/learning-guide.md#ii-23-in-app-guides-and-the-homescreen).
+
 ## Local models
 
 How fast the local models are, what they cost in memory, what a too-long prompt or a stopped server does, and what happens to the site under AI load. How to read the numbers: `/ai/guides/local-models` and [II-5 of the learning guide](docs/learning-guide.md#ii-5-local-models-and-their-limits).

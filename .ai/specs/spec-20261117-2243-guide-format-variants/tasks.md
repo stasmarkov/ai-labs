@@ -118,7 +118,7 @@
   - [x] F20 one validation and mapping place: the `App\Enums\GuideFormatType` enum holds the format list, each format's items field and field schema; the route binds `{format}` to it (unknown format is 404 by enum binding), and the repository and service take the enum.
   - [x] **Verify**: see the gate record below.
 
-- [ ] 8. Gate: the owner tries the six formats and records the pick
+- [x] 8. Gate: the owner tries the six formats and records the pick
   Covers: none (decision). The pick, with the rubric reasons, goes into `decisions.md`; the follow-up rollout slice is added to `backlog.md`.
 
 ## Traceability

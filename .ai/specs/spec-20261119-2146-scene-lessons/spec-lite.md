@@ -4,7 +4,7 @@ title: AI lab scene lessons
 type: feature
 size: L
 priority: P1
-status: approved
+status: in-progress
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-19; standing approval)
@@ -222,6 +222,15 @@ The reference pattern was observed on the load-balancing lesson (steps 1 and 4) 
 - **D-2:** step state is declarative (per node and edge). The animation is computed on the client from the rates, so the files stay small and diffable. (self-decided, standing approval)
 - **D-3:** progress lives in `localStorage` only. The lab has no accounts. (self-decided, standing approval)
 - **D-4:** SL-54 is closed in favour of scene lessons, on the owner's instruction of 2026-11-19, and its pages are kept for now. (owner decision)
+- **D-5:** pilot step 9 is titled "Another model, same queue" instead of "A smaller model", because the result files show the second model (gemma4:12b, 8.36 GB) is not smaller than the first (qwen3.5:9b, 8.40 GB); the step teaches that a model change moves the first token but not the writing speed or the queue. (self-decided, standing approval)
+- **D-6:** pilot change lines say "slowest searches" instead of "search p95", because the engine rejects any digit outside a placeholder in change lines and "p95" has one; the KPI label and body text keep "p95". (self-decided, standing approval)
+- **D-7:** pilot step 6 shows the C-2 figures, `metrics.max_busy_threads` (30) and `metrics.max_total_threads` (14) from `sse-frankenphp-auto.json`, and says what they mean: the total gauge does not count the threads autoscale adds, so 30 busy against 14 total is not a server that grew past its limit. Next to them it shows `metrics.max_busy_workers` (80) and `metrics.total_workers` (4) from `sse-frankenphp-worker-4.json`, a cell of the same metrics run (2026-11-16, answer streams open). The step names this run as separate from the search test, whose p95 figures are in its first paragraph; no conclusion mixes the two. (review fix F8, standing approval)
+- **D-8:** a KPI value may carry `trend: false`. The strip then shows it without a better or worse colour. The pilot uses it where a step switches scenario rather than changing one thing: step 5 goes back from sixteen users to four, step 9 switches model, and step 10 sums up. Step 10 also restates the first model's writing speed, so the summary shows one model only and its text says so. Step 3 still compares its first-token time (concurrency run, four users) with step 1's (speed run, one user): same model and the same median, so the colour stays. (review fix F5, standing approval)
+- **D-9:** moving between steps is a client-side Inertia visit (`router.push` with `preserveState`), not a server visit: the lesson is sent once with the page, each step change pushes a history entry with the new step, and Back and Forward restore it from history. A deep link is still rendered by the server at the requested step. This replaces C-6's "Inertia visit". (review fix F15, standing approval)
+- **D-10:** the callout is optional (the `lessons` guide always said so). The pilot gives one on every step. (review fix F7, standing approval)
+- **D-11:** `deeper` names a tab key the guide page shows: `works`, `implementation`, `modify`, `support`, `numbers`, `experiments`, `plan`, `build`, `watch` or `elsewhere`, taken from `GuidePageService`. The old names in C-5 and C-14 are mapped: `failures` to `support` and `recipes` to `modify`. Any other name is an error. (review fix F1, standing approval)
+- **D-12:** the guide page takes lesson titles from `course.php` only, through `LessonService::titles()`, and builds no lesson. They are not stored in the guide render cache. A cache entry would need `course.php` in its key, so it would read that file anyway, and the cache store is the database. Guides only declare `<module>/<lesson>` keys; `GuideContentTest` checks that each one is a playable lesson. (review fixes F16 and F21, standing approval)
+- **D-13:** only lessons listed in `course.php` and not marked coming soon can be played. A lesson file the course does not list (a draft) answers 404. (review fixes F9 and F12, standing approval)
 
 ## Open questions
 

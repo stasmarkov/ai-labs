@@ -154,6 +154,7 @@ final class GuideRepository
             )),
             plan: $this->plan($key, $data, $planned),
             related: array_values(array_map('strval', is_array($data['related'] ?? null) ? $data['related'] : [])),
+            lessons: $this->lessons($key, $data),
             contentHash: $hash,
         );
 
@@ -247,6 +248,33 @@ final class GuideRepository
         }
 
         return $bullets;
+    }
+
+    /**
+     * The lessons a guide links to, each written <module>/<lesson>. Only the shape is checked here: the guide page asks
+     * the course which of them are playable, so guides never read lesson files.
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<string>
+     */
+    private function lessons(string $key, array $data): array
+    {
+        $lessons = $data['lessons'] ?? [];
+
+        if (! is_array($lessons)) {
+            throw new InvalidGuideException("Guide [{$key}] field [lessons] must be a list.");
+        }
+
+        $keys = [];
+        foreach ($lessons as $lesson) {
+            if (! is_string($lesson) || preg_match('/^[a-z0-9-]+\/[a-z0-9-]+$/', $lesson) !== 1) {
+                throw new InvalidGuideException("Guide [{$key}] field [lessons] holds an entry that is not <module>/<lesson>.");
+            }
+
+            $keys[] = $lesson;
+        }
+
+        return $keys;
     }
 
     /**

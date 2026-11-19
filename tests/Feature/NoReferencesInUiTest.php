@@ -57,6 +57,9 @@ function labUiPaths(): array
         '/ai/photos/duplicates',
         '/ai/guides',
         ...array_map(fn (string $key): string => '/ai/guides/'.$key, $keys),
+        '/ai/learn',
+        '/ai/learn/running-models/one-model-many-users',
+        '/ai/learn/running-models/one-model-many-users/7',
         '/ai/guides/photos/formats',
         ...array_map(fn (string $format): string => '/ai/guides/photos/formats/'.$format, ['build-along', 'trace', 'quiz', 'debug', 'tour']),
     ];
@@ -159,4 +162,4 @@ it('AC-6 the build, watch and elsewhere sections of every guide show no slice id
     expect($text)->not->toMatch('/SL-\d+/')
         ->not->toMatch('/\.md\b/')
         ->not->toMatch('#\b(?:app|resources|config|routes|database|bench)/#');
-})->with(['describe', 'moderation', 'research', 'playground', 'providers', 'mcp']);
+})->with(['describe', 'moderation', 'research', 'playground', 'providers', 'mcp', 'lessons']);

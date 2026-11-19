@@ -19,6 +19,8 @@ use App\Http\Controllers\ShowLabGuideFormatController;
 use App\Http\Controllers\ShowLabGuideFormatsController;
 use App\Http\Controllers\ShowLabGuidesController;
 use App\Http\Controllers\ShowLabHomeController;
+use App\Http\Controllers\ShowLabLearnController;
+use App\Http\Controllers\ShowLabLessonController;
 use App\Http\Controllers\ShowLabModerationController;
 use App\Http\Controllers\ShowLabNlSearchController;
 use App\Http\Controllers\ShowLabOverviewController;
@@ -80,6 +82,8 @@ Route::middleware(HandleInertiaRequests::class)->prefix('ai')->group(function ()
     Route::get('/guides/{key}', ShowLabGuideController::class)->name('ai.guides.show');
     Route::get('/guides/{key}/formats', ShowLabGuideFormatsController::class)->name('ai.guides.formats');
     Route::get('/guides/{key}/formats/{format}', ShowLabGuideFormatController::class)->name('ai.guides.format');
+    Route::get('/learn', ShowLabLearnController::class)->name('ai.learn.index');
+    Route::get('/learn/{module}/{lesson}/{step?}', ShowLabLessonController::class)->where(['module' => '[a-z0-9-]+', 'lesson' => '[a-z0-9-]+', 'step' => '[1-9][0-9]{0,2}'])->name('ai.learn.show');
     Route::get('/runs/{invocationId}', ShowLabRunController::class)->name('ai.runs.show');
 
     Route::middleware(EnsureLocalSettings::class)->prefix('settings')->where(['feature' => implode('|', array_keys([...AiProviders::features(), AiProviders::ADMIN_ASSISTANT => 'text']))])->group(function (): void {

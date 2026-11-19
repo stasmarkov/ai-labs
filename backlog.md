@@ -756,7 +756,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-27
 - **Depends on:** SL-48, SL-53
 - **Blocked by:** none
-- **Status:** built, awaiting the owner pick (task 8)
+- **Status:** shipped (pick: scene lessons, follow-up SL-55)
 - **Spec:** spec-20261117-2243-guide-format-variants
 - **Source:** owner request 2026-11-17 (Stanislav Markov: "create 5 different variants of new interactive guides, for example for implementing /ai/guides/photos, so I will pick the best type of guide that will teach the best")
 - **Run:** `/sdd spec-20261117-2243-guide-format-variants`

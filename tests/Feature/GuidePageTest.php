@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Guides\GuideFacts;
 use App\Guides\GuideRepository;
+use App\Guides\InvalidGuideException;
+use App\Lessons\LessonNumbers;
 use App\Services\GuidePageService;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -63,7 +66,7 @@ it('AC-2 a capability guide has the six tabs, each with content', function (stri
             ->where('guide.experiments', fn ($experiments): bool => count($experiments) >= 1
                 && collect($experiments)->every(fn (array $experiment): bool => str_starts_with($experiment['href'], '/ai/')))
         );
-})->with(['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'local-models', 'metrics', 'logs-restart', 'worker-dx']);
+})->with(['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'local-models', 'metrics', 'logs-restart', 'worker-dx', 'lessons']);
 
 it('AC-2 the guide page resolves related keys to titles', function (): void {
     $this->get('/ai/guides/describe')
@@ -113,6 +116,7 @@ it('AC-6 every experiment preset URL uses only parameters its target page reads'
         'ai.research' => [],
         'ai.playground' => [],
         'ai.changes' => [],
+        'ai.learn.index' => [],
     ];
     app()->detectEnvironment(fn (): string => 'local');
     $repository = app(GuideRepository::class);
@@ -198,4 +202,44 @@ it('AC-5 the guide page renders the teach tabs and opens the one named in the UR
         ->toContain("tab.key === 'watch'")
         ->toContain("tab.key === 'elsewhere'")
         ->toContain('window.location.hash');
+});
+
+it('C-13 both guides carry the pilot lesson link, a malformed key fails validation and an unlisted one is not linked', function (): void {
+    foreach (['local-models', 'metrics'] as $key) {
+        $this->get('/ai/guides/'.$key)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('guide.lessons', fn ($lessons): bool => collect($lessons)->contains(
+                    fn (array $lesson): bool => $lesson['href'] === '/ai/learn/running-models/one-model-many-users' && $lesson['title'] === 'One model, many users'
+                ))
+            );
+    }
+
+    $directory = sys_get_temp_dir().'/guides-'.bin2hex(random_bytes(4));
+    mkdir($directory);
+    $guide = fn (string $lessons): string => "<?php\nreturn ['kind' => 'foundation', 'title' => 'Plain', 'summary' => 'S.', 'works' => [['title' => 'One', 'body' => 'Body.']], 'lessons' => [{$lessons}]];";
+    file_put_contents($directory.'/known.php', $guide("'running-models/one-model-many-users', 'running-models/no-such-lesson', 'running-models/streaming-an-answer'"));
+    file_put_contents($directory.'/malformed.php', $guide("'one-model-many-users'"));
+    $repository = new GuideRepository($directory);
+
+    expect($repository->find('known')->lessons)->toBe(['running-models/one-model-many-users', 'running-models/no-such-lesson', 'running-models/streaming-an-answer']);
+    expect(fn () => $repository->find('malformed'))->toThrow(InvalidGuideException::class);
+
+    $this->app->instance(GuideRepository::class, $repository);
+    $this->get('/ai/guides/known')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('guide.lessons', [
+            ['title' => 'One model, many users', 'href' => '/ai/learn/running-models/one-model-many-users'],
+        ]));
+
+    array_map('unlink', glob($directory.'/*.php'));
+    rmdir($directory);
+});
+
+it('F16 the guide page takes lesson titles from the course file and never builds a lesson', function (): void {
+    $this->app->scoped(LessonNumbers::class, fn (): LessonNumbers => new LessonNumbers(new GuideFacts(sys_get_temp_dir().'/no-results-here')));
+
+    $this->get('/ai/guides/local-models')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('guide.lessons.0.title', 'One model, many users'));
 });

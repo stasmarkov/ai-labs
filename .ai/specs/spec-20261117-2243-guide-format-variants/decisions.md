@@ -11,6 +11,6 @@ All self-decided under the owner's standing preference (recommended options), op
 
 ## Owner pick (task 8)
 
-- Chosen format: _(to fill)_
-- Why, against the rubric (clarity, time to first working change, retention, effort to author): _(to fill)_
-- Follow-up slice: _(to fill)_
+- Chosen format: scene lessons. None of the five formats is rolled out as it stands. The owner asked on 2026-11-19 for interactive guides like designed-to-scale.vercel.app: an animated scene with moving requests, a KPI strip of measured numbers, a list of what changed and a step panel, one step at a time.
+- Why, against the rubric: clarity, because each step moves from a problem to a solution and shows the change in the scene next to the numbers; retention, because the learner watches the queue fill and the first token slow down before reading the explanation; time to first working change, which the scene lessons do not aim at, so the guides stay the place for build-along work; effort to author, which is one PHP data file per lesson with every number read from `bench/results`.
+- Follow-up slice: SL-55 (AI lab scene lessons, `/ai/learn`). The five format pages stay as built until the owner says otherwise. The "Follow one photo" content may be reused as a later lesson.

@@ -18,6 +18,7 @@ final readonly class Guide
      * @param  list<GuideElsewhere>  $elsewhere
      * @param  list<string>  $plan
      * @param  list<string>  $related
+     * @param  list<string>  $lessons
      */
     public function __construct(
         public string $key,
@@ -36,6 +37,7 @@ final readonly class Guide
         public array $elsewhere,
         public array $plan,
         public array $related,
+        public array $lessons,
         public string $contentHash,
     ) {}
 

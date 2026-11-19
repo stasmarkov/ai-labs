@@ -22,8 +22,7 @@ final readonly class GuideFacts
             return self::PENDING_TEXT;
         }
 
-        $data = $this->load((string) $file);
-        $value = $this->lookup($data, (string) $path);
+        $value = $this->at($this->document((string) $file), (string) $path);
 
         if ($value === null) {
             throw new InvalidGuideException("Number path [{$path}] was not found in [{$file}].");
@@ -33,7 +32,58 @@ final readonly class GuideFacts
     }
 
     /**
-     * Dot notation where a key may itself contain dots, as a model id does ("qwen3.5:9b"): the longest key that matches wins.
+     * The decoded JSON of a result file under the results directory; a file outside it, missing or not JSON is refused.
+     *
+     * @return array<array-key, mixed>
+     */
+    public function document(string $file): array
+    {
+        $base = realpath($this->resultsPath);
+        $real = realpath($this->resultsPath.'/'.ltrim($file, '/'));
+
+        if ($base === false || $real === false || ! is_file($real) || ! str_starts_with($real, $base.'/')) {
+            throw new InvalidGuideException("Number file [{$file}] was not found.");
+        }
+
+        $data = json_decode((string) file_get_contents($real), true);
+
+        if (! is_array($data)) {
+            throw new InvalidGuideException("Number file [{$file}] is not a JSON object.");
+        }
+
+        return $data;
+    }
+
+    /**
+     * The value at a dot path, or null. A key that holds dots, as a model id does ("qwen3.5:9b"), is either quoted
+     * (models."qwen3.5:9b".speed) or left bare, in which case the longest key that matches wins.
+     *
+     * @param  array<array-key, mixed>  $data
+     */
+    public function at(array $data, string $path): mixed
+    {
+        if (! str_contains($path, '"')) {
+            return $this->lookup($data, $path);
+        }
+
+        preg_match_all('/"([^"]+)"|([^."]+)/', $path, $matches, PREG_SET_ORDER);
+        $value = $data;
+
+        foreach ($matches as $match) {
+            $segment = ($match[2] ?? '') !== '' ? $match[2] : $match[1];
+
+            if (! is_array($value) || ! array_key_exists($segment, $value)) {
+                return null;
+            }
+
+            $value = $value[$segment];
+        }
+
+        return $value;
+    }
+
+    /**
+     * Dot notation where a key may itself contain dots: the longest key that matches wins.
      *
      * @param  array<array-key, mixed>  $data
      */
@@ -153,26 +203,5 @@ final readonly class GuideFacts
     private function runLog(): array
     {
         return [['label' => 'ai_runs columns', 'value' => implode(', ', Schema::getColumnListing('ai_runs'))]];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function load(string $file): array
-    {
-        $base = realpath($this->resultsPath);
-        $real = realpath($this->resultsPath.'/'.ltrim($file, '/'));
-
-        if ($base === false || $real === false || ! is_file($real) || ! str_starts_with($real, $base.'/')) {
-            throw new InvalidGuideException("Number file [{$file}] was not found.");
-        }
-
-        $data = json_decode((string) file_get_contents($real), true);
-
-        if (! is_array($data)) {
-            throw new InvalidGuideException("Number file [{$file}] is not a JSON object.");
-        }
-
-        return $data;
     }
 }

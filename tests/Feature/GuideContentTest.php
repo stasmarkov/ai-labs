@@ -9,15 +9,17 @@ use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
 use App\Guides\InvalidGuideException;
 use App\Guides\SnippetResolver;
+use App\Lessons\LessonRepository;
+use App\Lessons\LessonService;
 use App\Services\GuidePageService;
 
 const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation', 'admin-assistant', 'research', 'playground'];
 
-const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards', 'local-models', 'mcp', 'metrics', 'logs-restart', 'worker-dx'];
+const FOUNDATION_GUIDES = ['providers', 'prompts', 'run-log', 'streaming', 'guards', 'local-models', 'mcp', 'metrics', 'logs-restart', 'worker-dx', 'lessons'];
 
 const ALL_FILLED_GUIDES = [...CAPABILITY_GUIDES, ...FOUNDATION_GUIDES];
 
-const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat', 'ai.photos', 'ai.photo-search', 'ai.photos.duplicates', 'ai.assistant', 'ai.moderation', 'ai.admin-assistant', 'ai.research', 'ai.playground', 'ai.changes'];
+const LAB_PAGES = ['ai.describe', 'ai.semantic', 'ai.nl-search', 'ai.docs', 'ai.chat', 'ai.photos', 'ai.photo-search', 'ai.photos.duplicates', 'ai.assistant', 'ai.moderation', 'ai.admin-assistant', 'ai.research', 'ai.playground', 'ai.changes', 'ai.learn.index'];
 
 /**
  * @return list<string>
@@ -659,7 +661,7 @@ it('AC-6 the teach sections stay optional and a guide without them still loads',
 
     $repository = new GuideRepository($directory);
     $guide = $repository->find('plain');
-    $teach = (new GuidePageService($repository, app(GuideRenderer::class)))->teach('plain')->toArray();
+    $teach = (new GuidePageService($repository, app(GuideRenderer::class), app(LessonService::class)))->teach('plain')->toArray();
 
     expect($guide->build)->toBe([])
         ->and($teach['build'])->toBe([])
@@ -712,7 +714,7 @@ it('AC-6 a long first sentence without spaces is cut instead of turning into an 
     ];
     file_put_contents($directory.'/cut.php', '<?php return '.var_export(['kind' => 'foundation', 'title' => 'T', 'summary' => 'S', 'works' => $steps], true).';');
 
-    $teach = (new GuidePageService(new GuideRepository($directory), app(GuideRenderer::class)))->teach('cut')->toArray();
+    $teach = (new GuidePageService(new GuideRepository($directory), app(GuideRenderer::class), app(LessonService::class)))->teach('cut')->toArray();
 
     expect($teach['works'][0]['summary'])->toBe(str_repeat('a', 239).'…')
         ->and($teach['works'][1]['summary'])->toBe('Read the docs first.');
@@ -853,7 +855,54 @@ it('MNC-2 a lab page still gets its How it works steps when a snippet reference 
     ];
     $repository = new GuideRepository(teachGuideDirectory('broken', ['kind' => 'foundation', 'title' => 'T', 'summary' => 'S', 'works' => $works]));
 
-    $teach = (new GuidePageService($repository, app(GuideRenderer::class)))->teach('broken');
+    $teach = (new GuidePageService($repository, app(GuideRenderer::class), app(LessonService::class)))->teach('broken');
 
     expect($teach->works[0])->toBe(['title' => 'Step', 'summary' => 'Hello world.', 'event' => 'token']);
+});
+
+it('AC-10 the lessons guide teaches how a scene lesson works and is written, and the docs describe authoring', function (): void {
+    $guide = app(GuideRepository::class)->find('lessons');
+    $rendered = app(GuideRenderer::class)->render('lessons');
+    $recipes = implode(' ', array_map(fn ($recipe): string => $recipe->title.' '.$recipe->body, $guide->recipes));
+
+    expect($guide->kind)->toBe('foundation')
+        ->and($guide->planned)->toBeFalse()
+        ->and($rendered['works'])->not->toBeEmpty()
+        ->and($rendered['failures'])->not->toBeEmpty()
+        ->and($rendered['recipes'])->not->toBeEmpty()
+        ->and($rendered['support'])->not->toBeEmpty()
+        ->and($rendered['numbers'])->not->toBeEmpty()
+        ->and($rendered['experiments'])->not->toBeEmpty()
+        ->and($guide->build)->not->toBeEmpty()
+        ->and($guide->watch)->not->toBeEmpty()
+        ->and($guide->elsewhere)->not->toBeEmpty()
+        ->and($recipes)->toMatch('/write a lesson/i');
+
+    foreach (['docs/learning-guide.md' => '/scene lessons/i', 'README.md' => '/\/ai\/learn/'] as $file => $pattern) {
+        expect((string) file_get_contents(base_path($file)))->toMatch($pattern);
+    }
+
+    $this->withoutVite();
+    $this->get('/ai/guides/lessons')->assertOk();
+});
+
+it('C-13 every lesson a guide links to is a playable lesson of the course', function (): void {
+    $playable = [];
+    foreach (app(LessonRepository::class)->course()->modules as $module) {
+        foreach ($module->lessons as $entry) {
+            if (! $entry->comingSoon) {
+                $playable[] = "{$module->slug}/{$entry->slug}";
+            }
+        }
+    }
+
+    $linked = [];
+    foreach (app(GuideRepository::class)->keys() as $key) {
+        foreach (app(GuideRepository::class)->find($key)->lessons as $lesson) {
+            expect($playable)->toContain($lesson);
+            $linked[] = $lesson;
+        }
+    }
+
+    expect($linked)->toContain('running-models/one-model-many-users');
 });

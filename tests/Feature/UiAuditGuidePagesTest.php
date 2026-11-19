@@ -17,3 +17,11 @@ it('AC-7 the ui audit covers the worker-dx guide page', function (): void {
 
     expect($listed[1])->toContain('guides/worker-dx');
 });
+
+it('AC-10 the ui audit covers the lessons guide, the course page and the pilot lesson', function (): void {
+    $script = (string) file_get_contents(base_path('bench/ui-audit.mjs'));
+    preg_match("/LAYOUT_ONLY_PAGES = \[(.*?)\];/s", $script, $match);
+    preg_match_all("/'([^']*)'/", $match[1] ?? '', $listed);
+
+    expect($listed[1])->toContain('guides/lessons', 'learn', 'learn/running-models/one-model-many-users');
+});

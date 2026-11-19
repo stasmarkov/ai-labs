@@ -38,6 +38,10 @@ const groups = computed(() => [
     <h1 class="m-0 text-[28px] font-semibold">Guides</h1>
     <p class="mt-2 text-[15px] text-muted">How each part of the lab works, how to change it, and what to check when it breaks.</p>
 
+    <p class="mt-4 text-[15px]">
+        Prefer to watch it move? <Link href="/ai/learn" class="text-ink underline">Learn with animated lessons</Link>.
+    </p>
+
     <section v-if="trial" aria-labelledby="guides-trial" class="mt-6">
         <h2 id="guides-trial" class="m-0 text-[18px]">Trial</h2>
         <div class="mt-3 min-w-0 rounded-sm border border-rule p-4">
