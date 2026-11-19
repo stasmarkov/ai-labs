@@ -39,11 +39,11 @@ return [
     ],
     'scene' => [
         'nodes' => [
-            ['id' => 'browser', 'kind' => 'browser', 'label' => 'Browsers', 'x' => 110, 'y' => 300],
-            ['id' => 'workers', 'kind' => 'workers', 'label' => 'PHP workers', 'x' => 420, 'y' => 300],
-            ['id' => 'model', 'kind' => 'model', 'label' => 'Model server', 'x' => 1000, 'y' => 300],
-            ['id' => 'search', 'kind' => 'vector-db', 'label' => 'Search database', 'x' => 420, 'y' => 520],
-            ['id' => 'queue', 'kind' => 'queue', 'label' => 'Queue and live updates', 'x' => 710, 'y' => 110],
+            ['id' => 'browser', 'kind' => 'browser', 'label' => 'Browsers', 'x' => 150, 'y' => 300],
+            ['id' => 'workers', 'kind' => 'workers', 'label' => 'PHP workers', 'x' => 450, 'y' => 300],
+            ['id' => 'model', 'kind' => 'model', 'label' => 'Model server', 'x' => 850, 'y' => 300],
+            ['id' => 'search', 'kind' => 'vector-db', 'label' => 'Search database', 'x' => 450, 'y' => 520],
+            ['id' => 'queue', 'kind' => 'queue', 'label' => 'Queue and live updates', 'x' => 450, 'y' => 90],
         ],
         'edges' => [
             ['id' => 'ask', 'from' => 'browser', 'to' => 'workers'],

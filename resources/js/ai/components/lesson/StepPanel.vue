@@ -14,22 +14,28 @@ const roles: Record<string, { label: string; class: string }> = {
 
 const callouts: Record<string, string> = { careful: 'Careful', useful: 'Useful', 'key-idea': 'Key idea' };
 
+const calloutStyles: Record<string, string> = {
+    careful: 'border-signal bg-[#fbeee4]',
+    useful: 'border-[#1d4ed8] bg-[#e9eefb]',
+    'key-idea': 'border-ink bg-[#ebe6da]',
+};
+
 const signs: Record<string, string> = { '+': 'Added', '~': 'Changed', '-': 'Removed' };
 </script>
 
 <template>
-    <article aria-labelledby="lesson-step-title" class="rounded-sm border border-rule p-4">
+    <article aria-labelledby="lesson-step-title" class="rounded-md border border-rule bg-white p-5">
         <p class="m-0 flex items-center gap-2 text-[13px] text-muted">
             <span class="rounded-sm px-2 py-0.5 text-[12px] font-semibold uppercase tracking-wide text-white" :class="roles[step.role]?.class ?? 'bg-ink'">{{ roles[step.role]?.label ?? step.role }}</span>
             Step {{ step.number }} of {{ total }}
         </p>
-        <h2 id="lesson-step-title" class="mb-0 mt-2 text-[20px] font-semibold">{{ step.title }}</h2>
-        <p v-for="(paragraph, index) in step.body" :key="index" class="mb-0 mt-3 text-[15px]"><LessonText :text="paragraph" /></p>
+        <h2 id="lesson-step-title" class="mb-0 mt-2 text-[22px] font-semibold leading-tight">{{ step.title }}</h2>
+        <p v-for="(paragraph, index) in step.body" :key="index" class="mb-0 mt-3 text-[15px] leading-relaxed"><LessonText :text="paragraph" /></p>
 
-        <p v-if="step.callout" class="mb-0 mt-4 rounded-sm border-l-4 border-ink bg-[#ebe6da] px-3 py-2 text-[14px]">
-            <strong>{{ callouts[step.callout.kind] ?? step.callout.kind }}.</strong>
-            <LessonText :text="step.callout.text" />
-        </p>
+        <div v-if="step.callout" class="mt-4 rounded-sm border-l-4 px-3 py-2 text-[14px]" :class="calloutStyles[step.callout.kind] ?? 'border-ink bg-[#ebe6da]'">
+            <p class="m-0 text-[12px] font-semibold uppercase tracking-wide">{{ callouts[step.callout.kind] ?? step.callout.kind }}</p>
+            <p class="mb-0 mt-1 leading-relaxed"><LessonText :text="step.callout.text" /></p>
+        </div>
 
         <template v-if="step.changed.length">
             <h3 class="mb-0 mt-4 text-[14px] font-semibold">What changed</h3>

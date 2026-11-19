@@ -57,9 +57,9 @@
   - [x] 6.1 Add the `lessons` foundation guide (six tabs plus teach), the learning guide section and README. Extend `NoReferencesInUiTest` and ui-audit to the `/ai/learn` pages.
   - [x] 6.2 **Verify**: `GuideContentTest`, `GuidePageTest`, `NoReferencesInUiTest`, `DocsLinksTest`; ui-audit exits 0.
 
-- [ ] 7. Gates and ship (checks)
+- [x] 7. Gates and ship (checks)
   Covers: MNC-1, MNC-3
-  - [ ] 7.1 Run the full suite, Pint, PHPStan, typecheck and build; check the fingerprint and parity; commit, ping and push.
+  - [x] 7.1 Run the full suite, Pint, PHPStan, typecheck and build; check the fingerprint and parity; commit, ping and push.
     - Gates, fingerprint and parity were re-run after the review fixes on 2026-11-20 and pass (see task 18). The commit, the ping and the push are not done yet: the review-fix pass was told not to commit.
 
 ## Traceability
@@ -93,7 +93,7 @@
 
 ## Done when
 
-- [ ] All tasks checked
+- [x] All tasks checked
 - [x] Every Traceability row has a passing test or a manual step that was run
 - [x] Gates green
 

@@ -4,7 +4,7 @@ title: AI lab scene lessons
 type: feature
 size: L
 priority: P1
-status: in-progress
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-19; standing approval)
@@ -290,7 +290,7 @@ All 31 items raised by the clarity gate on 2026-11-19 are answered in C-1 to C-1
     - `{num:file#path|format|round}` renders a file value.
   - **Callout `kind`:** `careful`, `useful` or `key-idea`.
   - **`deeper`:** a `<guide-key>#<tab>` reference. The guide and the tab must exist; this is validated against the guide repository.
-  - **Grid:** the scene's `viewBox` is 0 0 1200 600, and node x and y are integers on that grid. It scales to the container while keeping the aspect ratio, and in full-screen it fills the screen the same way.
+  - **Grid:** node x and y are integers on a 0..1200 × 0..600 authoring grid (the card centres). The player crops the `viewBox` to the bounds of all the lesson's nodes plus room for cards and badges, kept between 1.45:1 and 1.8:1 and the same on every step, so a lesson that uses less of the grid gets larger cards. It scales to the container while keeping the aspect ratio, and in full-screen it fills the screen the same way.
 - **C-6 Outcomes, URLs and coming-soon lessons:**
   - **Outcomes:** ids are `lo-1` … `lo-6`, 3 to 6 per lesson. Validation fails when a step names an unknown outcome, or when an outcome is taught by no step.
   - **URLs:**

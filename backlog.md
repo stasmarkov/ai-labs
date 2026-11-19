@@ -769,7 +769,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-26, BR-27
 - **Depends on:** SL-28, SL-15, SL-54
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261119-2146-scene-lessons
 - **Source:** owner request 2026-11-19 (Stanislav Markov: interactive guides like designed-to-scale.vercel.app, scene lessons that replace the SL-54 formats)
 - **Run:** `/sdd spec-20261119-2146-scene-lessons`

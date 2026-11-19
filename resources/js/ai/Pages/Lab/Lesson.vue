@@ -107,10 +107,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 
     <div class="sr-only" aria-live="polite" aria-atomic="true">{{ announcement }}</div>
 
-    <div class="mt-6 grid gap-6 lg:grid-cols-[200px_minmax(0,1fr)]">
+    <div class="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start">
         <CourseSidebar :course="course" :current="key" />
 
-        <div class="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div class="grid min-w-0 flex-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px] min-[1440px]:grid-cols-[minmax(0,1fr)_340px]">
             <div class="min-w-0">
                 <SceneCanvas
                     :nodes="lesson.nodes"
@@ -125,7 +125,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                 </SceneCanvas>
                 <StepBar :steps="lesson.steps" :current="step" :paused="paused" @go="go" @replay="replay" @pause="togglePause" />
             </div>
-            <div class="min-w-0 space-y-4">
+            <div class="grid min-w-0 content-start gap-4 lg:grid-cols-2 xl:grid-cols-1">
                 <StepPanel :step="current" :total="total" />
                 <LearnList :outcomes="lesson.learn" :ticked="ticked" />
             </div>

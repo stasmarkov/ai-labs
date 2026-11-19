@@ -16,6 +16,13 @@ const lab = computed(() => (page.props.lab ?? {}) as LabShared);
 const navigation = computed(() => lab.value.navigation ?? []);
 const overviewHref = computed(() => navigation.value[0]?.href ?? '/ai');
 
+/**
+ * The lesson player puts a scene, a step panel and a course rail side by side, so it gets the whole window up to 1440 px
+ * and a slightly narrower lab navigation.
+ */
+const lesson = computed(() => page.component === 'Lab/Lesson');
+const width = computed(() => (lesson.value ? 'max-w-[1440px]' : 'max-w-[1200px]'));
+
 const ollama = computed<{ state: 'ok' | 'down' | 'idle'; label: string }>(() => {
     const reachable = lab.value.ollama?.reachable;
 
@@ -41,7 +48,7 @@ function isCurrent(href: string): boolean {
     <div class="flex min-h-screen flex-col">
         <a href="#lab-content" class="lab-skip-link">Skip to content</a>
         <header class="border-b border-rule">
-            <div class="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
+            <div class="mx-auto flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6" :class="width">
                 <span class="text-[18px] font-semibold">AI lab</span>
                 <div class="flex min-w-0 flex-wrap items-center gap-2">
                     <LabTag v-if="lab.textModel" caption="text">{{ lab.textModel }}</LabTag>
@@ -53,8 +60,8 @@ function isCurrent(href: string): boolean {
             </div>
         </header>
 
-        <div class="mx-auto flex w-full max-w-[1200px] flex-1 flex-col md:flex-row">
-            <nav aria-label="Lab pages" class="shrink-0 border-b border-rule px-4 py-3 md:w-52 md:border-b-0 md:border-r md:px-6 md:py-6">
+        <div class="mx-auto flex w-full flex-1 flex-col md:flex-row" :class="width">
+            <nav aria-label="Lab pages" class="shrink-0 border-b border-rule px-4 py-3 md:border-b-0 md:border-r md:py-6" :class="lesson ? 'md:w-48 md:px-5' : 'md:w-52 md:px-6'">
                 <ul class="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0 md:flex-col md:gap-y-2">
                     <li v-for="item in navigation" :key="item.href">
                         <Link
