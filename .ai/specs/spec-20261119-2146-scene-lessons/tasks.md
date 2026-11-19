@@ -200,3 +200,4 @@
     - `PARITY_INSECURE=1 bench/parity.sh capture`: only the `captured=` line changed, and `git checkout -- bench/parity` restored it.
     - `node bench/ui-audit.mjs --only learn,learn/running-models/one-model-many-users`: exit 0, 4 pages, 0 failing. Full audit: exit 0, 66 pages, 0 failing.
     - Every result file the pilot reads is tracked by git; git is available in the container, so the test ran rather than skipping.
+- Clean-tree bench: after commit 111446e, `bench/run.sh ping --quick` exited 0 on frankenphp.
