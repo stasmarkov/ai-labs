@@ -760,3 +760,16 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Spec:** spec-20261117-2243-guide-format-variants
 - **Source:** owner request 2026-11-17 (Stanislav Markov: "create 5 different variants of new interactive guides, for example for implementing /ai/guides/photos, so I will pick the best type of guide that will teach the best")
 - **Run:** `/sdd spec-20261117-2243-guide-format-variants`
+
+### SL-55 · AI lab scene lessons
+
+- **Outcome:** `/ai/learn` holds a course of animated step-by-step lessons. Each step moves from a problem to a solution and updates four things together: a live SVG scene with moving requests, a KPI strip of measured numbers, a list of what changed, and a panel with a callout. A step bar works with the keyboard, a "You will learn" checklist ticks as steps pass, and a course sidebar shows progress. The pilot lesson "One model, many users" is built from the SL-28 and SL-15 measurements. This closes SL-54 in favour of scene lessons.
+- **Entry point:** `/ai/learn`
+- **Size:** L
+- **BRs:** BR-26, BR-27
+- **Depends on:** SL-28, SL-15, SL-54
+- **Blocked by:** none
+- **Status:** specced
+- **Spec:** spec-20261119-2146-scene-lessons
+- **Source:** owner request 2026-11-19 (Stanislav Markov: interactive guides like designed-to-scale.vercel.app, scene lessons that replace the SL-54 formats)
+- **Run:** `/sdd spec-20261119-2146-scene-lessons`
