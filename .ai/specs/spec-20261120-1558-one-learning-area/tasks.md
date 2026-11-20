@@ -125,3 +125,5 @@
   Covers: AC-10, AC-2
   - C-6 accepts fail-fast "caught by `LessonRepositoryTest`; the `lessons` guide's authoring notes say so", and C-4 requires every lesson to be named by a guide's `lessons` key. `resources/guides/lessons.php` does not say either: the "add a lesson" steps (around line 71) never say to add `<module>/<lesson>` to a guide's `lessons` key, no tab says a new guide must be linked by a lesson or listed in one module's `references` in the course file, and the support entry (around line 49) still says a server error means a broken lesson file, although an unplaced guide now makes `/ai/learn` and every lesson page fail.
   - [x] **Verify**: a `GuidePageTest` (or `GuideContentTest`) case asserts the `lessons` guide's text names the `references` list and the guide's `lessons` link as the two ways to place a topic, and says the course stops loading when a guide or lesson is not placed; `NoReferencesInUiTest` and the guide tab-count tests stay green; Pint green
+
+- Clean-tree bench after the review fix pass: after commit 3ec1530, `bench/run.sh ping --quick` exited 0 on frankenphp.
