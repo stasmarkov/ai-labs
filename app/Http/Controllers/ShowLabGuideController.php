@@ -16,7 +16,7 @@ final class ShowLabGuideController extends Controller
     {
         return Inertia::render('Lab/Guide', [
             'guide' => $service->show($key),
-            'trial' => $formats->trial($key),
+            'formatsHref' => $formats->trialHref($key),
             ...$course->guideContext($key),
         ]);
     }

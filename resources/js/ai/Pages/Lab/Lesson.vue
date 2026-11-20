@@ -16,13 +16,13 @@ import StepPanel from '../../components/lesson/StepPanel.vue';
 import TopicHeader from '../../components/lesson/TopicHeader.vue';
 import LabTag from '../../components/LabTag.vue';
 import { lessonActionFor } from '../../composables/lessonKeys';
-import type { Course, Lesson } from '../../composables/lessonTypes';
+import type { CourseOutline, Lesson } from '../../composables/lessonTypes';
 import { useLessonProgress } from '../../composables/useLessonProgress';
 
 const props = defineProps<{
     lesson: Lesson;
     step: number;
-    course: Course;
+    course: CourseOutline;
     guides: Array<{ key: string; title: string; href: string }>;
 }>();
 

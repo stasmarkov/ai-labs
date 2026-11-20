@@ -19,25 +19,17 @@ final readonly class GuideFormatPageService
     ) {}
 
     /**
-     * The link a guide page shows to its format trial: present only when the guide's folder holds a complete format
-     * set. Null otherwise.
-     *
-     * @return array{title: string, summary: string, href: string}|null
+     * The format trial link a guide page shows in its header: present only when the guide's folder holds a complete
+     * format set, null otherwise. Checks the files exist and reads none of them, so a broken format file fails only the
+     * format pages, never the guide.
      */
-    public function trial(string $key): ?array
+    public function trialHref(string $key): ?string
     {
         if (! $this->formats->has($key) || ! $this->guides->has($key)) {
             return null;
         }
 
-        $names = array_map(fn (GuideFormatMeta $meta): string => $meta->name, $this->formats->compare($key)->entries);
-        $last = array_pop($names);
-
-        return [
-            'title' => 'Guide format trial',
-            'summary' => 'The "'.$this->guides->find($key)->title.'" guide taught five ways: '.implode(', ', $names).' and '.$last.'. Try them side by side.',
-            'href' => route('ai.guides.formats', ['key' => $key], false),
-        ];
+        return route('ai.guides.formats', ['key' => $key], false);
     }
 
     /**

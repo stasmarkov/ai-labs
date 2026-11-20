@@ -245,25 +245,36 @@ final class LessonRepository
         }
 
         $named = [];
+        $readable = [];
 
         foreach ($this->guides->keys() as $key) {
-            foreach ($this->guideLessons($key, $where) as $lesson) {
+            $links = $this->guideLessons($key);
+
+            if ($links === null) {
+                continue;
+            }
+
+            $readable[$key] = $links;
+
+            foreach ($links as $lesson) {
                 $named[$lesson] = true;
             }
         }
 
-        foreach (array_keys($lessons) as $lesson) {
-            if (! isset($named[$lesson])) {
-                throw new InvalidLessonException("{$where}: lesson [{$lesson}] is not named by any guide's lessons.");
+        if (count($readable) === count($this->guides->keys())) {
+            foreach (array_keys($lessons) as $lesson) {
+                if (! isset($named[$lesson])) {
+                    throw new InvalidLessonException("{$where}: lesson [{$lesson}] is not named by any guide's lessons.");
+                }
             }
         }
 
-        foreach ($this->guides->keys() as $key) {
+        foreach ($readable as $key => $links) {
             if ($key === self::META_GUIDE) {
                 continue;
             }
 
-            $linked = array_values(array_filter($this->guideLessons($key, $where), fn (string $lesson): bool => isset($lessons[$lesson])));
+            $linked = array_values(array_filter($links, fn (string $lesson): bool => isset($lessons[$lesson])));
 
             if ($linked !== [] && isset($referenced[$key])) {
                 throw new InvalidLessonException("{$where}: guide [{$key}] is referenced by module [{$referenced[$key]}] and also linked by lesson [{$linked[0]}].");
@@ -276,16 +287,20 @@ final class LessonRepository
     }
 
     /**
-     * The lessons a guide names, with a broken guide file reported as a course problem naming the guide.
+     * The lessons a guide names, read from its `lessons` key only. A guide file too broken to read even that is
+     * reported and left out (null), so it fails its own page and not the course; whether a lesson is named by no guide
+     * is then not decided, since the broken guide may be the one that names it.
      *
-     * @return list<string>
+     * @return list<string>|null
      */
-    private function guideLessons(string $key, string $where): array
+    private function guideLessons(string $key): ?array
     {
         try {
-            return $this->guides->find($key)->lessons;
+            return $this->guides->lessonsOf($key);
         } catch (InvalidGuideException $exception) {
-            throw new InvalidLessonException("{$where}: guide [{$key}] is broken: {$exception->getMessage()}");
+            report($exception);
+
+            return null;
         }
     }
 

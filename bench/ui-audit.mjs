@@ -286,33 +286,46 @@ async function firstLinkId(page, base, listPath, prefix) {
   }, { prefix, uuid: UUID });
 }
 
-/** Every page under /ai that the course page links to and that matches the pattern, as a path under /ai. */
-async function coursePages(browser, source) {
+/** The course page's link patterns: every lesson (learn/<module>/<lesson>) and every guide (guides/<key>). */
+const COURSE_LINKS = {
+  lessons: '^/ai/(learn/[a-z0-9-]+/[a-z0-9-]+)$',
+  guides: '^/ai/(guides/[a-z0-9-]+)$',
+};
+
+/**
+ * Every page under /ai that the course page links to, per pattern in COURSE_LINKS, as paths under /ai. The course page
+ * is opened once for all patterns.
+ */
+async function coursePages(browser) {
   const context = await browser.newContext(contextOptions(1440));
   const page = await context.newPage();
   const response = await page.goto(`${base}/ai/learn`, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => null);
-  const paths = !response || response.status() >= 400 ? [] : await page.evaluate((pattern) => {
-    const found = new Set();
+  const empty = Object.fromEntries(Object.keys(COURSE_LINKS).map((label) => [label, []]));
+  const paths = !response || response.status() >= 400 ? empty : await page.evaluate((patterns) => {
+    const found = Object.fromEntries(Object.keys(patterns).map((label) => [label, new Set()]));
     for (const a of document.querySelectorAll('a[href]')) {
-      const match = new RegExp(pattern).exec(new URL(a.href, window.location.href).pathname);
-      if (match) {
-        found.add(match[1]);
+      const path = new URL(a.href, window.location.href).pathname;
+      for (const [label, pattern] of Object.entries(patterns)) {
+        const match = new RegExp(pattern).exec(path);
+        if (match) {
+          found[label].add(match[1]);
+        }
       }
     }
-    return [...found];
-  }, source);
+    return Object.fromEntries(Object.entries(found).map(([label, set]) => [label, [...set]]));
+  }, COURSE_LINKS);
   await context.close();
   return paths;
 }
 
 /** Every lesson the course page links to (learn/<module>/<lesson>). */
-async function lessonPages(browser) {
-  return coursePages(browser, '^/ai/(learn/[a-z0-9-]+/[a-z0-9-]+)$');
+async function lessonPages(links) {
+  return links.lessons;
 }
 
-/** Every guide the course page links to (guides/<key>), reference topics and the guides each lesson names. */
-async function guidePages(browser) {
-  return coursePages(browser, '^/ai/(guides/[a-z0-9-]+)$');
+/** Every guide the course page links to (guides/<key>): reference topics, the guides each lesson names and the lessons guide. */
+async function guidePages(links) {
+  return links.guides;
 }
 
 async function resolveExtraPages(browser) {
@@ -357,8 +370,9 @@ try {
 
 if (only === null || only.some((path) => path.startsWith('learn') || path.startsWith('guides'))) {
   const known = new Set(pages.map((target) => target.path));
+  const links = await coursePages(browser);
   for (const [label, collect] of [['lessons', lessonPages], ['guides', guidePages]]) {
-    const found = await collect(browser);
+    const found = await collect(links);
     if (found.length === 0) {
       console.error(`No ${label} links found on ${base}/ai/learn`);
       await browser.close();

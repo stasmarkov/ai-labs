@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
-import type { Course } from '../../composables/lessonTypes';
+import type { CourseOutline } from '../../composables/lessonTypes';
 import { useLessonProgress } from '../../composables/useLessonProgress';
 
 /** `current` is the lesson being played (it also enables reset); `highlightLesson` only marks a lesson row current, for a guide page. */
-const props = withDefaults(defineProps<{ course: Course; current?: string | null; currentGuide?: string | null; highlightLesson?: string | null }>(), { current: null, currentGuide: null, highlightLesson: null });
+const props = withDefaults(defineProps<{ course: CourseOutline; current?: string | null; currentGuide?: string | null; highlightLesson?: string | null }>(), { current: null, currentGuide: null, highlightLesson: null });
 
 const isCurrentLesson = (key: string): boolean => key === (props.current ?? props.highlightLesson);
 
@@ -59,11 +59,11 @@ onBeforeUnmount(() => wide?.removeEventListener('change', followWidth));
 
 const keyOf = (module: string, lesson: string): string => `${module}/${lesson}`;
 
-function playable(module: Course['modules'][number]): number {
+function playable(module: CourseOutline['modules'][number]): number {
     return module.lessons.filter((lesson) => lesson.href !== null).length;
 }
 
-function done(module: Course['modules'][number]): number {
+function done(module: CourseOutline['modules'][number]): number {
     return module.lessons.filter((lesson) => lesson.href !== null && progress.isDone(keyOf(module.slug, lesson.slug))).length;
 }
 

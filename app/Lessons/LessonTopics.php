@@ -8,7 +8,8 @@ use App\Guides\GuideRepository;
 use App\Guides\InvalidGuideException;
 
 /**
- * Which guide belongs to which lesson and module, read from the course file and the guides' own lesson links only.
+ * Which guide belongs to which lesson and module, read from the course file and the guides' own lesson links only
+ * (a light read of each guide's `lessons` key; a guide too broken for that is left out, the course already reported it).
  * Bound per request (scoped), so the map is built once.
  */
 final class LessonTopics
@@ -68,9 +69,9 @@ final class LessonTopics
 
         foreach ($this->guides->keys() as $key) {
             try {
-                $named = $this->guides->find($key)->lessons;
-            } catch (InvalidGuideException $exception) {
-                throw new InvalidLessonException("Guide [{$key}] is broken: {$exception->getMessage()}");
+                $named = $this->guides->lessonsOf($key);
+            } catch (InvalidGuideException) {
+                continue;
             }
 
             foreach ($named as $lesson) {

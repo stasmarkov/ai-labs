@@ -8,6 +8,7 @@ use App\DTOs\Lesson;
 use App\DTOs\LessonCourseEntry;
 use App\DTOs\LessonStep;
 use App\Guides\GuideRepository;
+use App\Guides\InvalidGuideException;
 use App\Lessons\InvalidLessonException;
 use App\Lessons\LessonService;
 use App\Lessons\LessonTopics;
@@ -34,7 +35,7 @@ final readonly class LessonPageService
     }
 
     /**
-     * @return array{lesson: \Closure, step: int, course: \Closure, guides: list<array{key: string, title: string, summary: string, href: string}>}
+     * @return array{lesson: \Closure, step: int, course: \Closure, guides: list<array{key: string, title: string, href: string}>}
      */
     public function show(string $module, string $slug, ?int $step): array
     {
@@ -56,16 +57,16 @@ final readonly class LessonPageService
             throw new NotFoundHttpException;
         }
 
-        return ['lesson' => fn (): array => $this->lessonProps($lesson), 'step' => $number, 'course' => fn (): array => $this->courseProps(), 'guides' => $this->guideLinks($this->topics->guidesOfLesson($module, $slug))];
+        return ['lesson' => fn (): array => $this->lessonProps($lesson), 'step' => $number, 'course' => fn (): array => $this->courseOutline(), 'guides' => $this->guideLinks($this->topics->guidesOfLesson($module, $slug))];
     }
 
     /**
-     * The course with each lesson's guides and each module's reference topics; public so a guide page carries the same
-     * course as the lesson pages.
+     * The course page's course: each lesson with its length and guides, each module with its reference topics and
+     * their summaries.
      *
      * @return array{modules: list<array<string, mixed>>}
      */
-    public function courseProps(): array
+    private function courseProps(): array
     {
         $modules = [];
 
@@ -83,8 +84,34 @@ final readonly class LessonPageService
                     'available' => $entry->available,
                     'minutes' => $entry->minutes,
                     'steps' => $entry->steps,
-                    'href' => $entry->comingSoon || ! $entry->available ? null : route('ai.learn.show', ['module' => $module->slug, 'lesson' => $entry->slug], absolute: false),
+                    'href' => $this->lessonHref($module->slug, $entry),
                     'guides' => $this->guideLinks($this->topics->guidesOfLesson($module->slug, $entry->slug)),
+                ], $module->lessons),
+                'references' => $this->guideLinks($module->references, withSummary: true),
+            ];
+        }
+
+        return ['modules' => $modules];
+    }
+
+    /**
+     * The course as the sidebar of a lesson or guide page reads it: module, lesson and reference titles and links only,
+     * so those pages do not carry the course page's summaries and lengths.
+     *
+     * @return array{modules: list<array{slug: string, title: string, lessons: list<array{slug: string, title: string, href: string|null}>, references: list<array{key: string, title: string, href: string}>}>}
+     */
+    public function courseOutline(): array
+    {
+        $modules = [];
+
+        foreach ($this->lessons->course()->modules as $module) {
+            $modules[] = [
+                'slug' => $module->slug,
+                'title' => $module->title,
+                'lessons' => array_map(fn (LessonCourseEntry $entry): array => [
+                    'slug' => $entry->slug,
+                    'title' => $entry->title,
+                    'href' => $this->lessonHref($module->slug, $entry),
                 ], $module->lessons),
                 'references' => $this->guideLinks($module->references),
             ];
@@ -102,7 +129,7 @@ final readonly class LessonPageService
     public function guideContext(string $key): array
     {
         try {
-            return ['topic' => $this->topic($key), 'course' => $this->courseProps()];
+            return ['topic' => $this->topic($key), 'course' => $this->courseOutline()];
         } catch (InvalidLessonException $exception) {
             report($exception);
 
@@ -128,7 +155,7 @@ final readonly class LessonPageService
             if ($module->slug === $slug) {
                 return [
                     'module' => ['slug' => $module->slug, 'title' => $module->title],
-                    'lessons' => $this->lessonLinks($this->guides->find($key)->lessons),
+                    'lessons' => $this->lessonLinks($this->guides->lessonsOf($key)),
                 ];
             }
         }
@@ -149,18 +176,40 @@ final readonly class LessonPageService
         ], $this->lessons->titles($keys));
     }
 
-    /**
-     * @param  list<string>  $keys
-     * @return list<array{key: string, title: string, summary: string, href: string}>
-     */
-    private function guideLinks(array $keys): array
+    private function lessonHref(string $module, LessonCourseEntry $entry): ?string
     {
-        return array_map(fn (string $key): array => [
-            'key' => $key,
-            'title' => $this->guides->find($key)->title,
-            'summary' => $this->guides->find($key)->summary,
-            'href' => route('ai.guides.show', ['key' => $key], absolute: false),
-        ], $keys);
+        return $entry->comingSoon || ! $entry->available ? null : route('ai.learn.show', ['module' => $module, 'lesson' => $entry->slug], absolute: false);
+    }
+
+    /**
+     * Links to the given guides; the summary only where a page shows it (the course page's reference topics). A guide
+     * file that does not load is reported and left out, so it breaks only its own page.
+     *
+     * @param  list<string>  $keys
+     * @return list<array{key: string, title: string, href: string, summary?: string}>
+     */
+    private function guideLinks(array $keys, bool $withSummary = false): array
+    {
+        $links = [];
+
+        foreach ($keys as $key) {
+            try {
+                $guide = $this->guides->find($key);
+            } catch (InvalidGuideException $exception) {
+                report($exception);
+
+                continue;
+            }
+
+            $links[] = [
+                'key' => $key,
+                'title' => $guide->title,
+                ...($withSummary ? ['summary' => $guide->summary] : []),
+                'href' => route('ai.guides.show', ['key' => $key], absolute: false),
+            ];
+        }
+
+        return $links;
     }
 
     /**

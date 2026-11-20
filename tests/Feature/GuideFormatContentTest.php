@@ -76,8 +76,7 @@ afterEach(function (): void {
 it('AC-4 the shipped format files load', function (): void {
     $repository = formatRepository(resource_path('guides/formats'));
 
-    expect($repository->keys())->toBe(['photos'])
-        ->and($repository->has('photos'))->toBeTrue()
+    expect($repository->has('photos'))->toBeTrue()
         ->and($repository->has('describe'))->toBeFalse()
         ->and($repository->compare('photos')->entries)->toHaveCount(5);
 
@@ -91,14 +90,12 @@ it('AC-3 a folder without format files is unknown and a partial set is not a for
     foreach (glob($directory.'/photos/*.php') ?: [] as $file) {
         unlink($file);
     }
-    expect(formatRepository($directory)->has('photos'))->toBeFalse()
-        ->and(formatRepository($directory)->keys())->toBe([]);
+    expect(formatRepository($directory)->has('photos'))->toBeFalse();
 
     copy(resource_path('guides/formats/photos/_compare.php'), $directory.'/photos/_compare.php');
     $repository = formatRepository($directory);
 
     expect($repository->has('photos'))->toBeFalse()
-        ->and($repository->keys())->toBe([])
         ->and(fn () => $repository->format('photos', GuideFormatType::Quiz))->toThrow(InvalidGuideException::class, 'missing the file');
 });
 

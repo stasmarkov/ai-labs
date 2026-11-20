@@ -35,7 +35,7 @@ afterEach(function (): void {
  *
  * @param  list<string>  $without
  */
-function useFormatFolder(string $key, array $without = []): void
+function useFormatFolder(string $key, array $without = []): string
 {
     $directory = sys_get_temp_dir().'/guide-format-pages-'.bin2hex(random_bytes(4));
     mkdir($directory.'/'.$key, 0777, true);
@@ -47,6 +47,8 @@ function useFormatFolder(string $key, array $without = []): void
     }
 
     app()->scoped(GuideFormatRepository::class, fn (): GuideFormatRepository => new GuideFormatRepository($directory, app(SnippetResolver::class)));
+
+    return $directory;
 }
 
 /**
@@ -115,7 +117,7 @@ it('AC-3 unknown key or format is 404', function (): void {
 it('AC-3 an incomplete format folder shows no trial link and answers 404, never 500', function (): void {
     useFormatFolder('photos', ['debug']);
 
-    $this->get('/ai/guides/photos')->assertOk()->assertInertia(fn (Assert $page) => $page->where('trial', null));
+    $this->get('/ai/guides/photos')->assertOk()->assertInertia(fn (Assert $page) => $page->where('formatsHref', null));
     $this->get('/ai/guides/photos/formats')->assertNotFound();
     $this->get('/ai/guides/photos/formats/quiz')->assertNotFound();
     $this->get('/ai/guides/photos/formats/debug')->assertNotFound();
@@ -134,11 +136,9 @@ it('AC-8 MNC-3 the photos guide exposes the trial link and the format URLs still
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('Lab/Guide')
-            ->where('trial.title', 'Guide format trial')
-            ->where('trial.href', '/ai/guides/photos/formats')
-            ->where('trial.summary', fn (string $summary): bool => str_contains($summary, 'Follow one photo') && str_contains($summary, 'Code tour'))
+            ->where('formatsHref', '/ai/guides/photos/formats')
         );
-    $this->get('/ai/guides/describe')->assertOk()->assertInertia(fn (Assert $page) => $page->where('trial', null));
+    $this->get('/ai/guides/describe')->assertOk()->assertInertia(fn (Assert $page) => $page->where('formatsHref', null));
     $this->get('/ai/guides/photos/formats')->assertOk();
     $this->get('/ai/guides/photos/formats/quiz')->assertOk();
 });
@@ -148,9 +148,19 @@ it('AC-8 the trial link follows the format sets found in the folder', function (
 
     $this->get('/ai/guides/describe')
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->where('trial.href', '/ai/guides/describe/formats'));
+        ->assertInertia(fn (Assert $page) => $page->where('formatsHref', '/ai/guides/describe/formats'));
     $this->get('/ai/guides/describe/formats')->assertOk();
     $this->get('/ai/guides/photos/formats')->assertNotFound();
+});
+
+it('F4 F12 a broken compare file fails only the format pages, never the photos guide', function (): void {
+    $directory = useFormatFolder('photos');
+    file_put_contents($directory.'/photos/_compare.php', "<?php\nreturn ['outcomes' => 'not a list'];");
+
+    $this->get('/ai/guides/photos')->assertOk()->assertInertia(fn (Assert $page) => $page->where('formatsHref', '/ai/guides/photos/formats'));
+    $this->withoutExceptionHandling();
+
+    expect(fn () => $this->get('/ai/guides/photos/formats'))->toThrow(InvalidGuideException::class);
 });
 
 it('MNC-1 the photos guide renders the same props as on master', function (): void {
@@ -257,7 +267,7 @@ it('AC-8 the format pages breadcrumb to the learning area and the photos guide s
     $guide = file_get_contents(base_path('resources/js/ai/Pages/Lab/Guide.vue'));
 
     expect($header)->toContain('trialHref')->toContain('Format trial')
-        ->and($guide)->toContain(':trial-href="trial?.href ?? null"')
+        ->and($guide)->toContain(':trial-href="formatsHref"')
         ->and($guide)->not->toContain('Guide format trial')
         ->and($guide)->not->toContain('v-if="trial" class="mt-8');
 });

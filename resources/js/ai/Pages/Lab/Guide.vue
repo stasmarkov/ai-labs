@@ -13,7 +13,7 @@ import LabFailureMode from '../../components/LabFailureMode.vue';
 import LabMetric from '../../components/LabMetric.vue';
 import LabRecipe from '../../components/LabRecipe.vue';
 import LabTag from '../../components/LabTag.vue';
-import type { Course } from '../../composables/lessonTypes';
+import type { CourseOutline } from '../../composables/lessonTypes';
 import CourseSidebar from '../../components/lesson/CourseSidebar.vue';
 import TopicHeader from '../../components/lesson/TopicHeader.vue';
 
@@ -87,8 +87,8 @@ interface Guide {
 
 const props = defineProps<{
     guide: Guide;
-    trial: { title: string; summary: string; href: string } | null;
-    course: Course;
+    formatsHref: string | null;
+    course: CourseOutline;
     topic: { module: { slug: string; title: string }; lessons: Array<{ key: string; title: string; href: string }> } | null;
 }>();
 
@@ -156,7 +156,7 @@ const statusLabel: Record<string, string> = {
                 :walk-href="topic?.lessons[0]?.href ?? null"
                 :reference-href="null"
                 :also="topic?.lessons.slice(1) ?? []"
-                :trial-href="trial?.href ?? null"
+                :trial-href="formatsHref"
             />
             <h1 class="m-0 flex flex-wrap items-center gap-3 text-[28px] font-semibold">
                 {{ guide.title }}

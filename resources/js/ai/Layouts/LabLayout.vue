@@ -78,11 +78,11 @@ function isCurrent(href: string): boolean {
         <div class="mx-auto flex w-full flex-1 flex-col md:flex-row" :class="width">
             <nav aria-label="Lab pages" class="shrink-0 border-b border-rule px-4 py-3 md:border-b-0 md:border-r md:py-6" :class="lesson ? 'md:w-48 md:px-5' : 'md:w-52 md:px-6'">
                 <div class="flex flex-wrap gap-x-6 gap-y-3 md:flex-col md:gap-y-5">
-                    <section v-for="(group, index) in groups" :key="group.label" :aria-labelledby="`lab-nav-group-${index}`">
+                    <div v-for="(group, index) in groups" :key="group.label" class="min-w-0">
                         <h2 :id="`lab-nav-group-${index}`" class="m-0 mb-1 text-[12px] font-semibold uppercase tracking-wide text-muted">
                             {{ group.label }}
                         </h2>
-                        <ul class="m-0 flex list-none flex-wrap gap-x-4 gap-y-0 p-0 md:flex-col">
+                        <ul :aria-labelledby="`lab-nav-group-${index}`" class="m-0 flex list-none flex-wrap gap-x-4 gap-y-0 p-0 md:flex-col">
                             <li v-for="item in group.items" :key="item.href">
                                 <Link
                                     :href="item.href"
@@ -94,7 +94,7 @@ function isCurrent(href: string): boolean {
                                 </Link>
                             </li>
                         </ul>
-                    </section>
+                    </div>
                 </div>
             </nav>
 

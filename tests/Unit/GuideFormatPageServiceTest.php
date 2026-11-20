@@ -40,14 +40,10 @@ it('AC-2 sends each snippet of a format once and points the items at it', functi
 })->with(GuideFormatType::cases());
 
 it('AC-8 builds the trial link from the format set of the guide', function (): void {
-    expect($this->service->trial('photos'))->toBe([
-        'title' => 'Guide format trial',
-        'summary' => 'The "Read a car photo" guide taught five ways: Build-along, Follow one photo, Predict and check, Break and fix and Code tour. Try them side by side.',
-        'href' => '/ai/guides/photos/formats',
-    ]);
+    expect($this->service->trialHref('photos'))->toBe('/ai/guides/photos/formats');
 });
 
 it('AC-8 a guide without a format set has no trial link', function (): void {
-    expect($this->service->trial('describe'))->toBeNull()
-        ->and($this->service->trial('nope'))->toBeNull();
+    expect($this->service->trialHref('describe'))->toBeNull()
+        ->and($this->service->trialHref('nope'))->toBeNull();
 });

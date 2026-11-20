@@ -9,8 +9,6 @@ use App\DTOs\GuideStep;
 use App\DTOs\GuideTeach;
 use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
-use App\Lessons\InvalidLessonException;
-use App\Lessons\LessonService;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final readonly class GuidePageService
@@ -37,7 +35,6 @@ final readonly class GuidePageService
     public function __construct(
         private GuideRepository $guides,
         private GuideRenderer $renderer,
-        private LessonService $lessons,
     ) {}
 
     /**
@@ -132,11 +129,7 @@ final readonly class GuidePageService
             fn (string $related): array => ['key' => $related, 'title' => $this->guides->find($related)->title],
             array_filter($guide['related'], fn (string $related): bool => $this->guides->has($related)),
         ));
-        $lessons = $this->lessonLinks($guide['lessons']);
         unset($guide['lessons']);
-        if ($lessons !== []) {
-            $guide['lessons'] = $lessons;
-        }
         $shown = self::tabKeys($this->guides->find($key));
         $guide['tabs'] = $this->labelled(self::TABS, $shown);
         $guide['teachTabs'] = $this->labelled(self::TEACH_TABS, $shown);
@@ -171,23 +164,5 @@ final readonly class GuidePageService
         $href = route($page, absolute: false);
 
         return isset($params['q']) ? $href.'?'.http_build_query(['q' => $params['q']]) : $href;
-    }
-
-    /**
-     * @param  list<string>  $keys
-     * @return list<array{title: string, href: string}>
-     */
-    private function lessonLinks(array $keys): array
-    {
-        try {
-            $titles = $this->lessons->titles($keys);
-        } catch (InvalidLessonException) {
-            return [];
-        }
-
-        return array_map(fn (array $lesson): array => [
-            'title' => $lesson['title'],
-            'href' => route('ai.learn.show', ['module' => $lesson['module'], 'lesson' => $lesson['slug']], absolute: false),
-        ], $titles);
     }
 }

@@ -160,7 +160,7 @@ it('F12 the course page and the sidebar read only lesson metadata, so an unreada
 
     $this->get('/ai/learn/mod/one')
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->where('course.modules.0.lessons.1.steps', 8));
+        ->assertInertia(fn (Assert $page) => $page->where('course.modules.0.lessons.1', ['slug' => 'two', 'title' => 'Two', 'href' => '/ai/learn/mod/two']));
 
     $this->get('/ai/learn/mod/two')->assertStatus(500);
 });
@@ -514,7 +514,8 @@ it('AC-7 NFR-2 the lab sidebar renders labelled groups and keeps Course current 
     $layout = (string) file_get_contents(resource_path('js/ai/Layouts/LabLayout.vue'));
 
     expect($layout)->toContain('in groups"')
-        ->and($layout)->toContain(':aria-labelledby')
+        ->and($layout)->toContain('<ul :aria-labelledby="`lab-nav-group-${index}`"')
+        ->and($layout)->toContain('uppercase')
         ->and($layout)->toContain('group.label')
         ->and($layout)->toContain("startsWith('/ai/guides')")
         ->and($layout)->toContain('aria-current')

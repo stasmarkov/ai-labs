@@ -2,15 +2,16 @@
 
 declare(strict_types=1);
 
+use App\DTOs\LabCapability;
 use App\Guides\GuideFacts;
 use App\Guides\GuideRepository;
 use App\Guides\InvalidGuideException;
-use App\Lessons\InvalidLessonException;
 use App\Lessons\LessonNumbers;
 use App\Lessons\LessonRepository;
 use App\Lessons\LessonService;
 use App\Lessons\LessonTopics;
 use App\Services\GuidePageService;
+use App\Services\LabOverviewService;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -58,6 +59,17 @@ it('AC-7 MNC-4 navigation is grouped in order and conditional items follow today
         ->and($navigation[1][1])->toBe(['Describe', 'Chat', 'Moderation', 'Playground'])
         ->and($navigation[4][1])->toBe(['Assistant', 'Research', 'Admin assistant', 'Changes'])
         ->and($navigation[5][1])->toBe(['Settings']);
+});
+
+it('F20 C-12 every lab page sits in a sidebar group, so a page missing from the groups cannot vanish silently', function (): void {
+    app()->detectEnvironment(fn (): string => 'local');
+    config(['ai.settings_ui' => true, 'ai.mcp.enabled' => true, 'ai.admin_assistant.enabled' => true]);
+
+    $hrefs = collect($this->get('/ai')->viewData('page')['props']['lab']['navigation'])->flatMap(fn (array $group): array => array_column($group['items'], 'href'));
+    $pages = collect(app(LabOverviewService::class)->capabilities())->map(fn (LabCapability $page): string => $page->route);
+
+    expect($hrefs->duplicates()->all())->toBe([])
+        ->and($hrefs->sort()->values()->all())->toBe($pages->merge(['/ai', '/ai/learn', '/ai/changes', '/ai/settings'])->sort()->values()->all());
 });
 
 it('AC-4 an unknown guide key returns 404', function (): void {
@@ -361,10 +373,10 @@ it('AC-5 AC-6 guide page carries topic and course', function (): void {
             ->where('topic.module.title', 'Running models')
             ->where('topic.lessons.0.href', '/ai/learn/running-models/one-model-many-users')
             ->has('course.modules', 5)
-            ->where('course.modules.0.references.0', ['key' => 'describe', 'title' => 'Describe a car', 'summary' => 'One car, one short description, sent word by word while the model writes it.', 'href' => '/ai/guides/describe'])
-            ->where('course.modules.0.lessons.0.guides', fn ($guides): bool => collect($guides)->contains(
-                fn (array $guide): bool => $guide['key'] === 'local-models' && $guide['href'] === '/ai/guides/local-models'
-            ))
+            ->where('course.modules.0.references.0', ['key' => 'describe', 'title' => 'Describe a car', 'href' => '/ai/guides/describe'])
+            ->where('course.modules.0.lessons.0', ['slug' => 'one-model-many-users', 'title' => 'One model, many users', 'href' => '/ai/learn/running-models/one-model-many-users'])
+            ->where('course.modules.0', fn ($module): bool => array_keys(collect($module)->all()) === ['slug', 'title', 'lessons', 'references'])
+            ->missing('guide.lessons')
         );
 
     $this->get('/ai/guides/describe')
@@ -377,12 +389,19 @@ it('AC-5 AC-6 guide page carries topic and course', function (): void {
         ->assertInertia(fn (Assert $page) => $page->where('topic', null));
 });
 
-it('NFR-1 a guide page payload stays under 60 000 characters', function (): void {
-    foreach (['local-models', 'describe', 'photos'] as $key) {
-        $page = $this->get('/ai/guides/'.$key)->viewData('page');
+it('NFR-1 C-17 every guide page payload stays under 60 000 characters', function (): void {
+    $sizes = [];
 
-        expect(strlen(json_encode($page['props'])))->toBeLessThan(60000);
+    foreach (app(GuideRepository::class)->keys() as $key) {
+        preg_match('#<script data-page="app" type="application/json">(.*?)</script>#s', (string) $this->get('/ai/guides/'.$key)->assertOk()->getContent(), $match);
+        $sizes[$key] = mb_strlen($match[1] ?? str_repeat('x', 60000));
     }
+
+    arsort($sizes);
+
+    expect($sizes)->toHaveCount(25)
+        ->and(min($sizes))->toBeGreaterThan(5000)
+        ->and(reset($sizes))->toBeLessThan(60000, 'largest guide page: '.array_key_first($sizes));
 });
 
 it('AC-6 a lesson-linked guide names its first lesson by key for the course sidebar', function (): void {
@@ -406,14 +425,31 @@ it('AC-10 AC-2 the lessons guide says a topic is placed by the references list o
         ->toContain('names the key');
 });
 
-it('F1 F2 one broken guide file fails the course pages with a lesson error and no guide page', function (): void {
+it('F1 a broken guide file fails only its own page: the course, a lesson and an unrelated guide still answer 200', function (): void {
     $root = sys_get_temp_dir().'/guides-'.bin2hex(random_bytes(4));
     File::copyDirectory(resource_path('guides'), $root.'/guides');
     File::copyDirectory(resource_path('lessons'), $root.'/lessons');
     file_put_contents($root.'/guides/worker-dx.php', "<?php\nreturn ['kind' => 'no-such-kind', 'title' => 'T', 'summary' => 'S.'];");
-    $lessons = new LessonRepository($root.'/lessons', new GuideRepository($root.'/guides'));
+    file_put_contents($root.'/guides/run-log.php', "<?php\nreturn ['kind' => ");
+    $this->app->scoped(GuideRepository::class, fn (): GuideRepository => new GuideRepository($root.'/guides'));
+    $this->app->scoped(LessonRepository::class, fn (): LessonRepository => new LessonRepository($root.'/lessons', $this->app->make(GuideRepository::class)));
+    $this->app->forgetScopedInstances();
 
-    expect(fn () => $lessons->course())->toThrow(InvalidLessonException::class, 'worker-dx');
+    $this->get('/ai/learn')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('course.modules', 5)
+            ->where('course.modules.4.slug', 'running-the-server')
+            ->where('course.modules.4.references', fn ($references): bool => collect($references)->pluck('key')->all() === ['logs-restart'])
+        );
+    $this->get('/ai/learn/running-models/streaming-an-answer')->assertOk();
+    $this->get('/ai/guides/chat')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('topic.module.slug', 'running-models')
+            ->where('course.modules.4.references', fn ($references): bool => ! collect($references)->pluck('key')->contains('worker-dx'))
+        );
+    $this->get('/ai/guides/worker-dx')->assertStatus(500);
 
     File::deleteDirectory($root);
 });

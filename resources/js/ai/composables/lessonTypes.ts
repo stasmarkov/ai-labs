@@ -82,8 +82,12 @@ export interface Lesson {
 export interface GuideLink {
     key: string;
     title: string;
-    summary: string;
     href: string;
+}
+
+/** A reference topic on the course page, shown with its guide's summary. */
+export interface ReferenceTopic extends GuideLink {
+    summary: string;
 }
 
 export interface CourseEntry {
@@ -104,9 +108,20 @@ export interface CourseModule {
     title: string;
     summary: string;
     lessons: CourseEntry[];
-    references: GuideLink[];
+    references: ReferenceTopic[];
 }
 
+/** The course page's course: lengths, summaries and each lesson's guides. */
 export interface Course {
     modules: CourseModule[];
+}
+
+/** The course as a lesson or guide page carries it for the sidebar: titles and links only. */
+export interface CourseOutline {
+    modules: Array<{
+        slug: string;
+        title: string;
+        lessons: Array<{ slug: string; title: string; href: string | null }>;
+        references: GuideLink[];
+    }>;
 }

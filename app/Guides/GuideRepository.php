@@ -42,6 +42,12 @@ final class GuideRepository
     /** @var array<string, Guide> */
     private array $loaded = [];
 
+    /** @var array<string, list<string>> */
+    private array $lessonLinks = [];
+
+    /** @var list<string>|null */
+    private ?array $keys = null;
+
     public function __construct(private readonly string $directory) {}
 
     public function has(string $key): bool
@@ -54,10 +60,13 @@ final class GuideRepository
      */
     public function keys(): array
     {
-        $keys = array_map(fn (string $file): string => basename($file, '.php'), glob($this->directory.'/*.php') ?: []);
-        sort($keys);
+        if ($this->keys === null) {
+            $keys = array_map(fn (string $file): string => basename($file, '.php'), glob($this->directory.'/*.php') ?: []);
+            sort($keys);
+            $this->keys = $keys;
+        }
 
-        return $keys;
+        return $this->keys;
     }
 
     public function find(string $key): Guide
@@ -65,20 +74,53 @@ final class GuideRepository
         return $this->loaded[$key] ??= $this->load($key);
     }
 
+    /**
+     * The lessons a guide links to, read from its `lessons` key alone without building or validating the rest of the
+     * file, so the course can place every guide cheaply and one broken guide fails only its own page. Throws only when
+     * the file does not load, is not an array or that key is malformed.
+     *
+     * @return list<string>
+     */
+    public function lessonsOf(string $key): array
+    {
+        if (isset($this->loaded[$key])) {
+            return $this->loaded[$key]->lessons;
+        }
+
+        if (! array_key_exists($key, $this->lessonLinks)) {
+            $this->lessonLinks[$key] = $this->lessons($key, $this->read($key));
+        }
+
+        return $this->lessonLinks[$key];
+    }
+
     private function load(string $key): Guide
+    {
+        return $this->build($key, $this->read($key), (string) sha1_file($this->path($key)));
+    }
+
+    /**
+     * What a guide file returns; a file that fails to run (a parse error, a failing require) is a broken guide too.
+     *
+     * @return array<string, mixed>
+     */
+    private function read(string $key): array
     {
         if (! $this->has($key)) {
             throw new InvalidGuideException("Unknown guide [{$key}].");
         }
 
-        $path = $this->path($key);
-        $data = require $path;
+        try {
+            $data = require $this->path($key);
+        } catch (\Throwable $exception) {
+            throw new InvalidGuideException("Guide [{$key}] does not load: {$exception->getMessage()}", previous: $exception);
+        }
 
         if (! is_array($data)) {
             throw new InvalidGuideException("Guide [{$key}] must return an array.");
         }
 
-        return $this->build($key, $data, (string) sha1_file($path));
+        return $data;
     }
 
     private function path(string $key): string

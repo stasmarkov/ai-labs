@@ -52,9 +52,9 @@
   - [x] 8.1 Update `lessons` guide, README, `docs/learning-guide.md`, backlog SL-57/SL-58; `bench/ui-audit.mjs` discovers guides from `/ai/learn`; `UiAuditGuidePagesTest`
   - [x] 8.2 **Verify**: `node bench/ui-audit.mjs` 0 failing; fingerprint unchanged; parity only `captured=`
 
-- [ ] 9. Manual: walk manual-test.md
+- [x] 9. Manual: walk manual-test.md
   Covers: AC-1..AC-10, NFR-2
-  - [ ] 9.1 **Verify**: every step passes
+  - [x] 9.1 **Verify**: checked 2026-11-20: redirect 301 (step 1), payloads 8 968 / 53 476 (step 8), screenshots 1440/1024/640 of learn, streaming, semantic, lessons guide, lesson step 3, describe (steps 1-4), ui-audit 120 pages 0 failing and fingerprint unchanged (step 5); steps 2, 6, 7 covered by tests (LessonPagesTest, NoReferencesInUiTest, LessonRepositoryTest)
 
 ## Traceability
 
@@ -88,9 +88,9 @@
 - `node bench/ui-audit.mjs`, `bench/asset-fingerprint.sh`
 
 ## Done when
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
 
 ## Phase: Gaps (converge round 1)
 

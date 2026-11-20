@@ -42,19 +42,6 @@ final class GuideFormatRepository
     ) {}
 
     /**
-     * The keys whose folder holds a complete format set, sorted.
-     *
-     * @return list<string>
-     */
-    public function keys(): array
-    {
-        $keys = array_map(basename(...), glob($this->directory.'/*', GLOB_ONLYDIR) ?: []);
-        sort($keys);
-
-        return array_values(array_filter($keys, $this->has(...)));
-    }
-
-    /**
      * Whether the key has a complete format set: `_compare.php` and one file per format. Checked once per request.
      */
     public function has(string $key): bool

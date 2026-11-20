@@ -121,13 +121,13 @@ Format trial, payload size and untouched pages (MNC-3, MNC-4, NFR-1).
 1. Open https://ai-lab.ddev.site/ai/guides/photos and click "Format trial" in the header.
 2. Open each of these and check the breadcrumb link: https://ai-lab.ddev.site/ai/guides/photos/formats/build-along, /trace, /quiz, /debug, /tour.
 3. Open https://ai-lab.ddev.site/ai/describe, /ai/playground, /ai/settings, /ai/changes and /ai/assistant.
-4. Run `curl -sk https://ai-lab.ddev.site/ai/learn | grep -o 'data-page="[^"]*"' | wc -c`.
+4. Run `curl -sk https://ai-lab.ddev.site/ai/learn | perl -0ne 'print length($1) if /<script data-page="app" type="application\/json">(.*?)<\/script>/s'; echo`.
 5. Repeat step 4 for `/ai/guides/local-models` and `/ai/guides/research`.
 
 Expected:
 - "Format trial" goes to `/ai/guides/photos/formats`, which lists five formats. Each format page answers 200 and its breadcrumb goes to "Learn" (`/ai/learn`), not to a guides list.
 - The lab pages open as before; playground, admin assistant, changes and settings appear only where they were available before.
-- The `/ai/learn` count is far below 60 000 (about 11 500 characters). `local-models` is under 60 000. `research` is the known tight one: the embedded value is about 61 000 characters, so note the number and flag it rather than failing the whole plan.
+- The `/ai/learn` count is far below 60 000 (about 11 500 characters). `local-models` is under 60 000. `research`, the largest guide page, is about 53 500.
 
 ## Tick after the manual steps pass
 

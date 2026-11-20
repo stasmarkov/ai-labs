@@ -10,7 +10,6 @@ use App\Guides\GuideRepository;
 use App\Guides\InvalidGuideException;
 use App\Guides\SnippetResolver;
 use App\Lessons\LessonRepository;
-use App\Lessons\LessonService;
 use App\Services\GuidePageService;
 
 const CAPABILITY_GUIDES = ['describe', 'semantic', 'nl-search', 'docs', 'chat', 'photos', 'similar-photos', 'photo-search', 'photo-duplicates', 'assistant', 'moderation', 'admin-assistant', 'research', 'playground'];
@@ -661,7 +660,7 @@ it('AC-6 the teach sections stay optional and a guide without them still loads',
 
     $repository = new GuideRepository($directory);
     $guide = $repository->find('plain');
-    $teach = (new GuidePageService($repository, app(GuideRenderer::class), app(LessonService::class)))->teach('plain')->toArray();
+    $teach = (new GuidePageService($repository, app(GuideRenderer::class)))->teach('plain')->toArray();
 
     expect($guide->build)->toBe([])
         ->and($teach['build'])->toBe([])
@@ -714,7 +713,7 @@ it('AC-6 a long first sentence without spaces is cut instead of turning into an 
     ];
     file_put_contents($directory.'/cut.php', '<?php return '.var_export(['kind' => 'foundation', 'title' => 'T', 'summary' => 'S', 'works' => $steps], true).';');
 
-    $teach = (new GuidePageService(new GuideRepository($directory), app(GuideRenderer::class), app(LessonService::class)))->teach('cut')->toArray();
+    $teach = (new GuidePageService(new GuideRepository($directory), app(GuideRenderer::class)))->teach('cut')->toArray();
 
     expect($teach['works'][0]['summary'])->toBe(str_repeat('a', 239).'…')
         ->and($teach['works'][1]['summary'])->toBe('Read the docs first.');
@@ -855,7 +854,7 @@ it('MNC-2 a lab page still gets its How it works steps when a snippet reference 
     ];
     $repository = new GuideRepository(teachGuideDirectory('broken', ['kind' => 'foundation', 'title' => 'T', 'summary' => 'S', 'works' => $works]));
 
-    $teach = (new GuidePageService($repository, app(GuideRenderer::class), app(LessonService::class)))->teach('broken');
+    $teach = (new GuidePageService($repository, app(GuideRenderer::class)))->teach('broken');
 
     expect($teach->works[0])->toBe(['title' => 'Step', 'summary' => 'Hello world.', 'event' => 'token']);
 });
