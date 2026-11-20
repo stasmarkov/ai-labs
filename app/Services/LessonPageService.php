@@ -96,7 +96,7 @@ final readonly class LessonPageService
 
     /**
      * The course as the sidebar of a lesson or guide page reads it: module, lesson and reference titles and links only,
-     * so those pages do not carry the course page's summaries and lengths.
+     * so those pages do not carry the course page's summaries and lengths, and no lesson file is required to draw it.
      *
      * @return array{modules: list<array{slug: string, title: string, lessons: list<array{slug: string, title: string, href: string|null}>, references: list<array{key: string, title: string, href: string}>}>}
      */
@@ -104,7 +104,7 @@ final readonly class LessonPageService
     {
         $modules = [];
 
-        foreach ($this->lessons->course()->modules as $module) {
+        foreach ($this->lessons->outline()->modules as $module) {
             $modules[] = [
                 'slug' => $module->slug,
                 'title' => $module->title,
@@ -151,7 +151,7 @@ final readonly class LessonPageService
             return null;
         }
 
-        foreach ($this->lessons->course()->modules as $module) {
+        foreach ($this->lessons->outline()->modules as $module) {
             if ($module->slug === $slug) {
                 return [
                     'module' => ['slug' => $module->slug, 'title' => $module->title],

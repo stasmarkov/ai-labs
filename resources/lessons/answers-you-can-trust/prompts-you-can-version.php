@@ -195,7 +195,7 @@ return [
             'callout' => ['kind' => 'useful', 'text' => 'Validate the whole run first, so a typo never costs a model call.'],
             'state' => [
                 'nodes' => [
-                    'browser' => ['badge' => 'picks a version and two models'],
+                    'browser' => ['badge' => 'a version, two models'],
                     'playground' => ['badge' => 'checks everything first'],
                     'first' => ['status' => 'ok', 'load' => 0],
                     'second' => ['status' => 'ok', 'load' => 0],

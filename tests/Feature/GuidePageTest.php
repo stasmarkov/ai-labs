@@ -326,7 +326,7 @@ it('AC-4 AC-6 every course lesson is linked from the guide it teaches, and the l
 
     expect(file_get_contents(base_path('README.md')))->not->toContain('listed as coming soon')->not->toContain('the other lessons are listed');
     expect(file_get_contents(base_path('docs/learning-guide.md')))->not->toContain('the pilot, "One model, many users"');
-    expect(file_get_contents(resource_path('guides/lessons.php')))->toContain('seventeen lessons');
+    expect(file_get_contents(resource_path('guides/lessons.php')))->toContain('it lists every lesson')->not->toMatch('/\b(sixteen|seventeen|eighteen) lessons\b/');
 });
 
 it('AC-6 the lessons guide page and the README name every course lesson', function (): void {
@@ -364,7 +364,9 @@ it('F3 AC-6 the guide a course lesson names lists that lesson, so the lesson and
 
 it('F19 the lessons guide builds its list from the course file, and the README lists the same lessons in the same order', function (): void {
     $modules = array_values(array_filter((require resource_path('lessons/course.php'))['modules'], fn (array $module): bool => $module['lessons'] !== []));
-    $works = collect((require resource_path('guides/lessons.php'))['works'])->firstWhere('title', 'The seventeen lessons');
+    $works = collect((require resource_path('guides/lessons.php'))['works'])->first(fn (array $entry): bool => str_contains($entry['body'], '**'.$modules[0]['title'].':**'));
+
+    expect($works)->not->toBeNull();
 
     foreach ($modules as $module) {
         expect($works['body'])->toContain('**'.$module['title'].':** '.implode('; ', array_column($module['lessons'], 'title')).'.');

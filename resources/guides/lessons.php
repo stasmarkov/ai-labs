@@ -13,7 +13,7 @@ $courseList = implode("\n\n", array_map(
 return [
     'kind' => 'foundation',
     'title' => 'Scene lessons',
-    'summary' => 'A scene lesson teaches one idea in about ten steps. Each step moves a picture of the system, a strip of measured numbers and a list of what changed together, so you see a problem and its fix instead of reading about them. The course at /ai/learn is the one place to start: it lists the seventeen lessons and every guide. Every topic has a lesson, so each can be walked through step by step or read as a reference.',
+    'summary' => 'A scene lesson teaches one idea in about ten steps. Each step moves a picture of the system, a strip of measured numbers and a list of what changed together, so you see a problem and its fix instead of reading about them. The course at /ai/learn is the one place to start: it lists every lesson, module by module, and every guide. Every topic has a lesson, so each can be walked through step by step or read as a reference.',
     'works' => [
         [
             'title' => 'One step changes four things at once',
@@ -30,8 +30,8 @@ return [
             'snippet' => 'App\Lessons\LessonNumbers',
         ],
         [
-            'title' => 'The seventeen lessons',
-            'body' => $courseList."\n\nThe course page at /ai/learn opens each one, and every lesson links to the guide that goes deeper. The course page and the lesson sidebar read only each lesson's minutes and number of steps, never a result file, so a figure that cannot be read breaks only its own lesson. Every topic has up to two ways in: Walk through is the lesson, and Reference is the guide with its tabs. The topic header on both pages links one to the other, the course sidebar sits beside both, and a topic with no lesson, if one is ever added, is a reference topic listed under its module. /ai/guides sends you to the course page; a guide keeps its address /ai/guides/{key}.",
+            'title' => 'The lessons in the course',
+            'body' => $courseList."\n\nThe course page at /ai/learn opens each one, and every lesson links to the guide that goes deeper. The course page reads only each lesson's minutes and number of steps, and the course sidebar only the course file, never a result file, so a figure that cannot be read breaks only its own lesson. Every topic has up to two ways in: Walk through is the lesson, and Reference is the guide with its tabs. The topic header on both pages links one to the other, the course sidebar sits beside both, and a topic with no lesson, if one is ever added, is a reference topic listed under its module. /ai/guides sends you to the course page; a guide keeps its address /ai/guides/{key}.",
         ],
         [
             'title' => 'The page gets resolved data only',

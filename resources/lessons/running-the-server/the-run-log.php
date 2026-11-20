@@ -170,12 +170,13 @@ return [
         ],
         [
             'role' => 'careful',
-            'title' => 'The page hears little, the row keeps the cause',
+            'title' => 'The stream says little, the row keeps the cause',
             'body' => [
-                'When the model server is unreachable, the page gets one short error and nothing of the provider\'s own words. In the failover check the call failed after {kpi:fail}, and a failed row was written.',
-                'The row stores the error class and the message, trimmed, with configured provider keys and anything shaped like a key replaced before saving. So the cause can be read without the server log, and a secret does not land in the table.',
+                'When the model server is down, the stream sends one fixed error, none of the provider\'s words. In the failover check the call failed after {kpi:fail} and a failed row was written.',
+                'The row keeps the error class and the trimmed message. Only configured provider keys of eight or more characters and keys starting sk-, AIza or org- are masked; a bearer token, another vendor\'s key or a password in an address stays.',
+                'The run page serves the whole row as JSON to anyone with its invocation id, so the reason does reach a browser there.',
             ],
-            'callout' => ['kind' => 'careful', 'text' => 'Tell the page that it failed, not why. The reason belongs in the log, with the keys taken out.'],
+            'callout' => ['kind' => 'careful', 'text' => 'The stream says only that it failed. The run page shows why, so keep secrets out of error messages instead of trusting the masking.'],
             'state' => [
                 'nodes' => [
                     'browser' => ['badge' => 'one safe error'],
@@ -192,7 +193,7 @@ return [
             ],
             'changed' => [
                 ['sign' => '+', 'text' => 'a failed run is written after {kpi:fail}'],
-                ['sign' => '~', 'text' => 'the cause is in the row, not on the page'],
+                ['sign' => '~', 'text' => 'the cause is in the row and on the run page, not in the stream'],
             ],
             'learn' => ['lo-3'],
             'deeper' => 'run-log#support',

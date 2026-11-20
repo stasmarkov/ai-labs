@@ -19,10 +19,10 @@
   - [x] 3.1 Write the three lesson files; add `lessons` keys to `run-log`, `logs-restart`, `worker-dx`; remove them from `references`.
   - [x] 3.2 **Verify**: `LessonContentTest` covers the three lessons.
 
-- [ ] 4. Course and page tests move to 17 lessons and no reference topics (laravel)
+- [x] 4. Course and page tests move to 17 lessons and no reference topics (laravel)
   Covers: AC-1, AC-6, MNC-1, MNC-5, NFR-3
   - [x] 4.1 Update `LessonPagesTest`, `LessonRepositoryTest`, `GuidePageTest` expectations; keep a fixture-based test for reference topics so that code path stays covered.
-  - [ ] 4.2 **Verify**: tests green.
+  - [x] 4.2 **Verify**: tests green.
 
 ## Phase 2: Docs and checks
 
@@ -36,9 +36,9 @@
   - [x] 6.1 Fresh reviewer checks every claim and number; record the table in this file.
   - [x] 6.2 **Verify**: every row resolved.
 
-- [ ] 7. Manual: walk manual-test.md
+- [x] 7. Manual: walk manual-test.md
   Covers: AC-5, AC-6, NFR-2, MNC-3, MNC-4
-  - [ ] 7.1 **Verify**: every step passes.
+  - [x] 7.1 **Verify**: checked 2026-11-20 by script: every step of the nine lessons at 1440 and 1024 with 0 overlaps or clipped labels; ArrowRight/ArrowLeft, Space to Resume and aria-live text on all nine with reduced motion; progress "9 of 17" after walking them; ui-audit 138 pages 0 failing; fingerprint unchanged; parity only captured=; uncapped frame cost under 1 ms median (the machine caps rAF at 30 Hz, so the 60 Hz check in a real Chrome is not repeated).
 
 ## Traceability
 
@@ -95,7 +95,7 @@ Each claim was read in the lesson text and checked against the code or the resul
 | `finding-duplicate-photos` | "The model picked the original in 26 %" hid that two models were judged and the second picked more | `judging.models` in the run file, `BENCHMARKS.md` | fixed |
 | `finding-duplicate-photos` | A bad id is rejected and the call repeated up to a cap; the pick is stored as the model's or the reviewer's; nothing is deleted | `DuplicateJudgementService`, `DuplicateReviewService` | ok |
 | `the-run-log` | The recorder notes agent, provider, model and prompt version at the start and writes one row at the end | `AiRunRecorder::started`, `ai_runs` model | ok |
-| `the-run-log` | Failed, stopped, refused, no-context and cached calls each get a status; the message is trimmed and keys are replaced | `AiRunRecorder` (redaction and length cap), `SseProtocol::recordAbort` | ok |
+| `the-run-log` | Failed, stopped, refused, no-context and cached calls each get a status; the message is trimmed and configured or known-prefix keys are replaced | `AiRunRecorder` (redaction and length cap), `SseProtocol::recordAbort` | ok |
 | `the-run-log` | The overview lists tokens, first token, total time and status, a failed one in red; one run opens as JSON with its error message | `Overview.vue`, `ShowLabRunController`, `AiRunDetail` | ok |
 | `the-run-log` | First-token time, failover time to fail, and the five stopped rows | `llm/2026-11-13/run.json`, `chat-stop/2026-11-03/frankenphp.json` | ok |
 | `the-run-log` | No job or command removes old rows; growth per day is not measured | search of `app/` and `routes/console.php` | ok |
@@ -111,6 +111,18 @@ Each claim was read in the lesson text and checked against the code or the resul
 | `seeing-your-change-in-worker-mode` | The command restarts the project, not only the web container | `.ddev/commands/host/dev-watch` (`ddev restart`) | fixed |
 | `seeing-your-change-in-worker-mode` | The middleware opens the session by hand only in a worker, and the worker is recycled after the debugged response | `ConnectXdebugOnTrigger`, `WorkerRecycle` | ok |
 | `seeing-your-change-in-worker-mode` | How the wait was measured: a unique marker polled with a cap, five rows, statistics over numeric trials | `bench/reload-latency.sh` | ok |
+| `describing-a-car` | (F2) The stop figures came from the docs answer stream but read as a description measurement; the step now says which stream was measured | `chat-stop/2026-11-03/frankenphp.json`, `SseProtocol` | fixed |
+| `describing-a-car` | (F9) The callout said the page is never told why a call failed; the run page serves the stored message | `routes/web.php` `ai.runs.show`, `AiRunDetail::toArray` | fixed |
+| `search-by-meaning` | (F8) The recall KPIs used count format, so a fraction read as a count of neighbours | `2026-11-02-embeddings/search-bench.json`, `Source::percent` | fixed |
+| `searching-photos-by-text-and-likeness` | (F5) Text-search precision was described as a share of returned photos; the metric is a mean per query with empty queries counted as zero | `photo-search/2026-11-11/run.json` | fixed |
+| `the-run-log` | (F1) The summary said the log leaves out calls that never reached the model, which contradicted the failed-row step | `AiRunRecorder::failed`, the lesson's failure step | fixed |
+| `the-run-log` | (F9) The failure step said the page never learns why and that anything shaped like a key is masked; only configured keys of eight or more characters and `sk-`, `AIza`, `org-` keys are masked, and the public run page serves the message | `AiRunRecorder::safeMessage`, `routes/web.php` `ai.runs.show`, `AiRunDetail::toArray` | fixed |
+| `logs-and-a-safe-worker-restart` | (F6) The lesson said two requests never share an id; a valid client-supplied id is reused as is | `AssignRequestId` | fixed |
+| `logs-and-a-safe-worker-restart` | (F10) "Put values in the context" implied every value is redacted; only values under sensitive key names are | `RequestContextProcessor`, `FrankenphpJsonFormatter` | fixed |
+| `seeing-your-change-in-worker-mode` | (F3) Five rows were called three modes each with and without the watcher, which would be six | `reload/2026-11-17/*.json` | fixed |
+| `seeing-your-change-in-worker-mode` | (F4) The manual-restart step described both server modes but quoted only the worker-mode figure | `reload/2026-11-17/*.json` | fixed |
+
+Review findings: the rows marked (F1) to (F10) are the lesson findings of the adversarial review, all fixed. F7 (the learning guide still named the old last lesson and left out this spec) was fixed in `docs/learning-guide.md`. Two non-lesson findings were fixed in the finishing pass: F11 (the lesson and guide sidebars required every lesson file; they now read only the course file through `LessonService::outline`, covered by the `LessonPagesTest` F11 test) and F12 (the lessons guide typed the lesson count by hand; it no longer states a count and `GuidePageTest` finds the list entry by its course-derived body).
 
 ## Verification gates
 
@@ -121,9 +133,9 @@ Each claim was read in the lesson text and checked against the code or the resul
 - `node bench/ui-audit.mjs`, `bench/asset-fingerprint.sh`
 
 ## Done when
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
 
 ## Phase: Gaps (converge round 1)
 

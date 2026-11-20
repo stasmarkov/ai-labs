@@ -205,7 +205,7 @@ return [
             'callout' => ['kind' => 'careful', 'text' => 'Fast indexes guess. Measure the guess against an exact scan before you trust it.'],
             'state' => [
                 'nodes' => [
-                    'index' => ['badge' => 'few candidates, some misses'],
+                    'index' => ['badge' => 'few candidates, misses'],
                     'service' => ['badge' => null],
                 ],
                 'edges' => [
@@ -231,7 +231,7 @@ return [
             'callout' => ['kind' => 'useful', 'text' => 'A perfect recall on a fast index is a reason to read the query plan.'],
             'state' => [
                 'nodes' => [
-                    'index' => ['status' => 'busy', 'load' => 60, 'badge' => 'more candidates, fewer misses'],
+                    'index' => ['status' => 'busy', 'load' => 60, 'badge' => 'more tried, fewer misses'],
                 ],
                 'edges' => [
                     'lookup' => ['packets' => ['embedding' => 3]],
@@ -260,7 +260,7 @@ return [
             'state' => [
                 'nodes' => [
                     'index' => ['status' => 'ok', 'load' => 30, 'badge' => 'crowded, all close'],
-                    'browser' => ['badge' => 'a family car with a big boot'],
+                    'browser' => ['badge' => 'family car, big boot'],
                 ],
                 'edges' => [
                     'nearest' => ['packets' => ['request' => 2]],
@@ -312,7 +312,7 @@ return [
             'state' => [
                 'nodes' => [
                     'service' => ['badge' => null],
-                    'index' => ['badge' => 'rebuilt after a model change'],
+                    'index' => ['badge' => 'rebuilt for the new model'],
                 ],
                 'edges' => [
                     'show' => ['packets' => ['failure' => 0, 'request' => 1]],

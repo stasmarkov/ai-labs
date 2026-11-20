@@ -173,7 +173,7 @@ return [
             'callout' => ['kind' => 'careful', 'text' => 'Redaction reads keys, not sentences. A secret in the message text goes straight to the log.'],
             'state' => [
                 'nodes' => [
-                    'log' => ['badge' => 'values under secret keys hidden'],
+                    'log' => ['badge' => 'secret-key values hidden'],
                 ],
                 'edges' => [
                     'entry' => ['packets' => ['request' => 1]],

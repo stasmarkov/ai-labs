@@ -152,7 +152,7 @@ return [
             'state' => [
                 'nodes' => [
                     'input' => ['badge' => null],
-                    'model' => ['load' => 50, 'badge' => 'a canary in the instructions'],
+                    'model' => ['load' => 50, 'badge' => 'a canary in the prompt'],
                     'browser' => ['badge' => null],
                 ],
                 'edges' => [
@@ -204,7 +204,7 @@ return [
                 'nodes' => [
                     'output' => ['status' => 'busy', 'badge' => 'leak found, answer stops'],
                     'model' => ['load' => 30, 'badge' => 'canary in the text'],
-                    'browser' => ['badge' => 'text cleared, fixed message'],
+                    'browser' => ['badge' => 'cleared, fixed message'],
                 ],
                 'edges' => [
                     'write' => ['packets' => ['token' => 2]],

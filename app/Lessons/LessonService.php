@@ -56,6 +56,17 @@ final class LessonService
     }
 
     /**
+     * The course as the sidebars read it: titles and references from the course file only, no lesson file required. A
+     * listed lesson always has its file (the course file is checked for that), so every playable entry links; a lesson
+     * whose own file is broken still links from a sidebar and answers 500 on its page, while the course page, which
+     * reads each file's length, lists it as unavailable.
+     */
+    public function outline(): LessonCourse
+    {
+        return $this->lessons->course();
+    }
+
+    /**
      * Null when the course does not list the lesson as playable (unknown, only announced, or a draft file); a broken
      * lesson file or course throws.
      */

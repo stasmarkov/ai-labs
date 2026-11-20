@@ -165,6 +165,36 @@ it('F12 the course page and the sidebar read only lesson metadata, so an unreada
     $this->get('/ai/learn/mod/two')->assertStatus(500);
 });
 
+it('F11 the lesson and guide sidebars require no lesson file, only the course page reads their lengths', function (): void {
+    file_put_contents($this->lessonsDirectory.'/mod/two.php', "<?php\nthrow new RuntimeException('a sidebar required this lesson file');");
+    writeLessonFile($this->lessonsDirectory.'/course.php', [
+        'modules' => [[
+            'slug' => 'mod',
+            'title' => 'Module',
+            'summary' => 'A module.',
+            'references' => courseFixtureReferences(),
+            'lessons' => [
+                ['slug' => 'one', 'title' => 'One', 'summary' => 'A lesson.', 'level' => 'beginner'],
+                ['slug' => 'two', 'title' => 'Two', 'summary' => 'A lesson whose file throws when required.', 'level' => 'beginner'],
+            ],
+        ]],
+    ]);
+    $this->withoutExceptionHandling();
+
+    $this->get('/ai/learn/mod/one')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('course.modules.0.lessons.1', ['slug' => 'two', 'title' => 'Two', 'href' => '/ai/learn/mod/two']));
+
+    $this->get('/ai/guides/local-models')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('course.modules.0.lessons.1.href', '/ai/learn/mod/two')
+            ->where('topic.module.slug', 'mod')
+        );
+
+    expect(fn () => $this->get('/ai/learn'))->toThrow(RuntimeException::class, 'a sidebar required this lesson file');
+});
+
 it('NFR-2 the lesson page props stay under 60 KB', function (): void {
     $props = $this->get('/ai/learn/mod/one')->viewData('page')['props'];
 

@@ -126,7 +126,7 @@ AC-7 (BR-27): the docs list 17 lessons.
 2. Open `README.md` and look for the lessons list.
 3. Open `docs/learning-guide.md` and look for "Scene lessons".
 
-Expected: all three say "seventeen lessons" and name all 17 titles in five modules, including the nine new ones (Describing a car, Prompts you can version, Guards on both sides, Search by meaning, Searching photos by text and likeness, Finding duplicate photos, The run log, Logs and a safe worker restart, Seeing your change in worker mode).
+Expected: the README and the learning guide say "seventeen lessons"; the guide page states no count (it is built from the course file). All three name all 17 titles in five modules, including the nine new ones (Describing a car, Prompts you can version, Guards on both sides, Search by meaning, Searching photos by text and likeness, Finding duplicate photos, The run log, Logs and a safe worker restart, Seeing your change in worker mode).
 
 ## Step 8
 
@@ -217,7 +217,7 @@ NFR-3: payload size.
 1. Run, for each of the nine lesson URLs:
 
    ```sh
-   curl -sk https://ai-lab.ddev.site/ai/learn/running-models/describing-a-car | grep -o 'data-page="[^"]*"' | wc -c
+   curl -sk https://ai-lab.ddev.site/ai/learn/running-models/describing-a-car | sed -n 's:.*<script data-page="app" type="application/json">\(.*\)</script>.*:\1:p' | wc -c
    ```
 
 Expected: every number is below 60000 (the nine lessons measured between about 21,500 and 33,500).

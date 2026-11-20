@@ -190,7 +190,7 @@ return [
                 'A provider can fail halfway through a description. By then the status code has gone, so the page gets one short error event and nothing of the provider\'s own message.',
                 'The cause stays in the run row, with the error class and message, so you can open the run and read why.',
             ],
-            'callout' => ['kind' => 'careful', 'text' => 'Tell the page that it failed, not why. The reason belongs in the log.'],
+            'callout' => ['kind' => 'careful', 'text' => 'Tell the stream that it failed, not why. The run page does show the stored message, so keep secrets out of it.'],
             'state' => [
                 'nodes' => [
                     'browser' => ['badge' => 'sees one safe error'],

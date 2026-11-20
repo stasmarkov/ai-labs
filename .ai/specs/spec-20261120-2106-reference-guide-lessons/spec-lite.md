@@ -4,7 +4,7 @@ title: Scene lessons for the reference-only guides
 type: feature
 size: L
 priority: P2
-status: in-progress
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-20; standing approval)

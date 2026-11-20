@@ -262,7 +262,7 @@ return [
             'state' => [
                 'nodes' => [
                     'queue' => ['status' => 'ok', 'load' => 10, 'badge' => null],
-                    'model' => ['status' => 'ok', 'load' => 30, 'badge' => 'valid, not always the original'],
+                    'model' => ['status' => 'ok', 'load' => 30, 'badge' => 'valid, maybe not original'],
                     'reviewer' => ['badge' => 'sees the pick and the reasons'],
                 ],
                 'edges' => [

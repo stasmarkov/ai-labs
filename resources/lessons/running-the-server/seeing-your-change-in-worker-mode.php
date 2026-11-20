@@ -102,7 +102,7 @@ return [
             'state' => [
                 'nodes' => [
                     'workers' => ['badge' => 'fresh PHP per request'],
-                    'browser' => ['badge' => 'sees the new page after a wait'],
+                    'browser' => ['badge' => 'new page after a wait'],
                 ],
             ],
             'kpis' => [
