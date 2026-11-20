@@ -773,3 +773,16 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Spec:** spec-20261119-2146-scene-lessons
 - **Source:** owner request 2026-11-19 (Stanislav Markov: interactive guides like designed-to-scale.vercel.app, scene lessons that replace the SL-54 formats)
 - **Run:** `/sdd spec-20261119-2146-scene-lessons`
+
+### SL-56 · Scene lessons for the remaining course outline
+
+- **Outcome:** All seven "coming soon" lessons on `/ai/learn` are playable: streaming an answer, choosing a model and provider, structured output and validation, retrieval with citations, caching answers, a tool loop with caps and confirmation, and MCP with a research agent. Each has 8 to 13 steps whose numbers come from committed measurements, and each is linked from its guide.
+- **Entry point:** `/ai/learn`
+- **Size:** L
+- **BRs:** BR-26, BR-27
+- **Depends on:** SL-55
+- **Blocked by:** none
+- **Status:** specced
+- **Spec:** spec-20261120-1032-scene-lessons-course
+- **Source:** owner request 2026-11-20
+- **Run:** `/sdd spec-20261120-1032-scene-lessons-course`
