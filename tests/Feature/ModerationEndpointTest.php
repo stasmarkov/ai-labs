@@ -243,7 +243,7 @@ it('AC-7 the page is in the navigation, on the overview and on the home page as 
 
     $navigation = $this->get('/ai/moderation')->viewData('page')['props']['lab']['navigation'];
 
-    expect(array_column($navigation, 'href'))->toContain('/ai/moderation');
+    expect(array_column(collect($navigation)->pluck('items')->flatten(1)->all(), 'href'))->toContain('/ai/moderation');
 
     $overview = $this->get('/ai')->viewData('page')['props'];
     $keys = array_column($overview['capabilities'], 'key');

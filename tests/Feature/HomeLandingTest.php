@@ -40,7 +40,7 @@ it('AC-3 the home page renders the landing page through the lab entry', function
             ->where('serverModes.0.key', 'frankenphp')
             ->where('serverModes.1.key', 'frankenphp-worker')
             ->where('serverModes.2.key', 'frankenphp-octane')
-            ->where('guidesHref', '/ai/guides'));
+            ->where('guidesHref', '/ai/learn'));
 });
 
 it('AC-3 the capability map comes from the lab capabilities', function (): void {

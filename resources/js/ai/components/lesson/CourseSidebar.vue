@@ -4,7 +4,10 @@ import { Link } from '@inertiajs/vue3';
 import type { Course } from '../../composables/lessonTypes';
 import { useLessonProgress } from '../../composables/useLessonProgress';
 
-defineProps<{ course: Course; current: string }>();
+/** `current` is the lesson being played (it also enables reset); `highlightLesson` only marks a lesson row current, for a guide page. */
+const props = withDefaults(defineProps<{ course: Course; current?: string | null; currentGuide?: string | null; highlightLesson?: string | null }>(), { current: null, currentGuide: null, highlightLesson: null });
+
+const isCurrentLesson = (key: string): boolean => key === (props.current ?? props.highlightLesson);
 
 const progress = useLessonProgress();
 const open = ref(false);
@@ -81,25 +84,39 @@ function done(module: Course['modules'][number]): number {
         </summary>
         <nav aria-label="Course" class="mt-3">
             <section v-for="module in course.modules" :key="module.slug" class="mb-4">
-                <h2 class="m-0 text-[13px] font-semibold">{{ module.title }} <span class="font-normal text-muted">{{ done(module) }}/{{ playable(module) }}</span></h2>
+                <h2 class="m-0 text-[13px] font-semibold">{{ module.title }} <span v-if="playable(module) > 0" class="font-normal text-muted">{{ done(module) }}/{{ playable(module) }}</span></h2>
                 <ul class="mb-0 mt-1 list-none space-y-1 p-0 text-[13px] leading-snug">
                     <li v-for="lesson in module.lessons" :key="lesson.slug">
                         <Link
                             v-if="lesson.href"
                             :href="lesson.href"
                             class="text-ink underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                            :class="keyOf(module.slug, lesson.slug) === current ? 'font-semibold' : ''"
-                            :aria-current="keyOf(module.slug, lesson.slug) === current ? 'page' : undefined"
+                            :class="isCurrentLesson(keyOf(module.slug, lesson.slug)) ? 'font-semibold' : ''"
+                            :aria-current="isCurrentLesson(keyOf(module.slug, lesson.slug)) ? 'page' : undefined"
                         >{{ lesson.title }}</Link>
                         <span v-else class="text-muted">{{ lesson.title }} (coming soon)</span>
                         <span v-if="lesson.href && progress.isDone(keyOf(module.slug, lesson.slug))" class="ml-1 text-success"><span aria-hidden="true">✓</span><span class="sr-only">done</span></span>
                     </li>
                 </ul>
+                <template v-if="module.references.length">
+                    <h3 class="mb-0 mt-2 text-[12px] font-semibold text-muted">Reference</h3>
+                    <ul aria-label="Reference topics" class="mb-0 mt-1 list-none space-y-1 p-0 text-[13px] leading-snug">
+                        <li v-for="reference in module.references" :key="reference.key">
+                            <Link
+                                :href="reference.href"
+                                class="text-ink underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                                :class="reference.key === currentGuide ? 'font-semibold' : ''"
+                                :aria-current="reference.key === currentGuide ? 'page' : undefined"
+                            >{{ reference.title }}</Link>
+                        </li>
+                    </ul>
+                </template>
             </section>
             <button
+                v-if="current"
                 type="button"
                 class="text-[13px] text-ink underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                @click="progress.resetLesson(current)"
+                @click="current && progress.resetLesson(current)"
             >reset this lesson</button>
         </nav>
     </details>

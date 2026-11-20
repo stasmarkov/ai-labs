@@ -5,10 +5,13 @@ declare(strict_types=1);
 use App\Guides\GuideFacts;
 use App\Guides\GuideRepository;
 use App\Guides\InvalidGuideException;
+use App\Lessons\InvalidLessonException;
 use App\Lessons\LessonNumbers;
 use App\Lessons\LessonRepository;
 use App\Lessons\LessonService;
+use App\Lessons\LessonTopics;
 use App\Services\GuidePageService;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -17,32 +20,44 @@ beforeEach(function (): void {
     Http::fake(['*/api/version' => Http::response(['version' => '0.12.0'])]);
 });
 
-it('AC-4 the index lists every guide with title and summary and labels the planned one', function (): void {
-    $keys = app(GuideRepository::class)->keys();
-
-    $this->get('/ai/guides')
-        ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Lab/Guides')
-            ->has('guides', count($keys))
-            ->where('guides', fn ($guides): bool => collect($guides)->every(
-                fn (array $guide): bool => $guide['title'] !== '' && $guide['summary'] !== ''
-            ))
-            ->where('guides', fn ($guides): bool => collect($guides)->firstWhere('key', 'photos')['planned'] === false
-                && collect($guides)->firstWhere('key', 'photos')['group'] === 'capability'
-                && collect($guides)->firstWhere('key', 'describe')['planned'] === false
-                && collect($guides)->firstWhere('key', 'describe')['group'] === 'capability'
-                && collect($guides)->firstWhere('key', 'providers')['group'] === 'foundation')
-        );
+it('AC-1 guides index redirects to learn', function (): void {
+    $this->get('/ai/guides')->assertStatus(301)->assertRedirect('/ai/learn');
+    $this->get('/ai/guides/')->assertStatus(301)->assertRedirect('/ai/learn');
 });
 
-it('AC-4 the navigation has a Guides entry', function (): void {
-    $this->get('/ai/guides')
-        ->assertInertia(fn (Assert $page) => $page
-            ->where('lab.navigation', fn ($navigation): bool => collect($navigation)->contains(
-                fn (array $item): bool => $item['label'] === 'Guides' && $item['href'] === '/ai/guides'
-            ))
-        );
+it('AC-7 MNC-4 navigation is grouped in order and conditional items follow today\'s availability rules', function (): void {
+    $groups = fn (): array => $this->get('/ai')->viewData('page')['props']['lab']['navigation'];
+    $labels = fn (array $navigation): array => array_map(
+        fn (array $group): array => [$group['label'], array_column($group['items'], 'label')],
+        $navigation,
+    );
+
+    app()->detectEnvironment(fn (): string => 'production');
+    config(['ai.settings_ui' => false, 'ai.mcp.enabled' => false, 'ai.admin_assistant.enabled' => false]);
+
+    expect($labels($groups()))->toBe([
+        ['Learn', ['Overview', 'Course']],
+        ['Text', ['Describe', 'Chat', 'Moderation']],
+        ['Search', ['Semantic search', 'NL search', 'Docs search']],
+        ['Photos', ['Photos', 'Photo search', 'Duplicate photos']],
+        ['Agents', ['Assistant', 'Research']],
+    ])
+        ->and($groups()[0]['items'])->toBe([
+            ['href' => '/ai', 'label' => 'Overview'],
+            ['href' => '/ai/learn', 'label' => 'Course'],
+        ]);
+
+    app()->detectEnvironment(fn (): string => 'local');
+    config(['ai.settings_ui' => true, 'ai.mcp.enabled' => true, 'ai.admin_assistant.enabled' => true]);
+
+    $navigation = $labels($groups());
+    $flat = array_merge(...array_map(fn (array $group): array => $group[1], $navigation));
+
+    expect(array_column($navigation, 0))->toBe(['Learn', 'Text', 'Search', 'Photos', 'Agents', 'Setup'])
+        ->and($flat)->toContain('Playground', 'Admin assistant', 'Changes', 'Settings')
+        ->and($navigation[1][1])->toBe(['Describe', 'Chat', 'Moderation', 'Playground'])
+        ->and($navigation[4][1])->toBe(['Assistant', 'Research', 'Admin assistant', 'Changes'])
+        ->and($navigation[5][1])->toBe(['Settings']);
 });
 
 it('AC-4 an unknown guide key returns 404', function (): void {
@@ -211,7 +226,7 @@ it('C-13 both guides carry the pilot lesson link, a malformed key fails validati
         $this->get('/ai/guides/'.$key)
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('guide.lessons', fn ($lessons): bool => collect($lessons)->contains(
+                ->where('topic.lessons', fn ($lessons): bool => collect($lessons)->contains(
                     fn (array $lesson): bool => $lesson['href'] === '/ai/learn/running-models/one-model-many-users' && $lesson['title'] === 'One model, many users'
                 ))
             );
@@ -226,6 +241,7 @@ it('C-13 both guides carry the pilot lesson link, a malformed key fails validati
 
     expect($repository->find('known')->lessons)->toBe(['running-models/one-model-many-users', 'running-models/no-such-lesson', 'running-models/streaming-an-answer']);
     expect(fn () => $repository->find('malformed'))->toThrow(InvalidGuideException::class);
+    unlink($directory.'/malformed.php');
 
     $lessons = $directory.'/lessons';
     mkdir($lessons.'/running-models', 0777, true);
@@ -238,10 +254,11 @@ it('C-13 both guides carry the pilot lesson link, a malformed key fails validati
     $this->app->instance(GuideRepository::class, $repository);
     $this->app->instance(LessonRepository::class, new LessonRepository($lessons, $repository));
     $this->app->forgetInstance(LessonService::class);
+    $this->app->forgetInstance(LessonTopics::class);
     $this->get('/ai/guides/known')
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->where('guide.lessons', [
-            ['title' => 'One model, many users', 'href' => '/ai/learn/running-models/one-model-many-users'],
+        ->assertInertia(fn (Assert $page) => $page->where('topic.lessons', [
+            ['key' => 'running-models/one-model-many-users', 'title' => 'One model, many users', 'href' => '/ai/learn/running-models/one-model-many-users'],
         ]));
 
     array_map('unlink', [...glob($directory.'/*.php'), ...glob($lessons.'/*.php'), ...glob($lessons.'/running-models/*.php')]);
@@ -255,7 +272,7 @@ it('F16 the guide page takes lesson titles from the course file and never builds
 
     $this->get('/ai/guides/local-models')
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->where('guide.lessons.0.title', 'One model, many users'));
+        ->assertInertia(fn (Assert $page) => $page->where('topic.lessons.0.title', 'One model, many users'));
 });
 
 it('AC-6 every course lesson is linked from the guide it teaches, and the lessons guide, learning guide and README describe the course', function (): void {
@@ -278,7 +295,7 @@ it('AC-6 every course lesson is linked from the guide it teaches, and the lesson
         $this->get('/ai/guides/'.$key)
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('guide.lessons', fn ($listed): bool => collect($lessons)->every(
+                ->where('topic.lessons', fn ($listed): bool => collect($lessons)->every(
                     fn (string $lesson): bool => collect($listed)->contains(fn (array $item): bool => $item['href'] === '/ai/learn/'.$lesson)
                 ))
             );
@@ -321,7 +338,7 @@ it('F3 AC-6 the guide a course lesson names lists that lesson, so the lesson and
 });
 
 it('F19 the lessons guide builds its list from the course file, and the README lists the same lessons in the same order', function (): void {
-    $modules = (require resource_path('lessons/course.php'))['modules'];
+    $modules = array_values(array_filter((require resource_path('lessons/course.php'))['modules'], fn (array $module): bool => $module['lessons'] !== []));
     $works = collect((require resource_path('guides/lessons.php'))['works'])->firstWhere('title', 'The eight lessons');
 
     foreach ($modules as $module) {
@@ -334,4 +351,79 @@ it('F19 the lessons guide builds its list from the course file, and the README l
     expect($readme)->toBe(collect($modules)->mapWithKeys(fn (array $module): array => [$module['title'] => array_column($module['lessons'], 'title')])->all());
 
     expect((string) file_get_contents(resource_path('guides/lessons.php')))->toContain("require __DIR__.'/../lessons/course.php'");
+});
+
+it('AC-5 AC-6 guide page carries topic and course', function (): void {
+    $this->get('/ai/guides/local-models')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('topic.module.slug', 'running-models')
+            ->where('topic.module.title', 'Running models')
+            ->where('topic.lessons.0.href', '/ai/learn/running-models/one-model-many-users')
+            ->has('course.modules', 5)
+            ->where('course.modules.0.references.0', ['key' => 'describe', 'title' => 'Describe a car', 'summary' => 'One car, one short description, sent word by word while the model writes it.', 'href' => '/ai/guides/describe'])
+            ->where('course.modules.0.lessons.0.guides', fn ($guides): bool => collect($guides)->contains(
+                fn (array $guide): bool => $guide['key'] === 'local-models' && $guide['href'] === '/ai/guides/local-models'
+            ))
+        );
+
+    $this->get('/ai/guides/describe')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('topic.module.slug', 'running-models')
+            ->where('topic.lessons', [])
+        );
+
+    $this->get('/ai/guides/lessons')
+        ->assertInertia(fn (Assert $page) => $page->where('topic', null));
+});
+
+it('NFR-1 a guide page payload stays under 60 000 characters', function (): void {
+    foreach (['local-models', 'describe', 'photos'] as $key) {
+        $page = $this->get('/ai/guides/'.$key)->viewData('page');
+
+        expect(strlen(json_encode($page['props'])))->toBeLessThan(60000);
+    }
+});
+
+it('AC-6 a lesson-linked guide names its first lesson by key for the course sidebar', function (): void {
+    $this->get('/ai/guides/streaming')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('topic.lessons.0.key', fn (string $key): bool => '/ai/learn/'.$key === $page->toArray()['props']['topic']['lessons'][0]['href'])
+        );
+});
+
+it('AC-10 AC-2 the lessons guide says a topic is placed by the references list or a guide lessons link, and the course stops loading otherwise', function (): void {
+    $response = $this->get('/ai/guides/lessons')->assertOk();
+    $guide = $response->viewData('page')['props']['guide'];
+    $text = html_entity_decode(strip_tags(json_encode($guide, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)));
+
+    expect($text)
+        ->toContain('one module\'s references list')
+        ->toContain('guide\'s lessons link')
+        ->toContain('named by at least one guide')
+        ->toContain('stop loading')
+        ->toContain('names the key');
+});
+
+it('F1 F2 one broken guide file fails the course pages with a lesson error and no guide page', function (): void {
+    $root = sys_get_temp_dir().'/guides-'.bin2hex(random_bytes(4));
+    File::copyDirectory(resource_path('guides'), $root.'/guides');
+    File::copyDirectory(resource_path('lessons'), $root.'/lessons');
+    file_put_contents($root.'/guides/worker-dx.php', "<?php\nreturn ['kind' => 'no-such-kind', 'title' => 'T', 'summary' => 'S.'];");
+    $lessons = new LessonRepository($root.'/lessons', new GuideRepository($root.'/guides'));
+
+    expect(fn () => $lessons->course())->toThrow(InvalidLessonException::class, 'worker-dx');
+
+    File::deleteDirectory($root);
+});
+
+it('F2 a guide page with lesson links still renders when the course file is broken', function (): void {
+    $this->app->instance(LessonRepository::class, new LessonRepository(sys_get_temp_dir().'/no-such-lessons', app(GuideRepository::class)));
+    $this->app->forgetInstance(LessonService::class);
+    $this->app->forgetInstance(LessonTopics::class);
+
+    $this->get('/ai/guides/chat')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->missing('guide.lessons')->where('topic', null));
 });

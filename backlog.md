@@ -796,7 +796,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-27
 - **Depends on:** SL-56
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** shipped
 - **Spec:** spec-20261120-1558-one-learning-area
 - **Source:** owner request 2026-11-20 (Stanislav Markov: guides in the learning format, keep the tabbed version, restructure the sidebar)
 - **Run:** `/sdd spec-20261120-1558-one-learning-area`

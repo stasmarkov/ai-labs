@@ -17,7 +17,6 @@ use App\Http\Controllers\ShowLabDocsController;
 use App\Http\Controllers\ShowLabGuideController;
 use App\Http\Controllers\ShowLabGuideFormatController;
 use App\Http\Controllers\ShowLabGuideFormatsController;
-use App\Http\Controllers\ShowLabGuidesController;
 use App\Http\Controllers\ShowLabHomeController;
 use App\Http\Controllers\ShowLabLearnController;
 use App\Http\Controllers\ShowLabLessonController;
@@ -78,7 +77,7 @@ Route::middleware(HandleInertiaRequests::class)->prefix('ai')->group(function ()
         Route::get('/playground', ShowLabPlaygroundController::class)->name('ai.playground');
         Route::get('/playground/{id}', ShowLabPlaygroundController::class)->whereUuid('id')->name('ai.playground.show');
     });
-    Route::get('/guides', ShowLabGuidesController::class)->name('ai.guides.index');
+    Route::redirect('/guides', '/ai/learn', 301)->name('ai.guides.index');
     Route::get('/guides/{key}', ShowLabGuideController::class)->name('ai.guides.show');
     Route::get('/guides/{key}/formats', ShowLabGuideFormatsController::class)->name('ai.guides.formats');
     Route::get('/guides/{key}/formats/{format}', ShowLabGuideFormatController::class)->name('ai.guides.format');

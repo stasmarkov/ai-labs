@@ -48,6 +48,9 @@ final class LessonRepository
 
     public const MAX_RATE = 5;
 
+    /** The guide that explains the lessons themselves; it has no topic in the course. */
+    private const META_GUIDE = 'lessons';
+
     /** Tab names from before the guide page grouped its tabs, mapped to the tab that now holds that content. */
     private const RENAMED_TABS = ['failures' => 'support', 'recipes' => 'modify'];
 
@@ -194,10 +197,96 @@ final class LessonRepository
                 );
             }
 
-            $modules[] = new LessonCourseModule($slug, $this->string($row, 'title', $here), $this->string($row, 'summary', $here), $entries);
+            $modules[] = new LessonCourseModule(
+                $slug,
+                $this->string($row, 'title', $here),
+                $this->string($row, 'summary', $here),
+                $entries,
+                $this->stringList($row, 'references', $here, false),
+            );
         }
 
+        $this->assertGuidesOwnedOnce($modules, $where);
+
         return new LessonCourse($modules);
+    }
+
+    /**
+     * Every guide except the one that explains the lessons has exactly one owner: the lessons that name it in their
+     * own `lessons` key, or one module's `references`, never both and never two modules.
+     *
+     * @param  list<LessonCourseModule>  $modules
+     */
+    private function assertGuidesOwnedOnce(array $modules, string $where): void
+    {
+        $lessons = [];
+        $referenced = [];
+
+        foreach ($modules as $module) {
+            foreach ($module->lessons as $entry) {
+                $lessons["{$module->slug}/{$entry->slug}"] = true;
+            }
+
+            foreach ($module->references as $key) {
+                if ($key === self::META_GUIDE) {
+                    throw new InvalidLessonException("{$where} module [{$module->slug}]: guide [{$key}] explains the lessons and is not a topic.");
+                }
+
+                if (! $this->guides->has($key)) {
+                    throw new InvalidLessonException("{$where} module [{$module->slug}]: references guide [{$key}], which does not exist.");
+                }
+
+                if (isset($referenced[$key])) {
+                    throw new InvalidLessonException("{$where}: guide [{$key}] is referenced by modules [{$referenced[$key]}] and [{$module->slug}].");
+                }
+
+                $referenced[$key] = $module->slug;
+            }
+        }
+
+        $named = [];
+
+        foreach ($this->guides->keys() as $key) {
+            foreach ($this->guideLessons($key, $where) as $lesson) {
+                $named[$lesson] = true;
+            }
+        }
+
+        foreach (array_keys($lessons) as $lesson) {
+            if (! isset($named[$lesson])) {
+                throw new InvalidLessonException("{$where}: lesson [{$lesson}] is not named by any guide's lessons.");
+            }
+        }
+
+        foreach ($this->guides->keys() as $key) {
+            if ($key === self::META_GUIDE) {
+                continue;
+            }
+
+            $linked = array_values(array_filter($this->guideLessons($key, $where), fn (string $lesson): bool => isset($lessons[$lesson])));
+
+            if ($linked !== [] && isset($referenced[$key])) {
+                throw new InvalidLessonException("{$where}: guide [{$key}] is referenced by module [{$referenced[$key]}] and also linked by lesson [{$linked[0]}].");
+            }
+
+            if ($linked === [] && ! isset($referenced[$key])) {
+                throw new InvalidLessonException("{$where}: guide [{$key}] is not reachable; link it from a lesson or list it in a module's references.");
+            }
+        }
+    }
+
+    /**
+     * The lessons a guide names, with a broken guide file reported as a course problem naming the guide.
+     *
+     * @return list<string>
+     */
+    private function guideLessons(string $key, string $where): array
+    {
+        try {
+            return $this->guides->find($key)->lessons;
+        } catch (InvalidGuideException $exception) {
+            throw new InvalidLessonException("{$where}: guide [{$key}] is broken: {$exception->getMessage()}");
+        }
     }
 
     /**

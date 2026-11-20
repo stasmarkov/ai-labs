@@ -42,6 +42,7 @@ use App\Guides\SnippetResolver;
 use App\Lessons\LessonNumbers;
 use App\Lessons\LessonRepository;
 use App\Lessons\LessonService;
+use App\Lessons\LessonTopics;
 use App\Logging\RequestContextProcessor;
 use App\Repositories\EloquentAdminListingRepository;
 use App\Repositories\EloquentAiSettingsRepository;
@@ -132,6 +133,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(LessonNumbers::class, fn (): LessonNumbers => new LessonNumbers($this->app->make(GuideFacts::class)));
         $this->app->scoped(LessonRepository::class, fn (): LessonRepository => new LessonRepository(resource_path('lessons'), $this->app->make(GuideRepository::class)));
         $this->app->scoped(LessonService::class);
+        $this->app->scoped(LessonTopics::class);
         $this->app->scoped(GuideFormatRepository::class, fn (): GuideFormatRepository => new GuideFormatRepository(resource_path('guides/formats'), $this->app->make(SnippetResolver::class)));
         $this->app->bind(GuideFacts::class, fn (): GuideFacts => new GuideFacts(base_path('bench/results')));
         $this->app->bind(SnippetResolver::class, fn (): SnippetResolver => new SnippetResolver(base_path()));

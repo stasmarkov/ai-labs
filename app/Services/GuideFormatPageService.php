@@ -19,16 +19,14 @@ final readonly class GuideFormatPageService
     ) {}
 
     /**
-     * The card the guides index shows for the guide format trial: the first guide, in key order, whose folder holds
-     * a complete format set. Null when no guide has one.
+     * The link a guide page shows to its format trial: present only when the guide's folder holds a complete format
+     * set. Null otherwise.
      *
      * @return array{title: string, summary: string, href: string}|null
      */
-    public function trial(): ?array
+    public function trial(string $key): ?array
     {
-        $key = array_find($this->formats->keys(), fn (string $key): bool => $this->guides->has($key));
-
-        if ($key === null) {
+        if (! $this->formats->has($key) || ! $this->guides->has($key)) {
             return null;
         }
 

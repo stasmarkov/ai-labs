@@ -58,7 +58,7 @@ it('AC-12 the page is in the navigation and on the overview only while the assis
     $keys = array_column($overview['capabilities'], 'key');
     $capability = $overview['capabilities'][array_search('admin-assistant', $keys, true)];
 
-    expect(array_column($navigation, 'href'))->toContain('/ai/admin-assistant')
+    expect(array_column(collect($navigation)->pluck('items')->flatten(1)->all(), 'href'))->toContain('/ai/admin-assistant')
         ->and($capability['route'])->toBe('/ai/admin-assistant')
         ->and($capability['status'])->toBe('ready')
         ->and($capability['guideKey'])->toBe('admin-assistant');
@@ -67,7 +67,7 @@ it('AC-12 the page is in the navigation and on the overview only while the assis
 
     $this->get('/ai/admin-assistant')->assertNotFound();
     expect(array_column($this->get('/ai')->viewData('page')['props']['capabilities'], 'key'))->not->toContain('admin-assistant')
-        ->and(array_column($this->get('/ai')->viewData('page')['props']['lab']['navigation'], 'href'))->not->toContain('/ai/admin-assistant');
+        ->and(array_column(collect($this->get('/ai')->viewData('page')['props']['lab']['navigation'])->pluck('items')->flatten(1)->all(), 'href'))->not->toContain('/ai/admin-assistant');
 
     app()->detectEnvironment(fn (): string => 'production');
     config(['ai.admin_assistant.enabled' => true]);

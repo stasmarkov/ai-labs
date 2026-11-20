@@ -13,6 +13,7 @@ return [
                 ['slug' => 'streaming-an-answer', 'title' => 'Streaming an answer', 'summary' => 'How text reaches the page piece by piece, and what Stop does to the work behind it.', 'level' => 'beginner'],
                 ['slug' => 'choosing-a-model-and-provider', 'title' => 'Choosing a model and provider', 'summary' => 'Compare two local models on speed, memory and quality, see how a cloud option is guarded, and what happens when a provider is unreachable.', 'level' => 'intermediate'],
             ],
+            'references' => ['describe'],
         ],
         [
             'slug' => 'answers-you-can-trust',
@@ -23,6 +24,7 @@ return [
                 ['slug' => 'retrieval-with-citations', 'title' => 'Retrieval with citations', 'summary' => 'Find the passages that answer a question and show where each claim came from.', 'level' => 'intermediate'],
                 ['slug' => 'caching-answers', 'title' => 'Caching answers', 'summary' => 'Reuse an answer for a question that was already asked, and know when not to.', 'level' => 'intermediate'],
             ],
+            'references' => ['prompts', 'guards', 'playground'],
         ],
         [
             'slug' => 'agents',
@@ -32,6 +34,20 @@ return [
                 ['slug' => 'a-tool-loop-with-caps-and-confirmation', 'title' => 'A tool loop with caps and confirmation', 'summary' => 'Let a model call tools in a loop, with a step cap and a person confirming every change.', 'level' => 'advanced'],
                 ['slug' => 'mcp-and-a-research-agent', 'title' => 'MCP and a research agent', 'summary' => 'Expose tools over MCP and let an agent research a question across them.', 'level' => 'advanced'],
             ],
+        ],
+        [
+            'slug' => 'search-and-photos',
+            'title' => 'Search and photos',
+            'summary' => 'Finding things by meaning instead of by words, in text and in pictures, and spotting copies.',
+            'lessons' => [],
+            'references' => ['semantic', 'photo-search', 'similar-photos', 'photo-duplicates'],
+        ],
+        [
+            'slug' => 'running-the-server',
+            'title' => 'Running the server',
+            'summary' => 'Reading the run log, restarting safely and keeping the queue worker healthy while you develop.',
+            'lessons' => [],
+            'references' => ['run-log', 'logs-restart', 'worker-dx'],
         ],
     ],
 ];

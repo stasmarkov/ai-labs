@@ -9,6 +9,7 @@ use App\DTOs\GuideStep;
 use App\DTOs\GuideTeach;
 use App\Guides\GuideRenderer;
 use App\Guides\GuideRepository;
+use App\Lessons\InvalidLessonException;
 use App\Lessons\LessonService;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -38,26 +39,6 @@ final readonly class GuidePageService
         private GuideRenderer $renderer,
         private LessonService $lessons,
     ) {}
-
-    /**
-     * @return array{guides: list<array{key: string, title: string, summary: string, planned: bool, group: string}>}
-     */
-    public function index(): array
-    {
-        $guides = [];
-        foreach ($this->guides->keys() as $key) {
-            $guide = $this->guides->find($key);
-            $guides[] = [
-                'key' => $guide->key,
-                'title' => $guide->title,
-                'summary' => $guide->summary,
-                'planned' => $guide->planned,
-                'group' => $guide->kind === 'foundation' ? 'foundation' : 'capability',
-            ];
-        }
-
-        return ['guides' => $guides];
-    }
 
     /**
      * What a live page teaches below its form: every "How it works" step cut to its first sentence (with the event that
@@ -151,10 +132,7 @@ final readonly class GuidePageService
             fn (string $related): array => ['key' => $related, 'title' => $this->guides->find($related)->title],
             array_filter($guide['related'], fn (string $related): bool => $this->guides->has($related)),
         ));
-        $lessons = array_map(fn (array $lesson): array => [
-            'title' => $lesson['title'],
-            'href' => route('ai.learn.show', ['module' => $lesson['module'], 'lesson' => $lesson['slug']], absolute: false),
-        ], $this->lessons->titles($guide['lessons']));
+        $lessons = $this->lessonLinks($guide['lessons']);
         unset($guide['lessons']);
         if ($lessons !== []) {
             $guide['lessons'] = $lessons;
@@ -193,5 +171,23 @@ final readonly class GuidePageService
         $href = route($page, absolute: false);
 
         return isset($params['q']) ? $href.'?'.http_build_query(['q' => $params['q']]) : $href;
+    }
+
+    /**
+     * @param  list<string>  $keys
+     * @return list<array{title: string, href: string}>
+     */
+    private function lessonLinks(array $keys): array
+    {
+        try {
+            $titles = $this->lessons->titles($keys);
+        } catch (InvalidLessonException) {
+            return [];
+        }
+
+        return array_map(fn (array $lesson): array => [
+            'title' => $lesson['title'],
+            'href' => route('ai.learn.show', ['module' => $lesson['module'], 'lesson' => $lesson['slug']], absolute: false),
+        ], $titles);
     }
 }

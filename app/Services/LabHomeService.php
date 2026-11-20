@@ -20,7 +20,7 @@ final readonly class LabHomeService
             about: 'A study lab for building AI features in Laravel: streamed answers, embeddings, retrieval with citations and structured output, on local and cloud model providers, served by FrankenPHP. Every feature has a page to try, a section in the learning guide and a measured result.',
             runSteps: $this->runSteps(),
             labHref: route('ai.overview', absolute: false),
-            guidesHref: route('ai.guides.index', absolute: false),
+            guidesHref: route('ai.learn.index', absolute: false),
             capabilities: array_values(array_map($this->card(...), array_filter($capabilities, fn (LabCapability $capability): bool => $capability->status === 'ready'))),
             coming: array_values(array_map(
                 fn (LabCapability $capability): array => $this->card($capability),

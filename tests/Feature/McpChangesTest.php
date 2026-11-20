@@ -335,7 +335,7 @@ it('AC-7 hides the change pages and the navigation entry while the MCP switch is
     mcpLocal();
     $change = storedChange();
     $navigation = fn (): array => array_column(
-        $this->get('/ai')->assertOk()->viewData('page')['props']['lab']['navigation'],
+        collect($this->get('/ai')->assertOk()->viewData('page')['props']['lab']['navigation'])->pluck('items')->flatten(1)->all(),
         'href',
     );
 
@@ -397,7 +397,7 @@ it('AC-4 renders the changes list and a change page, and lists the page in the n
     expect(array_column($props['pending'], 'id'))->toBe([$pending->id])
         ->and(array_column($props['recent'], 'id'))->toBe([$rejected->id])
         ->and($props['change'])->toBeNull()
-        ->and(array_column($props['lab']['navigation'], 'href'))->toContain('/ai/changes');
+        ->and(array_column(collect($props['lab']['navigation'])->pluck('items')->flatten(1)->all(), 'href'))->toContain('/ai/changes');
 
     $detail = $this->get("/ai/changes/{$pending->id}")->assertOk()->viewData('page')['props'];
 

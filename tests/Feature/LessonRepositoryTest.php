@@ -28,6 +28,8 @@ class LessonRepositoryTest extends TestCase
 
         $this->directory = sys_get_temp_dir().'/lessons-'.bin2hex(random_bytes(4));
         File::makeDirectory($this->directory.'/mod', 0777, true);
+        File::makeDirectory($this->directory.'/guides', 0777, true);
+        $this->copyGuide('local-models', ['mod/one']);
     }
 
     protected function tearDown(): void
@@ -200,9 +202,57 @@ class LessonRepositoryTest extends TestCase
         }
     }
 
+    public function test_ac_2_course_references_rules(): void
+    {
+        $this->service($this->lesson());
+        $this->writeFile($this->directory.'/mod/orphan.php', $this->lesson());
+        $this->copyGuide('chat', []);
+        $lesson = ['slug' => 'one', 'title' => 'One', 'summary' => 's', 'level' => 'beginner'];
+        $module = fn (string $slug, array $references, array $lessons = []): array => ['slug' => $slug, 'title' => 'M', 'summary' => 's', 'lessons' => $lessons, 'references' => $references];
+
+        $cases = [
+            'an unknown key' => [[$module('mod', ['chat', 'no-such-guide'], [$lesson])], 'no-such-guide'],
+            'a key in two modules' => [[$module('mod', ['chat'], [$lesson]), $module('other', ['chat'])], 'chat'],
+            'a key also linked by a lesson' => [[$module('mod', ['chat', 'local-models'], [$lesson])], 'local-models'],
+            'a guide no module reaches' => [[$module('mod', [], [$lesson])], 'chat'],
+            'a lesson no guide names' => [[$module('mod', ['chat'], [$lesson, ['slug' => 'orphan', 'title' => 'Orphan', 'summary' => 's', 'level' => 'beginner']])], 'mod/orphan'],
+            'the meta guide as a topic' => [[$module('mod', ['chat', 'lessons'], [$lesson])], 'lessons'],
+        ];
+
+        foreach ($cases as $name => [$modules, $key]) {
+            $this->writeFile($this->directory.'/course.php', ['modules' => $modules]);
+
+            try {
+                $this->makeRepository()->course();
+                $this->fail("{$name}: the course should not load.");
+            } catch (InvalidLessonException $exception) {
+                $this->assertStringContainsString("[{$key}]", $exception->getMessage(), $name);
+            }
+        }
+
+        $this->writeFile($this->directory.'/course.php', ['modules' => [$module('mod', ['chat'], [$lesson])]]);
+        $this->assertSame(['chat'], $this->makeRepository()->course()->modules[0]->references);
+    }
+
+    public function test_ac_2_the_real_course_owns_every_guide_once(): void
+    {
+        $guides = new GuideRepository(resource_path('guides'));
+        $course = (new LessonRepository(resource_path('lessons'), $guides))->course();
+        $referenced = array_merge(...array_map(fn ($module): array => $module->references, $course->modules));
+
+        $this->assertCount(5, $course->modules);
+        $this->assertSame(array_values(array_unique($referenced)), $referenced);
+        $this->assertNotContains('lessons', $referenced);
+        $this->assertSame(
+            ['describe', 'guards', 'logs-restart', 'photo-duplicates', 'photo-search', 'playground', 'prompts', 'run-log', 'semantic', 'similar-photos', 'worker-dx'],
+            collect($referenced)->sort()->values()->all(),
+        );
+    }
+
     public function test_ac_8_unknown_lessons_and_steps_are_not_found_and_a_broken_lesson_is_unavailable(): void
     {
         $this->service($this->lesson());
+        $this->copyGuide('local-models', ['mod/one', 'mod/broken', 'mod/later']);
         $this->writeFile($this->directory.'/mod/broken.php', ['title' => 'Broken']);
         $this->writeFile($this->directory.'/course.php', ['modules' => [['slug' => 'mod', 'title' => 'M', 'summary' => 's', 'lessons' => [
             ['slug' => 'one', 'title' => 'One', 'summary' => 's', 'level' => 'beginner'],
@@ -552,7 +602,21 @@ class LessonRepositoryTest extends TestCase
 
     private function makeRepository(): LessonRepository
     {
-        return new LessonRepository($this->directory, new GuideRepository(resource_path('guides')));
+        return new LessonRepository($this->directory, new GuideRepository($this->directory.'/guides'));
+    }
+
+    /**
+     * Copies a committed guide into the test's own guide directory, pointing its lesson links at the given lessons.
+     *
+     * @param  list<string>  $lessons
+     */
+    private function copyGuide(string $key, array $lessons): void
+    {
+        $source = (string) file_get_contents(resource_path("guides/{$key}.php"));
+        $copy = preg_replace("/^    'lessons' => \\[.*\\],$/m", "    'lessons' => ".var_export($lessons, true).',', $source);
+
+        $this->assertNotNull($copy);
+        file_put_contents($this->directory."/guides/{$key}.php", $copy);
     }
 
     private function numbers(): LessonNumbers

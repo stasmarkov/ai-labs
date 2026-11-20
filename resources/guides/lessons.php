@@ -7,13 +7,13 @@ $search = 'llm-load/2026-11-13/search-under-load.json';
 $course = require __DIR__.'/../lessons/course.php';
 $courseList = implode("\n\n", array_map(
     fn (array $module): string => '**'.$module['title'].':** '.implode('; ', array_column($module['lessons'], 'title')).'.',
-    $course['modules'],
+    array_filter($course['modules'], fn (array $module): bool => $module['lessons'] !== []),
 ));
 
 return [
     'kind' => 'foundation',
     'title' => 'Scene lessons',
-    'summary' => 'A scene lesson teaches one idea in about ten steps. Each step moves a picture of the system, a strip of measured numbers and a list of what changed together, so you see a problem and its fix instead of reading about them. The course is at /ai/learn: eight lessons in three modules, from how a model server shares its time to an agent that a person keeps in charge.',
+    'summary' => 'A scene lesson teaches one idea in about ten steps. Each step moves a picture of the system, a strip of measured numbers and a list of what changed together, so you see a problem and its fix instead of reading about them. The course at /ai/learn is the one place to start: it lists the eight lessons and every guide. A topic with a lesson can be walked through step by step or read as a reference; a guide with no lesson yet is a reference topic.',
     'works' => [
         [
             'title' => 'One step changes four things at once',
@@ -31,7 +31,7 @@ return [
         ],
         [
             'title' => 'The eight lessons',
-            'body' => $courseList."\n\nThe course page at /ai/learn opens each one, and every lesson links to the guide that goes deeper. The course page and the lesson sidebar read only each lesson's minutes and number of steps, never a result file, so a figure that cannot be read breaks only its own lesson.",
+            'body' => $courseList."\n\nThe course page at /ai/learn opens each one, and every lesson links to the guide that goes deeper. The course page and the lesson sidebar read only each lesson's minutes and number of steps, never a result file, so a figure that cannot be read breaks only its own lesson. Every topic has up to two ways in: Walk through is the lesson, and Reference is the guide with its tabs. The topic header on both pages links one to the other, the course sidebar sits beside both, and a guide with no lesson yet is a reference topic listed under its module. /ai/guides sends you to the course page; a guide keeps its address /ai/guides/{key}.",
         ],
         [
             'title' => 'The page gets resolved data only',
@@ -46,7 +46,7 @@ return [
     'failures' => [
         [
             'title' => 'The lesson page says not found, or fails',
-            'body' => "**Cause:** not found means the module, the lesson or the step in the address does not exist, the lesson is only announced as coming soon, or the course file does not list it yet. A server error means the lesson file is broken; the problem is written to the log, and the course page lists the lesson as unavailable.\n\n**Fix:** open the course page and follow a link from there. For a new lesson, add it to the course file. For a broken file, read the log line: it names the file and the rule.",
+            'body' => "**Cause:** not found means the module, the lesson or the step in the address does not exist, the lesson is only announced as coming soon, or the course file does not list it yet. A server error means the lesson file is broken; the problem is written to the log, and the course page lists the lesson as unavailable.\n\nA new guide or lesson that is not placed in the course makes the course page and every lesson page stop loading with a server error until it is placed; the error names the key.\n\n**Fix:** open the course page and follow a link from there. For a new lesson, add it to the course file. For a broken file, read the log line: it names the file and the rule. For a placement error, read the key in the message and place it as described in the steps for writing a lesson.",
         ],
         [
             'title' => 'The loader names a number it cannot find',
@@ -68,7 +68,7 @@ return [
     'recipes' => [
         [
             'title' => 'Write a lesson',
-            'body' => "1. Add a line for it in the course file, under a module, with a short title, a summary and a level.\n2. Create the lesson file under its module in the lessons folder. Start with three to six outcomes, each one a sentence a learner could answer.\n3. Draw the scene: a handful of boxes with a kind and a position, and the arrows between them. Keep it to what the lesson needs.\n4. Write the steps in the order problem, cause, fix, result. Give every step a role, a title, a body and a patch to the scene, and a callout where one helps.\n5. Point each number at a value in a committed result file. Do not type a figure.\n6. Tie every outcome to the step that teaches it, add a link to the guide tab that goes deeper (a tab the guide page shows, such as works, support or modify), then reload the page: a mistake is reported with the rule it broke.\n\nThe suite loads every lesson, so a broken file fails the tests before it ships.",
+            'body' => "1. Add a line for it in the course file, under a module, with a short title, a summary and a level.\n2. Create the lesson file under its module in the lessons folder. Start with three to six outcomes, each one a sentence a learner could answer.\n3. Draw the scene: a handful of boxes with a kind and a position, and the arrows between them. Keep it to what the lesson needs.\n4. Write the steps in the order problem, cause, fix, result. Give every step a role, a title, a body and a patch to the scene, and a callout where one helps.\n5. Point each number at a value in a committed result file. Do not type a figure.\n6. Tie every outcome to the step that teaches it, add a link to the guide tab that goes deeper (a tab the guide page shows, such as works, support or modify), then reload the page: a mistake is reported with the rule it broke.\n7. Place the topic. A topic is placed either by a guide's `lessons` link (the guide names `<module>/<lesson>` in its `lessons` key) or by one module's `references` list in the course file, never both and never in two modules. A new lesson must be named by at least one guide. Until both are true the course page and the lessons stop loading, and the error names the key.\n\nThe suite loads every lesson, so a broken file fails the tests before it ships.",
         ],
         [
             'title' => 'Add a number to a lesson',

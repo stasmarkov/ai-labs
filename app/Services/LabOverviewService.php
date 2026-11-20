@@ -36,6 +36,16 @@ final readonly class LabOverviewService
     /** The lab page that exists only while the admin assistant is available (local environment, switch on). */
     private const ADMIN_PAGE = ['admin-assistant', 'Admin assistant', 'ai.admin-assistant', 'ready'];
 
+    /** The sidebar groups in order, each with its item keys (page keys, plus overview, course, changes and settings). */
+    private const NAVIGATION_GROUPS = [
+        'Learn' => ['overview', 'course'],
+        'Text' => ['describe', 'chat', 'moderation', 'playground'],
+        'Search' => ['semantic', 'nl-search', 'docs'],
+        'Photos' => ['photos', 'photo-search', 'photo-duplicates'],
+        'Agents' => ['assistant', 'research', 'admin-assistant', 'changes'],
+        'Setup' => ['settings'],
+    ];
+
     public function __construct(
         private AiRunRepositoryInterface $runs,
         private OllamaServerInfo $ollama,
@@ -60,7 +70,7 @@ final readonly class LabOverviewService
     }
 
     /**
-     * @return array{textProvider: string, textModel: string, embeddingProvider: string, embeddingModel: string, ollama: array{reachable: bool|string}, navigation: list<array{href: string, label: string}>}
+     * @return array{textProvider: string, textModel: string, embeddingProvider: string, embeddingModel: string, ollama: array{reachable: bool|string}, navigation: list<array{label: string, items: list<array{href: string, label: string}>}>}
      */
     public function topBar(): array
     {
@@ -121,18 +131,40 @@ final readonly class LabOverviewService
     }
 
     /**
-     * @return list<array{href: string, label: string}>
+     * The sidebar as labelled groups; a group with no available item is left out.
+     *
+     * @return list<array{label: string, items: list<array{href: string, label: string}>}>
      */
     private function navigation(): array
     {
-        return [
-            ['href' => route('ai.overview', absolute: false), 'label' => 'Overview'],
-            ['href' => route('ai.guides.index', absolute: false), 'label' => 'Guides'],
-            ['href' => route('ai.learn.index', absolute: false), 'label' => 'Learn'],
-            ...array_map(fn (array $page): array => ['href' => route($page[2], absolute: false), 'label' => $page[1]], $this->pages()),
-            ...($this->providers->mcpServerAvailable() ? [['href' => route('ai.changes', absolute: false), 'label' => 'Changes']] : []),
-            ...($this->providers->settingsAvailable() ? [['href' => route('ai.settings', absolute: false), 'label' => 'Settings']] : []),
+        $links = [
+            'overview' => ['href' => route('ai.overview', absolute: false), 'label' => 'Overview'],
+            'course' => ['href' => route('ai.learn.index', absolute: false), 'label' => 'Course'],
         ];
+
+        foreach ($this->pages() as $page) {
+            $links[$page[0]] = ['href' => route($page[2], absolute: false), 'label' => $page[1]];
+        }
+
+        if ($this->providers->mcpServerAvailable()) {
+            $links['changes'] = ['href' => route('ai.changes', absolute: false), 'label' => 'Changes'];
+        }
+
+        if ($this->providers->settingsAvailable()) {
+            $links['settings'] = ['href' => route('ai.settings', absolute: false), 'label' => 'Settings'];
+        }
+
+        $groups = [];
+
+        foreach (self::NAVIGATION_GROUPS as $label => $keys) {
+            $items = array_values(array_filter(array_map(fn (string $key): ?array => $links[$key] ?? null, $keys)));
+
+            if ($items !== []) {
+                $groups[] = ['label' => $label, 'items' => $items];
+            }
+        }
+
+        return $groups;
     }
 
     /**

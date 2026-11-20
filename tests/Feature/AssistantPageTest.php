@@ -43,7 +43,7 @@ it('AC-5 the assistant is in the navigation, on the overview and on the home pag
 
     $navigation = $this->get('/ai/assistant')->viewData('page')['props']['lab']['navigation'];
 
-    expect(array_column($navigation, 'href'))->toContain('/ai/assistant');
+    expect(array_column(collect($navigation)->pluck('items')->flatten(1)->all(), 'href'))->toContain('/ai/assistant');
 
     $overview = $this->get('/ai')->viewData('page')['props'];
     $keys = array_column($overview['capabilities'], 'key');

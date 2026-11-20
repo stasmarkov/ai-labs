@@ -79,6 +79,13 @@ export interface Lesson {
     steps: Step[];
 }
 
+export interface GuideLink {
+    key: string;
+    title: string;
+    summary: string;
+    href: string;
+}
+
 export interface CourseEntry {
     slug: string;
     title: string;
@@ -89,6 +96,7 @@ export interface CourseEntry {
     minutes: number | null;
     steps: number | null;
     href: string | null;
+    guides: GuideLink[];
 }
 
 export interface CourseModule {
@@ -96,6 +104,7 @@ export interface CourseModule {
     title: string;
     summary: string;
     lessons: CourseEntry[];
+    references: GuideLink[];
 }
 
 export interface Course {

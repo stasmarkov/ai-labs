@@ -64,7 +64,6 @@ function labUiPaths(): array
         '/ai/photos',
         '/ai/photo-search',
         '/ai/photos/duplicates',
-        '/ai/guides',
         ...array_map(fn (string $key): string => '/ai/guides/'.$key, $keys),
         '/ai/learn',
         ...array_values(array_unique([...$lessonPaths, '/ai/learn/running-models/one-model-many-users/7'])),

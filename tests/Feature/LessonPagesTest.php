@@ -15,7 +15,8 @@ beforeEach(function (): void {
     Http::preventStrayRequests();
     Http::fake(['*/api/version' => Http::response(['version' => '0.12.0'])]);
 
-    $this->lessonsDirectory = sys_get_temp_dir().'/lesson-pages-'.bin2hex(random_bytes(4));
+    $this->root = sys_get_temp_dir().'/lesson-pages-'.bin2hex(random_bytes(4));
+    $this->lessonsDirectory = $this->root.'/lessons';
     File::makeDirectory($this->lessonsDirectory.'/mod', 0777, true);
 
     writeLessonFile($this->lessonsDirectory.'/mod/one.php', lessonFixture());
@@ -24,6 +25,7 @@ beforeEach(function (): void {
             'slug' => 'mod',
             'title' => 'Module',
             'summary' => 'A module.',
+            'references' => courseFixtureReferences(),
             'lessons' => [
                 ['slug' => 'one', 'title' => 'One', 'summary' => 'A lesson.', 'level' => 'beginner'],
                 ['slug' => 'later', 'title' => 'Later', 'summary' => 'Not yet.', 'level' => 'beginner', 'coming_soon' => true],
@@ -32,12 +34,17 @@ beforeEach(function (): void {
     ]);
 
     $directory = $this->lessonsDirectory;
-    $this->app->scoped(LessonRepository::class, fn (): LessonRepository => new LessonRepository($directory, new GuideRepository(resource_path('guides'))));
+    $guides = $this->root.'/guides';
+    File::copyDirectory(resource_path('guides'), $guides);
+    $linked = preg_replace("/^    'lessons' => \\[.*\\],$/m", "    'lessons' => ['mod/one', 'mod/two', 'mod/later', 'mod/broken'],", (string) file_get_contents($guides.'/local-models.php'));
+    file_put_contents($guides.'/local-models.php', $linked);
+    $this->app->scoped(GuideRepository::class, fn (): GuideRepository => new GuideRepository($guides));
+    $this->app->scoped(LessonRepository::class, fn (): LessonRepository => new LessonRepository($directory, $this->app->make(GuideRepository::class)));
     $this->app->scoped(LessonNumbers::class, fn (): LessonNumbers => new LessonNumbers(new GuideFacts(base_path('bench/results'))));
 });
 
 afterEach(function (): void {
-    File::deleteDirectory($this->lessonsDirectory);
+    File::deleteDirectory($this->root);
 });
 
 it('AC-1 the course page lists modules, playable lessons and coming-soon entries', function (): void {
@@ -55,11 +62,11 @@ it('AC-1 the course page lists modules, playable lessons and coming-soon entries
         );
 });
 
-it('AC-1 the navigation has a Learn entry', function (): void {
+it('AC-1 the navigation has a Course entry', function (): void {
     $this->get('/ai/learn')
         ->assertInertia(fn (Assert $page) => $page
-            ->where('lab.navigation', fn ($navigation): bool => collect($navigation)->contains(
-                fn (array $item): bool => $item['label'] === 'Learn' && $item['href'] === '/ai/learn'
+            ->where('lab.navigation', fn ($navigation): bool => collect($navigation)->pluck('items')->flatten(1)->contains(
+                fn (array $item): bool => $item['label'] === 'Course' && $item['href'] === '/ai/learn'
             ))
         );
 });
@@ -103,6 +110,7 @@ it('C-10 a broken lesson answers 500 for that lesson only and the course lists i
             'slug' => 'mod',
             'title' => 'Module',
             'summary' => 'A module.',
+            'references' => courseFixtureReferences(),
             'lessons' => [
                 ['slug' => 'one', 'title' => 'One', 'summary' => 'A lesson.', 'level' => 'beginner'],
                 ['slug' => 'broken', 'title' => 'Broken', 'summary' => 'A broken lesson.', 'level' => 'beginner'],
@@ -132,6 +140,7 @@ it('F12 the course page and the sidebar read only lesson metadata, so an unreada
             'slug' => 'mod',
             'title' => 'Module',
             'summary' => 'A module.',
+            'references' => courseFixtureReferences(),
             'lessons' => [
                 ['slug' => 'one', 'title' => 'One', 'summary' => 'A lesson.', 'level' => 'beginner'],
                 ['slug' => 'two', 'title' => 'Two', 'summary' => 'A lesson with a result file that cannot be read.', 'level' => 'advanced'],
@@ -185,6 +194,16 @@ it('MNC-4 the lesson pages write nothing to the database and make no HTTP calls'
 function writeLessonFile(string $path, array $data): void
 {
     file_put_contents($path, '<?php return '.var_export($data, true).';');
+}
+
+/**
+ * Every committed guide a fixture course has to own, since no fixture lesson links one.
+ *
+ * @return list<string>
+ */
+function courseFixtureReferences(): array
+{
+    return array_values(array_diff((new GuideRepository(resource_path('guides')))->keys(), ['lessons', 'local-models']));
 }
 
 /**
@@ -418,4 +437,115 @@ it('NFR-3 every scene SVG text colour has a contrast of at least 4.5:1 against i
     foreach ($pairs as [$text, $background]) {
         expect($ratio($text, $background))->toBeGreaterThanOrEqual(4.5);
     }
+});
+
+it('AC-3 course lists lesson and reference topics', function (): void {
+    $this->get('/ai/learn')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('course.modules.0.references', fn ($references): bool => collect($references)->contains(
+                fn (array $reference): bool => $reference['key'] === 'describe' && $reference['href'] === '/ai/guides/describe' && $reference['title'] === 'Describe a car'
+            ))
+            ->where('course.modules.0.lessons.0.guides', fn ($guides): bool => collect($guides)->pluck('key')->contains('local-models'))
+        );
+});
+
+it('AC-4 lesson page carries its guides', function (): void {
+    $directory = resource_path('lessons');
+    $this->app->scoped(GuideRepository::class, fn (): GuideRepository => new GuideRepository(resource_path('guides')));
+    $this->app->scoped(LessonRepository::class, fn (): LessonRepository => new LessonRepository($directory, $this->app->make(GuideRepository::class)));
+
+    $this->get('/ai/learn/running-models/one-model-many-users')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('guides', fn ($guides): bool => collect($guides)->contains(
+                fn (array $guide): bool => $guide['key'] === 'local-models' && $guide['href'] === '/ai/guides/local-models' && $guide['title'] !== ''
+            ))
+        );
+});
+
+it('NFR-1 course payload stays small', function (): void {
+    $props = $this->get('/ai/learn')->viewData('page')['props'];
+
+    expect(strlen(json_encode($props)))->toBeLessThan(60000);
+
+    $directory = resource_path('lessons');
+    $this->app->scoped(GuideRepository::class, fn (): GuideRepository => new GuideRepository(resource_path('guides')));
+    $this->app->scoped(LessonRepository::class, fn (): LessonRepository => new LessonRepository($directory, $this->app->make(GuideRepository::class)));
+    $props = $this->get('/ai/learn')->viewData('page')['props'];
+
+    expect(strlen(json_encode($props)))->toBeLessThan(60000);
+});
+
+it('AC-3 the course page and the sidebar list reference topics and each lesson\'s guides', function (): void {
+    $sources = lessonPlayerSources();
+    $types = (string) file_get_contents(resource_path('js/ai/composables/lessonTypes.ts'));
+
+    expect($types)->toContain('references: GuideLink[]')
+        ->and($types)->toContain('guides: GuideLink[]')
+        ->and($sources['course'])->toContain('module.references')
+        ->and($sources['course'])->toContain('lesson.guides')
+        ->and($sources['sidebar'])->toContain('module.references')
+        ->and($sources['sidebar'])->toContain('currentGuide');
+});
+
+it('AC-6 NFR-2 a guide page shows the course sidebar and the layout gives guide pages the 1440 px width', function (): void {
+    $guide = (string) file_get_contents(resource_path('js/ai/Pages/Lab/Guide.vue'));
+    $layout = (string) file_get_contents(resource_path('js/ai/Layouts/LabLayout.vue'));
+
+    expect($guide)->toContain('import CourseSidebar from')
+        ->and($guide)->toContain('<CourseSidebar')
+        ->and($guide)->toContain('current-guide')
+        ->and($layout)->toContain("'Lab/Guide'")
+        ->and($layout)->toContain('max-w-[1440px]');
+});
+
+it('NFR-2 the course page and sidebar label their groups and mark the current item', function (): void {
+    $sources = lessonPlayerSources();
+
+    expect($sources['sidebar'])->toContain('aria-current')
+        ->and($sources['sidebar'])->toContain('aria-label="Reference topics"')
+        ->and($sources['sidebar'])->toContain('focus-visible:')
+        ->and($sources['course'])->toContain('aria-label="Reference topics"')
+        ->and($sources['course'])->toContain('focus-visible:');
+});
+
+it('AC-7 NFR-2 the lab sidebar renders labelled groups and keeps Course current on guide pages', function (): void {
+    $layout = (string) file_get_contents(resource_path('js/ai/Layouts/LabLayout.vue'));
+
+    expect($layout)->toContain('in groups"')
+        ->and($layout)->toContain(':aria-labelledby')
+        ->and($layout)->toContain('group.label')
+        ->and($layout)->toContain("startsWith('/ai/guides')")
+        ->and($layout)->toContain('aria-current')
+        ->and($layout)->toContain('focus-visible:')
+        ->and($layout)->toContain('flex-wrap');
+});
+
+it('AC-3 the course page carries reference summaries and labels Walk through, Reference and how these lessons work', function (): void {
+    $this->get('/ai/learn')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('course.modules.0.references', fn ($references): bool => collect($references)->isNotEmpty()
+                && collect($references)->every(fn (array $reference): bool => is_string($reference['summary']) && $reference['summary'] !== ''))
+        );
+
+    $course = lessonPlayerSources()['course'];
+
+    expect($course)->toContain('How these lessons work')
+        ->and($course)->toContain('/ai/guides/lessons')
+        ->and($course)->toContain('Walk through')
+        ->and($course)->toContain('Reference')
+        ->and($course)->toContain('>reference</LabTag>')
+        ->and($course)->toContain(':id="module.slug"');
+});
+
+it('AC-6 a guide page marks its first linked lesson current in the sidebar without the reset button', function (): void {
+    $guide = (string) file_get_contents(resource_path('js/ai/Pages/Lab/Guide.vue'));
+    $sidebar = (string) file_get_contents(resource_path('js/ai/components/lesson/CourseSidebar.vue'));
+
+    expect($guide)->toContain(':highlight-lesson="topic?.lessons[0]?.key ?? null"')
+        ->and($guide)->not->toContain(':current="')
+        ->and($sidebar)->toContain('highlightLesson')
+        ->and($sidebar)->toContain('v-if="current"');
 });

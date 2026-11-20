@@ -26,7 +26,7 @@ defineProps<{
 
 <template>
     <p class="m-0 text-[14px] text-muted">
-        <Link href="/ai/guides" class="text-ink underline">Guides</Link>
+        <Link href="/ai/learn" class="text-ink underline">Learn</Link>
         /
         <Link :href="guide.href" class="text-ink underline">{{ guide.title }}</Link>
     </p>

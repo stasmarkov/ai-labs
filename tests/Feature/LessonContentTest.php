@@ -50,11 +50,11 @@ function lessonResultFiles(string $path): array
     return array_values(array_unique($files));
 }
 
-it('AC-1 the course lists three modules and eight lessons, and every one of them is playable', function (): void {
+it('AC-1 the course lists five modules and eight lessons, and every one of them is playable', function (): void {
     $modules = app(LessonRepository::class)->course()->modules;
 
-    expect(array_map(fn ($module): string => $module->slug, $modules))->toBe(['running-models', 'answers-you-can-trust', 'agents'])
-        ->and(array_map(fn ($module): int => count($module->lessons), $modules))->toBe([3, 3, 2]);
+    expect(array_map(fn ($module): string => $module->slug, $modules))->toBe(['running-models', 'answers-you-can-trust', 'agents', 'search-and-photos', 'running-the-server'])
+        ->and(array_map(fn ($module): int => count($module->lessons), $modules))->toBe([3, 3, 2, 0, 0]);
 
     $playable = [];
     foreach ($modules as $module) {
@@ -80,7 +80,7 @@ it('AC-1 the course lists three modules and eight lessons, and every one of them
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('Lab/Learn')
-            ->has('course.modules', 3)
+            ->has('course.modules', 5)
             ->where('course.modules.0.lessons.0.href', '/ai/learn/running-models/one-model-many-users')
             ->where('course.modules.0.lessons.0.steps', 10)
             ->where('course.modules.1.lessons.0.comingSoon', false)
@@ -103,7 +103,7 @@ it('AC-2 the pilot opens on step 1 with the scene, KPIs, panel, learn list and c
             ->has('lesson.steps.0.body')
             ->has('lesson.steps.0.callout')
             ->has('lesson.steps.0.changed')
-            ->has('course.modules', 3)
+            ->has('course.modules', 5)
         );
 });
 

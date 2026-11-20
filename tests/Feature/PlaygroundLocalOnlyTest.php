@@ -75,7 +75,7 @@ it('AC-8 hides the navigation entry and the capability card outside local and sh
 
     app()->detectEnvironment(fn (): string => 'production');
 
-    $links = array_filter($service->topBar()['navigation'], fn (array $link): bool => $link['href'] === '/ai/playground');
+    $links = array_filter(collect($service->topBar()['navigation'])->pluck('items')->flatten(1)->all(), fn (array $link): bool => $link['href'] === '/ai/playground');
     $keys = array_map(fn ($capability): string => $capability->key, $service->capabilities());
 
     expect($links)->toBe([])
@@ -84,7 +84,7 @@ it('AC-8 hides the navigation entry and the capability card outside local and sh
 
     app()->detectEnvironment(fn (): string => 'local');
 
-    $links = array_filter($service->topBar()['navigation'], fn (array $link): bool => $link['href'] === '/ai/playground');
+    $links = array_filter(collect($service->topBar()['navigation'])->pluck('items')->flatten(1)->all(), fn (array $link): bool => $link['href'] === '/ai/playground');
 
     expect($links)->toHaveCount(1)
         ->and($service->capability('playground')->route)->toBe('/ai/playground');

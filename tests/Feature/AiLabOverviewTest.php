@@ -146,7 +146,7 @@ it('AC-8 the playground is a capability with the guide summary and one navigatio
     expect($capability->route)->toBe('/ai/playground')
         ->and($capability->summary)->toBe(app(GuideRepository::class)->find('playground')->summary);
 
-    $links = array_filter($service->topBar()['navigation'], fn (array $link): bool => $link['href'] === '/ai/playground');
+    $links = array_filter(collect($service->topBar()['navigation'])->pluck('items')->flatten(1)->all(), fn (array $link): bool => $link['href'] === '/ai/playground');
 
     expect($links)->toHaveCount(1);
 });

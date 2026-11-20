@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Enums\GuideFormatType;
 use App\Guides\GuideFormatRepository;
-use App\Guides\GuideRepository;
 use App\Guides\InvalidGuideException;
 use App\Guides\SnippetResolver;
 use App\Services\GuideFormatPageService;
@@ -113,10 +112,10 @@ it('AC-3 unknown key or format is 404', function (): void {
     $this->get('/ai/guides/..%2Fconfig/formats')->assertNotFound();
 });
 
-it('AC-3 an incomplete format folder shows no trial card and answers 404, never 500', function (): void {
+it('AC-3 an incomplete format folder shows no trial link and answers 404, never 500', function (): void {
     useFormatFolder('photos', ['debug']);
 
-    $this->get('/ai/guides')->assertOk()->assertInertia(fn (Assert $page) => $page->where('trial', null));
+    $this->get('/ai/guides/photos')->assertOk()->assertInertia(fn (Assert $page) => $page->where('trial', null));
     $this->get('/ai/guides/photos/formats')->assertNotFound();
     $this->get('/ai/guides/photos/formats/quiz')->assertNotFound();
     $this->get('/ai/guides/photos/formats/debug')->assertNotFound();
@@ -130,25 +129,24 @@ it('AC-3 the format service refuses a key without a format set', function (): vo
         ->and(fn () => $service->compare('nope'))->toThrow(NotFoundHttpException::class);
 });
 
-it('AC-11 the guides index shows the trial card and keeps every guide in order', function (): void {
-    $keys = app(GuideRepository::class)->keys();
-
-    $this->get('/ai/guides')
+it('AC-8 MNC-3 the photos guide exposes the trial link and the format URLs still answer', function (): void {
+    $this->get('/ai/guides/photos')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->component('Lab/Guides')
-            ->has('guides', count($keys))
-            ->where('guides', fn ($guides): bool => collect($guides)->pluck('key')->all() === $keys)
+            ->component('Lab/Guide')
             ->where('trial.title', 'Guide format trial')
             ->where('trial.href', '/ai/guides/photos/formats')
             ->where('trial.summary', fn (string $summary): bool => str_contains($summary, 'Follow one photo') && str_contains($summary, 'Code tour'))
         );
+    $this->get('/ai/guides/describe')->assertOk()->assertInertia(fn (Assert $page) => $page->where('trial', null));
+    $this->get('/ai/guides/photos/formats')->assertOk();
+    $this->get('/ai/guides/photos/formats/quiz')->assertOk();
 });
 
-it('AC-11 the trial card follows the format sets found in the folder', function (): void {
+it('AC-8 the trial link follows the format sets found in the folder', function (): void {
     useFormatFolder('describe');
 
-    $this->get('/ai/guides')
+    $this->get('/ai/guides/describe')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('trial.href', '/ai/guides/describe/formats'));
     $this->get('/ai/guides/describe/formats')->assertOk();
@@ -172,7 +170,7 @@ it('NFR-3 the pages make no application writes and need no outside call', functi
     });
 
     $this->get('/ai/guides/photos/formats')->assertOk();
-    $this->get('/ai/guides')->assertOk();
+    $this->get('/ai/guides/photos')->assertOk();
 
     foreach (GuideFormatType::cases() as $format) {
         $this->get('/ai/guides/photos/formats/'.$format->value)->assertOk();
@@ -243,4 +241,23 @@ it('AC-9 NFR-1 after the answer is shown the debug page marks the right cause an
     expect($source)->toContain('(the cause)')
         ->toMatch('/v-if="isSolved\(scenario\) && causeIndex === scenario.correct"/')
         ->toMatch('/v-if="!isSolved\(scenario\) && scenario.id in picked[^"]*"[^>]*>[\s\S]*?Try another cause/');
+});
+
+it('AC-8 the format pages breadcrumb to the learning area and the photos guide shows a Format trial link in its header', function (): void {
+    $pages = ['GuideFormats.vue', 'GuideFormat/BuildAlong.vue', 'GuideFormat/Trace.vue', 'GuideFormat/Quiz.vue', 'GuideFormat/Debug.vue', 'GuideFormat/Tour.vue'];
+
+    foreach ($pages as $page) {
+        $source = file_get_contents(base_path('resources/js/ai/Pages/Lab/'.$page));
+
+        expect($source)->not->toContain('href="/ai/guides"')
+            ->and($source)->toContain('<Link href="/ai/learn" class="text-ink underline">Learn</Link>');
+    }
+
+    $header = file_get_contents(base_path('resources/js/ai/components/lesson/TopicHeader.vue'));
+    $guide = file_get_contents(base_path('resources/js/ai/Pages/Lab/Guide.vue'));
+
+    expect($header)->toContain('trialHref')->toContain('Format trial')
+        ->and($guide)->toContain(':trial-href="trial?.href ?? null"')
+        ->and($guide)->not->toContain('Guide format trial')
+        ->and($guide)->not->toContain('v-if="trial" class="mt-8');
 });

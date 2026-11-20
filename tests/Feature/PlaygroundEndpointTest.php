@@ -325,7 +325,7 @@ it('AC-8 gives the page its prompts, targets and limits', function (): void {
 it('AC-8 puts Playground in the lab navigation locally', function (): void {
     $navigation = $this->get('/ai/playground')->viewData('page')['props']['lab']['navigation'];
 
-    expect(array_column($navigation, 'href'))->toContain('/ai/playground');
+    expect(array_column(collect($navigation)->pluck('items')->flatten(1)->all(), 'href'))->toContain('/ai/playground');
 });
 
 it('AC-1 answers 409 version_conflict when another save takes the next version number and adds no extra version row', function (): void {

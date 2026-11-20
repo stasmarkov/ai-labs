@@ -4,23 +4,34 @@ import { Link, usePage } from '@inertiajs/vue3';
 import LabStatusDot from '../components/LabStatusDot.vue';
 import LabTag from '../components/LabTag.vue';
 
+interface NavigationItem {
+    href: string;
+    label: string;
+}
+
+interface NavigationGroup {
+    label: string;
+    items: NavigationItem[];
+}
+
 interface LabShared {
     textModel?: string;
     embeddingModel?: string;
     ollama?: { reachable: boolean | 'not-used' };
-    navigation?: Array<{ href: string; label: string }>;
+    navigation?: NavigationGroup[];
 }
 
 const page = usePage();
 const lab = computed(() => (page.props.lab ?? {}) as LabShared);
-const navigation = computed(() => lab.value.navigation ?? []);
-const overviewHref = computed(() => navigation.value[0]?.href ?? '/ai');
+const groups = computed(() => lab.value.navigation ?? []);
+const overviewHref = computed(() => groups.value[0]?.items[0]?.href ?? '/ai');
+const courseHref = '/ai/learn';
 
 /**
- * The lesson player puts a scene, a step panel and a course rail side by side, so it gets the whole window up to 1440 px
- * and a slightly narrower lab navigation.
+ * The lesson player puts a scene, a step panel and a course rail side by side, and a guide page sits beside the course
+ * sidebar and its own rail, so both get the whole window up to 1440 px and a slightly narrower lab navigation.
  */
-const lesson = computed(() => page.component === 'Lab/Lesson');
+const lesson = computed(() => page.component === 'Lab/Lesson' || page.component === 'Lab/Guide');
 const width = computed(() => (lesson.value ? 'max-w-[1440px]' : 'max-w-[1200px]'));
 
 const ollama = computed<{ state: 'ok' | 'down' | 'idle'; label: string }>(() => {
@@ -39,6 +50,10 @@ const ollama = computed<{ state: 'ok' | 'down' | 'idle'; label: string }>(() => 
 
 function isCurrent(href: string): boolean {
     const path = page.url.split('?')[0];
+
+    if (href === courseHref && path.startsWith('/ai/guides')) {
+        return true;
+    }
 
     return path === href || (href !== overviewHref.value && path.startsWith(`${href}/`));
 }
@@ -62,18 +77,25 @@ function isCurrent(href: string): boolean {
 
         <div class="mx-auto flex w-full flex-1 flex-col md:flex-row" :class="width">
             <nav aria-label="Lab pages" class="shrink-0 border-b border-rule px-4 py-3 md:border-b-0 md:border-r md:py-6" :class="lesson ? 'md:w-48 md:px-5' : 'md:w-52 md:px-6'">
-                <ul class="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0 md:flex-col md:gap-y-2">
-                    <li v-for="item in navigation" :key="item.href">
-                        <Link
-                            :href="item.href"
-                            class="inline-block py-1 text-[15px]"
-                            :class="isCurrent(item.href) ? 'font-semibold text-signal' : 'text-ink'"
-                            :aria-current="isCurrent(item.href) ? 'page' : undefined"
-                        >
-                            {{ item.label }}
-                        </Link>
-                    </li>
-                </ul>
+                <div class="flex flex-wrap gap-x-6 gap-y-3 md:flex-col md:gap-y-5">
+                    <section v-for="(group, index) in groups" :key="group.label" :aria-labelledby="`lab-nav-group-${index}`">
+                        <h2 :id="`lab-nav-group-${index}`" class="m-0 mb-1 text-[12px] font-semibold uppercase tracking-wide text-muted">
+                            {{ group.label }}
+                        </h2>
+                        <ul class="m-0 flex list-none flex-wrap gap-x-4 gap-y-0 p-0 md:flex-col">
+                            <li v-for="item in group.items" :key="item.href">
+                                <Link
+                                    :href="item.href"
+                                    class="inline-block rounded-sm py-1 text-[15px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
+                                    :class="isCurrent(item.href) ? 'font-semibold text-signal' : 'text-ink'"
+                                    :aria-current="isCurrent(item.href) ? 'page' : undefined"
+                                >
+                                    {{ item.label }}
+                                </Link>
+                            </li>
+                        </ul>
+                    </section>
+                </div>
             </nav>
 
             <div class="flex min-w-0 flex-1 flex-col gap-6 px-4 py-6 sm:px-6 lg:flex-row">

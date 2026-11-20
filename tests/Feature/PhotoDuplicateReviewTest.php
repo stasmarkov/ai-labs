@@ -198,7 +198,7 @@ it('AC-6 the lab lists the page in the navigation and as an overview capability 
 
     $navigation = $this->get('/ai/photos/duplicates')->viewData('page')['props']['lab']['navigation'] ?? [];
 
-    expect(array_column($navigation, 'href'))->toContain('/ai/photos/duplicates');
+    expect(array_column(collect($navigation)->pluck('items')->flatten(1)->all(), 'href'))->toContain('/ai/photos/duplicates');
 });
 
 it('AC-5 keeping the model pick marks the kept photo and the others and deletes nothing', function (): void {

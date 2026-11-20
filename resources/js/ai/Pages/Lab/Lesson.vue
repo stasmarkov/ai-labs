@@ -6,13 +6,14 @@ export default { layout: LabLayout };
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 import CourseSidebar from '../../components/lesson/CourseSidebar.vue';
 import KpiStrip from '../../components/lesson/KpiStrip.vue';
 import LearnList from '../../components/lesson/LearnList.vue';
 import SceneCanvas from '../../components/lesson/SceneCanvas.vue';
 import StepBar from '../../components/lesson/StepBar.vue';
 import StepPanel from '../../components/lesson/StepPanel.vue';
+import TopicHeader from '../../components/lesson/TopicHeader.vue';
 import LabTag from '../../components/LabTag.vue';
 import { lessonActionFor } from '../../composables/lessonKeys';
 import type { Course, Lesson } from '../../composables/lessonTypes';
@@ -22,12 +23,19 @@ const props = defineProps<{
     lesson: Lesson;
     step: number;
     course: Course;
+    guides: Array<{ key: string; title: string; href: string }>;
 }>();
 
 const progress = useLessonProgress();
 
 const paused = ref(false);
 const replayToken = ref(0);
+
+const topicModule = computed(() => {
+    const found = props.course.modules.find((module) => module.slug === props.lesson.module);
+
+    return found ? { slug: found.slug, title: found.title } : null;
+});
 
 const key = computed(() => `${props.lesson.module}/${props.lesson.slug}`);
 const total = computed(() => props.lesson.steps.length);
@@ -97,12 +105,19 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 </script>
 
 <template>
-    <p class="m-0 text-[14px] text-muted"><Link href="/ai/learn" class="text-ink underline">Learn</Link> / {{ lesson.title }}</p>
+    <TopicHeader
+        :module="topicModule"
+        :title="lesson.title"
+        :meta="null"
+        view="walk"
+        :walk-href="null"
+        :reference-href="guides[0]?.href ?? null"
+        :also="guides.slice(1)"
+    />
     <h1 class="mt-2 text-[28px] font-semibold">{{ lesson.title }}</h1>
     <p class="mt-2 flex flex-wrap items-center gap-2 text-[15px] text-muted">
         <span>{{ lesson.summary }}</span>
         <LabTag>{{ lesson.level }}, {{ lesson.minutes }} min, {{ total }} steps</LabTag>
-        <Link v-if="lesson.guide" :href="lesson.guide" class="text-ink underline">Read the guide</Link>
     </p>
 
     <div class="sr-only" aria-live="polite" aria-atomic="true">{{ announcement }}</div>

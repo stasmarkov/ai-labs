@@ -231,12 +231,12 @@ it('AC-5 an embeddings row carries the counts, the re-index command and a warnin
 
 it('AC-2 the navigation lists Settings only where the settings are available', function (): void {
     $this->get('/ai/settings')->assertInertia(fn (Assert $page) => $page
-        ->where('lab.navigation', fn ($navigation) => collect($navigation)->contains(['href' => '/ai/settings', 'label' => 'Settings'])));
+        ->where('lab.navigation', fn ($navigation) => collect($navigation)->pluck('items')->flatten(1)->contains(['href' => '/ai/settings', 'label' => 'Settings'])));
 
     config(['ai.settings_ui' => false]);
 
     $this->get('/ai')->assertInertia(fn (Assert $page) => $page
-        ->where('lab.navigation', fn ($navigation) => ! collect($navigation)->pluck('label')->contains('Settings')));
+        ->where('lab.navigation', fn ($navigation) => ! collect($navigation)->pluck('items')->flatten(1)->pluck('label')->contains('Settings')));
 });
 
 it('AC-2 a saved model that is not installed carries the flag, the pull command and stays in the select', function (): void {

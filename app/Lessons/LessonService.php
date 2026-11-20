@@ -23,6 +23,8 @@ final class LessonService
     /** @var array<string, Lesson> */
     private array $resolved = [];
 
+    private ?LessonCourse $course = null;
+
     public function __construct(
         private readonly LessonRepository $lessons,
         private readonly LessonNumbers $numbers,
@@ -34,6 +36,10 @@ final class LessonService
      */
     public function course(): LessonCourse
     {
+        if ($this->course !== null) {
+            return $this->course;
+        }
+
         $modules = [];
 
         foreach ($this->lessons->course()->modules as $module) {
@@ -43,10 +49,10 @@ final class LessonService
                 $entries[] = $entry->comingSoon ? $entry : $this->entry($module->slug, $entry);
             }
 
-            $modules[] = new LessonCourseModule($module->slug, $module->title, $module->summary, $entries);
+            $modules[] = new LessonCourseModule($module->slug, $module->title, $module->summary, $entries, $module->references);
         }
 
-        return new LessonCourse($modules);
+        return $this->course = new LessonCourse($modules);
     }
 
     /**

@@ -522,7 +522,7 @@ it('AC-5 the metrics guide has six non-empty tabs, no references, answers 200 an
 
     $this->withoutVite();
     $this->get('/ai/guides/metrics')->assertOk();
-    $this->get('/ai/guides')->assertOk()->assertSee('Metrics: watching the thread pool');
+    $this->get('/ai/learn')->assertOk();
 });
 
 it('AC-8 the logs-restart guide has six non-empty tabs and the teach sections, no references, answers 200 and is in the learning guide and the README', function (): void {
@@ -548,7 +548,7 @@ it('AC-8 the logs-restart guide has six non-empty tabs and the teach sections, n
 
     $this->withoutVite();
     $this->get('/ai/guides/logs-restart')->assertOk();
-    $this->get('/ai/guides')->assertOk()->assertSee('Logs and worker restart');
+    $this->get('/ai/learn')->assertOk();
 
     $learning = file_get_contents(base_path('docs/learning-guide.md'));
     $readme = file_get_contents(base_path('README.md'));
@@ -583,7 +583,7 @@ it('AC-7 the worker-dx guide has six non-empty tabs and the teach sections, answ
 
     $this->withoutVite();
     $this->get('/ai/guides/worker-dx')->assertOk();
-    $this->get('/ai/guides')->assertOk()->assertSee('Worker-mode developer experience');
+    $this->get('/ai/learn')->assertOk();
 
     $learning = file_get_contents(base_path('docs/learning-guide.md'));
     $readme = file_get_contents(base_path('README.md'));

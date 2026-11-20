@@ -287,7 +287,7 @@ it('AC-10 lists the latest 20 runs newest first on the lab page', function (): v
 it('AC-10 puts Research in the lab navigation', function (): void {
     $navigation = $this->get('/ai/research')->viewData('page')['props']['lab']['navigation'];
 
-    expect(array_column($navigation, 'href'))->toContain('/ai/research');
+    expect(array_column(collect($navigation)->pluck('items')->flatten(1)->all(), 'href'))->toContain('/ai/research');
 });
 
 it('AC-10 lists the research feature as a settings row', function (): void {

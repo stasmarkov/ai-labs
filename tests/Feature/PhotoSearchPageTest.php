@@ -56,7 +56,7 @@ it('AC-6 the lab lists the page in the navigation and as an overview capability 
 
     $navigation = $this->get('/ai/photo-search')->viewData('page')['props']['lab']['navigation'] ?? [];
 
-    expect(array_column($navigation, 'href'))->toContain('/ai/photo-search');
+    expect(array_column(collect($navigation)->pluck('items')->flatten(1)->all(), 'href'))->toContain('/ai/photo-search');
 });
 
 it('AC-6 the page links each result to the photo detail through a photoUrlTemplate', function (): void {
