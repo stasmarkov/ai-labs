@@ -50,11 +50,11 @@ function lessonResultFiles(string $path): array
     return array_values(array_unique($files));
 }
 
-it('AC-1 the course lists five modules and eight lessons, and every one of them is playable', function (): void {
+it('AC-1 the course lists five modules and seventeen lessons, and every one of them is playable', function (): void {
     $modules = app(LessonRepository::class)->course()->modules;
 
     expect(array_map(fn ($module): string => $module->slug, $modules))->toBe(['running-models', 'answers-you-can-trust', 'agents', 'search-and-photos', 'running-the-server'])
-        ->and(array_map(fn ($module): int => count($module->lessons), $modules))->toBe([3, 3, 2, 0, 0]);
+        ->and(array_map(fn ($module): int => count($module->lessons), $modules))->toBe([4, 5, 2, 3, 3]);
 
     $playable = [];
     foreach ($modules as $module) {
@@ -69,11 +69,20 @@ it('AC-1 the course lists five modules and eight lessons, and every one of them 
         PILOT_MODULE.'/'.PILOT_LESSON,
         'running-models/streaming-an-answer',
         'running-models/choosing-a-model-and-provider',
+        'running-models/describing-a-car',
         'answers-you-can-trust/structured-output-and-validation',
         'answers-you-can-trust/retrieval-with-citations',
         'answers-you-can-trust/caching-answers',
+        'answers-you-can-trust/prompts-you-can-version',
+        'answers-you-can-trust/guards-on-both-sides',
         'agents/a-tool-loop-with-caps-and-confirmation',
         'agents/mcp-and-a-research-agent',
+        'search-and-photos/search-by-meaning',
+        'search-and-photos/searching-photos-by-text-and-likeness',
+        'search-and-photos/finding-duplicate-photos',
+        'running-the-server/the-run-log',
+        'running-the-server/logs-and-a-safe-worker-restart',
+        'running-the-server/seeing-your-change-in-worker-mode',
     ]);
 
     $this->get('/ai/learn')
@@ -293,6 +302,15 @@ const COURSE_LESSONS = [
     'caching-answers' => ['answers-you-can-trust', 'caching-answers'],
     'a-tool-loop-with-caps-and-confirmation' => ['agents', 'a-tool-loop-with-caps-and-confirmation'],
     'mcp-and-a-research-agent' => ['agents', 'mcp-and-a-research-agent'],
+    'describing-a-car' => ['running-models', 'describing-a-car'],
+    'prompts-you-can-version' => ['answers-you-can-trust', 'prompts-you-can-version'],
+    'guards-on-both-sides' => ['answers-you-can-trust', 'guards-on-both-sides'],
+    'search-by-meaning' => ['search-and-photos', 'search-by-meaning'],
+    'searching-photos-by-text-and-likeness' => ['search-and-photos', 'searching-photos-by-text-and-likeness'],
+    'finding-duplicate-photos' => ['search-and-photos', 'finding-duplicate-photos'],
+    'the-run-log' => ['running-the-server', 'the-run-log'],
+    'logs-and-a-safe-worker-restart' => ['running-the-server', 'logs-and-a-safe-worker-restart'],
+    'seeing-your-change-in-worker-mode' => ['running-the-server', 'seeing-your-change-in-worker-mode'],
 ];
 
 /**
@@ -328,6 +346,44 @@ const COURSE_SPOT_CHECKS = [
     'mcp-and-a-research-agent' => [
         ['calls', 'research/2026-11-14/stats.json', 'summary.average_model_calls', 3.9, null],
         ['time', 'research/2026-11-14/stats.json', 'summary.average_duration_s', 20, null],
+    ],
+    'describing-a-car' => [
+        ['free', 'chat-stop/2026-11-03/frankenphp.json', 'median_probe_ms_after_stop', 75, [0, ' ms']],
+        ['speed', 'llm/2026-11-13/run.json', 'models."qwen3.5:9b".speed.generation_tokens_per_s.median', 51.6, [1, ' ']],
+    ],
+    // BENCHMARKS.md does not print the playground store counts, so only the file and the display are checked.
+    'prompts-you-can-version' => [
+        ['runs', 'playground/2026-11-14/stats.json', 'summary.runs', 9, null],
+        ['versions', 'playground/2026-11-14/stats.json', 'summary.versions', 7, null],
+    ],
+    // BENCHMARKS.md prints no false-refusal count, so only the file and the display are checked.
+    'guards-on-both-sides' => [
+        ['wrong', 'rag-eval/2026-11-03/answers-qwen-500-300/answers.json', 'models.0.runs.0.summary.false_refusal', 0, null],
+        ['asked', 'rag-eval/2026-11-03/answers-qwen-500-300/answers.json', 'models.0.runs.0.summary.on_topic', 24, null],
+    ],
+    'search-by-meaning' => [
+        ['many', '2026-11-02-embeddings/search-bench.json', 'ef_sweep.400.recall_at_10', 0.795, [3, '']],
+        ['database', '2026-11-02-embeddings/search-bench.json', 'ef_sweep.400.db_ms_p50', 10.748, [1, ' ms']],
+    ],
+    'searching-photos-by-text-and-likeness' => [
+        ['precision', 'photo-search/2026-11-11/run.json', 'variants.template.metrics.precision', 0.5056, [3, '']],
+        ['likeness', 'photo-similar/2026-11-11/run.json', 'metrics.precision_make_model', 0.6769, [3, '']],
+    ],
+    'finding-duplicate-photos' => [
+        ['cutoff', 'photo-duplicates/2026-11-12/run.json', 'cutoff.threshold', 0.92, [2, '']],
+        ['picked', 'photo-duplicates/2026-11-12/run.json', 'judging.models.0.picked_original.rate', 0.2632, [3, '']],
+    ],
+    'the-run-log' => [
+        ['ttft', 'llm/2026-11-13/run.json', 'models."qwen3.5:9b".speed.ttft_ms.median', 286.1, [0, ' ms']],
+        ['fail', 'llm/2026-11-13/run.json', 'models."qwen3.5:9b".failover.unreachable.describe.time_to_fail_ms', 134, [0, ' ms']],
+    ],
+    'logs-and-a-safe-worker-restart' => [
+        ['lostReload', 'restart/2026-11-17/frankenphp-octane-api-ping.json', 'failures.inside', 31, [0, '** / 665']],
+        ['tailIn', 'restart/2026-11-17/frankenphp-worker-listings-make-BMW.json', 'median_p99_ms.inside', 244.509534, [1, ' ms']],
+    ],
+    'seeing-your-change-in-worker-mode' => [
+        ['watch', 'reload/2026-11-17/worker-watch.json', 'median_ms', 526.5, [0, ' ms']],
+        ['restart', 'reload/2026-11-17/worker-nowatch.json', 'restart_ms.median', 2467.5, [0, ' ms']],
     ],
 ];
 
@@ -536,6 +592,10 @@ it('AC-2 C-11 the concept steps without data say not measured in their own KPI p
     'MCP confirmation' => ['mcp-and-a-research-agent', 'The confirmation is in the browser'],
     'research replay' => ['mcp-and-a-research-agent', 'A replay costs nothing'],
     'tool-loop confirm' => ['a-tool-loop-with-caps-and-confirmation', 'Only Confirm writes'],
+    'prompt quality' => ['prompts-you-can-version', 'What it cannot tell you'],
+    'hostile questions' => ['guards-on-both-sides', 'What guards do not catch'],
+    'run log growth' => ['the-run-log', 'The table only grows'],
+    'debugged request cost' => ['seeing-your-change-in-worker-mode', 'What a debugged request costs'],
 ]);
 
 it('F17 a KPI that no step reads from a file is a text KPI, and a measured KPI is never overwritten by a word', function (string $slug): void {
@@ -639,4 +699,43 @@ it('NFR-1 the caching invalidation step does not say stale entries are served', 
         ->and($text)->toContain('go stale')
         ->and($text)->toContain('not measured')
         ->and(array_column($step->kpis, 'value'))->toContain('not measured');
+});
+
+const REVIEWED_LESSONS = [
+    'describing-a-car',
+    'prompts-you-can-version',
+    'guards-on-both-sides',
+    'search-by-meaning',
+    'searching-photos-by-text-and-likeness',
+    'finding-duplicate-photos',
+    'the-run-log',
+    'logs-and-a-safe-worker-restart',
+    'seeing-your-change-in-worker-mode',
+];
+
+it('NFR-1 MNC-2 the accuracy review records at least three checked claims per new lesson and leaves no row open', function (): void {
+    $tasks = (string) file_get_contents(base_path('.ai/specs/spec-20261120-2106-reference-guide-lessons/tasks.md'));
+
+    expect($tasks)->toContain('## Accuracy review');
+
+    $section = substr($tasks, strpos($tasks, '## Accuracy review'));
+    $section = explode("\n## ", $section)[0];
+    $rows = [];
+    $claims = [];
+
+    foreach (explode("\n", $section) as $line) {
+        if (preg_match('/^\| `([a-z-]+)` \| (.+) \| (.+) \| (ok|fixed|dropped|open) \|$/', $line, $match) === 1) {
+            $rows[$match[1]][] = $match[4];
+            $claims[$match[1]][] = [$match[2].' '.$match[3], $match[4]];
+        }
+    }
+
+    expect(array_keys($rows))->toEqualCanonicalizing(REVIEWED_LESSONS)
+        ->and($rows['guards-on-both-sides'])->toContain('dropped')
+        ->and(collect($claims['the-run-log'])->contains(fn (array $claim): bool => str_contains($claim[0], 'bench/results')))->toBeTrue();
+
+    foreach ($rows as $slug => $results) {
+        expect(count($results))->toBeGreaterThanOrEqual(3, "[{$slug}] has too few reviewed claims")
+            ->and($results)->not->toContain('open', "[{$slug}] has an open row");
+    }
 });

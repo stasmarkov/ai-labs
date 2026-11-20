@@ -90,6 +90,7 @@ return [
         ],
     ],
     'related' => ['docs', 'prompts'],
+    'lessons' => ['answers-you-can-trust/guards-on-both-sides'],
     'build' => [
         ['step' => 'Check the question first', 'detail' => 'Run cheap pattern checks for known injection phrases before any model call.', 'tab' => 'recipes'],
         ['step' => 'Plant a canary in the instructions', 'detail' => 'Add a random marker to the system prompt, and treat its appearance in an answer as a leak.', 'tab' => 'recipes'],

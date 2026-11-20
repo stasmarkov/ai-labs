@@ -122,6 +122,7 @@ return [
         ],
     ],
     'related' => ['nl-search', 'docs'],
+    'lessons' => ['search-and-photos/search-by-meaning'],
     'build' => [
         ['step' => 'Choose one embedding model and keep it', 'detail' => 'Vectors from different models cannot be compared. Store the model name next to the index and refuse a search when it differs.', 'tab' => 'recipes'],
         ['step' => 'Store vectors in pgvector', 'detail' => 'Add a vector column and an HNSW index, then query by cosine distance with an ordinary SQL order by.', 'tab' => 'recipes', 'doc' => 'https://github.com/pgvector/pgvector'],

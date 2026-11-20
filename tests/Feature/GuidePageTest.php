@@ -287,7 +287,7 @@ it('F16 the guide page takes lesson titles from the course file and never builds
         ->assertInertia(fn (Assert $page) => $page->where('topic.lessons.0.title', 'One model, many users'));
 });
 
-it('AC-6 every course lesson is linked from the guide it teaches, and the lessons guide, learning guide and README describe the course', function (): void {
+it('AC-4 AC-6 every course lesson is linked from the guide it teaches, and the lessons guide, learning guide and README describe the course', function (): void {
     $links = [
         'local-models' => ['running-models/one-model-many-users', 'running-models/choosing-a-model-and-provider'],
         'streaming' => ['running-models/streaming-an-answer'],
@@ -301,6 +301,17 @@ it('AC-6 every course lesson is linked from the guide it teaches, and the lesson
         'admin-assistant' => ['agents/a-tool-loop-with-caps-and-confirmation'],
         'mcp' => ['agents/mcp-and-a-research-agent'],
         'research' => ['agents/mcp-and-a-research-agent'],
+        'describe' => ['running-models/describing-a-car'],
+        'prompts' => ['answers-you-can-trust/prompts-you-can-version'],
+        'playground' => ['answers-you-can-trust/prompts-you-can-version'],
+        'guards' => ['answers-you-can-trust/guards-on-both-sides'],
+        'semantic' => ['search-and-photos/search-by-meaning'],
+        'photo-search' => ['search-and-photos/searching-photos-by-text-and-likeness'],
+        'similar-photos' => ['search-and-photos/searching-photos-by-text-and-likeness'],
+        'photo-duplicates' => ['search-and-photos/finding-duplicate-photos'],
+        'run-log' => ['running-the-server/the-run-log'],
+        'logs-restart' => ['running-the-server/logs-and-a-safe-worker-restart'],
+        'worker-dx' => ['running-the-server/seeing-your-change-in-worker-mode'],
     ];
 
     foreach ($links as $key => $lessons) {
@@ -315,7 +326,7 @@ it('AC-6 every course lesson is linked from the guide it teaches, and the lesson
 
     expect(file_get_contents(base_path('README.md')))->not->toContain('listed as coming soon')->not->toContain('the other lessons are listed');
     expect(file_get_contents(base_path('docs/learning-guide.md')))->not->toContain('the pilot, "One model, many users"');
-    expect(file_get_contents(resource_path('guides/lessons.php')))->toContain('eight lessons');
+    expect(file_get_contents(resource_path('guides/lessons.php')))->toContain('seventeen lessons');
 });
 
 it('AC-6 the lessons guide page and the README name every course lesson', function (): void {
@@ -324,15 +335,17 @@ it('AC-6 the lessons guide page and the README name every course lesson', functi
         ->pluck('title')
         ->all();
 
-    expect($titles)->toHaveCount(8);
+    expect($titles)->toHaveCount(17);
 
     $response = $this->get('/ai/guides/lessons')->assertOk();
     $props = json_encode($response->viewData('page')['props']['guide'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $readme = file_get_contents(base_path('README.md'));
+    $learningGuide = file_get_contents(base_path('docs/learning-guide.md'));
 
     foreach ($titles as $title) {
         expect($props)->toContain($title);
         expect($readme)->toContain($title);
+        expect($learningGuide)->toContain($title);
     }
 });
 
@@ -351,7 +364,7 @@ it('F3 AC-6 the guide a course lesson names lists that lesson, so the lesson and
 
 it('F19 the lessons guide builds its list from the course file, and the README lists the same lessons in the same order', function (): void {
     $modules = array_values(array_filter((require resource_path('lessons/course.php'))['modules'], fn (array $module): bool => $module['lessons'] !== []));
-    $works = collect((require resource_path('guides/lessons.php'))['works'])->firstWhere('title', 'The eight lessons');
+    $works = collect((require resource_path('guides/lessons.php'))['works'])->firstWhere('title', 'The seventeen lessons');
 
     foreach ($modules as $module) {
         expect($works['body'])->toContain('**'.$module['title'].':** '.implode('; ', array_column($module['lessons'], 'title')).'.');
@@ -373,7 +386,7 @@ it('AC-5 AC-6 guide page carries topic and course', function (): void {
             ->where('topic.module.title', 'Running models')
             ->where('topic.lessons.0.href', '/ai/learn/running-models/one-model-many-users')
             ->has('course.modules', 5)
-            ->where('course.modules.0.references.0', ['key' => 'describe', 'title' => 'Describe a car', 'href' => '/ai/guides/describe'])
+            ->where('course.modules.0.references', [])
             ->where('course.modules.0.lessons.0', ['slug' => 'one-model-many-users', 'title' => 'One model, many users', 'href' => '/ai/learn/running-models/one-model-many-users'])
             ->where('course.modules.0', fn ($module): bool => array_keys(collect($module)->all()) === ['slug', 'title', 'lessons', 'references'])
             ->missing('guide.lessons')
@@ -382,7 +395,7 @@ it('AC-5 AC-6 guide page carries topic and course', function (): void {
     $this->get('/ai/guides/describe')
         ->assertInertia(fn (Assert $page) => $page
             ->where('topic.module.slug', 'running-models')
-            ->where('topic.lessons', [])
+            ->where('topic.lessons.0.href', '/ai/learn/running-models/describing-a-car')
         );
 
     $this->get('/ai/guides/lessons')
@@ -425,12 +438,18 @@ it('AC-10 AC-2 the lessons guide says a topic is placed by the references list o
         ->toContain('names the key');
 });
 
-it('F1 a broken guide file fails only its own page: the course, a lesson and an unrelated guide still answer 200', function (): void {
+it('MNC-5 F1 a broken guide file fails only its own page: the course, a lesson and an unrelated guide still answer 200', function (): void {
     $root = sys_get_temp_dir().'/guides-'.bin2hex(random_bytes(4));
     File::copyDirectory(resource_path('guides'), $root.'/guides');
     File::copyDirectory(resource_path('lessons'), $root.'/lessons');
-    file_put_contents($root.'/guides/worker-dx.php', "<?php\nreturn ['kind' => 'no-such-kind', 'title' => 'T', 'summary' => 'S.'];");
-    file_put_contents($root.'/guides/run-log.php', "<?php\nreturn ['kind' => ");
+    $reference = str_replace("    'lessons' => ['running-the-server/the-run-log'],\n", '', (string) file_get_contents($root.'/guides/run-log.php'));
+    file_put_contents($root.'/guides/ref-ok.php', $reference);
+    file_put_contents($root.'/guides/ref-broken.php', "<?php\nreturn ['kind' => 'no-such-kind', 'title' => 'T', 'summary' => 'S.'];");
+    file_put_contents($root.'/guides/ref-parse.php', "<?php\nreturn ['kind' => ");
+    $course = file_get_contents($root.'/lessons/course.php');
+    $course = preg_replace("/('slug' => 'running-the-server'.*?'references' => )\[\]/s", "$1['ref-ok', 'ref-broken', 'ref-parse']", $course, 1, $replaced);
+    expect($replaced)->toBe(1);
+    file_put_contents($root.'/lessons/course.php', $course);
     $this->app->scoped(GuideRepository::class, fn (): GuideRepository => new GuideRepository($root.'/guides'));
     $this->app->scoped(LessonRepository::class, fn (): LessonRepository => new LessonRepository($root.'/lessons', $this->app->make(GuideRepository::class)));
     $this->app->forgetScopedInstances();
@@ -440,16 +459,23 @@ it('F1 a broken guide file fails only its own page: the course, a lesson and an 
         ->assertInertia(fn (Assert $page) => $page
             ->has('course.modules', 5)
             ->where('course.modules.4.slug', 'running-the-server')
-            ->where('course.modules.4.references', fn ($references): bool => collect($references)->pluck('key')->all() === ['logs-restart'])
+            ->where('course.modules.4.references', fn ($references): bool => collect($references)->pluck('key')->all() === ['ref-ok'])
         );
     $this->get('/ai/learn/running-models/streaming-an-answer')->assertOk();
     $this->get('/ai/guides/chat')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('topic.module.slug', 'running-models')
-            ->where('course.modules.4.references', fn ($references): bool => ! collect($references)->pluck('key')->contains('worker-dx'))
+            ->where('course.modules.4.references', fn ($references): bool => collect($references)->pluck('key')->all() === ['ref-ok'])
         );
-    $this->get('/ai/guides/worker-dx')->assertStatus(500);
+    $this->get('/ai/guides/ref-broken')->assertStatus(500);
+    $this->get('/ai/guides/ref-parse')->assertStatus(500);
+    $this->get('/ai/guides/ref-ok')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('topic.module.slug', 'running-the-server')
+            ->where('topic.lessons', [])
+        );
 
     File::deleteDirectory($root);
 });

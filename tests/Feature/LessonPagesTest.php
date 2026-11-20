@@ -550,3 +550,23 @@ it('AC-6 a guide page marks its first linked lesson current in the sidebar witho
         ->and($sidebar)->toContain('highlightLesson')
         ->and($sidebar)->toContain('v-if="current"');
 });
+
+it('NFR-3 every real lesson page stays under 60 000 characters of page data', function (): void {
+    $directory = resource_path('lessons');
+    $this->app->scoped(GuideRepository::class, fn (): GuideRepository => new GuideRepository(resource_path('guides')));
+    $this->app->scoped(LessonRepository::class, fn (): LessonRepository => new LessonRepository($directory, $this->app->make(GuideRepository::class)));
+
+    $course = require resource_path('lessons/course.php');
+    $sizes = [];
+
+    foreach ($course['modules'] as $module) {
+        foreach ($module['lessons'] as $entry) {
+            $path = '/ai/learn/'.$module['slug'].'/'.$entry['slug'];
+            preg_match('#<script data-page="app" type="application/json">(.*?)</script>#s', (string) $this->get($path)->assertOk()->getContent(), $match);
+            $sizes[$path] = mb_strlen($match[1] ?? str_repeat('x', 60000));
+        }
+    }
+
+    expect($sizes)->toHaveCount(17);
+    expect(max($sizes))->toBeLessThan(60000);
+});

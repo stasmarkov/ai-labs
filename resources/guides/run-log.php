@@ -90,6 +90,7 @@ return [
         ],
     ],
     'related' => ['providers', 'streaming'],
+    'lessons' => ['running-the-server/the-run-log'],
     'build' => [
         ['step' => 'Write one row per call', 'detail' => 'Create the row when the call starts, with agent, provider, model and prompt version.', 'tab' => 'recipes'],
         ['step' => 'Time the first token', 'detail' => 'Store time to first token and total time, because they answer different questions.', 'tab' => 'recipes'],

@@ -243,10 +243,7 @@ class LessonRepositoryTest extends TestCase
         $this->assertCount(5, $course->modules);
         $this->assertSame(array_values(array_unique($referenced)), $referenced);
         $this->assertNotContains('lessons', $referenced);
-        $this->assertSame(
-            ['describe', 'guards', 'logs-restart', 'photo-duplicates', 'photo-search', 'playground', 'prompts', 'run-log', 'semantic', 'similar-photos', 'worker-dx'],
-            collect($referenced)->sort()->values()->all(),
-        );
+        $this->assertSame([], $referenced);
     }
 
     public function test_ac_8_unknown_lessons_and_steps_are_not_found_and_a_broken_lesson_is_unavailable(): void

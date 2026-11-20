@@ -88,6 +88,7 @@ return [
         ],
     ],
     'related' => ['providers', 'run-log'],
+    'lessons' => ['answers-you-can-trust/prompts-you-can-version'],
     'build' => [
         ['step' => 'Keep each prompt in a versioned file', 'detail' => 'One file per name and version, so history is in source control.', 'tab' => 'recipes'],
         ['step' => 'Name the active version in config', 'detail' => 'A setting picks the version, and changing it needs no code change.', 'tab' => 'recipes'],

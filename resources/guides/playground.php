@@ -148,6 +148,7 @@ return [
         ],
     ],
     'related' => ['prompts', 'run-log', 'local-models', 'guards'],
+    'lessons' => ['answers-you-can-trust/prompts-you-can-version'],
     'build' => [
         ['step' => 'Store prompts as immutable versions', 'detail' => 'Save each change as a new numbered version and refuse a save that changes nothing.', 'tab' => 'recipes'],
         ['step' => 'Run the same input on several models', 'detail' => 'Call each model in turn with the same prompt and keep every result in its own column.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],

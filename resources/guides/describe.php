@@ -111,6 +111,7 @@ return [
         ],
     ],
     'related' => ['chat'],
+    'lessons' => ['running-models/describing-a-car'],
     'build' => [
         ['step' => 'Build the prompt from stored facts', 'detail' => 'Look the record up first and turn its fields into the prompt, so the model never has to guess a make, year or price.', 'tab' => 'recipes'],
         ['step' => 'Use an agent class with fixed instructions', 'detail' => 'Keep the system prompt in one class or file and pass the facts as the user message, so the wording can be versioned and changed on its own.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],

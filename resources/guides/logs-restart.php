@@ -123,6 +123,7 @@ return [
         ],
     ],
     'related' => ['metrics', 'streaming'],
+    'lessons' => ['running-the-server/logs-and-a-safe-worker-restart'],
     'build' => [
         ['step' => 'Give each request an id', 'detail' => 'Accept a safe incoming id or make a new one, keep it for this request only, and return it in a header.', 'tab' => 'recipes'],
         ['step' => 'Add the request fields', 'detail' => 'Attach id, method, path, route and elapsed time to every entry with a processor.', 'tab' => 'recipes'],

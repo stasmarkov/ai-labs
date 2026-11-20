@@ -90,6 +90,7 @@ return [
         ],
     ],
     'related' => ['photos', 'similar-photos', 'providers'],
+    'lessons' => ['search-and-photos/finding-duplicate-photos'],
     'build' => [
         ['step' => 'Embed the images', 'detail' => 'Use an image encoder and store normalised vectors per photo.', 'tab' => 'recipes'],
         ['step' => 'Link close vectors', 'detail' => 'Connect any two photos above a similarity cutoff, and take each connected group as one cluster.', 'tab' => 'recipes'],

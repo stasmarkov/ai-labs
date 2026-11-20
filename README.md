@@ -107,11 +107,13 @@ bench/reload-latency.sh                       # edit-to-reload for classic, Octa
 
 ## Lessons
 
-`/ai/learn` is the one learning area: a course of animated step-by-step lessons plus every guide. A topic with a lesson has two ways in, Walk through (the lesson) and Reference (the tabbed guide at `/ai/guides/{key}`), linked by a header on both pages and a shared course sidebar; guides without a lesson yet are reference topics in the `search-and-photos` and `running-the-server` modules and in the others via `references` in `resources/lessons/course.php`. `/ai/guides` redirects to `/ai/learn`. The lessons: each step moves a live scene, a strip of measured numbers and a list of what changed together. The course has eight lessons in three modules (running models, answers you can trust, agents), starting with "One model, many users" at `/ai/learn/running-models/one-model-many-users`. Arrow keys move between steps, R replays and Space pauses; reduced motion is respected.
+`/ai/learn` is the one learning area: a course of animated step-by-step lessons plus every guide. A topic with a lesson has two ways in, Walk through (the lesson) and Reference (the tabbed guide at `/ai/guides/{key}`), linked by a header on both pages and a shared course sidebar; a guide with no lesson is a reference topic, listed through `references` in `resources/lessons/course.php` (none is left today). `/ai/guides` redirects to `/ai/learn`. The lessons: each step moves a live scene, a strip of measured numbers and a list of what changed together. The course has seventeen lessons in five modules (running models, answers you can trust, agents, search and photos, running the server), starting with "One model, many users" at `/ai/learn/running-models/one-model-many-users`. Arrow keys move between steps, R replays and Space pauses; reduced motion is respected.
 
-- Running models: One model, many users; Streaming an answer; Choosing a model and provider.
-- Answers you can trust: Structured output and validation; Retrieval with citations; Caching answers.
+- Running models: One model, many users; Streaming an answer; Choosing a model and provider; Describing a car.
+- Answers you can trust: Structured output and validation; Retrieval with citations; Caching answers; Prompts you can version; Guards on both sides.
 - Agents: A tool loop with caps and confirmation; MCP and a research agent.
+- Search and photos: Search by meaning; Searching photos by text and likeness; Finding duplicate photos.
+- Running the server: The run log; Logs and a safe worker restart; Seeing your change in worker mode.
 
 The lab sidebar is grouped into Learn, Text, Search, Photos, Agents and Setup. To write a lesson, add an entry to `resources/lessons/course.php`, create `resources/lessons/<module>/<lesson>.php` with the outcomes, the scene and the steps, and point every number at a file under `bench/results`. A broken file is reported with the rule it broke, and the lesson tests load every lesson. How it works: `/ai/guides/lessons` and [II-23 of the learning guide](docs/learning-guide.md#ii-23-in-app-guides-and-the-homescreen).
 

@@ -131,6 +131,7 @@ return [
         ],
     ],
     'related' => ['photos', 'photo-search', 'photo-duplicates', 'providers'],
+    'lessons' => ['search-and-photos/searching-photos-by-text-and-likeness'],
     'build' => [
         ['step' => 'Embed each photo with an image encoder', 'detail' => 'Run a local encoder on a queue and store normalised vectors with the model name.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/queues'],
         ['step' => 'Query the nearest photos', 'detail' => 'Order by cosine distance in pgvector, excluding photos of the same listing.', 'tab' => 'recipes', 'doc' => 'https://github.com/pgvector/pgvector'],

@@ -130,6 +130,7 @@ return [
         ],
     ],
     'related' => ['logs-restart', 'metrics'],
+    'lessons' => ['running-the-server/seeing-your-change-in-worker-mode'],
     'build' => [
         ['step' => 'Put the watch patterns behind one variable', 'detail' => 'Give the worker block a line that holds whole watch lines, so an empty value watches nothing.', 'tab' => 'recipes', 'doc' => 'https://frankenphp.dev/docs/worker/'],
         ['step' => 'Switch it with one overlay', 'detail' => 'Write a gitignored overlay for the variable or the Octane flag, and remove it to turn the watcher off.', 'tab' => 'recipes'],

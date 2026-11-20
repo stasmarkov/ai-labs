@@ -106,6 +106,7 @@ return [
         ],
     ],
     'related' => ['similar-photos', 'photos', 'providers'],
+    'lessons' => ['search-and-photos/searching-photos-by-text-and-likeness'],
     'build' => [
         ['step' => 'Pick a joint text and image encoder', 'detail' => 'Use a model such as CLIP that puts words and pictures in the same vector space.', 'tab' => 'recipes'],
         ['step' => 'Embed every photo once', 'detail' => 'Run the image side on a queue and store the vectors with the model name.', 'tab' => 'support', 'doc' => 'https://laravel.com/docs/queues'],
