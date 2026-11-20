@@ -26,18 +26,20 @@ it('AC-10 the ui audit covers the lessons guide, the course page and the pilot l
     expect($listed[1])->toContain('guides/lessons', 'learn', 'learn/running-models/one-model-many-users');
 });
 
-it('AC-4 the ui audit covers the course page and all eight lessons', function (): void {
+it('AC-4 F20 the ui audit covers the course page and collects every lesson from its links instead of a copied list', function (): void {
     $script = (string) file_get_contents(base_path('bench/ui-audit.mjs'));
     preg_match("/LAYOUT_ONLY_PAGES = \[(.*?)\];/s", $script, $match);
     preg_match_all("/'([^']*)'/", $match[1] ?? '', $listed);
 
-    $expected = ['learn'];
+    expect($listed[1])->toContain('learn')
+        ->and($script)->toContain('async function lessonPages(')
+        ->and($script)->toContain('/ai/learn`');
+
     foreach ((require base_path('resources/lessons/course.php'))['modules'] as $module) {
         foreach ($module['lessons'] as $lesson) {
-            $expected[] = 'learn/'.$module['slug'].'/'.$lesson['slug'];
+            if ($module['slug'].'/'.$lesson['slug'] !== 'running-models/one-model-many-users') {
+                expect($script)->not->toContain('learn/'.$module['slug'].'/'.$lesson['slug']);
+            }
         }
     }
-
-    expect($expected)->toHaveCount(9)
-        ->and($listed[1])->toContain(...$expected);
 });

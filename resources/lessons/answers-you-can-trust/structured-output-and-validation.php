@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Lessons\LessonSources as Source;
+
 /**
  * Every figure is read from a committed result file; the text only places it. State is a patch on the step before.
  */
@@ -12,14 +14,10 @@ $secondPhoto = 'models.0';
 $firstFilter = 'models.0';
 $secondFilter = 'models.1';
 
-$figure = static fn (string $file, string $path, int $round = 0): array => ['file' => $file, 'path' => $path, 'round' => $round];
-$percent = static fn (string $file, string $path): array => ['file' => $file, 'path' => $path, 'scale' => 100, 'round' => 0];
-$uncompared = static fn (array $value): array => [...$value, 'trend' => false];
-
 return [
     'title' => 'Structured output and validation',
     'summary' => 'Ask a model for a fixed shape, check the answer again in ordinary code, and decide what happens when it is wrong.',
-    'minutes' => 9,
+    'minutes' => 10,
     'level' => 'intermediate',
     'guide' => 'nl-search',
     'learn' => [
@@ -124,7 +122,7 @@ return [
                 ],
             ],
             'kpis' => [
-                'exact' => $percent($filters, "{$firstFilter}.exact_match.rate"),
+                'exact' => Source::percent($filters, "{$firstFilter}.exact_match.rate"),
             ],
             'changed' => [
                 ['sign' => '+', 'text' => 'an empty answer is a legal answer'],
@@ -175,8 +173,8 @@ return [
                 ],
             ],
             'kpis' => [
-                'valid' => $uncompared($percent($photos, "{$firstPhoto}.valid_first_attempt.rate")),
-                'attempts' => $uncompared($figure($photos, "{$firstPhoto}.mean_attempts", 2)),
+                'valid' => Source::uncompared(Source::percent($photos, "{$firstPhoto}.valid_first_attempt.rate")),
+                'attempts' => Source::uncompared(Source::figure($photos, "{$firstPhoto}.mean_attempts", 2)),
             ],
             'changed' => [
                 ['sign' => '~', 'text' => 'valid on the first try {kpi:valid}'],
@@ -189,8 +187,8 @@ return [
             'role' => 'solution',
             'title' => 'Retry, then fail loudly',
             'body' => [
-                'A reply that fails the rules is asked for again, up to three times, and every try is its own row in the run log. A photo that still fails is marked failed with the reasons.',
-                'For the first model the retries added {kpi:attempts} tries per photo on average, yet the count of valid photos stayed the same: {num:'.$photos.'#'.$firstPhoto.'.valid_after_retries.count|count|0}. A retry is not a fix for a reply that is wrong in the same way each time.',
+                'A reply that fails the rules is asked for again, up to three tries in all, and every try is its own row in the run log. A photo that still fails is marked failed with the reasons.',
+                'For the first model it took {kpi:attempts} tries per photo on average, retries included, yet the count of valid photos stayed the same: {num:'.$photos.'#'.$firstPhoto.'.valid_after_retries.count|count|0}. A retry is not a fix for a reply that is wrong in the same way each time.',
             ],
             'callout' => ['kind' => 'key-idea', 'text' => 'Cap the retries and record each one. An uncapped retry loop turns one bad reply into a bill.'],
             'state' => [
@@ -203,12 +201,10 @@ return [
                     'to-rules' => ['packets' => ['request' => 2, 'failure' => 1]],
                 ],
             ],
-            'kpis' => [
-                'valid' => $uncompared($percent($photos, "{$firstPhoto}.valid_after_retries.rate")),
-            ],
+            'kpis' => [],
             'changed' => [
                 ['sign' => '+', 'text' => 'up to three tries, one row each'],
-                ['sign' => '~', 'text' => 'valid after the retries {kpi:valid}, no better'],
+                ['sign' => '~', 'text' => 'valid after the retries: {num:'.$photos.'#'.$firstPhoto.'.valid_after_retries.count|count|0} photos, no more than on the first try'],
             ],
             'learn' => ['lo-4'],
             'deeper' => 'photos#support',
@@ -233,7 +229,7 @@ return [
             ],
             'kpis' => [],
             'changed' => [
-                ['sign' => '-', 'text' => 'a transport error is one try, with no retry'],
+                ['sign' => '~', 'text' => 'a transport error is one try, with no retry'],
                 ['sign' => '~', 'text' => 'a failed check in search is an error, not a query'],
             ],
             'learn' => ['lo-4'],
@@ -258,7 +254,7 @@ return [
                 ],
             ],
             'kpis' => [
-                'caught' => $uncompared($percent($filters, "{$firstFilter}.unsupported_recall.recall")),
+                'caught' => Source::uncompared(Source::percent($filters, "{$firstFilter}.unsupported_recall.recall")),
             ],
             'changed' => [
                 ['sign' => '+', 'text' => 'a list for terms the search cannot support'],
@@ -285,9 +281,9 @@ return [
                 ],
             ],
             'kpis' => [
-                'valid' => $uncompared($percent($photos, "{$secondPhoto}.valid_first_attempt.rate")),
-                'attempts' => $uncompared($figure($photos, "{$secondPhoto}.mean_attempts", 2)),
-                'body' => $uncompared($percent($photos, "{$secondPhoto}.body_type_agreement.rate")),
+                'valid' => Source::uncompared(Source::percent($photos, "{$secondPhoto}.valid_first_attempt.rate")),
+                'attempts' => Source::uncompared(Source::figure($photos, "{$secondPhoto}.mean_attempts", 2)),
+                'body' => Source::uncompared(Source::percent($photos, "{$secondPhoto}.body_type_agreement.rate")),
             ],
             'changed' => [
                 ['sign' => '~', 'text' => 'valid on the first try {kpi:valid}'],
@@ -301,7 +297,7 @@ return [
             'title' => 'What to take away',
             'body' => [
                 'Ask for a fixed shape, require every field and allow an empty answer. Check the reply again in your own code, retry only what a retry can fix, and fail the rest with a clear reason.',
-                'Then remember what the check cannot see: a valid reply can be wrong. The figures here are the second model\'s photo run.',
+                'Then remember what the check cannot see: a valid reply can be wrong. The photo figures here are the second model\'s run.',
             ],
             'callout' => ['kind' => 'key-idea', 'text' => 'A schema asks, validation checks, a labelled set measures. You need all three.'],
             'state' => [
@@ -319,9 +315,11 @@ return [
                 ],
             ],
             'kpis' => [
-                'valid' => $uncompared($percent($photos, "{$secondPhoto}.valid_first_attempt.rate")),
-                'attempts' => $uncompared($figure($photos, "{$secondPhoto}.mean_attempts", 2)),
-                'body' => $uncompared($percent($photos, "{$secondPhoto}.body_type_agreement.rate")),
+                'valid' => Source::uncompared(Source::percent($photos, "{$secondPhoto}.valid_first_attempt.rate")),
+                'attempts' => Source::uncompared(Source::figure($photos, "{$secondPhoto}.mean_attempts", 2)),
+                'body' => Source::uncompared(Source::percent($photos, "{$secondPhoto}.body_type_agreement.rate")),
+                'exact' => '—',
+                'caught' => '—',
             ],
             'changed' => [
                 ['sign' => '~', 'text' => 'valid on the first try {kpi:valid}, body type {kpi:body}'],

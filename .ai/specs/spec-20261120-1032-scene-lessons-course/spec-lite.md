@@ -4,7 +4,7 @@ title: Scene lessons for the remaining course outline
 type: feature
 size: L
 priority: P2
-status: in-progress
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-20; standing approval)
@@ -154,6 +154,7 @@ The engine stays as it is. The one exception is up to three new node kinds, adde
 
 - **D-1:** all seven lessons ship in one slice. They share one format, and the engine needs no change. (self-decided, standing approval)
 - **D-2:** concept steps without measurements are allowed, with an honest "not measured" and no invented numbers. (self-decided, standing approval)
+- **D-3:** two node kinds are appended to `NODE_KINDS`, after the existing ten and in this order: `tools` and `person`. The other ten kinds and their order are unchanged. `tools` is used by `a-tool-loop-with-caps-and-confirmation` (the tool set the loop calls) and by `mcp-and-a-research-agent` (the MCP server). `person` is used by the same two lessons (the human who confirms a tool call, and the developer on the MCP side). The reason: no existing kind fits: `app` is our own code and would hide that tools are a separate set the model asks for, `model` and `cloud` are inference, and `users` is a crowd of browsers sending requests, not one person who decides. Each new kind has its own icon. (self-decided, standing approval)
 
 ## Open questions
 

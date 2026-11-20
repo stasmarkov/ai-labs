@@ -161,4 +161,5 @@ return [
         ['domain' => 'Invoice checks', 'problem' => 'Fraud shows up as odd amounts or repeated vendors.', 'how' => 'Compute the ratios in code, let the model name reasons and floor known signals.'],
         ['domain' => 'User reviews', 'problem' => 'Fake reviews harm trust.', 'how' => 'Moderate with facts such as account age and send borderline cases to review.'],
     ],
+    'lessons' => ['answers-you-can-trust/structured-output-and-validation'],
 ];

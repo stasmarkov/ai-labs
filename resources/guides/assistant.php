@@ -149,4 +149,5 @@ return [
         ['domain' => 'Travel', 'problem' => 'A user asks for flights and hotels in one sentence.', 'how' => 'Expose search tools, validate the arguments and answer from what they return.'],
         ['domain' => 'Internal tools', 'problem' => 'Staff ask questions about stock or tickets.', 'how' => 'Wrap the existing queries as tools and log every call.'],
     ],
+    'lessons' => ['agents/a-tool-loop-with-caps-and-confirmation'],
 ];

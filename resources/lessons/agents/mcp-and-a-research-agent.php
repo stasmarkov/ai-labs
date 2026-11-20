@@ -2,20 +2,19 @@
 
 declare(strict_types=1);
 
+use App\Lessons\LessonSources as Source;
+
 /**
  * The research figures are read from the stats file; MCP has no measurement, and its steps say so. State is a patch on
  * the step before.
  */
 $stats = 'research/2026-11-14/stats.json';
 
-$figure = static fn (string $path, int $round = 0, float $scale = 1): array => ['file' => $stats, 'path' => "summary.{$path}", 'scale' => $scale, 'round' => $round];
-$uncompared = static fn (array $value): array => [...$value, 'trend' => false];
-
-$done = $figure('done_percent');
-$calls = $figure('average_model_calls', 1);
-$most = $figure('max_model_calls');
-$time = $figure('average_duration_s');
-$refused = $figure('refused');
+$done = Source::figure($stats, 'summary.done_percent');
+$calls = Source::figure($stats, 'summary.average_model_calls', 1);
+$most = Source::figure($stats, 'summary.max_model_calls');
+$time = Source::figure($stats, 'summary.average_duration_s');
+$refused = Source::figure($stats, 'summary.refused');
 
 return [
     'title' => 'MCP and a research agent',
@@ -58,6 +57,8 @@ return [
         ['id' => 'most', 'label' => 'Model calls in the largest run', 'format' => 'count', 'better' => 'lower'],
         ['id' => 'time', 'label' => 'Run time (average)', 'format' => 's', 'better' => 'lower'],
         ['id' => 'mcp', 'label' => 'MCP calls that ended in an error', 'format' => 'text', 'better' => 'lower'],
+        ['id' => 'self', 'label' => 'Clients that confirmed on their own', 'format' => 'text', 'better' => 'lower'],
+        ['id' => 'replay', 'label' => 'Time a replay saves', 'format' => 'text', 'better' => 'higher'],
     ],
     'steps' => [
         [
@@ -80,12 +81,14 @@ return [
                 'edges' => [],
             ],
             'kpis' => [
-                'done' => $done,
-                'refused' => $refused,
-                'calls' => $calls,
-                'most' => $most,
-                'time' => $time,
-                'mcp' => 'not measured',
+                'done' => '—',
+                'refused' => '—',
+                'calls' => '—',
+                'most' => '—',
+                'time' => '—',
+                'mcp' => '—',
+                'self' => '—',
+                'replay' => '—',
             ],
             'changed' => [
                 ['sign' => '-', 'text' => 'the tools are out of reach of any outside client'],
@@ -135,7 +138,9 @@ return [
                     'reply' => ['packets' => ['tool' => 2]],
                 ],
             ],
-            'kpis' => [],
+            'kpis' => [
+                'mcp' => 'not measured',
+            ],
             'changed' => [
                 ['sign' => '+', 'text' => 'one set of rules for the page and for the client'],
                 ['sign' => '~', 'text' => 'errors from MCP calls: {kpi:mcp}'],
@@ -198,7 +203,7 @@ return [
             'title' => 'The confirmation is in the browser',
             'body' => [
                 'The only way to apply a change is a click on the Changes page. That request must come from the same origin and carry a one-time value made when the page was rendered. A client that only speaks MCP gets neither, and no MCP tool can confirm.',
-                'This is not proof that a person clicked. A client that can run a shell, or drive a full browser, could fake both. Treat such a client as trusted, and read the preview before you confirm.',
+                'This is not proof that a person clicked. A client that can run a shell, or drive a full browser, could fake both. Treat such a client as trusted, and read the preview before you confirm. How often a client tried to confirm on its own was not measured.',
             ],
             'callout' => ['kind' => 'careful', 'text' => 'Headers and a session value raise the bar. They do not prove a human is there.'],
             'state' => [
@@ -212,7 +217,9 @@ return [
                     'call' => ['packets' => ['tool' => 0]],
                 ],
             ],
-            'kpis' => [],
+            'kpis' => [
+                'self' => 'not measured',
+            ],
             'changed' => [
                 ['sign' => '+', 'text' => 'no MCP tool can confirm a change'],
                 ['sign' => '-', 'text' => 'a client with a shell could imitate the click'],
@@ -326,7 +333,7 @@ return [
             ],
             'kpis' => [
                 'done' => $done,
-                'refused' => $uncompared($refused),
+                'refused' => $refused,
                 'calls' => $calls,
                 'most' => $most,
                 'time' => $time,
@@ -343,7 +350,7 @@ return [
             'title' => 'A replay costs nothing',
             'body' => [
                 'Every phase is stored as a step with its input and output. A replay reads those steps and prints them exactly as they were. It calls no model, no search and no network, so it costs nothing and gives the same text each time.',
-                'That makes a run something you can read twice, and compare with the next one.',
+                'That makes a run something you can read twice, and compare with the next one. What a replay saves in time or cost was not measured.',
             ],
             'callout' => ['kind' => 'useful', 'text' => 'Store what each phase saw and produced. Then a bad report can be examined, not guessed at.'],
             'state' => [
@@ -357,7 +364,9 @@ return [
                     'from-model' => ['packets' => ['token' => 0]],
                 ],
             ],
-            'kpis' => [],
+            'kpis' => [
+                'replay' => 'not measured',
+            ],
             'changed' => [
                 ['sign' => '+', 'text' => 'a replay makes no model call'],
             ],
@@ -393,12 +402,14 @@ return [
                 ],
             ],
             'kpis' => [
-                'done' => $uncompared($done),
-                'refused' => $uncompared($refused),
-                'calls' => $uncompared($calls),
-                'most' => $uncompared($most),
-                'time' => $uncompared($time),
+                'done' => Source::uncompared($done),
+                'refused' => Source::uncompared($refused),
+                'calls' => Source::uncompared($calls),
+                'most' => Source::uncompared($most),
+                'time' => Source::uncompared($time),
                 'mcp' => 'not measured',
+                'self' => 'not measured',
+                'replay' => 'not measured',
             ],
             'changed' => [
                 ['sign' => '+', 'text' => '{kpi:done} of the executed runs ended done'],

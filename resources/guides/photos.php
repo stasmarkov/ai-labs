@@ -113,6 +113,7 @@ return [
         ],
     ],
     'related' => ['describe', 'providers', 'similar-photos', 'photo-search', 'photo-duplicates'],
+    'lessons' => ['answers-you-can-trust/structured-output-and-validation'],
     'build' => [
         ['step' => 'Store a small copy of each image', 'detail' => 'Resize before sending, because image tokens and upload time grow with size.', 'tab' => 'recipes'],
         ['step' => 'Ask for a schema, not prose', 'detail' => 'Request caption, tags, colours and counts as structured output with fixed types and allowed values.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],

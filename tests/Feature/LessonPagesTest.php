@@ -121,6 +121,41 @@ it('C-10 a broken lesson answers 500 for that lesson only and the course lists i
         );
 });
 
+it('F12 the course page and the sidebar read only lesson metadata, so an unreadable result file breaks only its own lesson', function (): void {
+    $two = lessonFixture();
+    $two['title'] = 'Two';
+    $two['minutes'] = 9;
+    $two['steps'][0]['kpis'] = ['ttft' => ['file' => 'missing/2026-01-01/none.json', 'path' => 'value']];
+    writeLessonFile($this->lessonsDirectory.'/mod/two.php', $two);
+    writeLessonFile($this->lessonsDirectory.'/course.php', [
+        'modules' => [[
+            'slug' => 'mod',
+            'title' => 'Module',
+            'summary' => 'A module.',
+            'lessons' => [
+                ['slug' => 'one', 'title' => 'One', 'summary' => 'A lesson.', 'level' => 'beginner'],
+                ['slug' => 'two', 'title' => 'Two', 'summary' => 'A lesson with a result file that cannot be read.', 'level' => 'advanced'],
+            ],
+        ]],
+    ]);
+
+    $this->get('/ai/learn')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('course.modules.0.lessons.1.available', true)
+            ->where('course.modules.0.lessons.1.minutes', 9)
+            ->where('course.modules.0.lessons.1.steps', 8)
+            ->where('course.modules.0.lessons.1.level', 'advanced')
+            ->where('course.modules.0.lessons.1.href', '/ai/learn/mod/two')
+        );
+
+    $this->get('/ai/learn/mod/one')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('course.modules.0.lessons.1.steps', 8));
+
+    $this->get('/ai/learn/mod/two')->assertStatus(500);
+});
+
 it('NFR-2 the lesson page props stay under 60 KB', function (): void {
     $props = $this->get('/ai/learn/mod/one')->viewData('page')['props'];
 

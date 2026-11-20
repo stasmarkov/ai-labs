@@ -109,6 +109,10 @@ bench/reload-latency.sh                       # edit-to-reload for classic, Octa
 
 `/ai/learn` is a course of animated step-by-step lessons: each step moves a live scene, a strip of measured numbers and a list of what changed together. The course has eight lessons in three modules (running models, answers you can trust, agents), starting with "One model, many users" at `/ai/learn/running-models/one-model-many-users`. Arrow keys move between steps, R replays and Space pauses; reduced motion is respected.
 
+- Running models: One model, many users; Streaming an answer; Choosing a model and provider.
+- Answers you can trust: Structured output and validation; Retrieval with citations; Caching answers.
+- Agents: A tool loop with caps and confirmation; MCP and a research agent.
+
 To write a lesson, add an entry to `resources/lessons/course.php`, create `resources/lessons/<module>/<lesson>.php` with the outcomes, the scene and the steps, and point every number at a file under `bench/results`. A broken file is reported with the rule it broke, and the lesson tests load every lesson. How it works: `/ai/guides/lessons` and [II-23 of the learning guide](docs/learning-guide.md#ii-23-in-app-guides-and-the-homescreen).
 
 ## Local models

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Lessons\LessonSources as Source;
+
 /**
  * Every figure is read from a committed result file; the text only places it. State is a patch on the step before.
  */
@@ -10,11 +12,6 @@ $photos = 'photo-vision/2026-11-11/run.json';
 $assistant = 'assistant/2026-11-12/run.json';
 $first = 'models."qwen3.5:9b"';
 $second = 'models."gemma4:12b"';
-
-$figure = static fn (string $file, string $path, int $round = 0): array => ['file' => $file, 'path' => $path, 'round' => $round];
-$seconds = static fn (string $file, string $path): array => ['file' => $file, 'path' => $path, 'scale' => 0.001, 'round' => 1];
-$percent = static fn (string $file, string $path): array => ['file' => $file, 'path' => $path, 'scale' => 100, 'round' => 0];
-$uncompared = static fn (array $value): array => [...$value, 'trend' => false];
 
 return [
     'title' => 'Choosing a model and provider',
@@ -76,9 +73,9 @@ return [
                 ],
             ],
             'kpis' => [
-                'ttft' => $seconds($run, "{$first}.speed.ttft_ms.median"),
-                'speed' => $figure($run, "{$first}.speed.generation_tokens_per_s.median", 1),
-                'memory' => $figure($run, "{$first}.speed.size", 1),
+                'ttft' => Source::seconds($run, "{$first}.speed.ttft_ms.median"),
+                'speed' => Source::figure($run, "{$first}.speed.generation_tokens_per_s.median", 1),
+                'memory' => Source::figure($run, "{$first}.speed.size", 1),
                 'valid' => '—',
                 'accuracy' => '—',
                 'fail' => '—',
@@ -94,7 +91,7 @@ return [
             'role' => 'useful',
             'title' => 'Same speed, slower start',
             'body' => [
-                'The second model writes at {kpi:speed}, the same as the first, and holds {kpi:memory}, about the same. Its first token takes {kpi:ttft} against {num:'.$run.'#'.$first.'.speed.ttft_ms.median|ms|0}.',
+                'The second model writes at {kpi:speed}, about the same as the first, and holds {kpi:memory}, about the same. Its first token takes {kpi:ttft} against {num:'.$run.'#'.$first.'.speed.ttft_ms.median|ms|0}.',
                 'The difference is the start: it reads the prompt at {num:'.$run.'#'.$second.'.speed.prompt_eval_tokens_per_s.median|tokens-per-s|0} against {num:'.$run.'#'.$first.'.speed.prompt_eval_tokens_per_s.median|tokens-per-s|0}. Once it writes, you cannot tell them apart by speed.',
             ],
             'callout' => ['kind' => 'useful', 'text' => 'Compare the start and the writing speed separately. A model can differ in one and match in the other.'],
@@ -104,13 +101,13 @@ return [
                 ],
             ],
             'kpis' => [
-                'ttft' => $uncompared($seconds($run, "{$second}.speed.ttft_ms.median")),
-                'speed' => $uncompared($figure($run, "{$second}.speed.generation_tokens_per_s.median", 1)),
-                'memory' => $figure($run, "{$second}.speed.size", 1),
+                'ttft' => Source::uncompared(Source::seconds($run, "{$second}.speed.ttft_ms.median")),
+                'speed' => Source::uncompared(Source::figure($run, "{$second}.speed.generation_tokens_per_s.median", 1)),
+                'memory' => Source::figure($run, "{$second}.speed.size", 1),
             ],
             'changed' => [
                 ['sign' => '~', 'text' => 'first token after {kpi:ttft}, later than the first model'],
-                ['sign' => '~', 'text' => 'writing at {kpi:speed}, the same'],
+                ['sign' => '~', 'text' => 'writing at {kpi:speed}, about the same'],
             ],
             'learn' => ['lo-1'],
             'deeper' => 'local-models#numbers',
@@ -133,9 +130,9 @@ return [
                 ],
             ],
             'kpis' => [
-                'ttft' => $uncompared($seconds($run, "{$first}.speed.cold_ttft_ms")),
-                'speed' => $uncompared($figure($run, "{$first}.speed.generation_tokens_per_s.median", 1)),
-                'memory' => $figure($run, "{$first}.speed.size", 1),
+                'ttft' => Source::uncompared(Source::seconds($run, "{$first}.speed.cold_ttft_ms")),
+                'speed' => Source::uncompared(Source::figure($run, "{$first}.speed.generation_tokens_per_s.median", 1)),
+                'memory' => Source::figure($run, "{$first}.speed.size", 1),
             ],
             'changed' => [
                 ['sign' => '-', 'text' => 'the first call waits for the model to load'],
@@ -163,11 +160,11 @@ return [
                 ],
             ],
             'kpis' => [
-                'ttft' => $uncompared($seconds($run, "{$second}.speed.ttft_ms.median")),
-                'speed' => $uncompared($figure($run, "{$second}.speed.generation_tokens_per_s.median", 1)),
-                'memory' => $figure($run, "{$second}.speed.size", 1),
-                'valid' => $uncompared($percent($photos, 'models.0.valid_first_attempt.rate')),
-                'accuracy' => $uncompared($percent($photos, 'models.0.body_type_agreement.rate')),
+                'ttft' => Source::uncompared(Source::seconds($run, "{$second}.speed.ttft_ms.median")),
+                'speed' => Source::uncompared(Source::figure($run, "{$second}.speed.generation_tokens_per_s.median", 1)),
+                'memory' => Source::figure($run, "{$second}.speed.size", 1),
+                'valid' => Source::uncompared(Source::percent($photos, 'models.0.valid_first_attempt.rate')),
+                'accuracy' => Source::uncompared(Source::percent($photos, 'models.0.body_type_agreement.rate')),
             ],
             'changed' => [
                 ['sign' => '~', 'text' => 'the second model: valid on the first try {kpi:valid}, body type agreed {kpi:accuracy}'],
@@ -178,10 +175,10 @@ return [
         ],
         [
             'role' => 'careful',
-            'title' => 'The other way round: the assistant',
+            'title' => 'The assistant: a one-question gap',
             'body' => [
-                'On the assistant that searches with tools the order flips. The first model found the right filters in {num:'.$assistant.'#models.0.filter_accuracy.count|count|0} of {num:'.$assistant.'#models.0.filter_accuracy.of|count|0} questions, the second in {num:'.$assistant.'#models.1.filter_accuracy.count|count|0}.',
-                'But the first model once linked a listing the search never returned: its answers cited only returned listings in {num:'.$assistant.'#models.0.answers_citing_only_returned_ids.count|count|0} of {num:'.$assistant.'#models.0.answers_citing_only_returned_ids.of|count|0}, the second in {num:'.$assistant.'#models.1.answers_citing_only_returned_ids.count|count|0}.',
+                'On the assistant that searches with tools both models sent valid arguments on every first call, and the gaps are one question wide. The first model found the right filters in {num:'.$assistant.'#models.0.filter_accuracy.count|count|0} of {num:'.$assistant.'#models.0.filter_accuracy.of|count|0} questions, the second in {num:'.$assistant.'#models.1.filter_accuracy.count|count|0}.',
+                'But the first model once linked a listing the search never returned: its answers cited only returned listings in {num:'.$assistant.'#models.0.answers_citing_only_returned_ids.count|count|0} of {num:'.$assistant.'#models.0.answers_citing_only_returned_ids.of|count|0}, the second in {num:'.$assistant.'#models.1.answers_citing_only_returned_ids.count|count|0}. The same split as on the photos, the first reading the content a little better and the second keeping to the rules, but too small to rank them.',
             ],
             'callout' => ['kind' => 'careful', 'text' => 'No model wins everywhere. Measure on the task itself, with its own check.'],
             'state' => [
@@ -191,11 +188,11 @@ return [
                 ],
             ],
             'kpis' => [
-                'ttft' => $uncompared($seconds($run, "{$first}.speed.ttft_ms.median")),
-                'speed' => $uncompared($figure($run, "{$first}.speed.generation_tokens_per_s.median", 1)),
-                'memory' => $figure($run, "{$first}.speed.size", 1),
-                'valid' => $uncompared($percent($assistant, 'models.0.argument_validity_first_try.rate')),
-                'accuracy' => $uncompared($percent($assistant, 'models.0.filter_accuracy.rate')),
+                'ttft' => Source::uncompared(Source::seconds($run, "{$first}.speed.ttft_ms.median")),
+                'speed' => Source::uncompared(Source::figure($run, "{$first}.speed.generation_tokens_per_s.median", 1)),
+                'memory' => Source::figure($run, "{$first}.speed.size", 1),
+                'valid' => Source::uncompared(Source::percent($assistant, 'models.0.argument_validity_first_try.rate')),
+                'accuracy' => Source::uncompared(Source::percent($assistant, 'models.0.filter_accuracy.rate')),
             ],
             'changed' => [
                 ['sign' => '~', 'text' => 'the first model: filters right {kpi:accuracy}, arguments valid {kpi:valid}'],
@@ -294,7 +291,7 @@ return [
                 'memory' => '—',
                 'valid' => '—',
                 'accuracy' => '—',
-                'fail' => $figure($run, "{$first}.failover.unreachable.describe.time_to_fail_ms"),
+                'fail' => Source::figure($run, "{$first}.failover.unreachable.describe.time_to_fail_ms"),
             ],
             'changed' => [
                 ['sign' => '-', 'text' => 'the provider stops answering'],
@@ -327,12 +324,12 @@ return [
                 ],
             ],
             'kpis' => [
-                'ttft' => $uncompared($seconds($run, "{$first}.speed.ttft_ms.median")),
-                'speed' => $uncompared($figure($run, "{$first}.speed.generation_tokens_per_s.median", 1)),
-                'memory' => $uncompared($figure($run, "{$first}.speed.size", 1)),
+                'ttft' => Source::uncompared(Source::seconds($run, "{$first}.speed.ttft_ms.median")),
+                'speed' => Source::uncompared(Source::figure($run, "{$first}.speed.generation_tokens_per_s.median", 1)),
+                'memory' => Source::uncompared(Source::figure($run, "{$first}.speed.size", 1)),
                 'valid' => '—',
                 'accuracy' => '—',
-                'fail' => $uncompared($figure($run, "{$first}.failover.unreachable.describe.time_to_fail_ms")),
+                'fail' => Source::uncompared(Source::figure($run, "{$first}.failover.unreachable.describe.time_to_fail_ms")),
             ],
             'changed' => [
                 ['sign' => '~', 'text' => 'first token after {kpi:ttft}, writing at {kpi:speed}'],

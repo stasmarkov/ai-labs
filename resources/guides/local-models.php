@@ -171,7 +171,7 @@ return [
         ],
     ],
     'related' => ['providers', 'streaming', 'run-log'],
-    'lessons' => ['running-models/one-model-many-users'],
+    'lessons' => ['running-models/one-model-many-users', 'running-models/choosing-a-model-and-provider'],
     'build' => [
         ['step' => 'Run the model on a local server', 'detail' => 'Install a server such as Ollama, pull a model and point a provider entry at its URL.', 'tab' => 'recipes', 'doc' => 'https://ollama.com/'],
         ['step' => 'Set timeouts for slow starts', 'detail' => 'The first call loads the model into memory. Give it a longer timeout than a warm call.', 'tab' => 'recipes'],

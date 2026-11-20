@@ -54,6 +54,9 @@ final class LessonRepository
     /** @var array<string, LessonDefinition> */
     private array $loaded = [];
 
+    /** @var array<string, mixed> */
+    private array $files = [];
+
     private ?LessonCourse $course = null;
 
     public function __construct(
@@ -82,9 +85,51 @@ final class LessonRepository
         return $this->course ??= $this->loadCourse();
     }
 
+    /**
+     * The length of a lesson for the course list, read from the file's own fields without building it: no number is read
+     * and no guide is checked, so a broken pointer breaks only that lesson's page. Null when the file is not a lesson
+     * with valid minutes and a step list of the allowed length.
+     *
+     * @return array{minutes: int, steps: int}|null
+     */
+    public function summary(string $module, string $lesson): ?array
+    {
+        if (! $this->has($module, $lesson)) {
+            return null;
+        }
+
+        $data = $this->file($module, $lesson);
+        $minutes = is_array($data) ? ($data['minutes'] ?? null) : null;
+        $steps = is_array($data) ? ($data['steps'] ?? null) : null;
+
+        if (! is_int($minutes) || $minutes < 1 || $minutes > 240 || ! is_array($steps) || ! array_is_list($steps)) {
+            return null;
+        }
+
+        if (count($steps) < self::STEPS[0] || count($steps) > self::STEPS[1]) {
+            return null;
+        }
+
+        return ['minutes' => $minutes, 'steps' => count($steps)];
+    }
+
+    /**
+     * What the lesson file returns, read once per request.
+     */
+    private function file(string $module, string $lesson): mixed
+    {
+        $key = "{$module}/{$lesson}";
+
+        if (! array_key_exists($key, $this->files)) {
+            $this->files[$key] = require $this->path($module, $lesson);
+        }
+
+        return $this->files[$key];
+    }
+
     private function load(string $module, string $lesson): LessonDefinition
     {
-        $data = require $this->path($module, $lesson);
+        $data = $this->file($module, $lesson);
         $where = "Lesson [{$module}/{$lesson}]";
 
         if (! is_array($data)) {

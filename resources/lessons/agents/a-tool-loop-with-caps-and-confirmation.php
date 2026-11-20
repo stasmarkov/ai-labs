@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Lessons\LessonSources as Source;
+
 /**
  * Every figure is read from the assistant run file; the confirmation steps have no measurement and say so. State is a
  * patch on the step before.
@@ -9,15 +11,12 @@ declare(strict_types=1);
 $run = 'assistant/2026-11-12/run.json';
 $model = 'models.0';
 
-$figure = static fn (string $path, int $round = 0, float $scale = 1): array => ['file' => $run, 'path' => "{$model}.{$path}", 'scale' => $scale, 'round' => $round];
-$uncompared = static fn (array $value): array => [...$value, 'trend' => false];
-
-$valid = $figure('argument_validity_first_try.rate', 0, 100);
-$needed = $figure('tool_call_precision.rate', 0, 100);
-$most = $figure('steps.max');
-$cap = $uncompared($figure('steps.limit'));
-$time = $figure('latency_ms.p50', 1, 0.001);
-$said = $figure('unsupported_mentioned.rate', 0, 100);
+$valid = Source::percent($run, "{$model}.argument_validity_first_try.rate");
+$needed = Source::percent($run, "{$model}.tool_call_precision.rate");
+$most = Source::figure($run, "{$model}.steps.max");
+$cap = Source::uncompared(Source::figure($run, "{$model}.steps.limit"));
+$time = Source::seconds($run, "{$model}.latency_ms.p50");
+$said = Source::percent($run, "{$model}.unsupported_mentioned.rate");
 
 return [
     'title' => 'A tool loop with caps and confirmation',
@@ -60,6 +59,7 @@ return [
         ['id' => 'time', 'label' => 'Answer time (median)', 'format' => 's', 'better' => 'lower'],
         ['id' => 'said', 'label' => 'Says what the tool cannot filter', 'format' => 'percent', 'better' => 'higher'],
         ['id' => 'written', 'label' => 'Changes written before Confirm', 'format' => 'text', 'better' => 'lower'],
+        ['id' => 'claimed', 'label' => 'Changes claimed but not made', 'format' => 'text', 'better' => 'lower'],
     ],
     'steps' => [
         [
@@ -85,13 +85,14 @@ return [
                 ],
             ],
             'kpis' => [
-                'valid' => $valid,
-                'needed' => $needed,
-                'most' => $most,
-                'cap' => $cap,
-                'time' => $time,
-                'said' => $said,
-                'written' => 'not measured',
+                'valid' => '—',
+                'needed' => '—',
+                'most' => '—',
+                'cap' => '—',
+                'time' => '—',
+                'said' => '—',
+                'written' => '—',
+                'claimed' => '—',
             ],
             'changed' => [
                 ['sign' => '-', 'text' => 'the answer comes from memory, not from the listings'],
@@ -308,7 +309,7 @@ return [
             'title' => 'Only Confirm writes',
             'body' => [
                 'The confirm request is the only one that writes. It checks that the action belongs to this conversation, is not expired and was not used, validates the arguments again and writes in one transaction. The outcome goes back to the model, which answers or proposes the next change.',
-                'A typed "yes" is just a question. A model may also say a change was made before it was, so the listing page is the place to check.',
+                'A typed "yes" is just a question. A model may also say a change was made before it was, so the listing page is the place to check. How often a model claimed a change that was not made was not measured.',
             ],
             'callout' => ['kind' => 'careful', 'text' => 'What the model says about its own change is not evidence. The listing is.'],
             'state' => [
@@ -323,7 +324,7 @@ return [
                 ],
             ],
             'kpis' => [
-                'written' => 'not measured',
+                'claimed' => 'not measured',
             ],
             'changed' => [
                 ['sign' => '+', 'text' => 'one request writes, after a check of the same action'],
@@ -413,18 +414,19 @@ return [
                 ],
             ],
             'kpis' => [
-                'valid' => $uncompared($valid),
-                'needed' => $uncompared($needed),
-                'most' => $uncompared($most),
+                'valid' => Source::uncompared($valid),
+                'needed' => Source::uncompared($needed),
+                'most' => Source::uncompared($most),
                 'cap' => $cap,
-                'time' => $uncompared($time),
-                'said' => $uncompared($said),
-                'written' => 'not measured',
+                'time' => Source::uncompared($time),
+                'said' => Source::uncompared($said),
+                'written' => 'none by design',
+                'claimed' => 'not measured',
             ],
             'changed' => [
                 ['sign' => '+', 'text' => '{kpi:valid} valid first calls'],
                 ['sign' => '+', 'text' => 'at most {kpi:most} steps used, against {kpi:cap} allowed'],
-                ['sign' => '~', 'text' => 'writes only after a click: not measured'],
+                ['sign' => '+', 'text' => 'writes only after a click, by design'],
             ],
             'learn' => [],
             'deeper' => 'admin-assistant#modify',

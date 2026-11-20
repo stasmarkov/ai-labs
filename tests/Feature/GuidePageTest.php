@@ -6,6 +6,8 @@ use App\Guides\GuideFacts;
 use App\Guides\GuideRepository;
 use App\Guides\InvalidGuideException;
 use App\Lessons\LessonNumbers;
+use App\Lessons\LessonRepository;
+use App\Lessons\LessonService;
 use App\Services\GuidePageService;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -204,7 +206,7 @@ it('AC-5 the guide page renders the teach tabs and opens the one named in the UR
         ->toContain('window.location.hash');
 });
 
-it('C-13 both guides carry the pilot lesson link, a malformed key fails validation and an unlisted one is not linked', function (): void {
+it('C-13 both guides carry the pilot lesson link, a malformed key fails validation, and an unlisted or coming-soon one is not linked', function (): void {
     foreach (['local-models', 'metrics'] as $key) {
         $this->get('/ai/guides/'.$key)
             ->assertOk()
@@ -218,21 +220,33 @@ it('C-13 both guides carry the pilot lesson link, a malformed key fails validati
     $directory = sys_get_temp_dir().'/guides-'.bin2hex(random_bytes(4));
     mkdir($directory);
     $guide = fn (string $lessons): string => "<?php\nreturn ['kind' => 'foundation', 'title' => 'Plain', 'summary' => 'S.', 'works' => [['title' => 'One', 'body' => 'Body.']], 'lessons' => [{$lessons}]];";
-    file_put_contents($directory.'/known.php', $guide("'running-models/one-model-many-users', 'running-models/no-such-lesson', 'agents/not-yet-written'"));
+    file_put_contents($directory.'/known.php', $guide("'running-models/one-model-many-users', 'running-models/no-such-lesson', 'running-models/streaming-an-answer'"));
     file_put_contents($directory.'/malformed.php', $guide("'one-model-many-users'"));
     $repository = new GuideRepository($directory);
 
-    expect($repository->find('known')->lessons)->toBe(['running-models/one-model-many-users', 'running-models/no-such-lesson', 'agents/not-yet-written']);
+    expect($repository->find('known')->lessons)->toBe(['running-models/one-model-many-users', 'running-models/no-such-lesson', 'running-models/streaming-an-answer']);
     expect(fn () => $repository->find('malformed'))->toThrow(InvalidGuideException::class);
 
+    $lessons = $directory.'/lessons';
+    mkdir($lessons.'/running-models', 0777, true);
+    touch($lessons.'/running-models/one-model-many-users.php');
+    file_put_contents($lessons.'/course.php', "<?php\nreturn ['modules' => [['slug' => 'running-models', 'title' => 'Running models', 'summary' => 'S.', 'lessons' => [\n"
+        ."['slug' => 'one-model-many-users', 'title' => 'One model, many users', 'summary' => 'S.', 'level' => 'beginner'],\n"
+        ."['slug' => 'streaming-an-answer', 'title' => 'Streaming an answer', 'summary' => 'S.', 'level' => 'beginner', 'coming_soon' => true],\n"
+        .']]]];');
+
     $this->app->instance(GuideRepository::class, $repository);
+    $this->app->instance(LessonRepository::class, new LessonRepository($lessons, $repository));
+    $this->app->forgetInstance(LessonService::class);
     $this->get('/ai/guides/known')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('guide.lessons', [
             ['title' => 'One model, many users', 'href' => '/ai/learn/running-models/one-model-many-users'],
         ]));
 
-    array_map('unlink', glob($directory.'/*.php'));
+    array_map('unlink', [...glob($directory.'/*.php'), ...glob($lessons.'/*.php'), ...glob($lessons.'/running-models/*.php')]);
+    rmdir($lessons.'/running-models');
+    rmdir($lessons);
     rmdir($directory);
 });
 
@@ -246,11 +260,15 @@ it('F16 the guide page takes lesson titles from the course file and never builds
 
 it('AC-6 every course lesson is linked from the guide it teaches, and the lessons guide, learning guide and README describe the course', function (): void {
     $links = [
-        'local-models' => ['running-models/one-model-many-users'],
+        'local-models' => ['running-models/one-model-many-users', 'running-models/choosing-a-model-and-provider'],
         'streaming' => ['running-models/streaming-an-answer'],
         'providers' => ['running-models/choosing-a-model-and-provider'],
         'nl-search' => ['answers-you-can-trust/structured-output-and-validation'],
-        'chat' => ['answers-you-can-trust/retrieval-with-citations', 'answers-you-can-trust/caching-answers'],
+        'chat' => ['running-models/streaming-an-answer'],
+        'moderation' => ['answers-you-can-trust/structured-output-and-validation'],
+        'photos' => ['answers-you-can-trust/structured-output-and-validation'],
+        'docs' => ['answers-you-can-trust/retrieval-with-citations', 'answers-you-can-trust/caching-answers'],
+        'assistant' => ['agents/a-tool-loop-with-caps-and-confirmation'],
         'admin-assistant' => ['agents/a-tool-loop-with-caps-and-confirmation'],
         'mcp' => ['agents/mcp-and-a-research-agent'],
         'research' => ['agents/mcp-and-a-research-agent'],
@@ -269,4 +287,51 @@ it('AC-6 every course lesson is linked from the guide it teaches, and the lesson
     expect(file_get_contents(base_path('README.md')))->not->toContain('listed as coming soon')->not->toContain('the other lessons are listed');
     expect(file_get_contents(base_path('docs/learning-guide.md')))->not->toContain('the pilot, "One model, many users"');
     expect(file_get_contents(resource_path('guides/lessons.php')))->toContain('eight lessons');
+});
+
+it('AC-6 the lessons guide page and the README name every course lesson', function (): void {
+    $titles = collect((require resource_path('lessons/course.php'))['modules'])
+        ->flatMap(fn (array $module): array => $module['lessons'])
+        ->pluck('title')
+        ->all();
+
+    expect($titles)->toHaveCount(8);
+
+    $response = $this->get('/ai/guides/lessons')->assertOk();
+    $props = json_encode($response->viewData('page')['props']['guide'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $readme = file_get_contents(base_path('README.md'));
+
+    foreach ($titles as $title) {
+        expect($props)->toContain($title);
+        expect($readme)->toContain($title);
+    }
+});
+
+it('F3 AC-6 the guide a course lesson names lists that lesson, so the lesson and its guide link each other', function (): void {
+    $guides = app(GuideRepository::class);
+
+    foreach ((require resource_path('lessons/course.php'))['modules'] as $module) {
+        foreach ($module['lessons'] as $entry) {
+            $key = $module['slug'].'/'.$entry['slug'];
+            $guide = (require resource_path("lessons/{$key}.php"))['guide'];
+
+            expect($guides->find($guide)->lessons)->toContain($key);
+        }
+    }
+});
+
+it('F19 the lessons guide builds its list from the course file, and the README lists the same lessons in the same order', function (): void {
+    $modules = (require resource_path('lessons/course.php'))['modules'];
+    $works = collect((require resource_path('guides/lessons.php'))['works'])->firstWhere('title', 'The eight lessons');
+
+    foreach ($modules as $module) {
+        expect($works['body'])->toContain('**'.$module['title'].':** '.implode('; ', array_column($module['lessons'], 'title')).'.');
+    }
+
+    preg_match_all('/^- (.+?): (.+)\.$/m', (string) file_get_contents(base_path('README.md')), $lines, PREG_SET_ORDER);
+    $readme = collect($lines)->mapWithKeys(fn (array $line): array => [$line[1] => explode('; ', $line[2])])->only(array_column($modules, 'title'))->all();
+
+    expect($readme)->toBe(collect($modules)->mapWithKeys(fn (array $module): array => [$module['title'] => array_column($module['lessons'], 'title')])->all());
+
+    expect((string) file_get_contents(resource_path('guides/lessons.php')))->toContain("require __DIR__.'/../lessons/course.php'");
 });

@@ -14,6 +14,8 @@
 //               visible text, or a select with no visible label or with neither an empty option nor aria-describedby
 //   chips       a page with a main input shows fewer than 2 or more than 4 [data-example] chips (pages that had more than 4
 //               before the teach slice keep them: CHIPS_GRANDFATHERED)
+// Lesson pages are collected from the links on /ai/learn, so every lesson the course lists is audited without a copied list
+// (the first lesson stays in LAYOUT_ONLY_PAGES as a fixed page); none found while a lesson is in scope is a setup error.
 // Detail pages (changes, research, playground) and the run page are opened with a real id: first from a list-page link, then from
 // the dev database (latest row, through `ddev artisan tinker`, only for a *.ddev.site base), or skipped with a note when there is none.
 // The run page answers JSON, so for it only the status and the content type are checked.
@@ -41,10 +43,7 @@ const TEACH_PAGES = [
   'assistant', 'moderation', 'research', 'playground', 'admin-assistant', 'changes', 'settings',
 ];
 const LAYOUT_ONLY_PAGES = ['', 'guides', 'guides/describe', 'guides/logs-restart', 'guides/worker-dx', 'guides/lessons',
-  'learn', 'learn/running-models/one-model-many-users', 'learn/running-models/streaming-an-answer',
-  'learn/running-models/choosing-a-model-and-provider', 'learn/answers-you-can-trust/structured-output-and-validation',
-  'learn/answers-you-can-trust/retrieval-with-citations', 'learn/answers-you-can-trust/caching-answers',
-  'learn/agents/a-tool-loop-with-caps-and-confirmation', 'learn/agents/mcp-and-a-research-agent',
+  'learn', 'learn/running-models/one-model-many-users',
   'guides/photos/formats', 'guides/photos/formats/build-along', 'guides/photos/formats/trace', 'guides/photos/formats/quiz', 'guides/photos/formats/debug', 'guides/photos/formats/tour'];
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const DETAIL_PAGES = [
@@ -288,6 +287,25 @@ async function firstLinkId(page, base, listPath, prefix) {
   }, { prefix, uuid: UUID });
 }
 
+/** Every lesson the course page links to, as a path under /ai (learn/<module>/<lesson>). */
+async function lessonPages(browser) {
+  const context = await browser.newContext(contextOptions(1440));
+  const page = await context.newPage();
+  const response = await page.goto(`${base}/ai/learn`, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => null);
+  const paths = !response || response.status() >= 400 ? [] : await page.evaluate(() => {
+    const found = new Set();
+    for (const a of document.querySelectorAll('a[href]')) {
+      const match = /^\/ai\/(learn\/[a-z0-9-]+\/[a-z0-9-]+)$/.exec(new URL(a.href, window.location.href).pathname);
+      if (match) {
+        found.add(match[1]);
+      }
+    }
+    return [...found];
+  });
+  await context.close();
+  return paths;
+}
+
 async function resolveExtraPages(browser) {
   const context = await browser.newContext(contextOptions(1440));
   const page = await context.newPage();
@@ -326,6 +344,22 @@ try {
     console.error(`No browser could start: ${error.message.split('\n')[0]}`);
     process.exit(2);
   }
+}
+
+if (only === null || only.some((path) => path.startsWith('learn'))) {
+  const lessons = await lessonPages(browser);
+  if (lessons.length === 0) {
+    console.error(`No lesson links found on ${base}/ai/learn`);
+    await browser.close();
+    process.exit(2);
+  }
+  const known = new Set(pages.map((target) => target.path));
+  for (const path of lessons) {
+    if (!known.has(path) && (only === null || only.includes(path))) {
+      pages.push({ path, teach: false, chips: null });
+    }
+  }
+  console.log(`lessons ${lessons.length} from /ai/learn`);
 }
 
 if (only === null) {

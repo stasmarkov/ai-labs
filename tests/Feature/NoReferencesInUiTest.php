@@ -39,6 +39,15 @@ function labUiPaths(): array
 {
     $keys = array_map(fn (string $file): string => basename($file, '.php'), glob(dirname(__DIR__, 2).'/resources/guides/*.php') ?: []);
 
+    $lessonPaths = [];
+
+    foreach ((require dirname(__DIR__, 2).'/resources/lessons/course.php')['modules'] as $module) {
+        foreach ($module['lessons'] as $lesson) {
+            $base = '/ai/learn/'.$module['slug'].'/'.$lesson['slug'];
+            array_push($lessonPaths, $base, $base.'/3');
+        }
+    }
+
     return [
         '/',
         '/ai',
@@ -58,8 +67,7 @@ function labUiPaths(): array
         '/ai/guides',
         ...array_map(fn (string $key): string => '/ai/guides/'.$key, $keys),
         '/ai/learn',
-        '/ai/learn/running-models/one-model-many-users',
-        '/ai/learn/running-models/one-model-many-users/7',
+        ...array_values(array_unique([...$lessonPaths, '/ai/learn/running-models/one-model-many-users/7'])),
         '/ai/guides/photos/formats',
         ...array_map(fn (string $format): string => '/ai/guides/photos/formats/'.$format, ['build-along', 'trace', 'quiz', 'debug', 'tour']),
     ];

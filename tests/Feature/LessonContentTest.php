@@ -296,40 +296,75 @@ const COURSE_LESSONS = [
 ];
 
 /**
- * Two measured figures per lesson: the result file and path, the scale, the round the lesson shows, and the figure as
- * BENCHMARKS.md prints it. A null print means BENCHMARKS.md has no such figure (the research stats are not in it); the
- * lesson display is still checked against the result file.
+ * Two measured figures per lesson: the KPI that shows it, the result file and path, the exact value the file holds, and
+ * how BENCHMARKS.md prints it (decimals and the text after the number). A null print means BENCHMARKS.md has no such
+ * figure (the research stats are not in it); the lesson display and the exact value are still checked against the file.
  */
 const COURSE_SPOT_CHECKS = [
     'streaming-an-answer' => [
-        ['chat-stop/2026-11-03/frankenphp.json', 'median_probe_ms_after_stop', 1, 0, '75 ms'],
-        ['llm/2026-11-13/run.json', 'models."qwen3.5:9b".speed.ttft_ms.median', 0.001, 1, '286 ms'],
+        ['free', 'chat-stop/2026-11-03/frankenphp.json', 'median_probe_ms_after_stop', 75, [0, ' ms']],
+        ['ttft', 'llm/2026-11-13/run.json', 'models."qwen3.5:9b".speed.ttft_ms.median', 286.1, [0, ' ms']],
     ],
     'choosing-a-model-and-provider' => [
-        ['llm/2026-11-13/run.json', 'models."gemma4:12b".speed.ttft_ms.median', 0.001, 1, '429 ms'],
-        ['photo-vision/2026-11-11/run.json', 'models.1.valid_first_attempt.rate', 100, 0, '0.860 (43/50)'],
+        ['ttft', 'llm/2026-11-13/run.json', 'models."gemma4:12b".speed.ttft_ms.median', 429, [0, ' ms']],
+        ['valid', 'photo-vision/2026-11-11/run.json', 'models.0.valid_first_attempt.rate', 1, [3, ' (50/50)']],
     ],
     'structured-output-and-validation' => [
-        ['photo-vision/2026-11-11/run.json', 'models.1.valid_first_attempt.rate', 100, 0, '0.860 (43/50)'],
-        ['nl-search/2026-11-09/run.json', 'models.0.exact_match.rate', 100, 0, '0.950 (38/40)'],
+        ['valid', 'photo-vision/2026-11-11/run.json', 'models.1.valid_first_attempt.rate', 0.86, [3, ' (43/50)']],
+        ['exact', 'nl-search/2026-11-09/run.json', 'models.0.exact_match.rate', 0.95, [3, ' (38/40)']],
     ],
     'retrieval-with-citations' => [
-        ['rag-eval/2026-11-03/recall-500-300/recall.json', 'cells.1.recall', 100, 0, '0.875'],
-        ['rag-eval/2026-11-03/answers-qwen-500-300/answers.json', 'models.0.across_runs.citation_rate.median', 100, 0, '0.96'],
+        ['recall', 'rag-eval/2026-11-03/recall-500-300/recall.json', 'cells.1.recall', 0.875, [3, '']],
+        ['cited', 'rag-eval/2026-11-03/answers-qwen-500-300/answers.json', 'models.0.across_runs.citation_rate.median', 0.96, [2, '']],
     ],
     'caching-answers' => [
-        ['docs-cache/2026-11-03/latency/hit-miss.json', 'paths.exact.median_ms_by_path.exact', 1, 0, '51 ms'],
-        ['docs-cache/2026-11-03/latency/hit-miss.json', 'paths.fresh.median_ms_all', 0.001, 1, '5687 ms'],
+        ['exact', 'docs-cache/2026-11-03/latency/hit-miss.json', 'paths.exact.median_ms_by_path.exact', 51, [0, ' ms']],
+        ['fresh', 'docs-cache/2026-11-03/latency/hit-miss.json', 'paths.fresh.median_ms_all', 5687, [0, ' ms']],
     ],
     'a-tool-loop-with-caps-and-confirmation' => [
-        ['assistant/2026-11-12/run.json', 'models.0.latency_ms.p50', 0.001, 1, '3782'],
-        ['assistant/2026-11-12/run.json', 'models.0.argument_validity_first_try.rate', 100, 0, '1.000'],
+        ['time', 'assistant/2026-11-12/run.json', 'models.0.latency_ms.p50', 3782, [0, '']],
+        ['valid', 'assistant/2026-11-12/run.json', 'models.0.argument_validity_first_try.rate', 1, [3, '']],
     ],
     'mcp-and-a-research-agent' => [
-        ['research/2026-11-14/stats.json', 'summary.average_model_calls', 1, 1, null],
-        ['research/2026-11-14/stats.json', 'summary.average_duration_s', 1, 0, null],
+        ['calls', 'research/2026-11-14/stats.json', 'summary.average_model_calls', 3.9, null],
+        ['time', 'research/2026-11-14/stats.json', 'summary.average_duration_s', 20, null],
     ],
 ];
+
+/**
+ * The raw data of a course lesson file, before the repository or the service touch it.
+ *
+ * @return array<string, mixed>
+ */
+function courseLessonData(string $slug): array
+{
+    return require resource_path('lessons/'.COURSE_LESSONS[$slug][0].'/'.$slug.'.php');
+}
+
+/**
+ * The files under bench/results that git tracks, listed by one git call for the whole test run; null without git.
+ *
+ * @return array<string, int>|null
+ */
+function trackedResultFiles(): ?array
+{
+    static $tracked = false;
+
+    if ($tracked === false) {
+        $result = Process::path(base_path())->run(['git', 'ls-files', '--', 'bench/results']);
+        $tracked = $result->successful() ? array_flip(array_filter(explode("\n", $result->output()))) : null;
+    }
+
+    return $tracked;
+}
+
+/**
+ * The number as a whole token: not a part of a longer number, so 86 is not found inside 286 or 0.86.
+ */
+function wholeNumberPattern(string $text): string
+{
+    return '/(?<![\w.,])'.preg_quote($text, '/').'(?![\w]|[.,]\d)/';
+}
 
 function courseLesson(string $slug): Lesson
 {
@@ -348,8 +383,7 @@ function courseLesson(string $slug): Lesson
  */
 function courseLessonRawText(string $slug): array
 {
-    [$module, $lesson] = COURSE_LESSONS[$slug];
-    $data = require resource_path("lessons/{$module}/{$lesson}.php");
+    $data = courseLessonData($slug);
     $text = [$data['title'], $data['summary'], ...array_column($data['learn'], 'text'), ...array_column($data['kpis'], 'label')];
 
     foreach ($data['steps'] as $step) {
@@ -370,13 +404,13 @@ it('AC-2 MNC-2 every number of a course lesson comes from a tracked result file 
 
     expect($files)->not->toBeEmpty();
 
-    if (Process::path(base_path())->run(['git', 'rev-parse', '--is-inside-work-tree'])->successful()) {
-        foreach ($files as $file) {
-            expect($file)->not->toStartWith('raw/');
+    $tracked = trackedResultFiles();
 
-            $result = Process::path(base_path())->run(['git', 'ls-files', '--error-unmatch', '--', 'bench/results/'.$file]);
+    foreach ($files as $file) {
+        expect($file)->not->toStartWith('raw/');
 
-            expect($result->successful())->toBeTrue("bench/results/{$file} is not tracked by git");
+        if ($tracked !== null) {
+            expect(isset($tracked['bench/results/'.$file]))->toBeTrue("bench/results/{$file} is not tracked by git");
         }
     }
 
@@ -397,21 +431,43 @@ it('AC-2 MNC-2 every number of a course lesson comes from a tracked result file 
     }
 })->with(array_keys(COURSE_LESSONS));
 
-it('AC-2 two figures of each course lesson match the result file and BENCHMARKS.md', function (string $slug): void {
+it('AC-2 two figures of each course lesson match the result file, show as the KPI formats them, and BENCHMARKS.md prints them as whole numbers', function (string $slug): void {
     $numbers = app(LessonNumbers::class);
     $benchmarks = (string) file_get_contents(base_path('BENCHMARKS.md'));
-    $shown = collect(courseLesson($slug)->steps)->flatMap(fn ($step): array => [...$step->body, ...array_column($step->changed, 'text'), ...array_column($step->kpis, 'value')])->implode("\n");
+    $data = courseLessonData($slug);
+    $steps = courseLesson($slug)->steps;
 
-    foreach (COURSE_SPOT_CHECKS[$slug] as [$file, $path, $scale, $round, $printed]) {
-        $value = round($numbers->read($file, $path, 'spot-check') * $scale, $round);
+    foreach (COURSE_SPOT_CHECKS[$slug] as [$id, $file, $path, $exact, $print]) {
+        $definition = collect($data['kpis'])->firstWhere('id', $id);
+        $source = collect($data['steps'])
+            ->map(fn (array $step): mixed => $step['kpis'][$id] ?? null)
+            ->first(fn (mixed $value): bool => is_array($value) && $value['file'] === $file && $value['path'] === $path);
 
-        if ($printed !== null) {
-            expect($benchmarks)->toContain($printed);
+        expect($definition)->not->toBeNull("no KPI [{$id}]")
+            ->and($source)->not->toBeNull("no step shows {$file}#{$path} as [{$id}]");
+
+        $read = $numbers->read($file, $path, 'spot-check');
+        $display = $numbers->format(round($read * ($source['scale'] ?? 1), $source['round']), $definition['format'], $source['round'], $definition['unit'] ?? '');
+        $shown = collect($steps)->map(fn ($step): string => collect($step->kpis)->firstWhere('id', $id)['value'])->all();
+
+        expect((float) $read)->toBe((float) $exact)
+            ->and($shown)->toContain($display);
+
+        if ($print !== null) {
+            [$decimals, $after] = $print;
+
+            expect($benchmarks)->toMatch(wholeNumberPattern(number_format($read, $decimals, '.', '').$after));
         }
-
-        expect($shown)->toContain(number_format($value, $round));
     }
 })->with(array_keys(COURSE_LESSONS));
+
+it('AC-2 the whole-number match does not find a figure inside a longer one', function (): void {
+    expect('took 286 ms')->not->toMatch(wholeNumberPattern('86'))
+        ->and('a rate of 0.86')->not->toMatch(wholeNumberPattern('86'))
+        ->and('86.5 %')->not->toMatch(wholeNumberPattern('86'))
+        ->and('| 86 |')->toMatch(wholeNumberPattern('86'))
+        ->and('0.860 (43/50) |')->toMatch(wholeNumberPattern('0.860 (43/50)'));
+});
 
 it('AC-3 a course lesson has 8 to 13 steps, ends on a summary and teaches every outcome', function (string $slug): void {
     $lesson = courseLesson($slug);
@@ -458,3 +514,129 @@ it('AC-3 every Go deeper link of a course lesson opens a tab its guide page show
 
     $this->get("/ai/learn/{$module}/{$lesson}")->assertOk()->assertInertia(fn (Assert $page) => $page->component('Lab/Lesson')->where('step', 1));
 })->with(array_keys(COURSE_LESSONS));
+
+it('AC-2 C-11 the concept steps without data say not measured in their own KPI patch and in the text', function (string $slug, string $title): void {
+    $raw = array_values(array_filter(courseLessonData($slug)['steps'], fn (array $step): bool => $step['title'] === $title));
+    $steps = array_values(array_filter(courseLesson($slug)->steps, fn ($step): bool => $step->title === $title));
+
+    expect($raw)->toHaveCount(1)
+        ->and($steps)->toHaveCount(1);
+
+    $index = $steps[0]->number - 1;
+    $before = $index === 0 ? [] : array_column(courseLesson($slug)->steps[$index - 1]->kpis, 'value', 'id');
+    $own = array_filter($raw[0]['kpis'], fn (mixed $value, string $id): bool => $value === 'not measured' && ($before[$id] ?? null) !== 'not measured', ARRAY_FILTER_USE_BOTH);
+    $text = implode(' ', [...$steps[0]->body, $steps[0]->callout['text'], ...array_column($steps[0]->changed, 'text')]);
+
+    expect($own)->not->toBeEmpty("step [{$title}] does not set a not-measured KPI of its own")
+        ->and(array_column($steps[0]->kpis, 'value'))->toContain('not measured')
+        ->and($text)->toContain('not measured');
+})->with([
+    'cloud cost guard' => ['choosing-a-model-and-provider', 'A cloud model, with a guard'],
+    'cache invalidation' => ['caching-answers', 'Old answers go away'],
+    'MCP confirmation' => ['mcp-and-a-research-agent', 'The confirmation is in the browser'],
+    'research replay' => ['mcp-and-a-research-agent', 'A replay costs nothing'],
+    'tool-loop confirm' => ['a-tool-loop-with-caps-and-confirmation', 'Only Confirm writes'],
+]);
+
+it('F17 a KPI that no step reads from a file is a text KPI, and a measured KPI is never overwritten by a word', function (string $slug): void {
+    $data = courseLessonData($slug);
+
+    expect($data['kpis'])->not->toBeEmpty();
+
+    foreach ($data['kpis'] as $kpi) {
+        $values = array_values(array_filter(array_map(fn (array $step): mixed => $step['kpis'][$kpi['id']] ?? null, $data['steps']), fn (mixed $value): bool => $value !== null));
+        $measured = array_filter($values, 'is_array') !== [];
+
+        if (! $measured) {
+            expect($kpi['format'])->toBe('text', "KPI [{$kpi['id']}] is never measured, so its format is text");
+        }
+    }
+
+    $time = collect($data['kpis'])->firstWhere('id', 'time');
+
+    if ($slug === 'mcp-and-a-research-agent') {
+        expect($time['label'])->toBe('Run time (average)')
+            ->and(collect(courseLesson($slug)->steps)->firstWhere('title', 'A replay costs nothing')->kpis)
+            ->toContain(['id' => 'time', 'label' => 'Run time (average)', 'value' => '20 s', 'trend' => 'neutral']);
+    }
+})->with(array_keys(COURSE_LESSONS));
+
+it('F4 C-3 a lesson lasts about a minute per step, rounded up', function (string $slug): void {
+    $lesson = courseLesson($slug);
+
+    expect($lesson->minutes)->toBeGreaterThanOrEqual(count($lesson->steps))
+        ->and($lesson->minutes)->toBe((int) ceil(count($lesson->steps)));
+})->with(array_keys(COURSE_LESSONS));
+
+it('F11 the agent lessons show no measured result before the step that builds it', function (string $slug, string $firstMeasured): void {
+    $steps = courseLesson($slug)->steps;
+    $first = collect($steps)->firstWhere('title', $firstMeasured)->number;
+
+    foreach (array_slice($steps, 0, 1) as $step) {
+        expect(array_unique(array_column($step->kpis, 'value')))->toBe(['—'], "step {$step->number} of [{$slug}]");
+    }
+
+    foreach (array_slice($steps, 0, $first - 1) as $step) {
+        foreach ($step->kpis as $kpi) {
+            expect($kpi['value'])->not->toMatch('/\d/', "step {$step->number} of [{$slug}] shows [{$kpi['id']}] before it is measured");
+        }
+    }
+})->with([
+    'tool loop' => ['a-tool-loop-with-caps-and-confirmation', 'PHP checks every call first'],
+    'mcp and research' => ['mcp-and-a-research-agent', 'The caps stop the run'],
+]);
+
+it('F10 a solution step never marks a change with the minus sign, which reads as removed', function (string $slug): void {
+    foreach (courseLessonData($slug)['steps'] as $step) {
+        if ($step['role'] === 'solution') {
+            expect(in_array('-', array_column($step['changed'], 'sign'), true))->toBeFalse("[{$slug}] step [{$step['title']}]");
+        }
+    }
+})->with(array_keys(COURSE_LESSONS));
+
+it('NFR-1 the review fixes hold: tries include the first, the health limit is named, the assistant gap is small and each summary names its model', function (): void {
+    $retry = collect(courseLesson('structured-output-and-validation')->steps)->firstWhere('title', 'Retry, then fail loudly');
+    $retryText = implode(' ', [...$retry->body, ...array_column($retry->changed, 'text')]);
+
+    expect($retryText)->toContain('tries in all')
+        ->and($retryText)->toContain('retries included')
+        ->and($retryText)->not->toContain('retries added')
+        ->and($retryText)->toContain('valid after the retries: 43 photos');
+
+    $limit = number_format(app(LessonNumbers::class)->read('slow-load/2026-11-16/sse-frankenphp-14.json', 'probe_timeout_s', 'review') * 1000, 0, '.', ',').' ms';
+    $streaming = courseLesson('streaming-an-answer');
+
+    expect(collect($streaming->kpis)->firstWhere('id', 'health')->label)->not->toContain('slowest');
+
+    foreach ($streaming->steps as $step) {
+        if (collect($step->kpis)->firstWhere('id', 'health')['value'] === $limit && in_array($step->role, ['careful', 'problem'], true)) {
+            expect(implode(' ', [...$step->body, ...array_column($step->changed, 'text')]))->toContain('limit');
+        }
+    }
+
+    $assistant = collect(courseLesson('choosing-a-model-and-provider')->steps)->firstWhere('title', 'The assistant: a one-question gap');
+
+    expect($assistant)->not->toBeNull()
+        ->and(implode(' ', $assistant->body))->not->toContain('flips')
+        ->and(implode(' ', $assistant->body))->toContain('both models');
+
+    $structured = courseLesson('structured-output-and-validation')->steps;
+    $summary = end($structured);
+
+    expect(implode(' ', $summary->body))->toContain('second model')
+        ->and(collect($summary->kpis)->whereIn('id', ['exact', 'caught'])->pluck('value')->unique()->all())->toBe(['—']);
+
+    $caching = courseLesson('caching-answers')->steps;
+
+    expect(implode(' ', end($caching)->body))->not->toContain('lookup times');
+});
+
+it('NFR-1 the caching invalidation step does not say stale entries are served', function (): void {
+    $step = collect(courseLesson('caching-answers')->steps)->firstWhere('title', 'Old answers go away');
+    $text = implode(' ', $step->body);
+
+    expect($text)->not->toContain('served before pruning')
+        ->and($text)->toContain('go stale')
+        ->and($text)->toContain('not measured')
+        ->and(array_column($step->kpis, 'value'))->toContain('not measured');
+});

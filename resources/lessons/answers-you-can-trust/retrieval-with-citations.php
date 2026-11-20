@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Lessons\LessonSources as Source;
+
 /**
  * Every figure is read from a committed result file; the text only places it. State is a patch on the step before.
  */
@@ -14,17 +16,12 @@ $text6 = 'cells.4';
 $hybrid3 = 'cells.6';
 $hybrid6 = 'cells.7';
 
-$figure = static fn (string $file, string $path, int $round = 0): array => ['file' => $file, 'path' => $path, 'round' => $round];
-$percent = static fn (string $file, string $path): array => ['file' => $file, 'path' => $path, 'scale' => 100, 'round' => 0];
-$grade = static fn (string $file, string $path): array => ['file' => $file, 'path' => $path, 'scale' => 50, 'round' => 0];
-$uncompared = static fn (array $value): array => [...$value, 'trend' => false];
-
 return [
     'title' => 'Retrieval with citations',
     'summary' => 'Find the passages that answer a question, hand only those to the model, and show where each claim came from.',
     'minutes' => 10,
     'level' => 'intermediate',
-    'guide' => 'chat',
+    'guide' => 'docs',
     'learn' => [
         ['id' => 'lo-1', 'text' => 'Explain why a model answers from passages you hand it and not from memory.'],
         ['id' => 'lo-2', 'text' => 'Compare search by meaning, by words and both together, and say what recall measures.'],
@@ -136,8 +133,8 @@ return [
                 ],
             ],
             'kpis' => [
-                'recall' => $percent($large, "{$vector6}.recall"),
-                'early' => $percent($large, "{$vector3}.recall"),
+                'recall' => Source::percent($large, "{$vector6}.recall"),
+                'early' => Source::percent($large, "{$vector3}.recall"),
             ],
             'changed' => [
                 ['sign' => '+', 'text' => 'the right page in the top six for {kpi:recall}'],
@@ -164,7 +161,7 @@ return [
                 ],
             ],
             'kpis' => [
-                'recall' => $uncompared($percent($large, "{$text6}.recall")),
+                'recall' => Source::uncompared(Source::percent($large, "{$text6}.recall")),
                 'early' => '—',
             ],
             'changed' => [
@@ -191,8 +188,8 @@ return [
                 ],
             ],
             'kpis' => [
-                'recall' => $uncompared($percent($large, "{$hybrid6}.recall")),
-                'early' => $uncompared($percent($large, "{$hybrid3}.recall")),
+                'recall' => Source::uncompared(Source::percent($large, "{$hybrid6}.recall")),
+                'early' => Source::uncompared(Source::percent($large, "{$hybrid3}.recall")),
             ],
             'changed' => [
                 ['sign' => '~', 'text' => 'top six {kpi:recall}, the same as by meaning'],
@@ -218,11 +215,11 @@ return [
                 ],
             ],
             'kpis' => [
-                'recall' => $uncompared($percent($small, "{$vector6}.recall")),
-                'early' => $uncompared($percent($small, "{$vector3}.recall")),
+                'recall' => Source::uncompared(Source::percent($small, "{$vector6}.recall")),
+                'early' => Source::uncompared(Source::percent($small, "{$vector3}.recall")),
             ],
             'changed' => [
-                ['sign' => '~', 'text' => 'top three {kpi:early}, up from smaller chunks'],
+                ['sign' => '~', 'text' => 'top three {kpi:early} with smaller chunks, by meaning'],
                 ['sign' => '~', 'text' => 'top six {kpi:recall}, unchanged'],
             ],
             'learn' => ['lo-3'],
@@ -274,7 +271,7 @@ return [
                 ],
             ],
             'kpis' => [
-                'cited' => $uncompared($percent($answers, 'models.0.across_runs.citation_rate.median')),
+                'cited' => Source::uncompared(Source::percent($answers, 'models.0.across_runs.citation_rate.median')),
             ],
             'changed' => [
                 ['sign' => '+', 'text' => 'answers carry numbered markers'],
@@ -301,8 +298,8 @@ return [
                 ],
             ],
             'kpis' => [
-                'cited' => $uncompared($percent($answers, 'models.0.across_runs.citation_rate.median')),
-                'grounded' => $uncompared($grade($answers, 'models.0.across_runs.groundedness.median')),
+                'cited' => Source::uncompared(Source::percent($answers, 'models.0.across_runs.citation_rate.median')),
+                'grounded' => Source::uncompared(Source::figure($answers, 'models.0.across_runs.groundedness.median', 0, 50)),
             ],
             'changed' => [
                 ['sign' => '+', 'text' => 'an unknown marker is listed, not linked'],
@@ -335,10 +332,10 @@ return [
                 ],
             ],
             'kpis' => [
-                'recall' => $uncompared($percent($large, "{$vector6}.recall")),
-                'early' => $uncompared($percent($large, "{$vector3}.recall")),
-                'cited' => $uncompared($percent($answers, 'models.0.across_runs.citation_rate.median')),
-                'grounded' => $uncompared($grade($answers, 'models.0.across_runs.groundedness.median')),
+                'recall' => Source::uncompared(Source::percent($large, "{$vector6}.recall")),
+                'early' => Source::uncompared(Source::percent($large, "{$vector3}.recall")),
+                'cited' => Source::uncompared(Source::percent($answers, 'models.0.across_runs.citation_rate.median')),
+                'grounded' => Source::uncompared(Source::figure($answers, 'models.0.across_runs.groundedness.median', 0, 50)),
             ],
             'changed' => [
                 ['sign' => '~', 'text' => 'found {kpi:recall}, cited {kpi:cited}, grounded {kpi:grounded}'],

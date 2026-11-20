@@ -292,6 +292,12 @@
             "moreSnippets": []
         }
     ],
+    "lessons": [
+        {
+            "title": "Structured output and validation",
+            "href": "/ai/learn/answers-you-can-trust/structured-output-and-validation"
+        }
+    ],
     "tabs": [
         {
             "key": "works",

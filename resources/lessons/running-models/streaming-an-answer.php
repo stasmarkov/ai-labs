@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Lessons\LessonSources as Source;
+
 /**
  * Every figure is read from a committed result file; the text only places it. State is a patch on the step before.
  */
@@ -14,12 +16,8 @@ $growing = 'slow-load/2026-11-16/sse-frankenphp-auto.json';
 $few = 'slow-load/2026-11-16/sse-frankenphp-worker-4.json';
 $model = 'models."qwen3.5:9b"';
 
-$figure = static fn (string $file, string $path, int $round = 0): array => ['file' => $file, 'path' => $path, 'round' => $round];
-$seconds = static fn (string $file, string $path): array => ['file' => $file, 'path' => $path, 'scale' => 0.001, 'round' => 1];
-$uncompared = static fn (array $value): array => [...$value, 'trend' => false];
-
-$ttft = $seconds($run, "{$model}.speed.ttft_ms.median");
-$speed = $figure($run, "{$model}.speed.generation_tokens_per_s.median", 1);
+$ttft = Source::seconds($run, "{$model}.speed.ttft_ms.median");
+$speed = Source::figure($run, "{$model}.speed.generation_tokens_per_s.median", 1);
 
 return [
     'title' => 'Streaming an answer',
@@ -55,7 +53,7 @@ return [
         ['id' => 'speed', 'label' => 'Writing speed', 'format' => 'tokens-per-s', 'better' => 'higher'],
         ['id' => 'after', 'label' => 'Pieces sent after Stop (median)', 'format' => 'count', 'better' => 'lower'],
         ['id' => 'free', 'label' => 'Model free again after Stop', 'format' => 'ms', 'better' => 'lower'],
-        ['id' => 'health', 'label' => 'Health check, slowest answers', 'format' => 'ms', 'better' => 'lower'],
+        ['id' => 'health', 'label' => 'Health check wait, slow end', 'format' => 'ms', 'better' => 'lower'],
         ['id' => 'missed', 'label' => 'Health checks unanswered', 'format' => 'percent', 'better' => 'lower'],
     ],
     'steps' => [
@@ -185,8 +183,8 @@ return [
                 ],
             ],
             'kpis' => [
-                'after' => $figure($classic, 'median_tokens_after_stop'),
-                'free' => $figure($classic, 'median_probe_ms_after_stop'),
+                'after' => Source::figure($classic, 'median_tokens_after_stop'),
+                'free' => Source::figure($classic, 'median_probe_ms_after_stop'),
             ],
             'changed' => [
                 ['sign' => '+', 'text' => 'the model is released when the visitor leaves'],
@@ -209,8 +207,8 @@ return [
                 ],
             ],
             'kpis' => [
-                'after' => $uncompared($figure($octane, 'median_tokens_after_stop')),
-                'free' => $uncompared($figure($octane, 'median_probe_ms_after_stop')),
+                'after' => Source::uncompared(Source::figure($octane, 'median_tokens_after_stop')),
+                'free' => Source::uncompared(Source::figure($octane, 'median_probe_ms_after_stop')),
             ],
             'changed' => [
                 ['sign' => '~', 'text' => 'worker mode and Octane stop as classic does'],
@@ -224,7 +222,7 @@ return [
             'title' => 'A stream holds a worker',
             'body' => [
                 'While an answer is written, the request that carries it stays inside a PHP worker, for the whole length of the answer. That is the price of answering over a direct stream.',
-                'In a test with {num:'.$fixed.'#users|count|0} visitors streaming at once, on a fixed set of threads, a health check that does no work at all waited in the same queue. Its slowest answers took {kpi:health}, and {kpi:missed} of the checks got no answer in time.',
+                'In a test with {num:'.$fixed.'#users|count|0} visitors streaming at once, on a fixed set of threads, a health check that does no work at all waited in the same queue. {kpi:missed} of the checks got no answer before the limit the test allowed, so the slow end of the waits, {kpi:health}, is that limit and not a real answer time.',
             ],
             'callout' => ['kind' => 'careful', 'text' => 'A load balancer that loses its health check marks a healthy server dead.'],
             'state' => [
@@ -242,8 +240,8 @@ return [
                 ],
             ],
             'kpis' => [
-                'health' => $figure($fixed, 'median.health_p95_ms'),
-                'missed' => $figure($fixed, 'median.health_error_percent'),
+                'health' => Source::figure($fixed, 'median.health_p95_ms'),
+                'missed' => Source::figure($fixed, 'median.health_error_percent'),
             ],
             'changed' => [
                 ['sign' => '-', 'text' => 'health checks wait behind the open streams'],
@@ -256,7 +254,7 @@ return [
             'role' => 'solution',
             'title' => 'Let the threads grow',
             'body' => [
-                'With the same visitors and the same streams, but with threads allowed to grow under load, the health check answered even in its slowest cases within {kpi:health}, and {kpi:missed} of the checks went unanswered.',
+                'With the same visitors and the same streams, but with threads allowed to grow under load, nineteen of every twenty health checks answered within {kpi:health}, and {kpi:missed} of the checks went unanswered.',
                 'The streams still hold their workers. There are just more workers than streams, so a cheap request always finds a free one.',
             ],
             'callout' => ['kind' => 'useful', 'text' => 'Plan more threads than there will be open answers. The pool must be larger than the longest answers you allow.'],
@@ -269,12 +267,12 @@ return [
                 ],
             ],
             'kpis' => [
-                'health' => $figure($growing, 'median.health_p95_ms'),
-                'missed' => $figure($growing, 'median.health_error_percent'),
+                'health' => Source::figure($growing, 'median.health_p95_ms'),
+                'missed' => Source::figure($growing, 'median.health_error_percent'),
             ],
             'changed' => [
-                ['sign' => '+', 'text' => 'the health check answers at {kpi:health}'],
-                ['sign' => '-', 'text' => 'no check goes unanswered'],
+                ['sign' => '+', 'text' => 'nineteen in twenty health checks answer within {kpi:health}'],
+                ['sign' => '+', 'text' => 'no check goes unanswered'],
             ],
             'learn' => ['lo-6'],
             'deeper' => 'streaming#works',
@@ -296,12 +294,12 @@ return [
                 ],
             ],
             'kpis' => [
-                'health' => $uncompared($figure($few, 'median.health_p95_ms')),
-                'missed' => $uncompared($figure($few, 'median.health_error_percent')),
+                'health' => Source::uncompared(Source::figure($few, 'median.health_p95_ms')),
+                'missed' => Source::uncompared(Source::figure($few, 'median.health_error_percent')),
             ],
             'changed' => [
                 ['sign' => '-', 'text' => 'every health check goes unanswered while the streams run'],
-                ['sign' => '~', 'text' => 'the slowest health checks hit {kpi:health}, the limit the test allowed'],
+                ['sign' => '~', 'text' => 'no check answered before the limit the test allowed, {kpi:health}'],
             ],
             'learn' => ['lo-6'],
             'deeper' => 'streaming#support',
@@ -329,17 +327,17 @@ return [
                 ],
             ],
             'kpis' => [
-                'ttft' => $uncompared($ttft),
-                'speed' => $uncompared($speed),
-                'after' => $uncompared($figure($classic, 'median_tokens_after_stop')),
-                'free' => $uncompared($figure($classic, 'median_probe_ms_after_stop')),
-                'health' => $uncompared($figure($growing, 'median.health_p95_ms')),
-                'missed' => $uncompared($figure($growing, 'median.health_error_percent')),
+                'ttft' => Source::uncompared($ttft),
+                'speed' => Source::uncompared($speed),
+                'after' => Source::uncompared(Source::figure($classic, 'median_tokens_after_stop')),
+                'free' => Source::uncompared(Source::figure($classic, 'median_probe_ms_after_stop')),
+                'health' => Source::uncompared(Source::figure($growing, 'median.health_p95_ms')),
+                'missed' => Source::uncompared(Source::figure($growing, 'median.health_error_percent')),
             ],
             'changed' => [
                 ['sign' => '+', 'text' => 'first words after {kpi:ttft}'],
                 ['sign' => '+', 'text' => 'the model free again after {kpi:free} on Stop'],
-                ['sign' => '+', 'text' => 'the health check at {kpi:health} with threads to spare'],
+                ['sign' => '+', 'text' => 'nineteen in twenty health checks within {kpi:health}, with threads to spare'],
             ],
             'learn' => [],
             'deeper' => 'streaming#modify',

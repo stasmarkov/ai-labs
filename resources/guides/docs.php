@@ -147,4 +147,5 @@ return [
         ['domain' => 'API documentation', 'problem' => 'Developers search for a function and for a concept.', 'how' => 'Hybrid search finds the exact name and the explaining paragraph in one list.'],
         ['domain' => 'Contracts', 'problem' => 'A clause is described in different words in each contract.', 'how' => 'Chunk by clause and search by meaning, with the contract name as source.'],
     ],
+    'lessons' => ['answers-you-can-trust/retrieval-with-citations', 'answers-you-can-trust/caching-answers'],
 ];

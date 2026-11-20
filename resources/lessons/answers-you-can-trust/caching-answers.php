@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Lessons\LessonSources as Source;
+
 /**
  * Every figure is read from a committed result file; the text only places it. State is a patch on the step before.
  */
@@ -9,17 +11,12 @@ $latency = 'docs-cache/2026-11-03/latency/hit-miss.json';
 $mixed = 'docs-cache/2026-11-03/hit-miss/hit-miss.json';
 $pairs = 'docs-cache/2026-11-03/run/calibration.json';
 
-$figure = static fn (string $file, string $path, int $round = 0): array => ['file' => $file, 'path' => $path, 'round' => $round];
-$seconds = static fn (string $file, string $path): array => ['file' => $file, 'path' => $path, 'scale' => 0.001, 'round' => 1];
-$percent = static fn (string $file, string $path): array => ['file' => $file, 'path' => $path, 'scale' => 100, 'round' => 0];
-$uncompared = static fn (array $value): array => [...$value, 'trend' => false];
-
 return [
     'title' => 'Caching answers',
     'summary' => 'Reuse an answer for a question that was already asked, see why a reworded question is the hard case, and know when not to store.',
     'minutes' => 9,
     'level' => 'intermediate',
-    'guide' => 'chat',
+    'guide' => 'docs',
     'learn' => [
         ['id' => 'lo-1', 'text' => 'Explain what an exact cache hit saves and what the key is made of.'],
         ['id' => 'lo-2', 'text' => 'Say why a reworded question needs a similarity threshold and why the threshold is risky.'],
@@ -46,6 +43,7 @@ return [
         ['id' => 'exact', 'label' => 'Exact repeat, median', 'format' => 'ms', 'better' => 'lower'],
         ['id' => 'semantic', 'label' => 'Reworded repeat, median', 'format' => 'ms', 'better' => 'lower'],
         ['id' => 'served', 'label' => 'Requests served from the cache', 'format' => 'percent', 'better' => 'higher'],
+        ['id' => 'stale', 'label' => 'Entries gone stale per docs change', 'format' => 'text', 'better' => 'lower'],
     ],
     'steps' => [
         [
@@ -72,10 +70,11 @@ return [
                 ],
             ],
             'kpis' => [
-                'fresh' => $seconds($latency, 'paths.fresh.median_ms_all'),
+                'fresh' => Source::seconds($latency, 'paths.fresh.median_ms_all'),
                 'exact' => '—',
                 'semantic' => '—',
                 'served' => '—',
+                'stale' => '—',
             ],
             'changed' => [
                 ['sign' => '-', 'text' => 'every repeat pays the full {kpi:fresh}'],
@@ -88,7 +87,7 @@ return [
             'title' => 'Look it up first',
             'body' => [
                 'A finished answer is stored under a key made from the question. The next time the same question arrives, the app looks the key up before it searches or calls the model.',
-                'A repeat of the same question was served in {kpi:exact} at the median. That is a lookup and a replay of stored text.',
+                'A repeat that found its exact key was served in {kpi:exact} at the median. That is a lookup and a replay of stored text.',
             ],
             'callout' => ['kind' => 'useful', 'text' => 'Ask the cache before the expensive work, not after it.'],
             'state' => [
@@ -105,7 +104,7 @@ return [
                 ],
             ],
             'kpis' => [
-                'exact' => $figure($latency, 'paths.exact.median_ms_by_path.exact'),
+                'exact' => Source::figure($latency, 'paths.exact.median_ms_by_path.exact'),
             ],
             'changed' => [
                 ['sign' => '+', 'text' => 'an exact repeat in {kpi:exact}'],
@@ -156,7 +155,7 @@ return [
                 ],
             ],
             'kpis' => [
-                'semantic' => $uncompared($figure($latency, 'paths.paraphrase.median_ms_by_path.semantic')),
+                'semantic' => Source::uncompared(Source::figure($latency, 'paths.paraphrase.median_ms_by_path.semantic')),
             ],
             'changed' => [
                 ['sign' => '+', 'text' => 'a reworded repeat served in {kpi:semantic}'],
@@ -204,7 +203,7 @@ return [
                 ],
             ],
             'kpis' => [
-                'served' => $uncompared($percent($latency, 'hit_rate')),
+                'served' => Source::uncompared(Source::percent($latency, 'hit_rate')),
             ],
             'changed' => [
                 ['sign' => '+', 'text' => 'no near-miss is served'],
@@ -244,7 +243,7 @@ return [
             'title' => 'Old answers go away',
             'body' => [
                 'A stored answer is served only while its prompt version, answer model, embedding model and index version are still the current ones, and only until it expires.',
-                'A command lists how many entries are current and how many are stale, and prunes the stale and expired ones together with their exact keys. Turning the cache off for one question is a switch on the request.',
+                'A command lists how many entries are current and how many are stale, and prunes the stale and expired ones together with their exact keys. Turning the cache off for one question is a switch on the request. How many entries go stale with each change to the docs was not measured.',
             ],
             'callout' => ['kind' => 'useful', 'text' => 'Give every cached answer a way to stop being true: versions in the key, an expiry, and a way to clear.'],
             'state' => [
@@ -257,7 +256,9 @@ return [
                     'from-model' => ['packets' => ['token' => 0]],
                 ],
             ],
-            'kpis' => [],
+            'kpis' => [
+                'stale' => 'not measured',
+            ],
             'changed' => [
                 ['sign' => '+', 'text' => 'stale and expired entries are pruned'],
             ],
@@ -269,7 +270,7 @@ return [
             'title' => 'What to take away',
             'body' => [
                 'Look up an exact key first, then the nearest stored question above a strict threshold, and call the model only on a miss. Put every version that changes an answer into the key, store only answers you trust, and let old ones expire.',
-                'The figures here are the lookup times of the three paths from one run: a fresh answer, an exact repeat and a reworded repeat.',
+                'The figures here are from one run: the median time of a fresh answer, an exact repeat and a reworded repeat, and the share of its requests served from the cache.',
             ],
             'callout' => ['kind' => 'key-idea', 'text' => 'A cache is a promise that an old answer is still right. Keep the promise small.'],
             'state' => [
@@ -288,10 +289,10 @@ return [
                 ],
             ],
             'kpis' => [
-                'fresh' => $uncompared($seconds($latency, 'paths.fresh.median_ms_all')),
-                'exact' => $uncompared($figure($latency, 'paths.exact.median_ms_by_path.exact')),
-                'semantic' => $uncompared($figure($latency, 'paths.paraphrase.median_ms_by_path.semantic')),
-                'served' => $uncompared($percent($latency, 'hit_rate')),
+                'fresh' => Source::uncompared(Source::seconds($latency, 'paths.fresh.median_ms_all')),
+                'exact' => Source::uncompared(Source::figure($latency, 'paths.exact.median_ms_by_path.exact')),
+                'semantic' => Source::uncompared(Source::figure($latency, 'paths.paraphrase.median_ms_by_path.semantic')),
+                'served' => Source::uncompared(Source::percent($latency, 'hit_rate')),
             ],
             'changed' => [
                 ['sign' => '~', 'text' => 'fresh {kpi:fresh}, exact {kpi:exact}, reworded {kpi:semantic}'],

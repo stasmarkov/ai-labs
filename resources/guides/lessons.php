@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 $run = 'llm/2026-11-13/run.json';
 $search = 'llm-load/2026-11-13/search-under-load.json';
+$course = require __DIR__.'/../lessons/course.php';
+$courseList = implode("\n\n", array_map(
+    fn (array $module): string => '**'.$module['title'].':** '.implode('; ', array_column($module['lessons'], 'title')).'.',
+    $course['modules'],
+));
 
 return [
     'kind' => 'foundation',
@@ -23,6 +28,10 @@ return [
             'title' => 'The numbers are read, not typed',
             'body' => 'A number in a lesson is a pointer to a value inside a committed result file, with a scale and a rounding. A step can write `{num:...}` in its text or show a number in the strip, and the lesson service looks the value up with the same reader the guides use. A pointer that finds nothing is an error, and so is a file in the uncommitted raw folder. A number shows green or red when it got better or worse than the step before; a step that switches scenario, such as another model, marks its numbers as not compared. The one exception is a word such as "not measured", for a step where nothing was measured. This is how the lesson stays true: re-run a measurement, commit the new file, and every figure follows.',
             'snippet' => 'App\Lessons\LessonNumbers',
+        ],
+        [
+            'title' => 'The eight lessons',
+            'body' => $courseList."\n\nThe course page at /ai/learn opens each one, and every lesson links to the guide that goes deeper. The course page and the lesson sidebar read only each lesson's minutes and number of steps, never a result file, so a figure that cannot be read breaks only its own lesson.",
         ],
         [
             'title' => 'The page gets resolved data only',
@@ -83,7 +92,7 @@ return [
         [
             'name' => 'Safety of the lesson files',
             'status' => 'guarded',
-            'note' => 'The loader rejects a lesson that has a broken shape, a number it cannot resolve, a digit typed in a change line, an outcome no step teaches, or a link to a guide that does not exist. Lesson text is drawn from parts (plain, bold, code), never as HTML. Tests load every committed lesson and check the pilot figures against the benchmarks page.',
+            'note' => 'The loader rejects a lesson that has a broken shape, a number it cannot resolve, a digit typed in a change line, an outcome no step teaches, or a link to a guide that does not exist. Lesson text is drawn from parts (plain, bold, code), never as HTML. Tests load every committed lesson and check measured figures of every lesson against their result files and, where it prints them, the benchmarks page.',
         ],
         [
             'name' => 'A lesson looks wrong',
@@ -92,13 +101,13 @@ return [
         ],
     ],
     'numbers' => [
-        ['label' => 'qwen3.5:9b: median time to first token (ms), the first number the pilot lesson shows', 'file' => $run, 'path' => 'models.qwen3.5:9b.speed.ttft_ms.median'],
+        ['label' => 'qwen3.5:9b: median time to first token (ms), the first number "One model, many users" shows', 'file' => $run, 'path' => 'models.qwen3.5:9b.speed.ttft_ms.median'],
         ['label' => 'qwen3.5:9b: median writing speed (tokens per second)', 'file' => $run, 'path' => 'models.qwen3.5:9b.speed.generation_tokens_per_s.median'],
-        ['label' => 'Search p95 with no model load (ms), the baseline in the pilot', 'file' => $search, 'path' => 'servers.1.without_load.p95_ms'],
+        ['label' => 'Search p95 with no model load (ms), the baseline in "One model, many users"', 'file' => $search, 'path' => 'servers.1.without_load.p95_ms'],
     ],
     'experiments' => [
         [
-            'title' => 'Walk the pilot lesson',
+            'title' => 'Walk the first lesson',
             'predictions' => [
                 ['id' => 'a', 'text' => 'The time to first token and the writing speed both get worse as users are added.'],
                 ['id' => 'b', 'text' => 'The time to first token grows with the queue, while the writing speed of a running answer stays about the same.'],

@@ -10,6 +10,7 @@ use App\Lessons\LessonNumbers;
 use App\Lessons\LessonRepository;
 use App\Lessons\LessonService;
 use Illuminate\Support\Facades\File;
+use PHPUnit\Framework\AssertionFailedError;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -363,6 +364,23 @@ class LessonRepositoryTest extends TestCase
         $this->assertSame('not measured', $found->steps[4]->kpis[0]['value']);
     }
 
+    public function test_mnc_1_the_spec_decisions_record_the_tools_and_person_kinds_and_the_old_kinds_keep_their_order(): void
+    {
+        $this->assertSame(
+            ['browser', 'app', 'threads', 'workers', 'queue', 'model', 'vector-db', 'cache', 'cloud', 'users'],
+            array_slice(LessonRepository::NODE_KINDS, 0, 10),
+        );
+
+        $spec = (string) file_get_contents(base_path('.ai/specs/spec-20261120-1032-scene-lessons-course/spec-lite.md'));
+        $decisions = substr($spec, (int) strpos($spec, '## Decisions'));
+        $decisions = substr($decisions, 0, (int) strpos($decisions, '## Open questions'));
+
+        $this->assertMatchesRegularExpression('/\*\*D-3:\*\*.*`tools`.*`person`/s', $decisions);
+        $this->assertStringContainsString('a-tool-loop-with-caps-and-confirmation', $decisions);
+        $this->assertStringContainsString('mcp-and-a-research-agent', $decisions);
+        $this->assertStringContainsString('no existing kind', $decisions);
+    }
+
     public function test_ac_7_the_new_node_kinds_load_and_each_has_its_own_icon_and_readable_text(): void
     {
         $this->assertSame(['tools', 'person'], array_slice(LessonRepository::NODE_KINDS, 10));
@@ -387,7 +405,55 @@ class LessonRepositoryTest extends TestCase
             $drawn[] = $shape[1];
         }
 
-        $this->assertGreaterThanOrEqual(4.5, $this->contrast('#1a1916', '#f5f2eb'));
+        $this->assertNodeColoursAreReadable($icons, ['tools', 'person']);
+    }
+
+    public function test_ac_7_the_contrast_check_fails_on_a_pale_icon(): void
+    {
+        $icons = (string) file_get_contents(resource_path('js/ai/components/lesson/SceneIcon.vue'));
+        $pale = str_replace("kind === 'tools'\">", "kind === 'tools'\"><path stroke=\"#d8d2c4\" d=\"M0 0\" />", $icons);
+
+        try {
+            $this->assertNodeColoursAreReadable($pale, ['tools']);
+        } catch (AssertionFailedError) {
+            $this->addToAssertionCount(1);
+
+            return;
+        }
+
+        $this->fail('a pale stroke on the icon tile should fail the contrast check');
+    }
+
+    /**
+     * The colours a node card really draws, read from the components: the icon ink of each kind (the group stroke, or any
+     * colour its own shapes set) on the icon tile, and the card title on every status fill. Text needs 4.5:1 (C-12).
+     *
+     * @param  list<string>  $kinds
+     */
+    private function assertNodeColoursAreReadable(string $icons, array $kinds): void
+    {
+        $canvas = (string) file_get_contents(resource_path('js/ai/components/lesson/SceneCanvas.vue'));
+
+        $this->assertSame(1, preg_match('/<g fill="none" stroke="(#[0-9a-f]{6})"/i', $icons, $group), 'the icon group has no stroke colour');
+        $this->assertSame(1, preg_match('/<rect x="14" y="14" width="38" height="38" rx="9" fill="(#[0-9a-f]{6})"/i', $canvas, $tile), 'no icon tile fill in the scene');
+        $this->assertSame(1, preg_match('/<text font-size="20" font-weight="600" fill="(#[0-9a-f]{6})">/i', $canvas, $title), 'no card title colour in the scene');
+        $this->assertSame(1, preg_match('/const statusFills: Record<string, string> = \{([^}]*)\}/', $canvas, $fills), 'no status fills in the scene');
+        preg_match_all("/'?(\w+)'?: '(#[0-9a-f]{6})'/i", $fills[1], $statuses, PREG_SET_ORDER);
+
+        $this->assertNotEmpty($statuses);
+
+        foreach ($kinds as $kind) {
+            preg_match("#kind === '{$kind}'\">(.*?)</template>#s", $icons, $shape);
+            preg_match_all('/(?:stroke|fill)="(#[0-9a-f]{6})"/i', $shape[1] ?? '', $own);
+
+            foreach (array_unique([$group[1], ...$own[1]]) as $ink) {
+                $this->assertGreaterThanOrEqual(4.5, $this->contrast($ink, $tile[1]), "[{$kind}] icon {$ink} on the tile {$tile[1]}");
+            }
+        }
+
+        foreach ($statuses as [, $status, $fill]) {
+            $this->assertGreaterThanOrEqual(4.5, $this->contrast($title[1], $fill), "card title {$title[1]} on the {$status} fill {$fill}");
+        }
     }
 
     private function contrast(string $a, string $b): float

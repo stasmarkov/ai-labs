@@ -29,7 +29,8 @@ final class LessonService
     ) {}
 
     /**
-     * The course with each playable lesson's length; a broken lesson is listed as unavailable instead of failing the page.
+     * The course with each playable lesson's length, read from the lesson files' metadata; a lesson file without valid
+     * minutes or steps is listed as unavailable instead of failing the page.
      */
     public function course(): LessonCourse
     {
@@ -116,19 +117,19 @@ final class LessonService
         return null;
     }
 
+    /**
+     * A course entry with the lesson's length, from the file's metadata only: the course page and the sidebar never
+     * resolve a lesson, so they read no result file.
+     */
     private function entry(string $module, LessonCourseEntry $entry): LessonCourseEntry
     {
-        try {
-            $lesson = $this->find($module, $entry->slug);
-        } catch (InvalidLessonException) {
-            $lesson = null;
-        }
+        $summary = $this->lessons->summary($module, $entry->slug);
 
-        if ($lesson === null) {
+        if ($summary === null) {
             return new LessonCourseEntry($entry->slug, $entry->title, $entry->summary, $entry->level, false, false);
         }
 
-        return new LessonCourseEntry($entry->slug, $entry->title, $entry->summary, $entry->level, false, true, $lesson->minutes, count($lesson->steps));
+        return new LessonCourseEntry($entry->slug, $entry->title, $entry->summary, $entry->level, false, true, $summary['minutes'], $summary['steps']);
     }
 
     private function resolve(LessonDefinition $definition): Lesson
