@@ -165,3 +165,5 @@ Review findings: the rows marked (F1) to (F10) are the lesson findings of the ad
   Covers: NFR-1
   - [x] 12.1 Add rows to "Accuracy review (NFR-1)": for `the-run-log`, the search of `bench/results/**` for run, outcome or error count fields and its result (C-7); for `guards-on-both-sides`, that the Scope story's "answer guard checks citations" was dropped because `OutputGuard::leak` checks only the canary and copied prompt-word runs (C-8); and any other Scope-table beat a lesson rewrote or dropped, each with result `dropped` or `fixed`. Extend the row pattern in `LessonContentTest` "NFR-1 MNC-2 the accuracy review records ..." to accept `dropped` (C-17), since it now matches only `ok|fixed|open` and would skip a `dropped` row.
   - [x] 12.2 **Verify**: `ddev artisan test --compact --filter="accuracy review" tests/Feature/LessonContentTest.php` is green and the table has a `the-run-log` row naming `bench/results` and a `guards-on-both-sides` row with result `dropped`.
+
+- Clean-tree bench after the review fix pass: after commit e5ced8f, `bench/run.sh ping --quick` exited 0 on frankenphp.
