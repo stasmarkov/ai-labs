@@ -809,7 +809,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-26, BR-27
 - **Depends on:** SL-57
 - **Blocked by:** none
-- **Status:** planned
-- **Spec:** none
+- **Status:** specced
+- **Spec:** spec-20261120-2106-reference-guide-lessons
 - **Source:** owner request 2026-11-20
 - **Run:** `/sdd "SL-58: scene lessons for the reference-only guides (semantic, photo-search, similar-photos, photo-duplicates, describe, prompts, playground, guards, run-log, logs-restart, worker-dx), grouped into lessons of 8 to 13 steps from committed measurements; each turns its reference topics into a lesson topic (BR-26, BR-27)."`
