@@ -211,3 +211,4 @@ Gates after the fix pass: full suite 3664 passed, 3 skipped; Pint clean; PHPStan
   Covers: MNC-1
   - C-5 says every added node kind and its reason goes in Decisions. `tools` and `person` were appended to `LessonRepository::NODE_KINDS`, but `spec-lite.md` Decisions still has only D-1 and D-2.
   - [x] **Verify**: `spec-lite.md` Decisions has an entry naming `tools` and `person`, the lessons that use each, and why no existing kind fits. The existing node kinds and their order in `NODE_KINDS` are unchanged.
+- Clean-tree bench after the review fix pass: after commit 1d35e91, `bench/run.sh ping --quick` exited 0 on frankenphp.
