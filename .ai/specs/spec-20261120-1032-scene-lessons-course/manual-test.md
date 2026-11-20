@@ -11,7 +11,7 @@ Course and layout (AC-1, AC-4).
 3. Run the audit:
 
    ```sh
-   node bench/ui-audit.mjs --only learn
+   node bench/ui-audit.mjs --only learn,learn/running-models/one-model-many-users,learn/running-models/streaming-an-answer,learn/running-models/choosing-a-model-and-provider,learn/answers-you-can-trust/structured-output-and-validation,learn/answers-you-can-trust/retrieval-with-citations,learn/answers-you-can-trust/caching-answers,learn/agents/a-tool-loop-with-caps-and-confirmation,learn/agents/mcp-and-a-research-agent
    ```
 
 Expected:

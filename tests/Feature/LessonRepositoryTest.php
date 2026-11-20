@@ -363,6 +363,48 @@ class LessonRepositoryTest extends TestCase
         $this->assertSame('not measured', $found->steps[4]->kpis[0]['value']);
     }
 
+    public function test_ac_7_the_new_node_kinds_load_and_each_has_its_own_icon_and_readable_text(): void
+    {
+        $this->assertSame(['tools', 'person'], array_slice(LessonRepository::NODE_KINDS, 10));
+
+        $lesson = $this->lesson();
+        $lesson['scene']['nodes'][0]['kind'] = 'tools';
+        $lesson['scene']['nodes'][1]['kind'] = 'person';
+
+        $found = $this->service($lesson)->find('mod', 'one');
+
+        $this->assertNotNull($found);
+        $this->assertSame(['tools', 'person'], array_map(fn ($node): string => $node->kind, $found->nodes));
+
+        $icons = (string) file_get_contents(resource_path('js/ai/components/lesson/SceneIcon.vue'));
+        $drawn = [];
+
+        foreach (LessonRepository::NODE_KINDS as $kind) {
+            $this->assertStringContainsString("kind === '{$kind}'", $icons, "no icon for [{$kind}]");
+            preg_match("#kind === '{$kind}'\">(.*?)</template>#s", $icons, $shape);
+            $this->assertNotSame('', trim($shape[1] ?? ''));
+            $this->assertNotContains($shape[1], $drawn, "[{$kind}] reuses another icon");
+            $drawn[] = $shape[1];
+        }
+
+        $this->assertGreaterThanOrEqual(4.5, $this->contrast('#1a1916', '#f5f2eb'));
+    }
+
+    private function contrast(string $a, string $b): float
+    {
+        $luminance = function (string $hex): float {
+            $channels = array_map(function (int $value): float {
+                $c = $value / 255;
+
+                return $c <= 0.03928 ? $c / 12.92 : (($c + 0.055) / 1.055) ** 2.4;
+            }, sscanf($hex, '#%02x%02x%02x'));
+
+            return 0.2126 * $channels[0] + 0.7152 * $channels[1] + 0.0722 * $channels[2];
+        };
+
+        return (max($luminance($a), $luminance($b)) + 0.05) / (min($luminance($a), $luminance($b)) + 0.05);
+    }
+
     /**
      * A lesson of 8 steps: 3 outcomes, a kpi, two nodes and two edges.
      *

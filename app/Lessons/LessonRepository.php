@@ -22,7 +22,7 @@ use App\Services\GuidePageService;
  */
 final class LessonRepository
 {
-    public const NODE_KINDS = ['browser', 'app', 'threads', 'workers', 'queue', 'model', 'vector-db', 'cache', 'cloud', 'users'];
+    public const NODE_KINDS = ['browser', 'app', 'threads', 'workers', 'queue', 'model', 'vector-db', 'cache', 'cloud', 'users', 'tools', 'person'];
 
     public const NODE_STATUSES = ['ok', 'busy', 'down', 'hidden'];
 

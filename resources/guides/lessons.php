@@ -8,7 +8,7 @@ $search = 'llm-load/2026-11-13/search-under-load.json';
 return [
     'kind' => 'foundation',
     'title' => 'Scene lessons',
-    'summary' => 'A scene lesson teaches one idea in about ten steps. Each step moves a picture of the system, a strip of measured numbers and a list of what changed together, so you see a problem and its fix instead of reading about them. The course is at /ai/learn.',
+    'summary' => 'A scene lesson teaches one idea in about ten steps. Each step moves a picture of the system, a strip of measured numbers and a list of what changed together, so you see a problem and its fix instead of reading about them. The course is at /ai/learn: eight lessons in three modules, from how a model server shares its time to an agent that a person keeps in charge.',
     'works' => [
         [
             'title' => 'One step changes four things at once',

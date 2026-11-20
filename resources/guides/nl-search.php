@@ -135,6 +135,7 @@ return [
         ],
     ],
     'related' => ['semantic', 'docs'],
+    'lessons' => ['answers-you-can-trust/structured-output-and-validation'],
     'build' => [
         ['step' => 'Define the filters as a schema', 'detail' => 'List every filter with its type and allowed values, and ask the model for structured output in exactly that shape.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],
         ['step' => 'Validate the model output with the normal rules', 'detail' => 'Run the extracted values through the same validation as the filter form, and reject what it rejects.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/validation'],

@@ -172,6 +172,7 @@ return [
         ],
     ],
     'related' => ['prompts', 'run-log'],
+    'lessons' => ['running-models/choosing-a-model-and-provider'],
     'build' => [
         ['step' => 'Put providers in one config list', 'detail' => 'Name each provider with its driver, base URL and key, so enabling one is a configuration change.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],
         ['step' => 'Resolve through one class', 'detail' => 'Ask a single resolver for the provider and model of each feature instead of reading env values in many places.', 'tab' => 'recipes'],

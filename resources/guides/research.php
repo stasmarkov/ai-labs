@@ -147,6 +147,7 @@ return [
         ],
     ],
     'related' => ['docs', 'guards', 'prompts'],
+    'lessons' => ['agents/mcp-and-a-research-agent'],
     'build' => [
         ['step' => 'Split the work into fixed phases', 'detail' => 'Plan, search, take notes and write a report as separate steps, each stored before the next starts.', 'tab' => 'recipes'],
         ['step' => 'Let a planner agent produce sub-questions', 'detail' => 'Ask for a short list as structured output and validate its size and content.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],

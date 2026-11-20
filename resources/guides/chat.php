@@ -165,6 +165,7 @@ return [
         ],
     ],
     'related' => ['docs', 'describe'],
+    'lessons' => ['answers-you-can-trust/retrieval-with-citations', 'answers-you-can-trust/caching-answers'],
     'build' => [
         ['step' => 'Retrieve before you generate', 'detail' => 'Search the chunks first and give the model only what came back, with each chunk numbered for citation.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],
         ['step' => 'Gate on relevance', 'detail' => 'If no chunk passes a minimum score, answer that the docs do not cover it, without calling the model.', 'tab' => 'recipes'],

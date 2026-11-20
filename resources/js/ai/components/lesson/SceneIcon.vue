@@ -59,6 +59,17 @@ defineProps<{ kind: string }>();
         <template v-else-if="kind === 'cloud'">
             <path d="M7 19h10.5a4 4 0 0 0 .6-8A6 6 0 0 0 6.6 9.6 4.7 4.7 0 0 0 7 19Z" />
         </template>
+        <template v-else-if="kind === 'tools'">
+            <path d="M14.5 6.5a4 4 0 0 0 5 5L12 19a2.1 2.1 0 0 1-3-3Z" />
+            <path d="M14.5 6.5 17 9" />
+            <path d="M3.5 7.5 7 4l3 3-3.5 3.5Z" />
+            <path d="M8.5 8.5 11 11" />
+        </template>
+        <template v-else-if="kind === 'person'">
+            <circle cx="12" cy="7.5" r="3.8" />
+            <path d="M4.5 20.5c0-4.2 3.3-7 7.5-7s7.5 2.8 7.5 7" />
+            <path d="m9.5 17.5 1.8 1.8 3.2-3.4" />
+        </template>
         <template v-else>
             <rect x="4" y="4" width="16" height="16" rx="3" />
         </template>

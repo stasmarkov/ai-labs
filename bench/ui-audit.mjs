@@ -41,7 +41,10 @@ const TEACH_PAGES = [
   'assistant', 'moderation', 'research', 'playground', 'admin-assistant', 'changes', 'settings',
 ];
 const LAYOUT_ONLY_PAGES = ['', 'guides', 'guides/describe', 'guides/logs-restart', 'guides/worker-dx', 'guides/lessons',
-  'learn', 'learn/running-models/one-model-many-users',
+  'learn', 'learn/running-models/one-model-many-users', 'learn/running-models/streaming-an-answer',
+  'learn/running-models/choosing-a-model-and-provider', 'learn/answers-you-can-trust/structured-output-and-validation',
+  'learn/answers-you-can-trust/retrieval-with-citations', 'learn/answers-you-can-trust/caching-answers',
+  'learn/agents/a-tool-loop-with-caps-and-confirmation', 'learn/agents/mcp-and-a-research-agent',
   'guides/photos/formats', 'guides/photos/formats/build-along', 'guides/photos/formats/trace', 'guides/photos/formats/quiz', 'guides/photos/formats/debug', 'guides/photos/formats/tour'];
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const DETAIL_PAGES = [
