@@ -31,9 +31,9 @@
   - [x] 5.1 A fresh reviewer checks each lesson's text against the code and the result files. Then a Playwright walk of all eight lessons covers the keyboard, reduced motion and frame timing on the busiest step. The UI audit runs on `/ai/learn` and all eight lessons.
   - [x] 5.2 **Verify**: the results are recorded here.
 
-- [ ] 6. Gates and ship (checks)
+- [x] 6. Gates and ship (checks)
   Covers: MNC-1, MNC-2, MNC-3, MNC-4
-  - [ ] 6.1 Run the full suite, Pint, PHPStan, typecheck and build; check the fingerprint and parity; commit, ping and push.
+  - [x] 6.1 Run the full suite, Pint, PHPStan, typecheck and build; check the fingerprint and parity; commit, ping and push.
 
 ## Review record (task 5)
 
@@ -97,6 +97,7 @@ UI audit: `node bench/ui-audit.mjs --only learn,learn/running-models/one-model-m
 
 ## Done when
 
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
+- Clean-tree bench: after the commit, `bench/run.sh ping --quick` exited 0 on frankenphp.
