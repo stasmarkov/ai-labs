@@ -218,11 +218,11 @@ it('C-13 both guides carry the pilot lesson link, a malformed key fails validati
     $directory = sys_get_temp_dir().'/guides-'.bin2hex(random_bytes(4));
     mkdir($directory);
     $guide = fn (string $lessons): string => "<?php\nreturn ['kind' => 'foundation', 'title' => 'Plain', 'summary' => 'S.', 'works' => [['title' => 'One', 'body' => 'Body.']], 'lessons' => [{$lessons}]];";
-    file_put_contents($directory.'/known.php', $guide("'running-models/one-model-many-users', 'running-models/no-such-lesson', 'running-models/streaming-an-answer'"));
+    file_put_contents($directory.'/known.php', $guide("'running-models/one-model-many-users', 'running-models/no-such-lesson', 'agents/not-yet-written'"));
     file_put_contents($directory.'/malformed.php', $guide("'one-model-many-users'"));
     $repository = new GuideRepository($directory);
 
-    expect($repository->find('known')->lessons)->toBe(['running-models/one-model-many-users', 'running-models/no-such-lesson', 'running-models/streaming-an-answer']);
+    expect($repository->find('known')->lessons)->toBe(['running-models/one-model-many-users', 'running-models/no-such-lesson', 'agents/not-yet-written']);
     expect(fn () => $repository->find('malformed'))->toThrow(InvalidGuideException::class);
 
     $this->app->instance(GuideRepository::class, $repository);
@@ -242,4 +242,31 @@ it('F16 the guide page takes lesson titles from the course file and never builds
     $this->get('/ai/guides/local-models')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('guide.lessons.0.title', 'One model, many users'));
+});
+
+it('AC-6 every course lesson is linked from the guide it teaches, and the lessons guide, learning guide and README describe the course', function (): void {
+    $links = [
+        'local-models' => ['running-models/one-model-many-users'],
+        'streaming' => ['running-models/streaming-an-answer'],
+        'providers' => ['running-models/choosing-a-model-and-provider'],
+        'nl-search' => ['answers-you-can-trust/structured-output-and-validation'],
+        'chat' => ['answers-you-can-trust/retrieval-with-citations', 'answers-you-can-trust/caching-answers'],
+        'admin-assistant' => ['agents/a-tool-loop-with-caps-and-confirmation'],
+        'mcp' => ['agents/mcp-and-a-research-agent'],
+        'research' => ['agents/mcp-and-a-research-agent'],
+    ];
+
+    foreach ($links as $key => $lessons) {
+        $this->get('/ai/guides/'.$key)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('guide.lessons', fn ($listed): bool => collect($lessons)->every(
+                    fn (string $lesson): bool => collect($listed)->contains(fn (array $item): bool => $item['href'] === '/ai/learn/'.$lesson)
+                ))
+            );
+    }
+
+    expect(file_get_contents(base_path('README.md')))->not->toContain('listed as coming soon')->not->toContain('the other lessons are listed');
+    expect(file_get_contents(base_path('docs/learning-guide.md')))->not->toContain('the pilot, "One model, many users"');
+    expect(file_get_contents(resource_path('guides/lessons.php')))->toContain('eight lessons');
 });

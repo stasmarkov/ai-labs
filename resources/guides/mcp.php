@@ -115,6 +115,7 @@ return [
         ],
     ],
     'related' => ['admin-assistant', 'guards'],
+    'lessons' => ['agents/mcp-and-a-research-agent'],
     'build' => [
         ['step' => 'Create a server and list tools', 'detail' => 'Use the Laravel MCP package to define a server with a name, instructions and its tools.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/mcp'],
         ['step' => 'Wrap existing tools', 'detail' => 'Reuse the same tool classes your own assistant uses, so one validation path serves both.', 'tab' => 'recipes'],

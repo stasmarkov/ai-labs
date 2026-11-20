@@ -122,6 +122,7 @@ return [
         ],
     ],
     'related' => ['assistant', 'guards'],
+    'lessons' => ['agents/a-tool-loop-with-caps-and-confirmation'],
     'build' => [
         ['step' => 'Write the loop yourself', 'detail' => 'Send messages and tool definitions, run the tool calls the model asks for, and loop until it answers in text.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/ai-sdk'],
         ['step' => 'Validate each call before it runs', 'detail' => 'Check the tool name and arguments with normal rules, and send errors back as tool results.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/validation'],

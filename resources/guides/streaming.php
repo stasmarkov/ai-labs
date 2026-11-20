@@ -97,6 +97,7 @@ return [
         ],
     ],
     'related' => ['run-log', 'chat'],
+    'lessons' => ['running-models/streaming-an-answer'],
     'build' => [
         ['step' => 'Stream a line per event', 'detail' => 'Send newline-delimited JSON events, each with a type and a payload, and flush after each one.', 'tab' => 'recipes', 'doc' => 'https://laravel.com/docs/responses#streamed-responses'],
         ['step' => 'Disable buffering on the path', 'detail' => 'Turn off output buffering and proxy buffering, and test on the server you deploy to.', 'tab' => 'recipes', 'doc' => 'https://frankenphp.dev/docs/'],
