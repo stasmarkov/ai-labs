@@ -734,6 +734,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 | 2026-11-10 | Stanislav Markov | Switch the LLM or other models via the UI, no login, local only | New slice | SL-52 local settings page (spec-20261110-2155-model-settings-ui), after SL-51; BR-91 to be revised in that slice; order SL-51 → SL-52 → SL-25 … |
 | 2026-11-11 | Stanislav Markov | Photos next: import Stanford Cars, vision extraction with the local models | Revised slice | SL-27 widened with the photo import (spec-20261111-0000-photo-vision), taken before SL-52 and SL-25 at the owner's request; SL-52 spec reads features from AiProviders so it covers photo-vision |
 | 2026-11-17 | Stanislav Markov | Five interactive guide formats to compare on the photos guide, pick the best teacher | New slice | SL-54 (specced) |
+| 2026-11-20 | Stanislav Markov | Guides in the learning format, keep the tabbed version, restructure the sidebar | New slices | SL-57 one learning area (spec-20261120-1558-one-learning-area), SL-58 lessons for the reference-only guides |
 
 ### SL-53 · Lab pages that teach, with no broken layouts
 
@@ -786,3 +787,29 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Spec:** spec-20261120-1032-scene-lessons-course
 - **Source:** owner request 2026-11-20
 - **Run:** `/sdd spec-20261120-1032-scene-lessons-course`
+
+### SL-57 · One learning area for guides and scene lessons
+
+- **Outcome:** `/ai/learn` is the one index for every topic (guides and lessons); `/ai/guides` redirects there. Guide and lesson pages share a topic header with a "Walk through | Reference" switch and the same course sidebar; the tabbed guide is the Reference view. Guides with no lesson yet are reference topics in two new modules. The lab sidebar is grouped into Learn, Text, Search, Photos, Agents and Setup.
+- **Entry point:** `/ai/learn`
+- **Size:** L
+- **BRs:** BR-27
+- **Depends on:** SL-56
+- **Blocked by:** none
+- **Status:** specced
+- **Spec:** spec-20261120-1558-one-learning-area
+- **Source:** owner request 2026-11-20 (Stanislav Markov: guides in the learning format, keep the tabbed version, restructure the sidebar)
+- **Run:** `/sdd spec-20261120-1558-one-learning-area`
+
+### SL-58 · Scene lessons for the reference-only guides
+
+- **Outcome:** Every guide has a Walk through: scene lessons (8 to 13 steps, numbers from committed measurements) for search by meaning, photo search and similar photos, duplicate photos, describing a car with prompts and the playground, guards, the run log, logs and worker restart, and worker-mode developer experience; the reference topics they replace become lesson topics.
+- **Entry point:** `/ai/learn`
+- **Size:** L
+- **BRs:** BR-26, BR-27
+- **Depends on:** SL-57
+- **Blocked by:** none
+- **Status:** planned
+- **Spec:** none
+- **Source:** owner request 2026-11-20
+- **Run:** `/sdd "SL-58: scene lessons for the reference-only guides (semantic, photo-search, similar-photos, photo-duplicates, describe, prompts, playground, guards, run-log, logs-restart, worker-dx), grouped into lessons of 8 to 13 steps from committed measurements; each turns its reference topics into a lesson topic (BR-26, BR-27)."`
