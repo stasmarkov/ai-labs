@@ -835,7 +835,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-21, BR-26, BR-27
 - **Depends on:** SL-16
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** in-progress (code merged; idle-host bench pending)
 - **Spec:** spec-20261121-1905-log-channel-overhead
 - **Source:** owner request 2026-11-21 (SL-16 NFR-2 miss, +8 %)
 - **Run:** `/sdd spec-20261121-1905-log-channel-overhead`
