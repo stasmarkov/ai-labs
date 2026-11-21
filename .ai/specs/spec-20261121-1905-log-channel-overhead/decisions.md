@@ -86,3 +86,17 @@ closure still flattens through `slogAttributes()`. Guarded by `tests/Feature/Fra
 (child PHP process that defines a global `frankenphp_log`), plus the characterization and `StructuredLogTest` tests
 unchanged. The saving is one closure allocation and one `call_user_func` indirection per entry, well under 1 us; the
 bench in task 3 decides the 5 % target.
+
+## Bench run 2 (2026-11-21, same commit): also under load
+
+Started after the 1-minute load average stayed below 4 for two minutes (3.74 at start), but an unrelated Node test
+process (over 7 hours at about 96 % CPU) kept running and the load was back at 14 by the end; another project's install
+script and the OrbStack VM manager were busy too. Result (`log-overhead-run2.json`): channel off p95 9.52 ms (repeats
+9.48, 9.52, 9.58; RPS about 8 000 to 8 140), channel on 13.65 ms (repeats 12.40, 14.59, 13.65; RPS about 5 300 to
+6 000), difference 43.5 %. The channel-off p95 is just above the 2026-11-17 range (8.55 to 9.28 ms).
+
+Reading of runs 1 and 2 together: the off side moves a little with host load, the on side moves a lot (+8 % calm on
+2026-11-17, +43.5 % and +83.5 % under contention). That fits the profile: the cost sits in `frankenphp_log()` and Go's
+slog output, whose tail grows when threads contend for CPU, while the PHP side is about 5 us per entry. Neither run
+decides AC-2; the verdict needs a run on an idle host. Status: the code change is output-neutral and merged, the
+measurement is pending.
