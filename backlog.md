@@ -826,3 +826,16 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Spec:** none
 - **Source:** owner request 2026-11-21
 - **Run:** `/sdd "SL-59: lesson KPI strip fills its last row evenly (no empty grey cell when a lesson has 5–7 KPIs), checked at 1440 and 1024 px on all 17 lessons"`
+
+### SL-60 · Log channel under 5 % p95 overhead
+
+- **Outcome:** The opt-in `frankenphp` log channel costs less than 5 % extra p95 on a request that logs one entry, on worker mode, measured again with `bench/log-overhead.sh` (BR-21), with every entry unchanged; if the target cannot be met, the miss and the share taken by `frankenphp_log()` are recorded and the threshold stays.
+- **Entry point:** `bench/log-overhead.sh`
+- **Size:** M
+- **BRs:** BR-21, BR-26, BR-27
+- **Depends on:** SL-16
+- **Blocked by:** none
+- **Status:** specced
+- **Spec:** spec-20261121-1905-log-channel-overhead
+- **Source:** owner request 2026-11-21 (SL-16 NFR-2 miss, +8 %)
+- **Run:** `/sdd spec-20261121-1905-log-channel-overhead`
