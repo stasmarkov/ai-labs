@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Logging;
 
-use Illuminate\Support\Arr;
 use Monolog\Formatter\FormatterInterface;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;
@@ -53,11 +52,7 @@ final class FrankenphpLogHandler extends AbstractProcessingHandler
 
         /** @var array<string, mixed> $entry */
         $entry = $record->formatted;
-        $writer = $this->writer ?? (function_exists('frankenphp_log')
-            ? static function (string $message, int $level, array $context): void {
-                call_user_func('frankenphp_log', $message, $level, self::slogAttributes($context));
-            }
-            : null);
+        $writer = $this->writer ??= $this->resolveDefaultWriter();
 
         if ($writer !== null) {
             $writer($record->message, $this->slogLevel($record->level), [
@@ -78,6 +73,23 @@ final class FrankenphpLogHandler extends AbstractProcessingHandler
     }
 
     /**
+     * Resolved on the first write that has no injected writer; outside FrankenPHP the entry goes to stderr, and
+     * function_exists() runs again on each write, which is the cheap case.
+     *
+     * @return (callable(string, int, array<string, mixed>): void)|null
+     */
+    private function resolveDefaultWriter(): ?callable
+    {
+        if (! function_exists('frankenphp_log')) {
+            return null;
+        }
+
+        return static function (string $message, int $level, array $context): void {
+            frankenphp_log($message, $level, self::slogAttributes($context));
+        };
+    }
+
+    /**
      * frankenphp_log() hands the context to Go's slog, and FrankenPHP 1.13 turns a nested PHP array into an ordered map
      * that slog prints as {"Map": {...}, "Order": [...]}. Flat dotted keys (request.request_id, context.user.id) print as
      * plain JSON attributes; empty arrays carry nothing and are left out.
@@ -87,7 +99,25 @@ final class FrankenphpLogHandler extends AbstractProcessingHandler
      */
     public static function slogAttributes(array $context): array
     {
-        return array_filter(Arr::dot($context), static fn (mixed $value): bool => $value !== []);
+        $flat = [];
+        self::flatten($context, '', $flat);
+
+        return array_filter($flat, static fn (mixed $value): bool => $value !== []);
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $values
+     * @param  array<array-key, mixed>  $flat
+     */
+    private static function flatten(array $values, string $prefix, array &$flat): void
+    {
+        foreach ($values as $key => $value) {
+            if (is_array($value) && $value !== []) {
+                self::flatten($value, $prefix.$key.'.', $flat);
+            } else {
+                $flat[$prefix.$key] = $value;
+            }
+        }
     }
 
     /**

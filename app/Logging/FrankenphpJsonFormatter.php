@@ -21,6 +21,10 @@ final class FrankenphpJsonFormatter extends NormalizerFormatter
 
     private const int MAX_TRACE_FRAMES = 20;
 
+    private const int MAX_MEMOIZED_KEYS = 1024;
+
+    private const int MAX_MEMOIZED_KEY_LENGTH = 64;
+
     /**
      * A normalized key (lowercase, "-" and camelCase turned into "_") is sensitive when it equals one of these or ends
      * with one. "token" is a plain suffix, so access_token and csrftoken match while tokens, tokens_in, prompt_tokens
@@ -30,6 +34,9 @@ final class FrankenphpJsonFormatter extends NormalizerFormatter
         'password', 'passwd', 'secret', 'token', 'authorization', 'api_key', 'apikey', 'access_key', 'private_key',
         'cookie', 'bearer',
     ];
+
+    /** @var array<string, bool> */
+    private array $sensitiveKeys = [];
 
     public function __construct()
     {
@@ -118,6 +125,25 @@ final class FrankenphpJsonFormatter extends NormalizerFormatter
     }
 
     private function isSensitive(string $key): bool
+    {
+        if (isset($this->sensitiveKeys[$key])) {
+            return $this->sensitiveKeys[$key];
+        }
+
+        $sensitive = $this->matchesSensitiveSuffix($key);
+
+        if (strlen($key) <= self::MAX_MEMOIZED_KEY_LENGTH) {
+            if (count($this->sensitiveKeys) >= self::MAX_MEMOIZED_KEYS) {
+                $this->sensitiveKeys = [];
+            }
+
+            $this->sensitiveKeys[$key] = $sensitive;
+        }
+
+        return $sensitive;
+    }
+
+    private function matchesSensitiveSuffix(string $key): bool
     {
         $key = strtolower(str_replace('-', '_', (string) preg_replace('/(?<=[a-z0-9])(?=[A-Z])/', '_', $key)));
 
