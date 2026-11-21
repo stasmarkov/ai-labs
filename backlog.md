@@ -813,3 +813,16 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Spec:** spec-20261120-2106-reference-guide-lessons
 - **Source:** owner request 2026-11-20
 - **Run:** `/sdd "SL-58: scene lessons for the reference-only guides (semantic, photo-search, similar-photos, photo-duplicates, describe, prompts, playground, guards, run-log, logs-restart, worker-dx), grouped into lessons of 8 to 13 steps from committed measurements; each turns its reference topics into a lesson topic (BR-26, BR-27)."`
+
+### SL-59 · Even KPI rows in scene lessons
+
+- **Outcome:** The KPI strip of a lesson step picks its columns from the number of values (up to four in one row; 5 → 3 + 2, 6 → 3 + 3, 7 → 4 + 3) and lets a shorter last row stretch, so no empty grey cell shows. Checked on every step of all 17 lessons at 1440 and 1024 px.
+- **Entry point:** `/ai/learn`
+- **Size:** XS (trivial route, no spec)
+- **BRs:** none
+- **Depends on:** SL-58
+- **Blocked by:** none
+- **Status:** shipped
+- **Spec:** none
+- **Source:** owner request 2026-11-21
+- **Run:** `/sdd "SL-59: lesson KPI strip fills its last row evenly (no empty grey cell when a lesson has 5–7 KPIs), checked at 1440 and 1024 px on all 17 lessons"`
