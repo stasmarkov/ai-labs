@@ -100,3 +100,22 @@ Reading of runs 1 and 2 together: the off side moves a little with host load, th
 slog output, whose tail grows when threads contend for CPU, while the PHP side is about 5 us per entry. Neither run
 decides AC-2; the verdict needs a run on an idle host. Status: the code change is output-neutral and merged, the
 measurement is pending.
+
+## Bench run 3 and an A/B against the old code (2026-11-22): the change is reverted
+
+- Run 3, SL-60 code (commit 0b1b569), `bench/results/restart/2026-11-22/log-overhead.json`: channel off p95 9.94 ms,
+  on 20.88 ms, difference 109.9 %. The unrelated Node test process was still at about 99 % CPU.
+- Right after, the same bench on a temporary local branch with the logging code from before SL-60 (commit efa909c's
+  `app/Logging`; branch deleted after the run), `log-overhead-ab-before.json`: channel off p95 11.09 ms, on 11.06 ms,
+  difference -0.3 %, under the same kind of load.
+
+Three runs of the new code (+83.5 %, +43.5 %, +109.9 %) against one run of the old code (-0.3 %) on the same host on
+the same days point at the SL-60 change, not the host, even though the profile could not show why (the PHP side got
+cheaper; both versions call the same `frankenphp_log()` with the same attributes). The old run's -0.3 % is also far
+from SL-16's +8 %, so the host's state matters a lot and no single run is conclusive.
+
+Decision (self-decided, standing approval): revert `app/Logging` to the code before SL-60 on master, because the only
+same-conditions comparison favours it and the PHP-side saving (about 2.5 us per entry) is too small to be worth a
+risk of this size. The characterization tests stay (they were green on the old code and still are); the memo-cap test
+is removed with the memo. Still open: a clean A/B on an idle host (old and new code alternated, two runs each) to find
+the cause, and the AC-2 verdict. NFR-1 is not met by any run of this slice.

@@ -207,59 +207,6 @@ it('AC-3 MNC-1 pins the slog level mapping', function (): void {
     }
 });
 
-it('AC-3 MNC-1 caps the sensitive key memo at 1024 keys without changing the output', function (): void {
-    $formatter = new FrankenphpJsonFormatter;
-
-    foreach ([[0, 600], [600, 1200]] as [$from, $to]) {
-        $flood = [];
-        for ($i = $from; $i < $to; $i++) {
-            $flood[$i % 2 === 0 ? "key_$i" : "key_{$i}_token"] = $i;
-        }
-        $formatter->format(new LogRecord(
-            datetime: new DateTimeImmutable('2026-11-21 10:11:12', new DateTimeZone('UTC')),
-            channel: 'frankenphp',
-            level: Level::Info,
-            message: 'flood',
-            context: $flood,
-            extra: [],
-        ));
-    }
-
-    $memo = (new ReflectionProperty($formatter, 'sensitiveKeys'))->getValue($formatter);
-    // The 1025th distinct key resets the memo, so it holds the newest keys: key_1024 .. key_1199.
-    expect($memo)->toHaveCount(176)
-        ->toHaveKey('key_1199_token')
-        ->toHaveKey('key_1024')
-        ->not->toHaveKey('key_1023_token')
-        ->not->toHaveKey('key_0');
-
-    [$record] = characterizationRecord();
-
-    expect($formatter->format($record)['context'])->toBe((new FrankenphpJsonFormatter)->format($record)['context']);
-
-    $late = $formatter->format(new LogRecord(
-        datetime: new DateTimeImmutable('2026-11-21 10:11:12', new DateTimeZone('UTC')),
-        channel: 'frankenphp',
-        level: Level::Info,
-        message: 'late',
-        context: ['key_1199_token' => 'x', 'key_1198' => 'y'],
-        extra: [],
-    ));
-    expect($late['context'])->toBe(['key_1199_token' => '[redacted]', 'key_1198' => 'y']);
-
-    $longKey = str_repeat('k', 65).'_token';
-    $long = $formatter->format(new LogRecord(
-        datetime: new DateTimeImmutable('2026-11-21 10:11:12', new DateTimeZone('UTC')),
-        channel: 'frankenphp',
-        level: Level::Info,
-        message: 'long',
-        context: [$longKey => 'x'],
-        extra: [],
-    ));
-    expect($long['context'])->toBe([$longKey => '[redacted]'])
-        ->and((new ReflectionProperty($formatter, 'sensitiveKeys'))->getValue($formatter))->not->toHaveKey($longKey);
-});
-
 it('MNC-1 slogAttributes keeps colliding dotted keys and their order as Arr::dot did', function (): void {
     expect(FrankenphpLogHandler::slogAttributes(['a.b' => 1, 'a' => ['b' => []]]))->toBe([])
         ->and(array_keys(FrankenphpLogHandler::slogAttributes(['a' => ['b' => [], 'c' => 2], 'a.b' => 1])))->toBe(['a.b', 'a.c']);
