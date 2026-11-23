@@ -180,6 +180,21 @@ it('NFR-2 AC-8 refuses a cross-site write with 403 after the local gate and befo
     $this->postJson(PLAYGROUND_PROMPTS_URL, ['name' => 'second', 'system_prompt' => 'Write.'], ['Sec-Fetch-Site' => 'same-origin'])->assertCreated();
 });
 
+it('refuses a cross-site read of the stored prompts and runs with 403, and still answers same-site reads', function (): void {
+    $crossSite = ['Sec-Fetch-Site' => 'cross-site'];
+    $id = $this->postJson(PLAYGROUND_PROMPTS_URL, ['name' => 'writer', 'system_prompt' => 'Write.'])->assertCreated()->json('id');
+    $runId = (string) Str::uuid7();
+
+    $this->getJson(PLAYGROUND_PROMPTS_URL, $crossSite)->assertForbidden();
+    $this->getJson(PLAYGROUND_PROMPTS_URL.'/'.$id, $crossSite)->assertForbidden();
+    $this->getJson(PLAYGROUND_RUNS_URL, $crossSite)->assertForbidden();
+    $this->getJson(PLAYGROUND_RUNS_URL.'/'.$runId, $crossSite)->assertForbidden();
+
+    $this->getJson(PLAYGROUND_PROMPTS_URL, ['Sec-Fetch-Site' => 'same-origin'])->assertOk()->assertJsonCount(1);
+    $this->getJson(PLAYGROUND_PROMPTS_URL.'/'.$id)->assertOk();
+    $this->getJson(PLAYGROUND_RUNS_URL)->assertOk();
+});
+
 it('NFR-2 runs a comparison with 200 and the run shape, and calls each target once', function (): void {
     $calls = 0;
     PlaygroundAgent::fake(function () use (&$calls): TextResponse {

@@ -82,16 +82,16 @@ Route::get('/api/research/{id}', ShowResearchRunController::class)
     ->whereUuid('id')
     ->middleware('throttle:research-read')
     ->name('research.show');
-Route::prefix('api/playground')->middleware(EnsureLocalLab::class)->group(function (): void {
+// The stored prompts and runs are the developer's own data, and api/* answers CORS with a wildcard origin, so reads are
+// refused cross-site like writes.
+Route::prefix('api/playground')->middleware([EnsureLocalLab::class, RefuseCrossSiteRequests::class])->group(function (): void {
     Route::get('/prompts', ListPlaygroundPromptsController::class)->name('playground.prompts.index');
     Route::get('/prompts/{id}', ShowPlaygroundPromptController::class)->whereNumber('id')->name('playground.prompts.show');
-    Route::middleware(RefuseCrossSiteRequests::class)->group(function (): void {
-        Route::post('/prompts', CreatePlaygroundPromptController::class)->name('playground.prompts.store');
-        Route::post('/prompts/{id}/versions', AddPlaygroundVersionController::class)->whereNumber('id')->name('playground.versions.store');
-        Route::delete('/prompts/{id}', DeletePlaygroundPromptController::class)->whereNumber('id')->name('playground.prompts.destroy');
-    });
+    Route::post('/prompts', CreatePlaygroundPromptController::class)->name('playground.prompts.store');
+    Route::post('/prompts/{id}/versions', AddPlaygroundVersionController::class)->whereNumber('id')->name('playground.versions.store');
+    Route::delete('/prompts/{id}', DeletePlaygroundPromptController::class)->whereNumber('id')->name('playground.prompts.destroy');
     Route::post('/runs', RunPlaygroundController::class)
-        ->middleware([RefuseCrossSiteRequests::class, 'throttle:playground-run', LimitCloudAi::class.':playground'])
+        ->middleware(['throttle:playground-run', LimitCloudAi::class.':playground'])
         ->name('playground.runs.store');
     Route::get('/runs', ListPlaygroundRunsController::class)->name('playground.runs.index');
     Route::get('/runs/{id}', ShowPlaygroundRunController::class)->whereUuid('id')->name('playground.runs.show');
