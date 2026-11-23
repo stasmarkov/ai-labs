@@ -117,3 +117,5 @@
 - [x] 16. Run the MNC-4 check that Task 8 left unrun: asset fingerprint and dependency diff (laravel)
   Covers: MNC-4
   - [x] 16.1 **Verify**: after `ddev npm run build`, `bench/asset-fingerprint.sh` prints `app-DNob7CFE.css` and `app-PTzu1QaN.js` (as in `manual-test.md#step-11`). `git diff --stat master -- composer.json composer.lock package.json package-lock.json` prints nothing.
+
+- Clean-tree bench after the review fix pass: after commit ffe9e70, `bench/run.sh ping --quick` exited 0 on frankenphp.
