@@ -839,3 +839,16 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **Spec:** spec-20261121-1905-log-channel-overhead
 - **Source:** owner request 2026-11-21 (SL-16 NFR-2 miss, +8 %)
 - **Run:** `/sdd spec-20261121-1905-log-channel-overhead`
+
+### SL-61 · Fallback to a smaller local model
+
+- **Outcome:** Per text feature, a smaller model in the same Ollama (`qwen3:0.6b`) answers when the main model is unreachable, missing, errors, times out or gives no first token within a budget; the run row names both models and the reason; the lab shows it; `llm:bench --only=fallback` measures the fault matrix, busy describes at 4 and 16 parallel and the fallback's eval quality (Q-04).
+- **Entry point:** `llm:bench --only=fallback`, any text feature in `/ai`
+- **Size:** L
+- **BRs:** BR-21, BR-26, BR-27, BR-91
+- **Depends on:** SL-28, SL-52
+- **Blocked by:** none
+- **Status:** specced
+- **Spec:** spec-20261123-1440-local-model-fallback
+- **Source:** owner request 2026-11-23 (Q-04 answer of 2026-11-05)
+- **Run:** `/sdd spec-20261123-1440-local-model-fallback`
