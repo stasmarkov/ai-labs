@@ -53,6 +53,27 @@ final readonly class LlmSpeedBench
     }
 
     /**
+     * The names of the models the server has pulled, from /api/tags.
+     *
+     * @return list<string>
+     */
+    public function installed(): array
+    {
+        try {
+            $models = (array) $this->client()->get($this->url('/api/tags'))->throw()->json('models', []);
+        } catch (ConnectionException) {
+            throw LlmBenchException::unreachable();
+        } catch (RequestException $e) {
+            throw LlmBenchException::requestFailed('/api/tags', $e->response->status());
+        }
+
+        return array_values(array_unique(array_filter(array_merge(...array_map(
+            static fn (mixed $entry): array => is_array($entry) ? [$entry['name'] ?? null, $entry['model'] ?? null] : [],
+            $models,
+        )), is_string(...))));
+    }
+
+    /**
      * @param  positive-int  $runs
      * @return array<string, mixed>
      */

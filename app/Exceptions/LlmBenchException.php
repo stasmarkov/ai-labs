@@ -22,4 +22,14 @@ final class LlmBenchException extends RuntimeException
     {
         return new self("Listing {$id} is needed for the describe prompt and does not exist.");
     }
+
+    public static function fallbackModelMissing(string $model): self
+    {
+        return new self("The fallback model {$model} is not installed on the Ollama server. Run `ollama pull {$model}` on the host; the bench does not pull models.");
+    }
+
+    public static function evalFailed(string $feature, string $model): self
+    {
+        return new self("The {$feature} eval of {$model} did not finish and left no result.");
+    }
 }

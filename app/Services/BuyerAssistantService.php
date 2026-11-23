@@ -7,10 +7,12 @@ namespace App\Services;
 use App\Ai\AiRunRecorder;
 use App\Ai\AssistantProtocol;
 use App\Ai\BuyerAssistantAgent;
+use App\Ai\LocalFallback;
 use App\Ai\SseEventsResponse;
 use App\DTOs\DocsChatTurn;
 use App\Exceptions\ProviderNotConfiguredException;
 use Illuminate\Contracts\Support\Responsable;
+use Laravel\Ai\Responses\StreamableAgentResponse;
 
 final readonly class BuyerAssistantService
 {
@@ -72,7 +74,9 @@ final readonly class BuyerAssistantService
             return new SseEventsResponse([$refusal]);
         }
 
-        $stream = $agent->stream($question)->usingProtocol(new AssistantProtocol($recorder));
+        $stream = app(LocalFallback::class)
+            ->stream($agent->fallbackPolicy(), $agent->modelName(), fn (?string $model): StreamableAgentResponse => $agent->stream($question, model: $model))
+            ->usingProtocol(new AssistantProtocol($recorder));
         $recorder->annotate($stream->invocationId, [], origin: self::ORIGIN_API, historyTurns: $history === [] ? null : count($history));
 
         return $stream;

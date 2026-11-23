@@ -10,6 +10,7 @@ import LabTeach from '../../components/LabTeach.vue';
 import type { Teach } from '../../components/LabTeach.vue';
 import LabButton from '../../components/LabButton.vue';
 import LabMetric from '../../components/LabMetric.vue';
+import LabFallbackNote from '../../components/LabFallbackNote.vue';
 import LabProviderSelect from '../../components/LabProviderSelect.vue';
 import type { ProviderOption } from '../../components/LabProviderSelect.vue';
 import LabTag from '../../components/LabTag.vue';
@@ -70,6 +71,8 @@ interface RunRow {
     tokens_out: number | null;
     latency_ms: number;
     status: string;
+    fallback_from_model: string | null;
+    fallback_reason: string | null;
 }
 
 interface Body {
@@ -450,6 +453,7 @@ onBeforeUnmount(() => {
                     <LabMetric label="Latency" :value="run.latency_ms" unit="ms" />
                     <LabMetric label="Status" :value="run.status" />
                 </dl>
+                <LabFallbackNote v-if="run" :model="run.model" :from-model="run.fallback_from_model" :reason="run.fallback_reason" />
             </section>
         </div>
     </Teleport>

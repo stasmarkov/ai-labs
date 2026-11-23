@@ -17,6 +17,8 @@ final readonly class AiRunSummary
         public int $latencyMs,
         public string $status,
         public string $createdAt,
+        public ?string $fallbackFromModel = null,
+        public ?string $fallbackReason = null,
     ) {}
 
     /**
@@ -35,6 +37,8 @@ final readonly class AiRunSummary
             'latency_ms' => $this->latencyMs,
             'status' => $this->status,
             'created_at' => $this->createdAt,
+            'fallback_from_model' => $this->fallbackFromModel,
+            'fallback_reason' => $this->fallbackReason,
         ];
     }
 }

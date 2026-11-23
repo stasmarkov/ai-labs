@@ -71,18 +71,32 @@ return [
         'describe' => [
             'provider' => env('AI_DESCRIBE_PROVIDER') ?: null,
             'model' => env('AI_DESCRIBE_MODEL') ?: null,
+            // Smaller model on the same local provider that answers when the main model fails; an empty value turns it off.
+            'fallback_model' => env('AI_DESCRIBE_FALLBACK_MODEL', 'qwen3:0.6b'),
+            // Milliseconds to the first token before the main model counts as busy; empty means only errors trigger.
+            'fallback_after_ms' => filled(env('AI_DESCRIBE_FALLBACK_AFTER_MS')) ? (int) env('AI_DESCRIBE_FALLBACK_AFTER_MS') : null,
         ],
         'nl-search' => [
             'provider' => env('AI_NL_SEARCH_PROVIDER') ?: null,
             'model' => env('AI_NL_SEARCH_MODEL') ?: null,
+            // Smaller model on the same local provider that answers when the main model fails; an empty value turns it off.
+            'fallback_model' => env('AI_NL_SEARCH_FALLBACK_MODEL', 'qwen3:0.6b'),
         ],
         'docs-answer' => [
             'provider' => env('AI_DOCS_ANSWER_PROVIDER') ?: null,
             'model' => env('AI_DOCS_ANSWER_MODEL') ?: null,
+            // Smaller model on the same local provider that answers when the main model fails; an empty value turns it off.
+            'fallback_model' => env('AI_DOCS_ANSWER_FALLBACK_MODEL', 'qwen3:0.6b'),
+            // Milliseconds to the first token before the main model counts as busy; empty means only errors trigger.
+            'fallback_after_ms' => filled(env('AI_DOCS_ANSWER_FALLBACK_AFTER_MS')) ? (int) env('AI_DOCS_ANSWER_FALLBACK_AFTER_MS') : null,
         ],
         'assistant' => [
             'provider' => env('AI_ASSISTANT_PROVIDER') ?: null,
             'model' => env('AI_ASSISTANT_MODEL') ?: null,
+            // Smaller model on the same local provider that answers when the main model fails; an empty value turns it off.
+            'fallback_model' => env('AI_ASSISTANT_FALLBACK_MODEL', 'qwen3:0.6b'),
+            // Milliseconds to the first token before the main model counts as busy; empty means only errors trigger.
+            'fallback_after_ms' => filled(env('AI_ASSISTANT_FALLBACK_AFTER_MS')) ? (int) env('AI_ASSISTANT_FALLBACK_AFTER_MS') : null,
         ],
         'rag-grader' => [
             'provider' => env('AI_RAG_GRADER_PROVIDER') ?: null,
@@ -91,6 +105,10 @@ return [
         'moderation' => [
             'provider' => env('AI_MODERATION_PROVIDER') ?: null,
             'model' => env('AI_MODERATION_MODEL') ?: null,
+            // Smaller model on the same local provider that answers when the main model fails. Off by default: the small
+            // model has no calibrated threshold in ai.moderation.thresholds and no committed eval, so turn it on only
+            // after both exist. There is no first-token budget here: a non-streamed call has no first token.
+            'fallback_model' => env('AI_MODERATION_FALLBACK_MODEL') ?: null,
         ],
         'research' => [
             'provider' => env('AI_RESEARCH_PROVIDER') ?: null,

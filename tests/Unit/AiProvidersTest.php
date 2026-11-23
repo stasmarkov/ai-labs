@@ -156,3 +156,15 @@ it('MNC-1 forFeature accepts a configured fake outside local and testing but rej
         ->and(providers()->enabledTextProviders())->toBe(['ollama'])
         ->and(fn () => providers()->forFeature('describe', 'fake-instant'))->toThrow(ProviderNotEnabledException::class);
 });
+
+it('MNC-2 keeps the main choice when a fallback model is configured', function (): void {
+    config([
+        'ai.default' => 'ollama',
+        'ai.features.describe.fallback_model' => 'qwen3:0.6b',
+        'ai.features.describe.fallback_after_ms' => 2000,
+    ]);
+
+    expect(providers()->forFeature('describe'))->toEqual(new ProviderChoice('ollama', 'qwen3.5:9b', 'ollama'))
+        ->and(providers()->forFeature('describe', 'fake-stream')->provider)->toBe('fake-stream')
+        ->and(providers()->effective('describe')->choice->model)->toBe('qwen3.5:9b');
+});

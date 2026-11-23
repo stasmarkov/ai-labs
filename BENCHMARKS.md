@@ -1435,6 +1435,17 @@ The describe loop used qwen3.5:9b, ran through warm-up and all repeats, and comp
 
 I measured two local models the way a user feels them: time to first token, writing speed and what happens under load. A first run reported a first token in 46 ms; the number was wrong because the server cached the repeated prompt, and a unique start per request gave 286 ms for qwen3.5:9b and 429 ms for gemma4:12b, both writing about 52 tokens per second. Then I opened 16 streams at once: no stream failed, but the median one waited 31 seconds for its first byte and then wrote at full speed, because the server answers one request at a time. The answer to "how many users can it carry" is "one at a time, and the queue is the cost". The bigger surprise was the rest of the site: with only 4 describe streams open, search p95 on the worker servers went from 64 ms to 2.7 s, because the 4 streams held all 4 PHP workers, while classic FrankenPHP with more threads only slowed from 132 to 237 ms. I also had to correct two of my own readings: a per-stream rate that measured the queue, and a context check that said "not truncated" when the count was above the window.
 
+## Local model fallback (SL-61)
+
+`ddev artisan llm:bench --only=fallback --models=<main>` measures the fallback to a smaller local model (`qwen3:0.6b` by default) and writes `bench/results/llm-fallback/<date>/run.json`. The run needs a quiet host: the file records the load average at the start and the end, and the guide numbers read the newest file by pointer. No run is committed yet, so the figures on `/ai/guides/local-models` show "not measured yet" and this section has no table.
+
+What the run measures, and the budget each part is read against:
+
+- **Fault matrix.** The SL-28 faults (server unreachable, model missing, 1 s timeout) at the four entry points with the fallback on, each row with the answering model, the reason and the SL-28 time beside it. NFR-1: the time to a fallback answer is under 2 s plus the small model's own first-token time.
+- **Busy describes.** Describe streams at 1, 4 and 16 parallel (default budget 2000 ms), without and with the budget (1 warm-up, 3 repeats, the median): first-token p50 and p95, the share answered by the fallback and the failed count.
+- **No added latency.** NFR-2: describe first-token p50 at 1 parallel without a fault or a budget hit stays at or under 296 ms and its p95 within the SL-28 p95 plus the run's own spread, or the difference is explained.
+- **Quality.** The NL search and moderation evals on the small model, next to the main model's committed figures.
+
 ## Metrics during slow I/O (2026-11-16)
 
 The slow-I/O scenarios of [Slow I/O and the health check](#slow-io-and-the-health-check-2026-11-03) were run again on the three FrankenPHP modes, with Prometheus and Grafana watching (SL-15). Prometheus scrapes the web container's port 9180 (`/metrics`) every second ([`prometheus.yml.template`](.ddev/metrics/prometheus.yml.template)). The provisioned dashboard ([`frankenphp.json`](.ddev/metrics/grafana/dashboards/frankenphp.json)) shows requests per second, p50 and p95, busy and total threads, busy, ready and total workers, queue depth, memory and status codes. How to read the panels: [I-11 of the learning guide](docs/learning-guide.md#i-11-metrics-watching-the-thread-pool) and `/ai/guides/metrics`.

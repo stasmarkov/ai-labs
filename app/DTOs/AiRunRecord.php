@@ -35,5 +35,7 @@ final readonly class AiRunRecord
         public ?bool $validationFailed = null,
         /** @var list<AiToolStepRecord> */
         public array $toolSteps = [],
+        public ?string $fallbackFromModel = null,
+        public ?string $fallbackReason = null,
     ) {}
 }

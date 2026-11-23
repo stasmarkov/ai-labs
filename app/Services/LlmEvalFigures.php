@@ -29,6 +29,26 @@ final readonly class LlmEvalFigures
     }
 
     /**
+     * The same two figures from a run file that is not in the committed folders, for one model; null when the file has
+     * no report for the model.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{json_valid: float|int|null, accuracy: float|int|null, accuracy_metric: string|null}|null
+     */
+    public function fromRunData(string $feature, array $data, string $model): ?array
+    {
+        $report = $this->report($data, $model);
+
+        if ($report === null) {
+            return null;
+        }
+
+        [$validity, $accuracy, $metric] = $this->extract($feature, $report);
+
+        return ['json_valid' => $validity, 'accuracy' => $accuracy, 'accuracy_metric' => $metric];
+    }
+
+    /**
      * @return array{json_valid: float|int|null, accuracy: float|int|null, accuracy_metric: string|null, source: string|null, date: string|null, reason?: string}
      */
     private function figure(string $feature, string $model): array

@@ -8,6 +8,7 @@ use App\Ai\AiRunRecorder;
 use App\Ai\CanaryGenerator;
 use App\Ai\DocsAnswerAgent;
 use App\Ai\DocsAnswerProtocol;
+use App\Ai\LocalFallback;
 use App\Ai\OutputGuard;
 use App\Ai\SseEventsResponse;
 use App\DTOs\DocsAnswerPlan;
@@ -24,6 +25,7 @@ use App\Exceptions\DocsSearchUnavailableException;
 use App\Exceptions\ProviderNotConfiguredException;
 use Closure;
 use Illuminate\Contracts\Support\Responsable;
+use Laravel\Ai\Responses\StreamableAgentResponse;
 use Laravel\Ai\Streaming\Events\Error;
 use Laravel\Ai\Streaming\Events\StreamEnd;
 use Laravel\Ai\Streaming\Events\TextDelta;
@@ -96,7 +98,9 @@ final readonly class DocsAnswerService
         }
 
         $recorder = app(AiRunRecorder::class);
-        $stream = $plan->agent->stream($plan->agent->promptFor($question, $plan->sources))
+        $prompt = $plan->agent->promptFor($question, $plan->sources);
+        $stream = app(LocalFallback::class)
+            ->stream($plan->agent->fallbackPolicy(), $plan->agent->modelName(), fn (?string $model): StreamableAgentResponse => $plan->agent->stream($prompt, model: $model))
             ->usingProtocol(new DocsAnswerProtocol(
                 $recorder,
                 $plan->sources,
@@ -342,6 +346,10 @@ final readonly class DocsAnswerService
         $recorder = app(AiRunRecorder::class);
 
         return function (string $invocationId, string $answer, array $citedIds) use ($question, $plan, $startedAt, $recorder): void {
+            if ($recorder->answeredByFallback($invocationId)) {
+                return;
+            }
+
             $this->cache->store(new DocsCacheCandidate(
                 question: $question,
                 vector: $plan->vector,

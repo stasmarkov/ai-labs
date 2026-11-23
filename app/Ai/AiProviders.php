@@ -37,6 +37,9 @@ final readonly class AiProviders
     public const ADMIN_ASSISTANT = 'admin-assistant';
 
     /** Text features whose default model is the provider's vision model, when its entry names one. */
+    /** Features that stream, so a first-token budget means something. */
+    private const STREAMED_FALLBACK_FEATURES = ['describe', 'docs-answer', 'assistant'];
+
     private const VISION_FEATURES = ['photo-vision'];
 
     /** Features whose model may be chosen per request by the lab selector; the rest always run as configured. */
@@ -235,6 +238,25 @@ final readonly class AiProviders
     public function effective(string $feature): ResolvedChoice
     {
         return $this->resolveConfigured($feature);
+    }
+
+    /**
+     * The fallback of a feature, resolved after the main choice (BR-91): off unless the main provider is a local Ollama
+     * entry, a model is configured and it differs from the main model. Without a main choice the effective one is used.
+     * The first-token budget applies only to the streamed features; a non-streamed call has no first token.
+     */
+    public function fallbackPolicy(string $feature, ?ProviderChoice $main = null): FallbackPolicy
+    {
+        $main ??= $this->effective($feature)->choice;
+        $model = config("ai.features.{$feature}.fallback_model");
+
+        if ($this->kindOf($feature) !== 'text' || $main->driver !== 'ollama' || ! is_string($model) || $model === '' || $model === $main->model) {
+            return FallbackPolicy::off();
+        }
+
+        $afterMs = in_array($feature, self::STREAMED_FALLBACK_FEATURES, true) ? (int) config("ai.features.{$feature}.fallback_after_ms") : 0;
+
+        return new FallbackPolicy($model, $afterMs > 0 ? $afterMs : null);
     }
 
     /**

@@ -69,7 +69,9 @@ it('AC-1 the overview shows models, Ollama status, capabilities and recent runs'
                 ->where('ttft_ms', null)
                 ->where('latency_ms', 525)
                 ->where('status', 'completed')
-                ->has('created_at'))
+                ->has('created_at')
+                ->where('fallback_from_model', null)
+                ->where('fallback_reason', null))
             ->where('recentRuns.19.invocation_id', 'run-6'));
 });
 

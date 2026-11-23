@@ -6,6 +6,7 @@ export default { layout: LabLayout };
 
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { fallbackReasonLabel } from '../../components/LabFallbackNote.vue';
 import LabStatusDot from '../../components/LabStatusDot.vue';
 import LabTag from '../../components/LabTag.vue';
 
@@ -30,6 +31,8 @@ interface Run {
     latency_ms: number;
     status: 'completed' | 'cached' | 'failed' | 'refused' | 'no_context';
     created_at: string;
+    fallback_from_model: string | null;
+    fallback_reason: string | null;
 }
 
 defineProps<{
@@ -140,7 +143,10 @@ function show(value: number | null): string {
                     <tr v-for="run in recentRuns" :key="run.invocation_id" class="border-b border-rule">
                         <td class="py-2 pr-4">{{ run.agent }}</td>
                         <td class="py-2 pr-4">{{ run.provider }}</td>
-                        <td class="py-2 pr-4">{{ run.model }}</td>
+                        <td class="py-2 pr-4">
+                            {{ run.model }}
+                            <span v-if="run.fallback_from_model" class="text-muted" :title="`fell back from ${run.fallback_from_model}`">(fallback: {{ fallbackReasonLabel(run.fallback_reason) }})</span>
+                        </td>
                         <td class="py-2 pr-4 text-right">{{ show(run.tokens_in) }}</td>
                         <td class="py-2 pr-4 text-right">{{ show(run.tokens_out) }}</td>
                         <td class="py-2 pr-4 text-right">{{ show(run.ttft_ms) }}</td>

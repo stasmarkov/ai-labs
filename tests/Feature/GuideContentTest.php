@@ -905,3 +905,40 @@ it('C-13 every lesson a guide links to is a playable lesson of the course', func
 
     expect($linked)->toContain('running-models/one-model-many-users');
 });
+
+it('AC-8 the local-models and providers guides explain the local fallback, its trigger reasons and its limits', function (): void {
+    $local = mb_strtolower(implode("\n", guideTexts(app(GuideRepository::class)->find('local-models'))));
+    $providers = mb_strtolower(implode("\n", guideTexts(app(GuideRepository::class)->find('providers'))));
+
+    foreach (['fallback_model', 'fallback_after_ms', 'unreachable', 'model_missing', 'server_error', 'timeout', 'busy', 'first token', 'never falls back', 'cloud', 'qwen3:0.6b'] as $needle) {
+        expect($local)->toContain($needle);
+    }
+
+    expect($providers)->toContain('fallback_model')
+        ->and($providers)->toContain('local');
+
+    $this->withoutVite();
+    $this->get('/ai/guides/local-models')->assertOk();
+    $this->get('/ai/guides/providers')->assertOk();
+});
+
+it('AC-8 the local-models guide Numbers tab reads the fallback figures by file pointer, or shows the pending note until the run exists', function (): void {
+    $rendered = app(GuideRenderer::class)->render('local-models');
+    $fallback = array_values(array_filter($rendered['numbers'], fn (array $number): bool => str_starts_with($number['label'], 'Fallback')));
+
+    expect($fallback)->not->toBeEmpty();
+
+    if ((glob(base_path('bench/results/llm-fallback/*/run.json')) ?: []) === []) {
+        foreach ($fallback as $number) {
+            expect($number['value'])->toBe(GuideFacts::PENDING_TEXT);
+        }
+    }
+});
+
+it('AC-8 the learning guide and the backlog describe the fallback and its numbers file', function (): void {
+    $guide = (string) file_get_contents(base_path('docs/learning-guide.md'));
+
+    foreach (['fallback_model', 'fallback_after_ms', 'llm:bench --only=fallback', 'bench/results/llm-fallback'] as $needle) {
+        expect($guide)->toContain($needle);
+    }
+});

@@ -848,7 +848,7 @@ Build order: SL-01 → {SL-02, SL-03, SL-05} → SL-04 → SL-06 → SL-07 → S
 - **BRs:** BR-21, BR-26, BR-27, BR-91
 - **Depends on:** SL-28, SL-52
 - **Blocked by:** none
-- **Status:** specced
+- **Status:** built, idle-host bench pending
 - **Spec:** spec-20261123-1440-local-model-fallback
 - **Source:** owner request 2026-11-23 (Q-04 answer of 2026-11-05)
 - **Run:** `/sdd spec-20261123-1440-local-model-fallback`

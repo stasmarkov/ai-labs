@@ -32,6 +32,17 @@ trait UsesActiveProvider
     }
 
     /**
+     * Whether and how this agent's feature falls back to the smaller local model, resolved after the provider and model
+     * this run uses (BR-91).
+     */
+    public function fallbackPolicy(): FallbackPolicy
+    {
+        $choice = app(AiProviders::class)->configured($this->feature(), $this->providerOverride);
+
+        return app(AiProviders::class)->fallbackPolicy($this->feature(), new ProviderChoice($choice->provider, $this->modelName(), $choice->driver));
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function providerOptions(Lab|string $provider): array

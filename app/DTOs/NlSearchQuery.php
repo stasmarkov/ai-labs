@@ -12,5 +12,6 @@ final readonly class NlSearchQuery
         public int $perPage = 20,
         public int $page = 1,
         public ?string $provider = null,
+        public bool $fallback = true,
     ) {}
 }

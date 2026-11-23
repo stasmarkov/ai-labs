@@ -136,7 +136,7 @@ final class NlEvalCommand extends Command
     private function search(NlSearchService $search, NlEvalQuery $query, string $model): NlEvalOutcome
     {
         try {
-            $result = $search->search(new NlSearchQuery($query->query, $model, 1));
+            $result = $search->search(new NlSearchQuery($query->query, $model, 1, fallback: false));
 
             return new NlEvalOutcome(NlEvalOutcome::COMPLETED, $result->extracted, $result->unsupported, $result->invocationId);
         } catch (NlSearchInvalidException $e) {

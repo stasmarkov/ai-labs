@@ -6,7 +6,10 @@ namespace App\Services;
 
 use App\Ai\AiProviders;
 use App\Ai\AiRunRecorder;
+use App\Ai\FallbackPolicy;
+use App\Ai\FallbackTrail;
 use App\Ai\ListingFilterAgent;
+use App\Ai\LocalFallback;
 use App\DTOs\ListingFilter;
 use App\DTOs\NlSearchQuery;
 use App\DTOs\NlSearchResult;
@@ -82,8 +85,16 @@ final readonly class NlSearchService
             throw new NlSearchRefusedException($pattern, $invocationId);
         }
 
+        $trail = new FallbackTrail;
+        $policy = $query->fallback ? $agent->fallbackPolicy() : FallbackPolicy::off();
+        $mainModel = $agent->modelName();
+
         try {
-            $response = $this->timing->measure('model', fn () => $agent->prompt($query->text, model: $agent->hasProviderOverride() ? null : $query->model));
+            $response = $this->timing->measure('model', fn () => app(LocalFallback::class)->prompt(
+                $policy,
+                fn (?string $model) => $agent->prompt($query->text, model: $model ?? ($agent->hasProviderOverride() ? null : $query->model)),
+                $trail,
+            ));
             $structured = $response->structured;
 
             if ($structured === []) {
@@ -92,7 +103,7 @@ final readonly class NlSearchService
         } catch (ProviderNotConfiguredException $e) {
             throw $e;
         } catch (Throwable $e) {
-            $recorder->recordRun('failed', class_basename($agent), $agent->providerName(), $agent->modelName(), $agent->promptVersion(), $this->elapsedMs($startedAt), null, exception: $e);
+            $recorder->recordRun('failed', class_basename($agent), $agent->providerName(), $trail->modelOr($mainModel), $agent->promptVersion(), $this->elapsedMs($startedAt), null, exception: $e, fallbackFromModel: $trail->fromModel($mainModel), fallbackReason: $trail->reason);
 
             throw NlSearchUnavailableException::because($e);
         }
@@ -109,7 +120,7 @@ final readonly class NlSearchService
             'completed',
             class_basename($agent),
             $agent->providerName(),
-            $agent->modelName(),
+            $trail->modelOr($mainModel),
             $agent->promptVersion(),
             $this->elapsedMs($startedAt),
             null,
@@ -117,6 +128,8 @@ final readonly class NlSearchService
             tokensOut: $response->usage->outputTokens,
             invocationId: $response->invocationId,
             validationFailed: $failed,
+            fallbackFromModel: $trail->fromModel($mainModel),
+            fallbackReason: $trail->reason,
         );
 
         if ($failed) {
@@ -132,7 +145,7 @@ final readonly class NlSearchService
 
         $page = $this->timing->measure('db', fn () => $this->listings->search(ListingFilter::fromValidated($data, $query->perPage, $query->page)));
 
-        return new NlSearchResult($query->text, $agent->modelName(), $extracted, $unsupported, $filters, $page, $invocationId);
+        return new NlSearchResult($query->text, $trail->modelOr($mainModel), $extracted, $unsupported, $filters, $page, $invocationId);
     }
 
     /**

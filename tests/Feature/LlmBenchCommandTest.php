@@ -10,6 +10,8 @@ use App\Services\ListingDetailService;
 use App\Services\LlmEvalFigures;
 use App\Support\LlmBenchRedactor;
 use App\Support\LlmContextBench;
+use App\Support\LlmFailoverBench;
+use App\Support\LlmFallbackBench;
 use App\Support\LlmSpeedBench;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
@@ -690,4 +692,202 @@ test('NFR-2 the redactor covers bearer tokens, key headers, key query parameters
 test('NFR-2 the redactor keeps the harmless parts of a message', function (): void {
     expect(LlmBenchRedactor::clean('GET http://u:p4ss@host.test:11434/api/chat?model=qwen3.5:9b answered 500'))
         ->toBe('GET http://host.test:11434/api/chat?model=qwen3.5:9b answered 500');
+});
+
+/**
+ * Plays an Ollama that has the small model installed. The main model is unreachable, missing, slow or fine according to
+ * $main; the fallback model always answers, streamed as text or as the JSON the structured features read.
+ *
+ * @param  array<string, string>  $behaviour  model => 'ok' | 'missing' | 'slow'
+ */
+function llmFallbackFake(array $behaviour = [], bool $installed = true, ?array &$seen = null): void
+{
+    $seen = [];
+    Http::fake(function (Request $request) use ($behaviour, $installed, &$seen) {
+        $url = $request->url();
+        $model = (string) ($request['model'] ?? '');
+        $seen[] = ['url' => $url, 'model' => $model];
+
+        if (str_contains($url, '/api/version')) {
+            return Http::response(['version' => '0.40.16']);
+        }
+
+        if (str_contains($url, '/api/tags')) {
+            return Http::response(['models' => $installed ? [['name' => 'qwen3:0.6b', 'model' => 'qwen3:0.6b'], ['name' => 'qwen3.5:9b', 'model' => 'qwen3.5:9b']] : [['name' => 'qwen3.5:9b', 'model' => 'qwen3.5:9b']]]);
+        }
+
+        if (str_contains($url, '/api/ps')) {
+            return Http::response(['models' => []]);
+        }
+
+        if (str_contains($url, '/api/generate')) {
+            return Http::response(['done' => true]);
+        }
+
+        if (str_contains($url, '127.0.0.1:9')) {
+            throw new ConnectionException('cURL error 7: Failed to connect to 127.0.0.1 port 9 after 0 ms: Connection refused');
+        }
+
+        $kind = $behaviour[$model] ?? 'ok';
+
+        if ($kind === 'missing' || $model === 'llm-bench-missing:0') {
+            return Http::response(['error' => "model '{$model}' not found"], 404);
+        }
+
+        if ($kind === 'slow') {
+            usleep(150_000);
+        }
+
+        $done = ['model' => $model, 'message' => ['role' => 'assistant', 'content' => ''], 'done' => true, 'prompt_eval_count' => 7, 'eval_count' => 5, 'eval_duration' => 1_000_000_000];
+
+        if (($request['stream'] ?? true) === false) {
+            $json = ['make' => null, 'model' => null, 'city' => null, 'fuel' => null, 'min_year' => null, 'max_price_eur' => null, 'unsupported' => []];
+
+            return Http::response(['model' => $model, 'message' => ['role' => 'assistant', 'content' => json_encode($json)]] + $done);
+        }
+
+        return Http::response(json_encode(['model' => $model, 'message' => ['role' => 'assistant', 'content' => 'A fine car'], 'done' => false])."\n".json_encode($done)."\n", 200, ['Content-Type' => 'application/x-ndjson']);
+    });
+}
+
+/**
+ * The bench of the fallback with its three outside edges replaced: the parallel runner (one after the other), the eval
+ * runner (scripted run files) and the host load reading.
+ *
+ * @param  list<array{0: float, 1: float, 2: float}>  $loads
+ */
+function llmFallbackBind(array $loads = [[0.4, 0.5, 0.6], [1.2, 0.9, 0.7]], ?array &$evalCalls = null): void
+{
+    $evalCalls = [];
+    $queue = $loads;
+    app()->bind(LlmFallbackBench::class, function () use (&$evalCalls, &$queue): LlmFallbackBench {
+        return new LlmFallbackBench(
+            app(LlmSpeedBench::class),
+            app(LlmFailoverBench::class),
+            app(AiRunRepositoryInterface::class),
+            app(LlmEvalFigures::class),
+            parallel: fn (array $tasks): array => array_map(fn (Closure $task): mixed => $task(), $tasks),
+            eval: function (string $feature, string $model) use (&$evalCalls): array {
+                $evalCalls[] = [$feature, $model];
+
+                return $feature === 'nl-search'
+                    ? ['models' => [['model' => $model, 'queries' => 40, 'exact_match' => ['count' => 10, 'rate' => 0.25], 'validation_422' => ['count' => 4], 'failed' => 0, 'refused' => 0]]]
+                    : ['summary' => [$model => ['json_valid_first_try' => ['rate' => 0.8], 'best_f1' => ['accuracy' => 0.7]]]];
+            },
+            load: function () use (&$queue): array {
+                return array_shift($queue) ?? [0.0, 0.0, 0.0];
+            },
+        );
+    });
+}
+
+function llmFallbackRun(): array
+{
+    $files = File::glob(llmBenchRoot().'/llm-fallback/*/run.json');
+
+    return json_decode((string) File::get($files[0]), true);
+}
+
+test('AC-7 the fallback bench writes the fault matrix with the model that answered, the busy runs, the evals and the host load', function (): void {
+    llmFallbackFake();
+    llmFallbackBind(evalCalls: $evalCalls);
+
+    $this->artisan('llm:bench', ['--models' => 'qwen3.5:9b', '--only' => 'fallback', '--parallel' => '2', '--budget-ms' => 500, '--runs' => 1])->assertSuccessful();
+
+    $run = llmFallbackRun();
+
+    expect($run['metadata'])->toMatchArray(['main_model' => 'qwen3.5:9b', 'fallback_model' => 'qwen3:0.6b', 'budget_ms' => 500, 'parallel' => [2], 'repeats' => 3])
+        ->and($run['metadata']['host_load'])->toBe(['start' => ['1m' => 0.4, '5m' => 0.5, '15m' => 0.6], 'end' => ['1m' => 1.2, '5m' => 0.9, '15m' => 0.7]])
+        ->and(array_keys($run['faults']))->toBe(['unreachable', 'model_missing', 'timeout'])
+        ->and($run['faults']['model_missing']['describe'])->toMatchArray(['status' => 200, 'answered_by_model' => 'qwen3:0.6b', 'fallback_from_model' => LlmFailoverBench::MISSING_MODEL, 'fallback_reason' => 'model_missing'])
+        ->and($run['faults']['unreachable']['describe']['answered_by_model'])->toBeNull()
+        ->and($run['fallback_speed']['ttft_ms'])->not->toBeNull()
+        ->and(array_keys($run['busy']))->toBe([2])
+        ->and(array_keys($run['busy']['2']))->toBe(['without_budget', 'with_budget'])
+        ->and($run['busy']['2']['with_budget'])->toMatchArray(['budget_ms' => 500, 'requests' => 2, 'failed' => 0, 'fallback_share' => 0])
+        ->and($run['busy']['2']['with_budget']['repeats'])->toHaveCount(3)
+        ->and($run['busy']['2']['without_budget']['budget_ms'])->toBeNull()
+        ->and($run['busy']['2']['with_budget']['ttft_ms']['p50'])->toBeInt()
+        ->and($run['evals']['nl-search']['fallback'])->toMatchArray(['json_valid' => 0.9, 'accuracy' => 0.25])
+        ->and($run['evals']['moderation']['fallback'])->toMatchArray(['json_valid' => 0.8, 'accuracy' => 0.7])
+        ->and($run['evals']['nl-search']['main'])->toHaveKey('json_valid')
+        ->and($evalCalls)->toBe([['nl-search', 'qwen3:0.6b'], ['moderation', 'qwen3:0.6b']]);
+});
+
+test('AC-7 NFR-2 the fallback bench defaults to a 2000 ms budget and 1, 4 and 16 parallel streams with a one-stream figure without budget', function (): void {
+    llmFallbackFake();
+    llmFallbackBind();
+
+    $this->artisan('llm:bench', ['--models' => 'qwen3.5:9b', '--only' => 'fallback', '--runs' => 1])->assertSuccessful();
+
+    $run = llmFallbackRun();
+
+    expect($run['metadata']['budget_ms'])->toBe(2000)
+        ->and($run['metadata']['parallel'])->toBe([1, 4, 16])
+        ->and(array_keys($run['busy']))->toBe([1, 4, 16])
+        ->and($run['busy']['1']['without_budget']['ttft_ms']['p50'])->toBeInt();
+});
+
+test('AC-7 a busy main model that misses the budget is answered by the fallback and counted in the share', function (): void {
+    llmFallbackFake(['qwen3.5:9b' => 'slow']);
+    llmFallbackBind();
+
+    $this->artisan('llm:bench', ['--models' => 'qwen3.5:9b', '--only' => 'fallback', '--parallel' => '2', '--budget-ms' => 50, '--runs' => 1])->assertSuccessful();
+
+    $busy = llmFallbackRun()['busy']['2'];
+
+    expect($busy['with_budget']['fallback_share'])->toEqual(1.0)
+        ->and($busy['with_budget']['failed'])->toBe(0)
+        ->and($busy['without_budget']['fallback_share'])->toEqual(0.0)
+        ->and($busy['without_budget']['ttft_ms']['p50'])->toBeGreaterThanOrEqual(150);
+});
+
+test('AC-7 the fault matrix names the SL-28 row of the same fault and entry point', function (): void {
+    llmFallbackFake();
+    llmFallbackBind();
+    File::ensureDirectoryExists(llmBenchRoot().'/llm/2026-11-13');
+    File::put(llmBenchRoot().'/llm/2026-11-13/run.json', json_encode(['models' => ['qwen3.5:9b' => ['failover' => ['model_missing' => ['describe' => ['status' => 200, 'time_to_fail_ms' => 31, 'answered' => false]]]]]]));
+
+    $this->artisan('llm:bench', ['--models' => 'qwen3.5:9b', '--only' => 'fallback', '--parallel' => '1', '--runs' => 1])->assertSuccessful();
+
+    $faults = llmFallbackRun()['faults'];
+
+    expect($faults['model_missing']['describe']['sl28'])->toBe(['status' => 200, 'time_to_fail_ms' => 31, 'source' => 'bench/results/llm/2026-11-13/run.json'])
+        ->and($faults['model_missing']['nl-search']['sl28'])->toBeNull();
+});
+
+test('AC-7 a fallback model that is not installed is one clear error and nothing is measured or written', function (): void {
+    llmFallbackFake(installed: false, seen: $seen);
+    llmFallbackBind();
+
+    $this->artisan('llm:bench', ['--models' => 'qwen3.5:9b', '--only' => 'fallback'])
+        ->expectsOutputToContain('ollama pull qwen3:0.6b')
+        ->assertFailed();
+
+    expect(File::glob(llmBenchRoot().'/llm-fallback/*/run.json'))->toBe([])
+        ->and(collect($seen)->contains(fn (array $call): bool => str_ends_with($call['url'], '/api/chat')))->toBeFalse();
+});
+
+test('AC-7 the fallback section runs alone and an existing result file is not overwritten without force', function (): void {
+    llmFallbackFake();
+    llmFallbackBind();
+
+    $this->artisan('llm:bench', ['--models' => 'qwen3.5:9b', '--only' => 'fallback,speed'])->expectsOutputToContain('alone')->assertFailed();
+
+    $options = ['--models' => 'qwen3.5:9b', '--only' => 'fallback', '--parallel' => '1', '--runs' => 1];
+    $this->artisan('llm:bench', $options)->assertSuccessful();
+    $this->artisan('llm:bench', $options)->assertFailed();
+    $this->artisan('llm:bench', [...$options, '--force' => true])->assertSuccessful();
+});
+
+test('AC-7 no key or key-bearing url reaches the fallback run file', function (): void {
+    config(['ai.providers.ollama.key' => 'sk-test-secret-123']);
+    llmFallbackFake();
+    llmFallbackBind();
+
+    $this->artisan('llm:bench', ['--models' => 'qwen3.5:9b', '--only' => 'fallback', '--parallel' => '1', '--runs' => 1])->doesntExpectOutputToContain('p4ss')->assertSuccessful();
+
+    $file = (string) File::get(File::glob(llmBenchRoot().'/llm-fallback/*/run.json')[0]);
+
+    expect($file)->not->toContain('sk-test-secret-123')->not->toContain('p4ss');
 });

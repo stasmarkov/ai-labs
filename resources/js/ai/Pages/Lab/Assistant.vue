@@ -11,6 +11,7 @@ import LabEventRow from '../../components/LabEventRow.vue';
 import LabTeach from '../../components/LabTeach.vue';
 import type { Teach } from '../../components/LabTeach.vue';
 import LabMetric from '../../components/LabMetric.vue';
+import LabFallbackNote from '../../components/LabFallbackNote.vue';
 import LabProviderSelect from '../../components/LabProviderSelect.vue';
 import type { ProviderOption } from '../../components/LabProviderSelect.vue';
 import LabTag from '../../components/LabTag.vue';
@@ -29,6 +30,8 @@ interface RunRow {
     ttft_ms: number | null;
     latency_ms: number;
     status: string;
+    fallback_from_model: string | null;
+    fallback_reason: string | null;
 }
 
 interface Refusal {
@@ -442,6 +445,7 @@ onBeforeUnmount(() => {
                     <LabMetric label="Status" :value="turn.run.status" />
                     <LabMetric label="Prompt" :value="turn.run.prompt_version" />
                 </dl>
+                <LabFallbackNote v-if="turn.run" :model="turn.run.model" :from-model="turn.run.fallback_from_model" :reason="turn.run.fallback_reason" />
             </details>
         </li>
     </ol>

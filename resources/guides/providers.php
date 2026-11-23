@@ -34,8 +34,8 @@ return [
         ],
         [
             'title' => 'Options travel with the call, and every run names its provider and model',
-            'body' => 'The entry\'s request options (thinking on or off, how long the model stays loaded, context size), the token cap and the timeout are read from the active entry on every call, so a change in the environment is enough. The run row stores the provider and the model that actually answered, so a later comparison never has to guess which setup produced a number.',
-            'snippet' => ['App\Ai\UsesActiveProvider::providerOptions', 'App\Ai\AiRunRecorder::started'],
+            'body' => 'The entry\'s request options (thinking on or off, how long the model stays loaded, context size), the token cap and the timeout are read from the active entry on every call, so a change in the environment is enough. The run row stores the provider and the model that actually answered, so a later comparison never has to guess which setup produced a number. A local text feature can also name a `fallback_model` (and an optional `fallback_after_ms`): a smaller local model that answers when the main one fails, and then the row names both models and the reason. A cloud provider never falls back to a local model, and a local one never falls back to a cloud provider. The local models guide has the reasons and the numbers.',
+            'snippet' => ['App\Ai\UsesActiveProvider::providerOptions', 'App\Ai\AiRunRecorder::started', 'App\Ai\AiProviders::fallbackPolicy'],
         ],
     ],
     'failures' => [

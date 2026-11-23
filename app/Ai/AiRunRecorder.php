@@ -21,11 +21,23 @@ final class AiRunRecorder
 
     private const MAX_REASON_LENGTH = 120;
 
-    /** @var array<string, array{agent: string, provider: string, model: string, promptVersion: ?string, inputs: ?int, startedAt: int, firstTokenAt: ?int, retrieved: ?list<int>, cited: ?list<int>, origin: ?string, historyTurns: ?int}> */
+    /** @var array<string, array{agent: string, provider: string, model: string, promptVersion: ?string, inputs: ?int, startedAt: int, firstTokenAt: ?int, retrieved: ?list<int>, cited: ?list<int>, origin: ?string, historyTurns: ?int, fallbackFrom: ?string, fallbackReason: ?string}> */
     private array $runs = [];
 
-    /** @var array<string, array{retrieved: list<int>, cited: ?list<int>, origin: ?string, historyTurns: ?int}> */
+    /** @var array<string, array{retrieved: ?list<int>, cited: ?list<int>, origin: ?string, historyTurns: ?int}> */
     private array $pendingAnnotations = [];
+
+    /** @var array<string, Throwable|null> runs that may still fall back, by invocation id; the failure is kept back until the caller decides */
+    private array $heldFailures = [];
+
+    /** @var array<string, int> request start of the main attempt, by the invocation id of the fallback attempt that takes over */
+    private array $carriedStarts = [];
+
+    /** @var array<string, true> invocation ids of runs answered by the fallback model; the newest few are kept */
+    private array $fallbackRuns = [];
+
+    /** @var array<string, array{from: string, reason: string}> fallbacks noted before the run started, by invocation id */
+    private array $pendingFallbacks = [];
 
     /** @var array<string, list<AiToolStepRecord>> tool calls seen so far, by invocation id; written with the run row */
     private array $toolSteps = [];
@@ -33,6 +45,8 @@ final class AiRunRecorder
     private ?string $embeddingsAgent = null;
 
     private const KEPT_LATENCIES = 50;
+
+    private const KEPT_FALLBACK_RUNS = 50;
 
     /** @var array<string, int> latency_ms written with a finished run, by invocation id; the newest few are kept */
     private array $finishedLatencies = [];
@@ -69,14 +83,96 @@ final class AiRunRecorder
             'model' => $model,
             'promptVersion' => $promptVersion,
             'inputs' => $inputs,
-            'startedAt' => hrtime(true),
+            'startedAt' => $this->carriedStarts[$invocationId] ?? hrtime(true),
             'firstTokenAt' => null,
             'retrieved' => $this->pendingAnnotations[$invocationId]['retrieved'] ?? null,
             'cited' => $this->pendingAnnotations[$invocationId]['cited'] ?? null,
             'origin' => $this->pendingAnnotations[$invocationId]['origin'] ?? null,
             'historyTurns' => $this->pendingAnnotations[$invocationId]['historyTurns'] ?? null,
+            'fallbackFrom' => $this->pendingFallbacks[$invocationId]['from'] ?? null,
+            'fallbackReason' => $this->pendingFallbacks[$invocationId]['reason'] ?? null,
         ];
-        unset($this->pendingAnnotations[$invocationId]);
+        unset($this->pendingAnnotations[$invocationId], $this->pendingFallbacks[$invocationId], $this->carriedStarts[$invocationId]);
+    }
+
+    /**
+     * Keeps the failure of a run that may still fall back: its failed row is written only when releaseFailure() says the
+     * request ends with it.
+     */
+    public function holdFailure(string $invocationId): void
+    {
+        $this->heldFailures[$invocationId] = null;
+    }
+
+    /**
+     * Ends the hold. A failure kept back meanwhile is written now; a run that completed has none and nothing happens.
+     */
+    public function releaseFailure(string $invocationId): void
+    {
+        $exception = $this->heldFailures[$invocationId] ?? null;
+        unset($this->heldFailures[$invocationId]);
+
+        if ($exception !== null) {
+            $this->failed($invocationId, $exception);
+        }
+    }
+
+    /**
+     * Hands a request over from its failed main attempt to the fallback attempt: the main run writes no row, and the
+     * fallback run takes its annotations and its start time, so the one row tells the whole story and its latency is
+     * what the visitor waited.
+     */
+    public function fallbackTo(string $mainInvocationId, string $fallbackInvocationId, string $mainModel, string $reason): void
+    {
+        $run = $this->runs[$mainInvocationId] ?? null;
+        $pending = $this->pendingAnnotations[$mainInvocationId] ?? null;
+
+        unset($this->runs[$mainInvocationId], $this->heldFailures[$mainInvocationId], $this->pendingAnnotations[$mainInvocationId], $this->toolSteps[$mainInvocationId]);
+
+        $source = $run ?? $pending;
+
+        if ($source !== null) {
+            $this->pendingAnnotations[$fallbackInvocationId] = [
+                'retrieved' => $source['retrieved'],
+                'cited' => $source['cited'],
+                'origin' => $source['origin'],
+                'historyTurns' => $source['historyTurns'],
+            ];
+        }
+
+        if ($run !== null) {
+            $this->carriedStarts[$fallbackInvocationId] = $run['startedAt'];
+        }
+
+        $this->fallbackFrom($fallbackInvocationId, $mainModel, $reason);
+        $this->fallbackRuns = array_slice([...$this->fallbackRuns, $fallbackInvocationId => true], -self::KEPT_FALLBACK_RUNS, null, true);
+    }
+
+    /**
+     * Whether the run was answered by the fallback model; such answers are never stored in an answer cache.
+     */
+    public function answeredByFallback(string $invocationId): bool
+    {
+        return isset($this->fallbackRuns[$invocationId]);
+    }
+
+    /**
+     * Notes that the run was answered by the fallback model: the row keeps the main model and the trigger. A run that has
+     * not started yet takes them when it does.
+     */
+    public function fallbackFrom(string $invocationId, string $mainModel, string $reason): void
+    {
+        $mainModel = mb_substr($mainModel, 0, 255);
+        $reason = mb_substr($reason, 0, 20);
+
+        if (! isset($this->runs[$invocationId])) {
+            $this->pendingFallbacks[$invocationId] = ['from' => $mainModel, 'reason' => $reason];
+
+            return;
+        }
+
+        $this->runs[$invocationId]['fallbackFrom'] = $mainModel;
+        $this->runs[$invocationId]['fallbackReason'] = $reason;
     }
 
     /**
@@ -220,6 +316,8 @@ final class AiRunRecorder
         ?string $origin = null,
         ?int $inputs = null,
         ?array $toolSteps = null,
+        ?string $fallbackFromModel = null,
+        ?string $fallbackReason = null,
     ): string {
         $invocationId ??= (string) Str::uuid();
 
@@ -243,6 +341,8 @@ final class AiRunRecorder
             origin: $origin,
             validationFailed: $validationFailed,
             toolSteps: $toolSteps ?? $this->takeToolSteps($invocationId),
+            fallbackFromModel: $fallbackFromModel,
+            fallbackReason: $fallbackReason,
         )));
 
         return $invocationId;
@@ -303,6 +403,12 @@ final class AiRunRecorder
 
     public function failed(string $invocationId, Throwable $exception): void
     {
+        if (array_key_exists($invocationId, $this->heldFailures)) {
+            $this->heldFailures[$invocationId] = $exception;
+
+            return;
+        }
+
         $this->finish(
             $invocationId,
             'failed',
@@ -356,6 +462,8 @@ final class AiRunRecorder
             historyTurns: $run['historyTurns'],
             stoppedAfterMs: $stopped && $run['firstTokenAt'] !== null ? $this->millisecondsSince($run['firstTokenAt'], $endedAt) : null,
             toolSteps: $this->takeToolSteps($invocationId),
+            fallbackFromModel: $run['fallbackFrom'],
+            fallbackReason: $run['fallbackReason'],
         )));
     }
 

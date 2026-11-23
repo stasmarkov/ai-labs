@@ -70,12 +70,12 @@ final class ModerationAgent implements Agent, HasProviderOptions, HasStructuredO
 
     /**
      * Sends the listing and the computed facts as two JSON blocks. JSON encoding with escaped tags keeps the listing text
-     * from closing its block, so it stays data.
+     * from closing its block, so it stays data. A model replaces the agent's own for this call (the fallback).
      */
-    public function classify(ModerationInput $input, ModerationFactsResult $facts): StructuredAgentResponse
+    public function classify(ModerationInput $input, ModerationFactsResult $facts, ?string $model = null): StructuredAgentResponse
     {
         /** @var StructuredAgentResponse */
-        return $this->prompt($this->promptFor($input, $facts));
+        return $this->prompt($this->promptFor($input, $facts), model: $model);
     }
 
     public function promptFor(ModerationInput $input, ModerationFactsResult $facts): string

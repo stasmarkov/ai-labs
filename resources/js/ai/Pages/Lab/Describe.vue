@@ -12,6 +12,7 @@ import type { Teach } from '../../components/LabTeach.vue';
 import LabButton from '../../components/LabButton.vue';
 import LabEventRow from '../../components/LabEventRow.vue';
 import LabMetric from '../../components/LabMetric.vue';
+import LabFallbackNote from '../../components/LabFallbackNote.vue';
 import LabTextInput from '../../components/LabTextInput.vue';
 import LabProviderSelect from '../../components/LabProviderSelect.vue';
 import type { ProviderOption } from '../../components/LabProviderSelect.vue';
@@ -36,6 +37,8 @@ interface RunRow {
     status: string;
     error_message: string | null;
     created_at: string;
+    fallback_from_model: string | null;
+    fallback_reason: string | null;
 }
 
 const props = defineProps<{
@@ -249,6 +252,7 @@ onBeforeUnmount(() => {
                     <LabMetric label="Status" :value="run.status" />
                     <LabMetric label="Prompt" :value="run.prompt_version" />
                 </dl>
+                <LabFallbackNote v-if="run" :model="run.model" :from-model="run.fallback_from_model" :reason="run.fallback_reason" />
             </section>
         </div>
     </Teleport>

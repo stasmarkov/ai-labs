@@ -58,11 +58,24 @@ final readonly class AiSettingsService
                 'saved' => $savedChoice?->toArray(),
                 'savedProviderEnabled' => $savedChoice === null ? null : $this->providers->isEnabled($savedChoice->provider),
                 'providers' => $this->withCurrentModel($this->options($feature), $effective->choice->provider, $effective->choice->model),
+                'fallback' => $this->fallback($feature),
                 'index' => $kind !== 'text' ? $this->indexStatus($feature, $effective->choice->provider.'/'.$effective->choice->model) : null,
             ];
         }
 
         return $rows;
+    }
+
+    /**
+     * The fallback model and first-token budget of a feature, or null when it has none (read-only on the page).
+     *
+     * @return array{model: string, afterMs: ?int}|null
+     */
+    private function fallback(string $feature): ?array
+    {
+        $policy = $this->providers->fallbackPolicy($feature);
+
+        return $policy->model === null ? null : ['model' => $policy->model, 'afterMs' => $policy->afterMs];
     }
 
     /**

@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Ai\AiRunRecorder;
 use App\Ai\CarDescriptionAgent;
+use App\Ai\LocalFallback;
 use App\Ai\SseProtocol;
 use App\Exceptions\ProviderNotConfiguredException;
 use Laravel\Ai\Responses\StreamableAgentResponse;
@@ -29,8 +30,8 @@ final readonly class ListingDescriptionService
 
         $agent->provider();
 
-        return $agent
-            ->stream($prompt)
+        return app(LocalFallback::class)
+            ->stream($agent->fallbackPolicy(), $agent->modelName(), fn (?string $model): StreamableAgentResponse => $agent->stream($prompt, model: $model))
             ->usingProtocol(new SseProtocol(app(AiRunRecorder::class)));
     }
 }

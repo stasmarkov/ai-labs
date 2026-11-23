@@ -33,6 +33,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $stopped_after_ms
  * @property int|null $tool_steps
  * @property int|null $tool_errors
+ * @property string|null $fallback_from_model
+ * @property string|null $fallback_reason
  */
 #[Fillable([
     'invocation_id', 'agent', 'provider', 'model', 'prompt_version', 'tokens_in', 'tokens_out',
@@ -40,6 +42,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'retrieved_chunk_ids', 'cited_chunk_ids', 'refusal_reason',
     'cache_kind', 'cache_similarity', 'cache_entry_id', 'saved_latency_ms', 'origin',
     'history_turns', 'stopped_after_ms', 'validation_failed', 'tool_steps', 'tool_errors',
+    'fallback_from_model', 'fallback_reason',
 ])]
 class AiRun extends Model
 {

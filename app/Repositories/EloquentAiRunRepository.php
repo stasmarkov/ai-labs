@@ -44,6 +44,8 @@ final readonly class EloquentAiRunRepository implements AiRunRepositoryInterface
                 'history_turns' => $record->historyTurns,
                 'stopped_after_ms' => $record->stoppedAfterMs,
                 'validation_failed' => $record->validationFailed,
+                'fallback_from_model' => $record->fallbackFromModel,
+                'fallback_reason' => $record->fallbackReason,
                 'tool_steps' => $record->toolSteps === [] ? null : count($record->toolSteps),
                 'tool_errors' => $record->toolSteps === [] ? null : count(array_filter($record->toolSteps, fn (AiToolStepRecord $step): bool => ! in_array($step->outcome, ['ok', 'pending', 'confirmed', 'rejected'], true))),
             ]);
@@ -128,6 +130,8 @@ final readonly class EloquentAiRunRepository implements AiRunRepositoryInterface
             latencyMs: $run->latency_ms,
             status: $run->status,
             createdAt: $run->created_at?->utc()->toIso8601String() ?? '',
+            fallbackFromModel: $run->fallback_from_model,
+            fallbackReason: $run->fallback_reason,
         );
     }
 }

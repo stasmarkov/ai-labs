@@ -142,7 +142,7 @@ it('AC-10 a tag is unique per listing and goes with its listing', function (): v
 });
 
 it('MNC-3 the migrations roll back and run again', function (): void {
-    Artisan::call('migrate:rollback', ['--step' => 7, '--force' => true]);
+    Artisan::call('migrate:rollback', ['--step' => 8, '--force' => true]);
 
     expect(Schema::hasTable('listing_tags'))->toBeFalse()
         ->and(Schema::hasColumn('listings', 'title'))->toBeFalse();
@@ -159,5 +159,5 @@ it('MNC-3 the outcome rollback refuses to delete data', function (): void {
     $run = newToolRun();
     insertToolStep($run, 1, 'pending', null);
 
-    expect(fn () => Artisan::call('migrate:rollback', ['--step' => 5, '--force' => true]))->toThrow(RuntimeException::class);
+    expect(fn () => Artisan::call('migrate:rollback', ['--step' => 6, '--force' => true]))->toThrow(RuntimeException::class);
 });

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Ai\AiRunRecorder;
+use App\Ai\FallbackPolicy;
+use App\Ai\FallbackTrail;
+use App\Ai\LocalFallback;
 use App\Ai\ModerationAgent;
 use App\DTOs\ModerationFactsResult;
 use App\DTOs\ModerationInput;
@@ -47,17 +50,32 @@ final readonly class ModerationService
     {
         $facts = $this->facts->compute($input);
         $agent = (new ModerationAgent)->usingProvider($provider)->usingModel($model);
+        $policy = $model === null ? $agent->fallbackPolicy() : FallbackPolicy::off();
+        $mainModel = $agent->modelName();
+        $answeredBy = $mainModel;
         $invocationIds = [];
         $errors = [];
         $attempts = 0;
         $status = ModerationResult::INVALID;
+        $fallbackUsed = null;
 
         while ($attempts < self::MAX_ATTEMPTS) {
             $attempts++;
             $startedAt = hrtime(true);
+            $trail = new FallbackTrail;
 
             try {
-                $response = $agent->classify($input, $facts);
+
+                if ($fallbackUsed !== null) {
+                    // The main model already failed once; a retry goes straight to the fallback model (one fallback per request).
+                    $trail->record((string) $fallbackUsed->model, (string) $fallbackUsed->reason);
+                    $response = $agent->classify($input, $facts, $policy->model);
+                } else {
+                    $response = app(LocalFallback::class)->prompt($policy, fn (?string $fallbackModel) => $agent->classify($input, $facts, $fallbackModel), $trail);
+                }
+
+                $fallbackUsed = $trail->attempted() ? $trail : null;
+                $answeredBy = $trail->modelOr($mainModel);
                 $output = $response->toArray();
 
                 if ($output === []) {
@@ -73,6 +91,7 @@ final readonly class ModerationService
                     $startedAt,
                     exception: $e,
                     validationFailed: $unparsable ? true : null,
+                    trail: $trail,
                 );
 
                 if ($unparsable) {
@@ -98,6 +117,7 @@ final readonly class ModerationService
                 tokensOut: $response->usage->outputTokens,
                 invocationId: $response->invocationId,
                 validationFailed: $invalid,
+                trail: $trail,
             );
 
             if (! $invalid) {
@@ -105,7 +125,7 @@ final readonly class ModerationService
                 $data = $validator->validated();
                 $modelRisk = (float) $data['risk'];
                 [$risk, $reasons, $floors] = $this->applyFloors($modelRisk, array_values($data['reasons']), $facts);
-                $threshold = $this->thresholdFor($agent->modelName());
+                $threshold = $this->thresholdFor($answeredBy);
 
                 return new ModerationResult(
                     ModerationResult::CLASSIFIED,
@@ -116,7 +136,7 @@ final readonly class ModerationService
                     $facts,
                     $threshold,
                     $agent->providerName(),
-                    $agent->modelName(),
+                    $answeredBy,
                     $agent->promptVersion(),
                     $attempts,
                     $invocationIds,
@@ -136,9 +156,9 @@ final readonly class ModerationService
             [],
             null,
             $facts,
-            $this->thresholdFor($agent->modelName()),
+            $this->thresholdFor($answeredBy),
             $agent->providerName(),
-            $agent->modelName(),
+            $answeredBy,
             $agent->promptVersion(),
             $attempts,
             $invocationIds,
@@ -202,12 +222,15 @@ final readonly class ModerationService
         ?string $invocationId = null,
         ?Throwable $exception = null,
         ?bool $validationFailed = null,
+        ?FallbackTrail $trail = null,
     ): string {
+        $mainModel = $agent->modelName();
+
         return $this->recorder->recordRun(
             $status,
             class_basename($agent),
             $agent->providerName(),
-            $agent->modelName(),
+            $trail?->modelOr($mainModel) ?? $mainModel,
             $agent->promptVersion(),
             intdiv(hrtime(true) - $startedAt, 1_000_000),
             null,
@@ -216,6 +239,8 @@ final readonly class ModerationService
             invocationId: $invocationId,
             exception: $exception,
             validationFailed: $validationFailed,
+            fallbackFromModel: $trail?->fromModel($mainModel),
+            fallbackReason: $trail?->reason,
         );
     }
 }

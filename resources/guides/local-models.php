@@ -16,6 +16,7 @@ $latest = static function (string $directory, string $file): ?string {
 $run = $latest('llm', 'run.json') ?? 'llm/missing/run.json';
 $concurrency = $latest('llm-load', 'concurrency.json') ?? 'llm-load/missing/concurrency.json';
 $search = $latest('llm-load', 'search-under-load.json');
+$fallback = $latest('llm-fallback', 'run.json');
 $servers = ['classic frankenphp', 'frankenphp worker', 'frankenphp octane'];
 
 $numbers = [];
@@ -41,6 +42,17 @@ foreach ($servers as $index => $server) {
     $numbers[] = ['label' => "Search p95 without description streams, {$server} (ms)", 'file' => $search, 'path' => "servers.{$index}.without_load.p95_ms"];
     $numbers[] = ['label' => "Search p95 with 4 description streams open, {$server} (ms)", 'file' => $search, 'path' => "servers.{$index}.with_load.p95_ms"];
     $numbers[] = ['label' => "Search p95 change under the streams, {$server} (ms)", 'file' => $search, 'path' => "servers.{$index}.p95_delta_ms"];
+}
+
+$fallbackFigures = [
+    ['Fallback model, time to first token (ms)', 'fallback_speed.ttft_ms.median'],
+    ['Fallback, describe with 16 streams and the budget, time to first token p50 (ms)', 'busy.16.with_budget.ttft_ms.p50'],
+    ['Fallback, share of 16 simultaneous describes answered by the small model with the budget', 'busy.16.with_budget.fallback_share'],
+    ['Fallback, describe with the server unreachable (ms)', 'faults.unreachable.describe.time_to_fail_ms'],
+];
+
+foreach ($fallbackFigures as [$label, $path]) {
+    $numbers[] = $fallback === null ? ['label' => $label, 'pending' => true] : ['label' => $label, 'file' => $fallback, 'path' => $path];
 }
 
 return [
@@ -72,9 +84,15 @@ return [
         ],
         [
             'title' => 'A failed call is logged and masked for the page',
-            'body' => "Every feature has the same failure path: the provider call throws, the run row records a failed status with a redacted message, and the page gets a generic error instead of the provider's text. The failover check sends a real request to each entry point (the description stream, the natural-language search, the moderation endpoint and the assistant) with the server unreachable, with a model that is not pulled and with a one second timeout, and records the status, what the client sees and how long it took to fail. It only measures: no request is redirected to another model.",
+            'body' => "Every feature has the same failure path: the provider call throws, the run row records a failed status with a redacted message, and the page gets a generic error instead of the provider's text. The failover check sends a real request to each entry point (the description stream, the natural-language search, the moderation endpoint and the assistant) with the server unreachable, with a model that is not pulled and with a one second timeout, and records the status, what the client sees and how long it took to fail. With no fallback model set for a feature, it only measures: nothing is redirected.",
             'event' => 'request_failed',
             'snippet' => 'App\Support\LlmFailoverBench::measure',
+        ],
+        [
+            'title' => 'A smaller model on the same server answers when the main one cannot',
+            'body' => "Each text feature has a `fallback_model` (default `qwen3:0.6b`, in the same Ollama; moderation is off until its eval and threshold exist) and, for streamed ones, an optional `fallback_after_ms`. When the main call fails with `unreachable`, `model_missing` (404), `server_error` (a 5xx or overloaded) or `timeout`, the request runs once on the fallback model. A client error is no reason. The run row names the answering model, the main model and the reason.\n\nA stream can fall back only before its first content event. A first token later than `fallback_after_ms` drops the main stream and the fallback answers with the reason `busy`; with no budget a slow model is waited for. If the fallback fails too, the visitor gets the masked error.\n\nThe policy is on only when the main provider is Ollama and the fallback model is set and differs from it, so a cloud model never falls back to a local one, and the reverse never happens. Evals never fall back; a fallback answer stays out of the docs cache.",
+            'event' => 'request_failed',
+            'snippet' => ['App\Ai\FallbackPolicy::reasonFor', 'App\Ai\LocalFallback::stream', 'App\Ai\FallbackPolicy::enabled'],
         ],
     ],
     'failures' => [
@@ -104,6 +122,16 @@ return [
     ],
     'recipes' => [
         [
+            'title' => 'Turn the fallback on or off for one feature',
+            'body' => "Set `AI_DESCRIBE_FALLBACK_MODEL` (or the NL search, docs answer, assistant and moderation siblings) to a pulled model; empty turns it off. `AI_DESCRIBE_FALLBACK_AFTER_MS` (streamed features only) switches when the first token is late. Pull the model first.\n\n**Check:** with the main model stopped, a description still streams and its run row shows the fallback model, the main model and the reason `unreachable`.",
+            'snippet' => 'config/ai.php#provider-ollama',
+        ],
+        [
+            'title' => 'Measure the fallback on your machine',
+            'body' => "Run `llm:bench --only=fallback --models=<main>` on an idle host. Its flags have defaults. It writes `llm-fallback/<date>/run.json`: the fault matrix, the fallback's own speed, busy describes with and without the budget, its eval figures and the host load.\n\n**Check:** every fault row names the model that answered.",
+            'snippet' => 'App\Support\LlmFallbackBench::faults',
+        ],
+        [
             'title' => 'Compare two models on your machine',
             'body' => "Run the bench with the two model names, `llm:bench --models=a,b`, after pulling both. It writes one result file per day with the speed, the memory, the context check, the failover table and the quality figures copied from the latest evals.\n\n**Check:** the summary table has one row per model, and each quality figure names the run it came from.",
             'snippet' => 'App\Support\LlmSpeedBench::measure',
@@ -115,8 +143,8 @@ return [
         ],
         [
             'title' => 'Add a fallback chain',
-            'body' => "The app does not switch models by itself, on purpose: a silent switch would hide the fault and could send a prompt to a paid provider the feature was not configured for. To add one, put the order in the configuration (for example the local model, then a second local model, then nothing), try the next entry only on a transport error or a timeout and never on a rejected answer, log every attempt as its own run row with the provider that answered, and keep the cloud limiter in front of any paid entry.\n\n**Check:** with the first model stopped, the run rows show one failed attempt and one answered by the next entry, and the page shows which model answered.",
-            'snippet' => 'App\Ai\AiProviders::resolve',
+            'body' => "The built-in fallback has one step: a smaller local model. A longer chain, or one ending at a cloud provider, is not built: paying is a decision for a person. To add one, put the order in the configuration, try the next entry only on a transport error, a timeout or a server error, log every attempt as its own run row, and keep the cloud limiter before any paid entry.\n\n**Check:** with the first model stopped, the run rows show one answered by the next entry.",
+            'snippet' => 'App\Ai\AiProviders::fallbackPolicy',
         ],
         [
             'title' => 'Run the smoke tests against a tiny model',
@@ -135,9 +163,14 @@ return [
             'note' => 'The bench strips URL credentials, Authorization values and keys from everything it writes. Committed evaluation results are only read. The normal test run makes no request to Ollama, and the smoke group is skipped unless it is switched on.',
         ],
         [
+            'name' => 'Limits of the small fallback model',
+            'status' => 'guarded',
+            'note' => "1. The small model is weaker: the page keeps answering, at lower quality.\n2. Loading it can push the main model out of memory, so first answers after a fault are slow.\n3. With a budget, late requests go to the small model: load spreads, answers change.",
+        ],
+        [
             'name' => 'Why the site slows while a model answers',
             'status' => 'runbook',
-            'note' => "1. A streamed answer holds one PHP thread for its whole length, and a classic server has a fixed number of them. A few open streams can take all of them, and pages without any AI then wait in the queue.\n2. A worker server keeps fewer, longer-lived processes, and a stream still occupies one for its duration. Measured here, 4 open description streams took all 4 workers: search p95 went from about 64 ms to 2.7 s on both worker servers, while the classic server, with more threads, only slowed from 132 to 237 ms.\n3. The model also uses the machine: memory pressure and a busy GPU or CPU slow the database and the web server running next to it.\n4. To check, run the search benchmark with and without a few open description streams and compare the p95 latency.\n5. To reduce it, keep fewer open streams than workers (or add workers), move long answers off the request workers with a queue and live updates, use a smaller model, or run the model on another machine.",
+            'note' => "1. A streamed answer holds one PHP thread for its whole length, and a classic server has a fixed number. A few open streams can take all of them, and pages without AI then queue.\n2. A worker server keeps fewer, longer-lived processes, and a stream still occupies one for its duration. Measured here, 4 open description streams took all 4 workers: search p95 went from about 64 ms to 2.7 s on both worker servers; the classic server, with more threads, slowed only from 132 to 237 ms.\n3. The model also uses the machine: memory pressure and a busy GPU or CPU slow the database and web server beside it.\n4. To check, run the search benchmark with and without open streams and compare p95.\n5. To reduce it, keep fewer open streams than workers (or add workers), move long answers to a queue with live updates, use a smaller model, or run the model elsewhere.",
         ],
         [
             'name' => 'The model is slow or missing',

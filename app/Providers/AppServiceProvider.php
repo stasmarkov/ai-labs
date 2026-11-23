@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Ai\FirstTokenBudget;
 use App\Contracts\AdminListingRepositoryInterface;
 use App\Contracts\AiSettingsRepositoryInterface;
 use App\Contracts\AiToolStepRepositoryInterface;
@@ -87,6 +88,7 @@ use Illuminate\Queue\Events\Looping;
 use Illuminate\Queue\Events\WorkerStopping;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -151,6 +153,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->markQueueJobExecution();
+
+        $this->app->singleton(FirstTokenBudget::class);
+        Http::globalMiddleware($this->app->make(FirstTokenBudget::class)->middleware());
 
         Model::preventLazyLoading(! $this->app->isProduction());
 

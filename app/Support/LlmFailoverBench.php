@@ -18,7 +18,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * Breaks the local model on purpose and records what each user-facing AI entry point does: the HTTP status, what the
  * client sees, how long the failure takes and whether a failed ai_runs row was written. The requests run in-process
- * through the HTTP kernel with config overrides that are put back afterwards; .env is never touched. No fallback is built.
+ * through the HTTP kernel with config overrides that are put back afterwards; .env is never touched.
+ * The fallback model is off unless the caller gives one.
  */
 final readonly class LlmFailoverBench
 {
@@ -40,12 +41,12 @@ final readonly class LlmFailoverBench
     /**
      * @return array<string, array<string, array<string, mixed>>> fault => entry point => row
      */
-    public function measure(string $model): array
+    public function measure(string $model, ?string $fallbackModel = null): array
     {
         $matrix = [];
 
         foreach (self::FAULTS as $fault) {
-            $matrix[$fault] = $this->fault($fault, $model);
+            $matrix[$fault] = $this->fault($fault, $model, $fallbackModel);
         }
 
         return $matrix;
@@ -54,14 +55,14 @@ final readonly class LlmFailoverBench
     /**
      * @return array<string, array<string, mixed>>
      */
-    private function fault(string $fault, string $model): array
+    private function fault(string $fault, string $model, ?string $fallbackModel): array
     {
         $bodies = $this->bodies();
         $config = (array) config('ai');
         $request = app('request');
 
         try {
-            config($this->overrides($fault, $model));
+            config($this->overrides($fault, $model, $fallbackModel));
             app(AiManager::class)->forgetInstance('ollama');
 
             $rows = [];
@@ -93,7 +94,7 @@ final readonly class LlmFailoverBench
     /**
      * @return array<string, mixed>
      */
-    private function overrides(string $fault, string $model): array
+    private function overrides(string $fault, string $model, ?string $fallbackModel): array
     {
         $overrides = [
             'ai.settings_ui' => false,
@@ -106,6 +107,9 @@ final readonly class LlmFailoverBench
         foreach (['describe', 'nl-search', 'moderation', 'assistant'] as $feature) {
             $overrides["ai.features.{$feature}.provider"] = 'ollama';
             $overrides["ai.features.{$feature}.model"] = $fault === 'model_missing' ? self::MISSING_MODEL : $model;
+            // Without a fallback model this bench measures the failure alone; the fallback bench passes one.
+            $overrides["ai.features.{$feature}.fallback_model"] = $fallbackModel;
+            $overrides["ai.features.{$feature}.fallback_after_ms"] = null;
         }
 
         if ($fault === 'unreachable') {
@@ -174,6 +178,7 @@ final readonly class LlmFailoverBench
         $failed = array_values(array_filter($details, static fn ($detail): bool => $detail->summary->status === 'failed'));
 
         $client = $this->client($response, $body);
+        $answered = collect($details)->first(static fn ($detail): bool => $detail->summary->status === 'completed');
         $stored = array_map(fn (string $id): ?string => $this->runs->storedErrorMessage($id), array_map(static fn ($detail): string => $detail->summary->invocationId, $failed));
         $messages = array_values(array_filter(array_map(static fn (?string $message): ?string => $message === null ? null : LlmBenchRedactor::clean($message), $stored)));
         $redacted = array_values(array_filter($stored)) !== $messages;
@@ -183,6 +188,9 @@ final readonly class LlmFailoverBench
             'client' => $client,
             'answered' => $response->getStatusCode() < 400 && ($client['kind'] === 'json' || $client['event'] === 'none'),
             'time_to_fail_ms' => $elapsedMs,
+            'answered_by_model' => $answered?->summary->model,
+            'fallback_from_model' => $answered?->summary->fallbackFromModel,
+            'fallback_reason' => $answered?->summary->fallbackReason,
             'failed_run_written' => $failed !== [],
             'invocation_ids' => $new,
             'run_error_messages' => $messages,

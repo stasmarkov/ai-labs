@@ -35,6 +35,7 @@ export interface SettingRow {
     };
     saved: { provider: string; model: string } | null;
     savedProviderEnabled: boolean | null;
+    fallback: { model: string; afterMs: number | null } | null;
     providers: SettingProvider[];
     index: SettingIndex | null;
 }
@@ -137,6 +138,13 @@ const errors = computed(() => Object.values(form.errors).filter((error): error i
         <p class="mb-0 mt-2 break-words text-[15px]">
             Using <span class="font-mono">{{ row.effective.provider }}</span> / <span class="font-mono">{{ row.effective.model }}</span>
             <span v-if="modelSourceLabel" class="text-muted" data-testid="model-source"> ({{ modelSourceLabel }})</span>
+        </p>
+        <p v-if="row.fallback" class="mb-0 mt-2 break-words text-[15px]" data-testid="fallback">
+            Fallback <span class="font-mono">{{ row.fallback.model }}</span>
+            <span class="text-muted">
+                on an error<template v-if="row.fallback.afterMs !== null">, or when the first token takes over {{ row.fallback.afterMs }} ms</template>
+                (configuration, read-only)
+            </span>
         </p>
         <p v-if="row.effective.installed === false" role="status" class="mb-0 mt-2 text-[15px] font-medium text-danger">
             Not installed. Pull it with <code class="break-all font-mono text-[13px]">{{ row.effective.pullCommand }}</code>

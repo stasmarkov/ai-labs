@@ -15,6 +15,7 @@ import LabTeach from '../../components/LabTeach.vue';
 import type { Teach } from '../../components/LabTeach.vue';
 import LabButton from '../../components/LabButton.vue';
 import LabMetric from '../../components/LabMetric.vue';
+import LabFallbackNote from '../../components/LabFallbackNote.vue';
 import LabSegmented from '../../components/LabSegmented.vue';
 import LabProviderSelect from '../../components/LabProviderSelect.vue';
 import type { ProviderOption } from '../../components/LabProviderSelect.vue';
@@ -51,6 +52,8 @@ interface RunRow {
     ttft_ms: number | null;
     latency_ms: number;
     status: string;
+    fallback_from_model: string | null;
+    fallback_reason: string | null;
 }
 
 const RUN_LOOKUP_ATTEMPTS = 5;
@@ -348,6 +351,7 @@ function outcomeLabel(outcome: Outcome): string {
                     <LabMetric label="Latency" :value="answer.run.latency_ms" unit="ms" />
                     <LabMetric label="Status" :value="answer.run.status" />
                 </dl>
+                <LabFallbackNote v-if="answer.run" :model="answer.run.model" :from-model="answer.run.fallback_from_model" :reason="answer.run.fallback_reason" />
             </section>
         </section>
     </div>
