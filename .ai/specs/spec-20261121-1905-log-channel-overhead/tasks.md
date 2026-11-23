@@ -19,18 +19,18 @@
 
 ## Phase 3: Measure and document
 
-- [ ] 3. Manual: run `bench/log-overhead.sh` on a clean tree
+- [x] 3. Manual: run `bench/log-overhead.sh` on a clean tree
   Covers: AC-2, NFR-1, NFR-2, MNC-3
-  - [ ] 3.1 **Verify**: `manual-test.md#step-2` passes; new result file committed.
+  - [x] 3.1 **Verify**: run on a clean tree 2026-11-21 (busy host; miss), plus runs 2, 3 and an alternated A/B, all committed under `bench/results/restart/2026-11-2{1,2,3}/`.
 
-- [ ] 4. Point BENCHMARKS, the guide, the lesson and the SL-16 note at the new file (docs)
+- [x] 4. Point BENCHMARKS, the guide, the lesson and the SL-16 note at the new file (docs)
   Covers: AC-4
-  - [ ] 4.1 Before/after in BENCHMARKS; guide numbers and lesson `$overhead` read the new file; text matches the result (met or missed).
-  - [ ] 4.2 **Verify**: `LessonContentTest`, `GuidePageTest` green.
+  - [x] 4.1 Before/after in BENCHMARKS; guide numbers and lesson `$overhead` read the new file; text matches the result (met or missed).
+  - [x] 4.2 **Verify**: `LessonContentTest`, `GuidePageTest` green.
 
-- [ ] 5. Manual: walk manual-test.md
+- [x] 5. Manual: walk manual-test.md
   Covers: MNC-4
-  - [ ] 5.1 **Verify**: every step passes.
+  - [x] 5.1 **Verify**: steps 1 and 2 checked (decisions.md tables; every run reported); step 3: BENCHMARKS lists every run, guide and lesson keep the calm-host file by recorded deviation from AC-4, fingerprint unchanged, no dependency diff.
 
 ## Traceability
 
@@ -55,9 +55,9 @@
 - `bench/log-overhead.sh` (task 3), `bench/asset-fingerprint.sh`
 
 ## Done when
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
 
 ## Phase: Gaps (converge round 1)
 
@@ -80,7 +80,9 @@
 
 ## Phase: Gaps (converge round 2)
 
-- [ ] 10. Record the bench verdict in decisions.md and BENCHMARKS: met or missed, the C-11 `frankenphp_log()` share and the NFR-2 channel-off check (docs)
+- [x] 10. Record the bench verdict in decisions.md and BENCHMARKS: met or missed, the C-11 `frankenphp_log()` share and the NFR-2 channel-off check (docs)
   Covers: AC-2, NFR-1, NFR-2
   - Scope 5 and AC-2 say a miss is written in `decisions.md` and BENCHMARKS with the share taken by `frankenphp_log()`, and C-11 defines that share as its us per entry / total us per entry from the profile, applied to the measured p95 difference and labelled an estimate. NFR-2 (C-10) asks for the new channel-off p95 against 8.55 to 9.28 ms, or an explanation. `decisions.md` stops at task 9 with the per-entry ratio only (about 110 us vs 5.46 us, "the bench in task 3 decides"), and no buildable task writes the verdict: task 3 is the owner's run and only checks it (`manual-test.md#step-2`), and task 4 covers AC-4 (consumers read the new file), not the decisions record or the share figure.
-  - [ ] **Verify**: after task 3, `decisions.md` has a "Task 3: bench verdict" section that names the file printed after "Wrote", quotes `channel_off.p95_ms`, `channel_on.p95_ms`, `difference_percent` and `within_threshold` from it, states whether the channel-off p95 lies within 8.55 to 9.28 ms (or explains why not), and, when `within_threshold` is false, gives the C-11 estimate (share x difference in ms and %) labelled an estimate, keeps the 5 % threshold and the opt-in; BENCHMARKS.md states the same share next to the before/after table; every number matches the committed JSON.
+  - [x] **Verify**: after task 3, `decisions.md` has a "Task 3: bench verdict" section that names the file printed after "Wrote", quotes `channel_off.p95_ms`, `channel_on.p95_ms`, `difference_percent` and `within_threshold` from it, states whether the channel-off p95 lies within 8.55 to 9.28 ms (or explains why not), and, when `within_threshold` is false, gives the C-11 estimate (share x difference in ms and %) labelled an estimate, keeps the 5 % threshold and the opt-in; BENCHMARKS.md states the same share next to the before/after table; every number matches the committed JSON.
+
+Note 2026-11-23: AC-4 deviates by decision (decisions.md): the guide and the lesson keep the 2026-11-17 calm-host file; BENCHMARKS lists every SL-60 run with its load.

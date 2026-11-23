@@ -136,6 +136,7 @@ return [
         ['point' => 'Secrets in messages', 'detail' => 'Redaction checks keys, not the text of the message.', 'tab' => 'failures'],
         ['point' => 'Where the command runs', 'detail' => 'The admin API is on localhost, so run the command inside the web container.', 'tab' => 'failures'],
         ['point' => 'Classic mode', 'detail' => 'It has no workers, so the command only says so.', 'tab' => 'support'],
+        ['point' => 'The channel on a busy machine', 'detail' => 'Almost all of its cost is the write into the server log, not the PHP side, and that write gets much slower when the CPU is shared with other work. Measure it on a quiet host before you turn it on.', 'tab' => 'support'],
     ],
     'elsewhere' => [
         ['domain' => 'Support and incidents', 'problem' => 'A customer reports one slow request and nobody can find it.', 'how' => 'Ask for the request id from the response header and search every log for it.'],

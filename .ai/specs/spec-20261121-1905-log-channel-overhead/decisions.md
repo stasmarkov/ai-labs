@@ -119,3 +119,30 @@ same-conditions comparison favours it and the PHP-side saving (about 2.5 us per 
 risk of this size. The characterization tests stay (they were green on the old code and still are); the memo-cap test
 is removed with the memo. Still open: a clean A/B on an idle host (old and new code alternated, two runs each) to find
 the cause, and the AC-2 verdict. NFR-1 is not met by any run of this slice.
+
+## A/B on 2026-11-23: no regression; the revert is undone; verdict
+
+Alternated runs, two each, files in `bench/results/restart/2026-11-23/` (`ab-summary.txt` has the load before and after
+each run and the busiest processes): old-1 +91.4 %, new-1 +53.6 %, old-2 +12.5 %, new-2 +20.3 %. The host was busy in
+all four (load 3.9 rising to 11 in the first, 12 to 18 in the others; the IDE peaked at about 1 000 % CPU and the Docker
+VM manager at about 260 %). The old code is as noisy as the new one, so the -0.3 % of 2026-11-22 was a fluke and the
+revert of 2026-11-22 was premature: it is undone (`app/Logging` and the memo-cap test are back to commit 0b1b569).
+
+Verdict for AC-2 (miss path, Scope 5): no run of this slice is below 5 %, and none was taken on a calm host. The share
+of `frankenphp_log()` in one entry is about 110 of about 115 us (estimate from the profile: CLI PHP side plus the
+sampled call in worker mode), so PHP-side work cannot bring the channel under 5 %. The threshold stays at 5 %, the
+channel stays opt-in, and the calm-host figure stays +8 % (2026-11-17).
+
+Deviation from AC-4: the guide and the lesson keep reading the 2026-11-17 file, because every SL-60 file was taken on a
+busy host and would show a contention figure as if it were the channel's cost. BENCHMARKS lists every SL-60 run with the
+load next to it.
+
+## Task 3: bench verdict
+
+Per C-1 the first clean-tree run decides: `bench/results/restart/2026-11-21/log-overhead.json` (printed after "Wrote"),
+`channel_off.p95_ms` 10.34273, `channel_on.p95_ms` 18.975288, `difference_percent` 83.5, `within_threshold` false. The
+channel-off p95 is outside 8.55 to 9.28 ms because the host was busy (load 15 to 19, see run 1 above); every later run
+was busy too, and the A/B shows old and new code alike. C-11 estimate: `frankenphp_log()` is about 110 of about 115 us
+of one entry (share about 0.96), so about 8.3 ms of the 8.63 ms (about 80 of the 83.5 %) difference in that run is the
+call itself; an estimate, and one that reflects contention, not the calm-host cost. **AC-2 takes the miss path: the
+5 % threshold stays, the channel stays opt-in.**

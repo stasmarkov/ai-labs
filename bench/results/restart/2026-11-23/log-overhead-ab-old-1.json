@@ -1,0 +1,58 @@
+{
+  "server": "frankenphp-worker",
+  "route": "/debug/log-ping",
+  "commit": "e41eb81",
+  "date": "2026-11-23",
+  "method": "BR-21: warm-up 30 s, measure 60 s, 3 repeats, median",
+  "channel_off": {
+    "log_stack": "single",
+    "p95_ms": 12.088089,
+    "runs": [
+      {
+        "p95_ms": 12.088089,
+        "rps": 6621.018078955186,
+        "p99_ms": 16.230943,
+        "error_percent": 0
+      },
+      {
+        "p95_ms": 11.975164999999999,
+        "rps": 6862.430525382989,
+        "p99_ms": 16.26802,
+        "error_percent": 0
+      },
+      {
+        "p95_ms": 13.261395,
+        "rps": 6356.084985976226,
+        "p99_ms": 18.906957,
+        "error_percent": 0
+      }
+    ]
+  },
+  "channel_on": {
+    "log_stack": "single,frankenphp",
+    "p95_ms": 23.139709,
+    "runs": [
+      {
+        "p95_ms": 23.139709,
+        "rps": 4009.349039035061,
+        "p99_ms": 35.352813,
+        "error_percent": 0
+      },
+      {
+        "p95_ms": 21.799018,
+        "rps": 4304.798486420775,
+        "p99_ms": 32.520485,
+        "error_percent": 0
+      },
+      {
+        "p95_ms": 23.845868,
+        "rps": 3746.5262467987272,
+        "p99_ms": 42.265969,
+        "error_percent": 0
+      }
+    ]
+  },
+  "difference_percent": 91.4,
+  "threshold_percent": 5,
+  "within_threshold": false
+}

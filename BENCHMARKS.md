@@ -1547,6 +1547,21 @@ Channel overhead, worker mode, `/debug/log-ping` (`log-overhead.json`):
 
 The difference is **+8 % p95** (0.71 ms) and about -17 % requests per second. Every repeat with the channel is slower than every repeat without it, so this is not inside the spread. **NFR-2 (< 5 %) is not met.**
 
+**Re-measured in SL-60 (2026-11-21 to 2026-11-23).** SL-60 made the PHP side of an entry cheaper with the same output (about 8.0 to 5.5 us per entry in a CLI profile of 3 x 100 000 entries), and found that the `frankenphp_log()` call itself takes about 110 us per entry on average under load (median 36 us, p95 300 to 455 us; sampled with `hrtime` in worker mode). Every bench run in that slice was taken on a busy host (load average 11 to 25 during the runs: an unrelated test process, the IDE and the Docker VM), so the channel-off p95 was 9.5 to 22 ms instead of about 9 ms:
+
+| Run | Logging code | Off p95 | On p95 | Difference |
+|-----|--------------|---------|--------|------------|
+| 2026-11-21 run 1 | SL-60 | 10.34 ms | 18.98 ms | +83.5 % |
+| 2026-11-21 run 2 | SL-60 | 9.52 ms | 13.65 ms | +43.5 % |
+| 2026-11-22 run 3 | SL-60 | 9.94 ms | 20.88 ms | +109.9 % |
+| 2026-11-22 A/B | before SL-60 | 11.09 ms | 11.06 ms | -0.3 % |
+| 2026-11-23 A/B old-1 | before SL-60 | 12.09 ms | 23.14 ms | +91.4 % |
+| 2026-11-23 A/B new-1 | SL-60 | 19.31 ms | 29.65 ms | +53.6 % |
+| 2026-11-23 A/B old-2 | before SL-60 | 21.98 ms | 24.72 ms | +12.5 % |
+| 2026-11-23 A/B new-2 | SL-60 | 20.46 ms | 24.63 ms | +20.3 % |
+
+Files: `bench/results/restart/2026-11-21/log-overhead.json`, `log-overhead-run2.json`, `bench/results/restart/2026-11-22/log-overhead.json`, `log-overhead-ab-before.json`, `bench/results/restart/2026-11-23/log-overhead-ab-*.json` (load before and after each A/B run in `ab-summary.txt`). Old and new code swing the same way, so the change is not a regression; the swings come from the host. What the runs do show: under CPU contention the channel costs far more than its +8 % on a calm host, because nearly all of its cost is the `frankenphp_log()` call (about 110 of about 115 us per entry, an estimate). **NFR-2 (< 5 %) is still not met; the channel stays opt-in and the threshold stays.** The +8 % of 2026-11-17 remains the only calm-host figure.
+
 ### What the numbers say
 
 - **The native restart loses nothing.** 18 restarts under 50 connections, on a 9 000 rps ping and a 1 430 rps database search, and not one failed probe or load request. Caddy keeps the port open and the requests that arrive during the swap are answered by the new workers (observed, not traced). The admin call itself returns in 51 to 85 ms.

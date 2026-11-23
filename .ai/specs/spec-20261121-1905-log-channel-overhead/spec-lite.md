@@ -4,7 +4,7 @@ title: Bring the frankenphp log channel under 5 % p95 overhead
 type: improvement
 size: M
 priority: P2
-status: in-progress
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-21; standing approval)
