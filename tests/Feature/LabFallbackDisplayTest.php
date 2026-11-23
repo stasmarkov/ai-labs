@@ -71,7 +71,7 @@ it('AC-6 the settings page lists each feature fallback model and budget', functi
         'ai.features.nl-search.provider' => null,
         'ai.features.nl-search.model' => 'qwen3.5:9b',
         'ai.features.nl-search.fallback_model' => 'qwen3:0.6b',
-        'ai.features.nl-search.fallback_after_ms' => null,
+        'ai.features.nl-search.fallback_after_ms' => 1500,
     ]);
 
     $this->get('/ai/settings')->assertInertia(fn (Assert $page) => $page
@@ -150,7 +150,9 @@ it('AC-6 the invocation id a streamed feature page reads is the fallback row id'
     $run = AiRun::query()->where('agent', 'not like', 'embeddings:%')->sole();
 
     expect($ids)->not->toBeEmpty()
-        ->and($ids->first())->toBe($run->invocation_id);
+        ->and($ids->first())->toBe($run->invocation_id)
+        ->and($ids->unique()->values()->all())->toBe([$run->invocation_id])
+        ->and($run->model)->toBe('qwen3:0.6b');
 
     $this->getJson('/ai/runs/'.$ids->first())
         ->assertOk()

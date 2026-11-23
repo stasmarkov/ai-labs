@@ -35,6 +35,7 @@ final readonly class NlSearchService
         private ListingSearchService $listings,
         private PromptInjectionGuard $guard,
         private ServerTiming $timing,
+        private LocalFallback $fallback,
     ) {}
 
     /**
@@ -90,7 +91,7 @@ final readonly class NlSearchService
         $mainModel = $agent->modelName();
 
         try {
-            $response = $this->timing->measure('model', fn () => app(LocalFallback::class)->prompt(
+            $response = $this->timing->measure('model', fn () => $this->fallback->prompt(
                 $policy,
                 fn (?string $model) => $agent->prompt($query->text, model: $model ?? ($agent->hasProviderOverride() ? null : $query->model)),
                 $trail,

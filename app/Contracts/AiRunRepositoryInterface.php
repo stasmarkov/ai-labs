@@ -24,6 +24,14 @@ interface AiRunRepositoryInterface
     public function findByInvocationId(string $invocationId): ?AiRunDetail;
 
     /**
+     * The runs with the given invocation ids, in one query, keyed by invocation id; missing ids are left out.
+     *
+     * @param  list<string>  $invocationIds
+     * @return array<string, AiRunSummary>
+     */
+    public function summariesByInvocationIds(array $invocationIds): array;
+
+    /**
      * The message stored with a failed run (already cleaned by the recorder), null when the run is missing or has none.
      */
     public function storedErrorMessage(string $invocationId): ?string;

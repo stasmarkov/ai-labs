@@ -13,7 +13,10 @@ use Laravel\Ai\Responses\StreamableAgentResponse;
 
 final readonly class ListingDescriptionService
 {
-    public function __construct(private ListingDetailService $listings) {}
+    public function __construct(
+        private ListingDetailService $listings,
+        private LocalFallback $fallback,
+    ) {}
 
     /**
      * Looks the listing up first, so an unknown id fails before any stream starts. The scoped recorder is resolved here,
@@ -30,7 +33,7 @@ final readonly class ListingDescriptionService
 
         $agent->provider();
 
-        return app(LocalFallback::class)
+        return $this->fallback
             ->stream($agent->fallbackPolicy(), $agent->modelName(), fn (?string $model): StreamableAgentResponse => $agent->stream($prompt, model: $model))
             ->usingProtocol(new SseProtocol(app(AiRunRecorder::class)));
     }

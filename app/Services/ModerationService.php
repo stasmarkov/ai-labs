@@ -31,6 +31,7 @@ final readonly class ModerationService
     public function __construct(
         private ModerationFacts $facts,
         private AiRunRecorder $recorder,
+        private LocalFallback $fallback,
     ) {}
 
     /**
@@ -71,7 +72,7 @@ final readonly class ModerationService
                     $trail->record((string) $fallbackUsed->model, (string) $fallbackUsed->reason);
                     $response = $agent->classify($input, $facts, $policy->model);
                 } else {
-                    $response = app(LocalFallback::class)->prompt($policy, fn (?string $fallbackModel) => $agent->classify($input, $facts, $fallbackModel), $trail);
+                    $response = $this->fallback->prompt($policy, fn (?string $fallbackModel) => $agent->classify($input, $facts, $fallbackModel), $trail);
                 }
 
                 $fallbackUsed = $trail->attempted() ? $trail : null;

@@ -33,12 +33,17 @@ final readonly class FallbackPolicy
     }
 
     /**
-     * The trigger a failure maps to, or null when it is not one: a refused connection, a missing model (404), a server
-     * error (5xx) or a timeout fall back; validation, guard and other client errors do not. The first match along the
-     * exception chain wins.
+     * The trigger a failure maps to, or null when it is not one: a spent first-token budget (busy, anywhere in the
+     * chain), a refused connection, a 404, a 5xx or a timeout fall back; client errors do not. First match wins.
      */
     public static function reasonFor(Throwable $failure): ?string
     {
+        for ($e = $failure; $e !== null; $e = $e->getPrevious()) {
+            if ($e instanceof FirstTokenBudgetExceeded) {
+                return 'busy';
+            }
+        }
+
         for ($e = $failure; $e !== null; $e = $e->getPrevious()) {
             if ($e instanceof RequestException && $e->response !== null) {
                 $status = $e->response->status();
@@ -66,7 +71,9 @@ final readonly class FallbackPolicy
 
     /**
      * Guzzle's stream handler (streamed chat requests) reports a timeout while waiting for headers as a bare
-     * "HTTP request failed!"; a refused connection names its cause, so the bare message counts as a timeout.
+     * "Error creating resource: [message] fopen(<url>): Failed to open stream: HTTP request failed!" (a GuzzleHttp
+     * RequestException without a response, which Laravel wraps in a ConnectionException); a refused connection names
+     * its cause ("Connection refused"), so the bare message counts as a timeout.
      */
     private static function streamOpenFailed(Throwable $failure): bool
     {

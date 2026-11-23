@@ -39,6 +39,11 @@ final class LlmBenchCommand extends Command
 
     private const FALLBACK = 'fallback';
 
+    /**
+     * BR-21: the fallback bench is meant for a host whose 1-minute load average is below this at the start.
+     */
+    private const IDLE_LOAD = 4;
+
     public function handle(LlmSpeedBench $speed, LlmContextBench $context, LlmFailoverBench $failover, LlmFallbackBench $fallback, LlmEvalFigures $evals, RagEvalResultWriter $writer): int
     {
         if (! app()->environment('local')) {
@@ -178,6 +183,11 @@ final class LlmBenchCommand extends Command
             $bench->assertInstalled($fallbackModel);
 
             $loadAtStart = $bench->hostLoad();
+
+            if ($loadAtStart['1m'] >= self::IDLE_LOAD) {
+                $this->warn("The host load is {$loadAtStart['1m']} (1 min), not below ".self::IDLE_LOAD.': the busy figures will be noisy; the run file records it.');
+            }
+
             $version = $speed->version();
 
             $this->line("Breaking {$model} on purpose with {$fallbackModel} as the fallback: ".count(LlmFailoverBench::FAULTS).' faults, '.count(LlmFailoverBench::ENTRIES).' entry points');
@@ -186,6 +196,7 @@ final class LlmBenchCommand extends Command
             $fallbackSpeed = $bench->fallbackSpeed($fallbackModel, $runs);
             $this->line('Describe streams at '.implode(', ', $levels)." parallel, without and with a {$budget} ms budget: 1 warm-up and ".LlmFallbackBench::REPEATS.' repeats each');
             $busy = $bench->busy($model, $fallbackModel, $budget, $levels);
+            $noFault = $bench->noFault($model, $fallbackModel, $busy);
             $this->line("Running the evals of {$fallbackModel}");
             $evals = $bench->evals($model, $fallbackModel);
 
@@ -202,10 +213,12 @@ final class LlmBenchCommand extends Command
                     'repeats' => LlmFallbackBench::REPEATS,
                     'runs' => $runs,
                     'host_load' => ['start' => $loadAtStart, 'end' => $bench->hostLoad()],
+                    'host_idle_at_start' => $loadAtStart['1m'] < self::IDLE_LOAD,
                 ],
                 'faults' => $faults,
                 'fallback_speed' => $fallbackSpeed,
                 'busy' => $busy,
+                'no_fault' => $noFault,
                 'evals' => $evals,
             ]), (bool) $this->option('force'));
         } catch (LlmBenchException|RagEvalOptionException|RagEvalResultException $e) {
@@ -222,9 +235,9 @@ final class LlmBenchCommand extends Command
             ), array_keys($faults))),
         );
         $this->table(
-            ['Parallel', 'Budget ms', 'TTFT p50 ms', 'TTFT p95 ms', 'By fallback', 'Failed'],
+            ['Parallel', 'Budget ms', 'TTFT p50 ms', 'TTFT p95 ms', 'By fallback', 'Reasons', 'Failed'],
             array_merge(...array_map(fn (int $level): array => array_map(
-                fn (array $row): array => [$level, $row['budget_ms'] ?? 'none', $row['ttft_ms']['p50'] ?? self::EMPTY, $row['ttft_ms']['p95'] ?? self::EMPTY, round($row['fallback_share'] * 100).'%', $row['failed']],
+                fn (array $row): array => [$level, $row['budget_ms'] ?? 'none', $row['ttft_ms']['p50'] ?? self::EMPTY, $row['ttft_ms']['p95'] ?? self::EMPTY, round($row['fallback_share'] * 100).'%', $this->reasonList($row['fallback_reasons'] ?? []), $row['failed']],
                 array_values($busy[$level]),
             ), $levels)),
         );
@@ -232,6 +245,16 @@ final class LlmBenchCommand extends Command
         $this->info('Results written to '.$directory.'/run.json');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * The fallback reasons of a busy row as "busy 12, timeout 1", or the empty mark when the fallback never answered.
+     *
+     * @param  array<string, int>  $reasons
+     */
+    private function reasonList(array $reasons): string
+    {
+        return $reasons === [] ? self::EMPTY : implode(', ', array_map(fn (string $reason, int $count): string => "{$reason} {$count}", array_keys($reasons), $reasons));
     }
 
     /**

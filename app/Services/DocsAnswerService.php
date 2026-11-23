@@ -47,6 +47,7 @@ final readonly class DocsAnswerService
         private DocsAnswerContext $context,
         private CanaryGenerator $canaries,
         private DocsAnswerCache $cache,
+        private LocalFallback $fallback,
     ) {}
 
     /**
@@ -99,7 +100,7 @@ final readonly class DocsAnswerService
 
         $recorder = app(AiRunRecorder::class);
         $prompt = $plan->agent->promptFor($question, $plan->sources);
-        $stream = app(LocalFallback::class)
+        $stream = $this->fallback
             ->stream($plan->agent->fallbackPolicy(), $plan->agent->modelName(), fn (?string $model): StreamableAgentResponse => $plan->agent->stream($prompt, model: $model))
             ->usingProtocol(new DocsAnswerProtocol(
                 $recorder,

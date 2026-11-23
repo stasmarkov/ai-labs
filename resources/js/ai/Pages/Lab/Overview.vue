@@ -145,7 +145,7 @@ function show(value: number | null): string {
                         <td class="py-2 pr-4">{{ run.provider }}</td>
                         <td class="py-2 pr-4">
                             {{ run.model }}
-                            <span v-if="run.fallback_from_model" class="text-muted" :title="`fell back from ${run.fallback_from_model}`">(fallback: {{ fallbackReasonLabel(run.fallback_reason) }})</span>
+                            <span v-if="run.fallback_from_model" class="block text-[12px] text-muted" :title="`fell back from ${run.fallback_from_model}`">fallback: {{ fallbackReasonLabel(run.fallback_reason) }}</span>
                         </td>
                         <td class="py-2 pr-4 text-right">{{ show(run.tokens_in) }}</td>
                         <td class="py-2 pr-4 text-right">{{ show(run.tokens_out) }}</td>

@@ -22,8 +22,10 @@ use Throwable;
  * whose first content event comes later than the policy's budget counts as busy and moves over too; non-streamed
  * calls have no first token, so only errors trigger them (the budget never applies to them).
  */
-final class LocalFallback
+final readonly class LocalFallback
 {
+    public function __construct(private FirstTokenBudget $budget) {}
+
     /**
      * A non-streamed call. The attempt runs on the main model (null) and, when that fails with a trigger, once on the
      * fallback model. When both fail the main failure is thrown, as without a fallback; the trail says what was tried.
@@ -61,6 +63,9 @@ final class LocalFallback
      * its event is dropped. After the first content event (text, reasoning or a tool call) a failure ends the stream
      * as it did before. The run row is the fallback attempt's, carrying the main model and the reason.
      *
+     * The recorder is request-scoped, so it is resolved per stream. The main failure is held only until the first
+     * content event or the stream's end (also when the client leaves).
+     *
      * @param  Closure(?string): StreamableAgentResponse  $open  opens the stream on the given model, or on the main one when null
      */
     public function stream(FallbackPolicy $policy, string $mainModel, Closure $open): StreamableAgentResponse
@@ -73,64 +78,66 @@ final class LocalFallback
 
         $recorder = app(AiRunRecorder::class);
         $recorder->holdFailure($main->invocationId);
+        $budget = $this->budget;
 
         $outer = null;
         $outer = new StreamableAgentResponse(
             $main->invocationId,
-            function () use ($main, $policy, $mainModel, $open, $recorder, &$outer): Generator {
-                $held = [];
-                $sent = false;
-                $startedAt = hrtime(true);
-                $budget = app(FirstTokenBudget::class);
-
-                if ($policy->afterMs !== null) {
-                    $budget->arm($mainModel, $policy->afterMs);
-                }
-
+            function () use ($main, $policy, $mainModel, $open, $recorder, $budget, &$outer): Generator {
                 try {
-                    foreach ($main as $event) {
-                        if (! $sent && $this->opensStream($event)) {
-                            $held[] = $event;
+                    $held = [];
+                    $sent = false;
+                    $startedAt = hrtime(true);
 
-                            continue;
-                        }
+                    if ($policy->afterMs !== null) {
+                        $budget->arm($mainModel, $policy->afterMs);
+                    }
 
-                        if (! $sent) {
-                            if ($policy->afterMs !== null && intdiv(hrtime(true) - $startedAt, 1_000_000) > $policy->afterMs) {
-                                throw new FirstTokenBudgetExceeded($policy->afterMs);
+                    try {
+                        foreach ($main as $event) {
+                            if (! $sent && $this->opensStream($event)) {
+                                $held[] = $event;
+
+                                continue;
                             }
 
-                            $sent = true;
-                            $budget->disarm();
-                            yield from $held;
-                            $held = [];
+                            if (! $sent) {
+                                if ($policy->afterMs !== null && intdiv(hrtime(true) - $startedAt, 1_000_000) > $policy->afterMs) {
+                                    throw new FirstTokenBudgetExceeded($policy->afterMs);
+                                }
+
+                                $sent = true;
+                                $budget->disarm();
+                                $recorder->releaseFailure($main->invocationId);
+                                yield from $held;
+                                $held = [];
+                            }
+
+                            yield $event;
                         }
 
-                        yield $event;
+                        yield from $held;
+
+                        return;
+                    } catch (Throwable $failure) {
+                        $reason = $sent ? null : FallbackPolicy::reasonFor($failure);
+
+                        if ($reason === null) {
+                            throw $failure;
+                        }
+                    } finally {
+                        $budget->disarm();
                     }
 
-                    yield from $held;
-                    $recorder->releaseFailure($main->invocationId);
+                    $fallback = $open($policy->model);
+                    $recorder->fallbackTo($main->invocationId, $fallback->invocationId, $mainModel, $reason);
+                    $outer->invocationId = $fallback->invocationId;
+                    $fallback->then(fn (StreamedAgentResponse $response): StreamableAgentResponse => $outer->adoptStateFrom($response));
 
-                    return;
-                } catch (Throwable $failure) {
-                    $reason = $sent ? null : ($failure instanceof FirstTokenBudgetExceeded ? 'busy' : FallbackPolicy::reasonFor($failure));
-
-                    if ($reason === null) {
-                        $recorder->releaseFailure($main->invocationId);
-
-                        throw $failure;
-                    }
+                    yield from $fallback;
                 } finally {
-                    $budget->disarm();
+                    $recorder->releaseFailure($main->invocationId);
                 }
-
-                $fallback = $open($policy->model);
-                $recorder->fallbackTo($main->invocationId, $fallback->invocationId, $mainModel, $reason);
-                $outer->invocationId = $fallback->invocationId;
-                $fallback->then(fn (StreamedAgentResponse $response): StreamableAgentResponse => $outer->adoptStateFrom($response));
-
-                yield from $fallback;
             },
             new Meta,
         );

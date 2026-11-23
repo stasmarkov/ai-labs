@@ -825,7 +825,27 @@ test('AC-7 NFR-2 the fallback bench defaults to a 2000 ms budget and 1, 4 and 16
     expect($run['metadata']['budget_ms'])->toBe(2000)
         ->and($run['metadata']['parallel'])->toBe([1, 4, 16])
         ->and(array_keys($run['busy']))->toBe([1, 4, 16])
-        ->and($run['busy']['1']['without_budget']['ttft_ms']['p50'])->toBeInt();
+        ->and($run['busy']['1']['without_budget']['ttft_ms']['p50'])->toBeInt()
+        ->and($run['no_fault'])->toMatchArray(['parallel' => 1, 'budget_ms' => null, 'failed' => 0, 'fallback_share' => 0])
+        ->and($run['no_fault']['ttft_ms'])->toBe($run['busy']['1']['without_budget']['ttft_ms'])
+        ->and($run['metadata']['host_load'])->toHaveKeys(['start', 'end'])
+        ->and($run['metadata']['host_idle_at_start'])->toBeTrue();
+});
+
+test('AC-7 NFR-2 the one-stream no-fault figure is measured on its own when the parallel levels leave out 1, and a busy host is flagged', function (): void {
+    llmFallbackFake();
+    llmFallbackBind(loads: [[5.5, 3.0, 2.0], [5.0, 3.1, 2.1]]);
+
+    $this->artisan('llm:bench', ['--models' => 'qwen3.5:9b', '--only' => 'fallback', '--parallel' => '2', '--runs' => 1])
+        ->expectsOutputToContain('The host load is 5.5')
+        ->assertSuccessful();
+
+    $run = llmFallbackRun();
+
+    expect(array_keys($run['busy']))->toBe([2])
+        ->and($run['no_fault'])->toMatchArray(['parallel' => 1, 'budget_ms' => null, 'failed' => 0])
+        ->and($run['no_fault']['ttft_ms']['p50'])->toBeInt()
+        ->and($run['metadata']['host_idle_at_start'])->toBeFalse();
 });
 
 test('AC-7 a busy main model that misses the budget is answered by the fallback and counted in the share', function (): void {
@@ -837,6 +857,9 @@ test('AC-7 a busy main model that misses the budget is answered by the fallback 
     $busy = llmFallbackRun()['busy']['2'];
 
     expect($busy['with_budget']['fallback_share'])->toEqual(1.0)
+        ->and($busy['with_budget']['fallback_reasons'])->toBe(['busy' => 6])
+        ->and($busy['with_budget']['repeats'][0]['fallback_reasons'])->toBe(['busy' => 2])
+        ->and($busy['without_budget']['fallback_reasons'])->toBe([])
         ->and($busy['with_budget']['failed'])->toBe(0)
         ->and($busy['without_budget']['fallback_share'])->toEqual(0.0)
         ->and($busy['without_budget']['ttft_ms']['p50'])->toBeGreaterThanOrEqual(150);

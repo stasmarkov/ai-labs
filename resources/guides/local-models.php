@@ -90,7 +90,7 @@ return [
         ],
         [
             'title' => 'A smaller model on the same server answers when the main one cannot',
-            'body' => "Each text feature has a `fallback_model` (default `qwen3:0.6b`, in the same Ollama; moderation is off until its eval and threshold exist) and, for streamed ones, an optional `fallback_after_ms`. When the main call fails with `unreachable`, `model_missing` (404), `server_error` (a 5xx or overloaded) or `timeout`, the request runs once on the fallback model. A client error is no reason. The run row names the answering model, the main model and the reason.\n\nA stream can fall back only before its first content event. A first token later than `fallback_after_ms` drops the main stream and the fallback answers with the reason `busy`; with no budget a slow model is waited for. If the fallback fails too, the visitor gets the masked error.\n\nThe policy is on only when the main provider is Ollama and the fallback model is set and differs from it, so a cloud model never falls back to a local one, and the reverse never happens. Evals never fall back; a fallback answer stays out of the docs cache.",
+            'body' => "Each text feature has a `fallback_model` (default `qwen3:0.6b`, same Ollama; moderation is off until its eval exists) and, for streamed ones, an optional `fallback_after_ms`. On `unreachable`, `model_missing` (404), `server_error` (5xx) or `timeout` the request runs once on the fallback model; a client error is no reason. The run row names both models and the reason.\n\nA stream falls back only before its first content event. A first token later than `fallback_after_ms` drops the main stream: reason `busy`. If the fallback fails too, the visitor gets the masked error.\n\nIt is on only when the main provider is Ollama, so a cloud model never falls back to a local one, nor the reverse. Evals never fall back; a fallback answer stays out of the docs cache.",
             'event' => 'request_failed',
             'snippet' => ['App\Ai\FallbackPolicy::reasonFor', 'App\Ai\LocalFallback::stream', 'App\Ai\FallbackPolicy::enabled'],
         ],
@@ -123,12 +123,12 @@ return [
     'recipes' => [
         [
             'title' => 'Turn the fallback on or off for one feature',
-            'body' => "Set `AI_DESCRIBE_FALLBACK_MODEL` (or the NL search, docs answer, assistant and moderation siblings) to a pulled model; empty turns it off. `AI_DESCRIBE_FALLBACK_AFTER_MS` (streamed features only) switches when the first token is late. Pull the model first.\n\n**Check:** with the main model stopped, a description still streams and its run row shows the fallback model, the main model and the reason `unreachable`.",
+            'body' => "Set `AI_DESCRIBE_FALLBACK_MODEL` (or a sibling feature's) to a pulled model; empty turns it off. `AI_DESCRIBE_FALLBACK_AFTER_MS` (streamed only) sets the first-token budget.\n\n**Check:** with the main model stopped, a description still streams; its row shows both models and `unreachable`.",
             'snippet' => 'config/ai.php#provider-ollama',
         ],
         [
             'title' => 'Measure the fallback on your machine',
-            'body' => "Run `llm:bench --only=fallback --models=<main>` on an idle host. Its flags have defaults. It writes `llm-fallback/<date>/run.json`: the fault matrix, the fallback's own speed, busy describes with and without the budget, its eval figures and the host load.\n\n**Check:** every fault row names the model that answered.",
+            'body' => "Run `llm:bench --only=fallback --models=<main>` on an idle host (load average below 4). Defaults: a 2000 ms budget, 1, 4 and 16 parallel describes. It writes `llm-fallback/<date>/run.json`: faults, busy rows with fallback reasons, `no_fault` and the host load.\n\n**Check:** busy rows with the budget count `busy`.",
             'snippet' => 'App\Support\LlmFallbackBench::faults',
         ],
         [
@@ -143,7 +143,7 @@ return [
         ],
         [
             'title' => 'Add a fallback chain',
-            'body' => "The built-in fallback has one step: a smaller local model. A longer chain, or one ending at a cloud provider, is not built: paying is a decision for a person. To add one, put the order in the configuration, try the next entry only on a transport error, a timeout or a server error, log every attempt as its own run row, and keep the cloud limiter before any paid entry.\n\n**Check:** with the first model stopped, the run rows show one answered by the next entry.",
+            'body' => "The built-in fallback has one step. A longer chain, or one ending at a cloud provider, is not built: paying is a decision for a person. To add one, put the order in configuration, move on only on a transport error, timeout or server error, log each attempt as a run row, and keep the cloud limiter before any paid entry.\n\n**Check:** with the first model stopped, a row shows the next entry answered.",
             'snippet' => 'App\Ai\AiProviders::fallbackPolicy',
         ],
         [
@@ -165,7 +165,7 @@ return [
         [
             'name' => 'Limits of the small fallback model',
             'status' => 'guarded',
-            'note' => "1. The small model is weaker: the page keeps answering, at lower quality.\n2. Loading it can push the main model out of memory, so first answers after a fault are slow.\n3. With a budget, late requests go to the small model: load spreads, answers change.",
+            'note' => "1. The small model is weaker: the page keeps answering, at lower quality.\n2. Loading it can push the main model out of memory, so first answers after a fault are slow.\n3. With a budget, late requests go to the small model: load spreads, answers change.\n4. Both timing out costs the main timeout (or budget) plus the fallback's.",
         ],
         [
             'name' => 'Why the site slows while a model answers',

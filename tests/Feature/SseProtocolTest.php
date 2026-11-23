@@ -60,6 +60,11 @@ it('AC-5 a failed ai_runs insert is reported and the stream still ends with [DON
             return null;
         }
 
+        public function summariesByInvocationIds(array $invocationIds): array
+        {
+            return [];
+        }
+
         public function storedErrorMessage(string $invocationId): ?string
         {
             return null;

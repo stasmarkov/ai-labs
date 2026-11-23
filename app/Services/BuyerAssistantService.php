@@ -20,7 +20,10 @@ final readonly class BuyerAssistantService
 
     private const ORIGIN_API = 'api';
 
-    public function __construct(private PromptInjectionGuard $guard) {}
+    public function __construct(
+        private PromptInjectionGuard $guard,
+        private LocalFallback $fallback,
+    ) {}
 
     /**
      * Input guard, then the agent's tool loop as a stream. The guard runs before the model over the question and every
@@ -74,7 +77,7 @@ final readonly class BuyerAssistantService
             return new SseEventsResponse([$refusal]);
         }
 
-        $stream = app(LocalFallback::class)
+        $stream = $this->fallback
             ->stream($agent->fallbackPolicy(), $agent->modelName(), fn (?string $model): StreamableAgentResponse => $agent->stream($question, model: $model))
             ->usingProtocol(new AssistantProtocol($recorder));
         $recorder->annotate($stream->invocationId, [], origin: self::ORIGIN_API, historyTurns: $history === [] ? null : count($history));

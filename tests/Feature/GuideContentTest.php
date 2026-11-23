@@ -922,6 +922,14 @@ it('AC-8 the local-models and providers guides explain the local fallback, its t
     $this->get('/ai/guides/providers')->assertOk();
 });
 
+it('AC-7 the fallback bench recipe names the command defaults: a 2000 ms budget at 1, 4 and 16 parallel and the no-fault figure', function (): void {
+    $recipe = collect(app(GuideRepository::class)->find('local-models')->recipes)->firstWhere('title', 'Measure the fallback on your machine');
+    $command = (string) file_get_contents(app_path('Console/Commands/LlmBenchCommand.php'));
+
+    expect($command)->toContain('{--budget-ms=2000 ')->toContain('{--parallel=1,4,16 ')
+        ->and($recipe->body)->toContain('2000 ms budget')->toContain('1, 4 and 16 parallel')->toContain('no_fault')->toContain('load average below 4');
+});
+
 it('AC-8 the local-models guide Numbers tab reads the fallback figures by file pointer, or shows the pending note until the run exists', function (): void {
     $rendered = app(GuideRenderer::class)->render('local-models');
     $fallback = array_values(array_filter($rendered['numbers'], fn (array $number): bool => str_starts_with($number['label'], 'Fallback')));

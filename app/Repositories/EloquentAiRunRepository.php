@@ -110,6 +110,21 @@ final readonly class EloquentAiRunRepository implements AiRunRepositoryInterface
         return $run === null ? null : new AiRunDetail($this->toSummary($run), $run->prompt_version, $run->error_class === null ? null : class_basename($run->error_class));
     }
 
+    public function summariesByInvocationIds(array $invocationIds): array
+    {
+        if ($invocationIds === []) {
+            return [];
+        }
+
+        $summaries = [];
+
+        foreach (AiRun::query()->whereIn('invocation_id', array_values(array_unique($invocationIds)))->get() as $run) {
+            $summaries[$run->invocation_id] = $this->toSummary($run);
+        }
+
+        return $summaries;
+    }
+
     public function storedErrorMessage(string $invocationId): ?string
     {
         $message = AiRun::query()->where('invocation_id', $invocationId)->value('error_message');

@@ -113,6 +113,6 @@
   Covers: AC-3, MNC-3
   - [x] 15.1 **Verify**: in `LocalModelFallbackTest`, the assistant's main model streams a tool call and then fails with a trigger (500 or connection error). Only the main model is requested, the tool runs once, and the stream ends with the masked error event. The one row is `failed` with `model` = main and null `fallback_from_model` and `fallback_reason`.
 
-- [ ] 16. Run the MNC-4 check that Task 8 left unrun: asset fingerprint and dependency diff (laravel)
+- [x] 16. Run the MNC-4 check that Task 8 left unrun: asset fingerprint and dependency diff (laravel)
   Covers: MNC-4
-  - [ ] 16.1 **Verify**: after `ddev npm run build`, `bench/asset-fingerprint.sh` prints `app-DNob7CFE.css` and `app-PTzu1QaN.js` (as in `manual-test.md#step-11`). `git diff --stat master -- composer.json composer.lock package.json package-lock.json` prints nothing.
+  - [x] 16.1 **Verify**: after `ddev npm run build`, `bench/asset-fingerprint.sh` prints `app-DNob7CFE.css` and `app-PTzu1QaN.js` (as in `manual-test.md#step-11`). `git diff --stat master -- composer.json composer.lock package.json package-lock.json` prints nothing.

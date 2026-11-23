@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Ai;
 
 use Closure;
+use GuzzleHttp\Exception\ResponseException;
 use Psr\Http\Message\RequestInterface;
 use Throwable;
 
@@ -32,16 +33,19 @@ final class FirstTokenBudget
     }
 
     /**
-     * A Guzzle middleware for the shared HTTP client.
+     * A Guzzle middleware for the shared HTTP client. A feature timeout at or below the budget is left alone, so a real
+     * timeout keeps its own reason instead of turning into busy.
      */
     public function middleware(): Closure
     {
         return fn (callable $handler): Closure => function (RequestInterface $request, array $options) use ($handler) {
-            if (! $this->appliesTo($request)) {
+            $afterMs = $this->afterMs;
+            $timeoutMs = (float) ($options['timeout'] ?? 0) * 1000;
+
+            if (! $this->appliesTo($request) || ($timeoutMs > 0 && $timeoutMs <= $afterMs)) {
                 return $handler($request, $options);
             }
 
-            $afterMs = $this->afterMs;
             $options['read_timeout'] ??= $options['timeout'] ?? 60;
             $options['timeout'] = $afterMs / 1000;
             $startedAt = hrtime(true);
@@ -54,22 +58,20 @@ final class FirstTokenBudget
         };
     }
 
+    /**
+     * With the budget as the request's timeout, a timeout means the budget ran out. The cURL handler says so ("cURL
+     * error 28"); Guzzle's stream handler, which streamed chat requests use, does not: a silent server makes fopen()
+     * fail with a bare "Failed to open stream: HTTP request failed!", raised as a GuzzleHttp RequestException (not a
+     * ResponseException, which carries a response). So any failure without a response that comes once the budget has
+     * (almost) run out counts too; a refused connection or a DNS error fails long before that.
+     */
     private function exceeded(Throwable $failure, int $afterMs, int $startedAt): Throwable
     {
-        $timedOut = FallbackPolicy::timedOut($failure) || $this->streamOpenTimedOut($failure, $afterMs, $startedAt);
+        $elapsedMs = (hrtime(true) - $startedAt) / 1_000_000;
+        $withoutResponse = ! $failure instanceof ResponseException;
+        $timedOut = FallbackPolicy::timedOut($failure) || ($withoutResponse && $elapsedMs >= $afterMs * 0.9);
 
         return $timedOut ? new FirstTokenBudgetExceeded($afterMs, $failure) : $failure;
-    }
-
-    /**
-     * Guzzle's stream handler (used for streamed chat requests) reports a timeout while opening the stream as a bare
-     * "HTTP request failed!" with no mention of a timeout, so it counts only when the budget has really run out.
-     */
-    private function streamOpenTimedOut(Throwable $failure, int $afterMs, int $startedAt): bool
-    {
-        $elapsedMs = (hrtime(true) - $startedAt) / 1_000_000;
-
-        return $elapsedMs >= $afterMs * 0.9 && str_contains($failure->getMessage(), 'HTTP request failed!');
     }
 
     private function appliesTo(RequestInterface $request): bool

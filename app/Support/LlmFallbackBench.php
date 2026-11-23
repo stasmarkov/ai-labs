@@ -117,6 +117,20 @@ final readonly class LlmFallbackBench
     }
 
     /**
+     * The NFR-2 figure: describe at 1 parallel with the fallback on and no budget, nothing broken. It is the 1-stream
+     * row of the busy runs when those include 1, else it is measured on its own.
+     *
+     * @param  array<int, array{without_budget: array<string, mixed>, with_budget: array<string, mixed>}>  $busy
+     * @return array<string, mixed>
+     */
+    public function noFault(string $model, string $fallbackModel, array $busy): array
+    {
+        $row = $busy[1]['without_budget'] ?? $this->level($model, $fallbackModel, null, 1);
+
+        return ['parallel' => 1, 'budget_ms' => null, 'ttft_ms' => $row['ttft_ms'], 'fallback_share' => $row['fallback_share'], 'failed' => $row['failed']];
+    }
+
+    /**
      * @return array<string, array{main: array<string, mixed>, fallback: array<string, mixed>}>
      */
     public function evals(string $model, string $fallbackModel): array
@@ -223,41 +237,78 @@ final readonly class LlmFallbackBench
                 'p95' => $this->median(array_column(array_column($repeats, 'ttft_ms'), 'p95')),
             ],
             'fallback_share' => round((float) $this->median(array_column($repeats, 'fallback_share'), 3), 3),
+            'fallback_reasons' => $this->reasonTotals($repeats),
             'failed' => (int) $this->median(array_column($repeats, 'failed')),
             'repeats' => $repeats,
         ];
     }
 
     /**
-     * @return array{ttft_ms: array{p50: int|null, p95: int|null}, fallback_share: float, failed: int}
+     * One batch of parallel describes; the run rows are read back in one query. The reasons count every request the
+     * fallback answered, by its fallback_reason, so a busy row shows whether the budget (busy) or an error moved it.
+     *
+     * @return array{ttft_ms: array{p50: int|null, p95: int|null}, fallback_share: float, fallback_reasons: array<string, int>, failed: int}
      */
     private function batch(string $model, string $fallbackModel, ?int $budgetMs, int $level): array
     {
         $tasks = array_fill(0, $level, static fn (): array => app(self::class)->describeOnce($model, $fallbackModel, $budgetMs));
         $results = ($this->parallel)($tasks);
+        $runs = $this->runs->summariesByInvocationIds(array_values(array_filter(array_column($results, 'invocation_id'), is_string(...))));
 
         $times = [];
         $failed = 0;
         $fallbacks = 0;
+        $reasons = [];
 
         foreach ($results as $result) {
-            $run = is_string($result['invocation_id'] ?? null) ? $this->runs->findByInvocationId($result['invocation_id']) : null;
+            $id = $result['invocation_id'] ?? null;
+            $run = is_string($id) ? ($runs[$id] ?? null) : null;
 
-            if (! is_int($result['ttft_ms'] ?? null) || $run?->summary->status === 'failed') {
+            if (! is_int($result['ttft_ms'] ?? null) || $run?->status === 'failed') {
                 $failed++;
 
                 continue;
             }
 
             $times[] = $result['ttft_ms'];
-            $fallbacks += $run?->summary->fallbackFromModel !== null ? 1 : 0;
+
+            if ($run?->fallbackFromModel !== null) {
+                $fallbacks++;
+                $reason = $run->fallbackReason ?? 'unknown';
+                $reasons[$reason] = ($reasons[$reason] ?? 0) + 1;
+            }
         }
+
+        ksort($reasons);
 
         return [
             'ttft_ms' => ['p50' => NlEvalScorer::percentile($times, 50), 'p95' => NlEvalScorer::percentile($times, 95)],
             'fallback_share' => $level === 0 ? 0.0 : round($fallbacks / $level, 3),
+            'fallback_reasons' => $reasons,
             'failed' => $failed,
         ];
+    }
+
+    /**
+     * The fallback reasons of the repeats added up (the warm-up is left out), so the counts read against
+     * requests × repeats.
+     *
+     * @param  list<array{fallback_reasons: array<string, int>}>  $repeats
+     * @return array<string, int>
+     */
+    private function reasonTotals(array $repeats): array
+    {
+        $totals = [];
+
+        foreach ($repeats as $repeat) {
+            foreach ($repeat['fallback_reasons'] as $reason => $count) {
+                $totals[$reason] = ($totals[$reason] ?? 0) + $count;
+            }
+        }
+
+        ksort($totals);
+
+        return $totals;
     }
 
     /**

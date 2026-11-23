@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Ai\AbortWatcher;
 use App\Ai\AiProviders;
 use App\Ai\AiRunRecorder;
 use App\Ai\FallbackPolicy;
+use App\Ai\FirstTokenBudget;
+use App\Ai\FirstTokenBudgetExceeded;
 use App\Ai\ProviderChoice;
 use App\DTOs\ModerationInput;
 use App\Models\AiRun;
@@ -12,6 +15,11 @@ use App\Models\Dealer;
 use App\Models\DocsDocument;
 use App\Models\Listing;
 use App\Services\ModerationService;
+use GuzzleHttp\Exception\ConnectException as GuzzleConnectException;
+use GuzzleHttp\Exception\RequestException as GuzzleRequestException;
+use GuzzleHttp\Promise\Create as PromiseCreate;
+use GuzzleHttp\Promise\PromiseInterface;
+use GuzzleHttp\Psr7\Request as Psr7Request;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -22,6 +30,7 @@ use Illuminate\Testing\TestResponse;
 use Laravel\Ai\Embeddings;
 use Laravel\Ai\Exceptions\ProviderConnectionException;
 use Laravel\Ai\Exceptions\StreamErrorException;
+use Psr\Http\Message\RequestInterface;
 
 beforeEach(function (): void {
     config(['ai.default' => 'ollama', 'ai.features.moderation.fallback_model' => 'qwen3:0.6b']);
@@ -699,6 +708,123 @@ it('AC-2 a main model silent on a real loopback socket is cut at the first-byte 
         ->and($run->fallback_from_model)->toBe(FALLBACK_MAIN)
         ->and($run->fallback_reason)->toBe('busy')
         ->and($run->latency_ms)->toBeLessThan(1000);
+});
+
+it('AC-2 Guzzle stream handler header timeout, as it is really thrown, counts as busy once the budget has run out', function (): void {
+    $budget = app(FirstTokenBudget::class);
+    $budget->arm(FALLBACK_MAIN, 100);
+    $request = new Psr7Request('POST', 'http://127.0.0.1:11434/api/chat', [], json_encode(['model' => FALLBACK_MAIN]));
+    // Exactly what StreamHandler::createStream() raises when fopen() gets no headers before the timeout (probed against a
+    // silent loopback socket in the DDEV web container): a RequestException without a response, no "timeout" in it.
+    $message = 'Error creating resource: [message] fopen(http://127.0.0.1:11434/api/chat): Failed to open stream: HTTP request failed!; [file] /var/www/html/vendor/guzzlehttp/guzzle/src/Handler/StreamHandler.php; [line] 1030';
+    $seenOptions = null;
+    $handler = function (RequestInterface $request, array $options) use ($message, &$seenOptions) {
+        $seenOptions = $options;
+        usleep((int) ($options['timeout'] * 1_000_000));
+
+        return PromiseCreate::rejectionFor(new GuzzleRequestException($message, $request, 0, new RuntimeException($message)));
+    };
+
+    try {
+        $budget->middleware()($handler)($request, ['timeout' => 120])->wait();
+        $failure = null;
+    } catch (Throwable $e) {
+        $failure = $e;
+    } finally {
+        $budget->disarm();
+    }
+
+    expect($failure)->toBeInstanceOf(FirstTokenBudgetExceeded::class)
+        ->and($failure->getPrevious())->toBeInstanceOf(GuzzleRequestException::class)
+        ->and(FallbackPolicy::reasonFor($failure))->toBe('busy')
+        ->and(FallbackPolicy::reasonFor(new ProviderConnectionException('x', previous: $failure)))->toBe('busy')
+        ->and($seenOptions)->toMatchArray(['timeout' => 0.1, 'read_timeout' => 120]);
+});
+
+it('AC-2 a refused connection under an armed budget stays unreachable, it is not busy', function (): void {
+    $budget = app(FirstTokenBudget::class);
+    $budget->arm(FALLBACK_MAIN, 500);
+    $request = new Psr7Request('POST', 'http://127.0.0.1:1/api/chat', [], json_encode(['model' => FALLBACK_MAIN]));
+    $message = 'Error creating resource: [message] fopen(http://127.0.0.1:1/api/chat): Failed to open stream: Connection refused';
+    $handler = fn (RequestInterface $request): PromiseInterface => PromiseCreate::rejectionFor(new GuzzleConnectException($message, $request, new RuntimeException($message)));
+
+    try {
+        $budget->middleware()($handler)($request, ['timeout' => 120])->wait();
+        $failure = null;
+    } catch (Throwable $e) {
+        $failure = $e;
+    } finally {
+        $budget->disarm();
+    }
+
+    expect($failure)->toBeInstanceOf(GuzzleConnectException::class)
+        ->and(FallbackPolicy::reasonFor(new ConnectionException($message, 0, $failure)))->toBe('unreachable');
+});
+
+it('AC-1 a feature timeout shorter than the budget keeps its own reason on a real loopback socket (timeout, not busy)', function (): void {
+    $server = stream_socket_server('tcp://127.0.0.1:0', $errno, $error);
+    expect($server)->not->toBeFalse();
+    $port = (int) substr((string) strrchr((string) stream_socket_get_name($server, false), ':'), 1);
+
+    config([
+        'ai.default' => 'ollama',
+        'ai.providers.ollama.url' => 'http://127.0.0.1:'.$port,
+        'ai.providers.ollama.timeout' => 1,
+        'ai.features.describe.fallback_after_ms' => 2000,
+    ]);
+
+    $seen = [];
+    $done = ['model' => FALLBACK_SMALL, 'message' => ['role' => 'assistant', 'content' => ''], 'done' => true, 'prompt_eval_count' => 7, 'eval_count' => 5];
+    Http::preventStrayRequests();
+    Http::allowStrayRequests(['http://127.0.0.1:'.$port.'/*']);
+    Http::fake(['*/api/chat' => function (Request $request) use (&$seen, $done) {
+        $model = (string) $request->data()['model'];
+        $seen[] = $model;
+
+        if ($model === FALLBACK_MAIN) {
+            return null;
+        }
+
+        return Http::response(
+            json_encode(['model' => $model, 'message' => ['role' => 'assistant', 'content' => 'A fine car'], 'done' => false])."\n".json_encode($done)."\n",
+            200,
+            ['Content-Type' => 'application/x-ndjson'],
+        );
+    }]);
+
+    $body = fallbackDescribe();
+    fclose($server);
+
+    expect($seen)->toBe([FALLBACK_MAIN, FALLBACK_SMALL])
+        ->and($body)->toContain('A fine car');
+
+    $run = fallbackRun();
+    expect($run->fallback_reason)->toBe('timeout')
+        ->and($run->latency_ms)->toBeGreaterThanOrEqual(900)->toBeLessThan(1900);
+});
+
+it('MNC-1 a client that leaves right after the masked in-stream error still gets its failed row', function (): void {
+    fallbackOllama([FALLBACK_MAIN => 'after_token']);
+    // stream_start, text_start, text_delta, then the masked error: the abort is noticed at the 4th flush.
+    app()->instance(AbortWatcher::class, new class implements AbortWatcher
+    {
+        private int $flushed = 0;
+
+        public function aborted(): bool
+        {
+            return ++$this->flushed >= 4;
+        }
+    });
+
+    $body = fallbackDescribe();
+
+    expect($body)->toContain('"type":"error"')
+        ->and(fallbackRequestedModels())->toBe([FALLBACK_MAIN]);
+
+    $run = fallbackRun();
+    expect($run->status)->toBe('failed')
+        ->and($run->model)->toBe(FALLBACK_MAIN)
+        ->and($run->fallback_reason)->toBeNull();
 });
 
 it('AC-1 an in-stream error before any content moves the stream to the fallback model', function (string $ask): void {
