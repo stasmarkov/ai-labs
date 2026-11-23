@@ -4,7 +4,7 @@ title: Fall back to a smaller local model when the main model is down or busy
 type: feature
 size: L
 priority: P2
-status: in-progress
+status: done
 ticket:
 stakeholders: [Stas Markov]
 approved_by: Stas Markov (owner request 2026-11-23; standing approval)

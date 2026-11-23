@@ -39,9 +39,9 @@
   - [x] 6.1 Fault matrix, busy runs (4 and 16 parallel, with and without the budget, BR-21 for load), fallback evals; result file with host load at start and end; clear error if the fallback model is missing.
   - [x] 6.2 **Verify**: `LlmBenchCommandTest` with fakes.
 
-- [ ] 7. Manual: run the bench on an idle host and commit the result
+- [x] 7. Manual: run the bench on an idle host and commit the result
   Covers: AC-7, NFR-1, NFR-2
-  - [ ] 7.1 **Verify**: `manual-test.md#step-9`.
+  - [x] 7.1 **Verify**: `manual-test.md#step-9`. Run 2026-11-23: `bench/results/llm-fallback/2026-11-23/run.json` (load 1.67 at the start, 4.24 at the end); NFR-1 and NFR-2 readings in `decisions.md`.
 
 ## Phase 3: Docs
 
@@ -78,9 +78,9 @@
 - `node bench/ui-audit.mjs`, `bench/asset-fingerprint.sh`
 
 ## Done when
-- [ ] All tasks checked
-- [ ] Every Traceability row has a passing test or a manual step that was run
-- [ ] Gates green
+- [x] All tasks checked
+- [x] Every Traceability row has a passing test or a manual step that was run
+- [x] Gates green
 
 ## Phase: Gaps (converge round 1)
 
@@ -96,8 +96,9 @@
   Covers: MNC-3
   - [x] 11.1 **Verify**: in `LocalModelFallbackTest`, with the main model unreachable and the fallback returning JSON that breaks the listing filter rules, `/api/listings/nl` answers with the same status and error shape as an invalid main answer, and the one row has `model` = fallback, `fallback_from_model` = main, `fallback_reason` = `unreachable` and `validation_failed` = true.
 
-- [ ] 12. Manual: after the bench run, add the three BENCHMARKS tables, a measured number in the interview story, and apply the C-14 quality rule
+- [x] 12. Manual: after the bench run, add the three BENCHMARKS tables, a measured number in the interview story, and apply the C-14 quality rule
   Covers: AC-7, AC-8
+  - [x] 12.1 **Verify**: BENCHMARKS.md "Local model fallback (2026-11-23)" has the faults, busy and evals tables from the 2026-11-23 run; the learning guide and BENCHMARKS interview stories quote measured numbers; C-14 turned the nl-search default off (moderation already off), recorded in `decisions.md`; `LocalModelFallbackTest`, `GuidePageTest`, `GuideContentTest` and `DocsLinksTest` green.
 
 ## Phase: Gaps (converge round 2)
 

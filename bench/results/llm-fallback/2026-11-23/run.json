@@ -1,0 +1,681 @@
+{
+    "metadata": {
+        "generated_at": "2026-11-23T16:53:11+00:00",
+        "provider": "ollama",
+        "ollama_version": "0.40.16",
+        "num_ctx": 8192,
+        "main_model": "qwen3.5:9b",
+        "fallback_model": "qwen3:0.6b",
+        "budget_ms": 2000,
+        "parallel": [
+            1,
+            4,
+            16
+        ],
+        "repeats": 3,
+        "runs": 5,
+        "host_load": {
+            "start": {
+                "1m": 1.67,
+                "5m": 2.16,
+                "15m": 2.41
+            },
+            "end": {
+                "1m": 4.24,
+                "5m": 3.3,
+                "15m": 2.79
+            }
+        },
+        "host_idle_at_start": true
+    },
+    "faults": {
+        "unreachable": {
+            "describe": {
+                "status": 200,
+                "client": {
+                    "kind": "sse",
+                    "event": "error",
+                    "code": null,
+                    "message": "The description could not be generated."
+                },
+                "answered": false,
+                "time_to_fail_ms": 149,
+                "answered_by_model": null,
+                "fallback_from_model": null,
+                "fallback_reason": null,
+                "failed_run_written": true,
+                "invocation_ids": [
+                    "01a20953-6d28-70cb-a7ed-806498f068eb"
+                ],
+                "run_error_messages": [
+                    "Could not connect to AI provider [ollama]."
+                ],
+                "message_redacted": false,
+                "sl28": {
+                    "status": 200,
+                    "time_to_fail_ms": 134,
+                    "source": "bench/results/llm/2026-11-13/run.json"
+                }
+            },
+            "nl-search": {
+                "status": 503,
+                "client": {
+                    "kind": "json",
+                    "message": "Natural-language search is unavailable right now.",
+                    "code": null
+                },
+                "answered": false,
+                "time_to_fail_ms": 28,
+                "answered_by_model": null,
+                "fallback_from_model": null,
+                "fallback_reason": null,
+                "failed_run_written": true,
+                "invocation_ids": [
+                    "3531e6af-27ee-4988-a93e-ae7ba677e6c5"
+                ],
+                "run_error_messages": [
+                    "Could not connect to AI provider [ollama]."
+                ],
+                "message_redacted": false,
+                "sl28": {
+                    "status": 503,
+                    "time_to_fail_ms": 28,
+                    "source": "bench/results/llm/2026-11-13/run.json"
+                }
+            },
+            "moderation": {
+                "status": 503,
+                "client": {
+                    "kind": "json",
+                    "message": "The moderation model could not be reached.",
+                    "code": "moderation_unavailable"
+                },
+                "answered": false,
+                "time_to_fail_ms": 24,
+                "answered_by_model": null,
+                "fallback_from_model": null,
+                "fallback_reason": null,
+                "failed_run_written": true,
+                "invocation_ids": [
+                    "dc084cb6-664d-47b5-939c-080262375fcc"
+                ],
+                "run_error_messages": [
+                    "Could not connect to AI provider [ollama]."
+                ],
+                "message_redacted": false,
+                "sl28": {
+                    "status": 503,
+                    "time_to_fail_ms": 9,
+                    "source": "bench/results/llm/2026-11-13/run.json"
+                }
+            },
+            "assistant": {
+                "status": 200,
+                "client": {
+                    "kind": "sse",
+                    "event": "error",
+                    "code": null,
+                    "message": "The answer could not be generated."
+                },
+                "answered": false,
+                "time_to_fail_ms": 11,
+                "answered_by_model": null,
+                "fallback_from_model": null,
+                "fallback_reason": null,
+                "failed_run_written": true,
+                "invocation_ids": [
+                    "01a20953-6dac-7119-a95e-c24fabb8537f"
+                ],
+                "run_error_messages": [
+                    "Could not connect to AI provider [ollama]."
+                ],
+                "message_redacted": false,
+                "sl28": {
+                    "status": 200,
+                    "time_to_fail_ms": 10,
+                    "source": "bench/results/llm/2026-11-13/run.json"
+                }
+            }
+        },
+        "model_missing": {
+            "describe": {
+                "status": 200,
+                "client": {
+                    "kind": "sse",
+                    "event": "none",
+                    "code": null,
+                    "message": null
+                },
+                "answered": true,
+                "time_to_fail_ms": 1351,
+                "answered_by_model": "qwen3:0.6b",
+                "fallback_from_model": "llm-bench-missing:0",
+                "fallback_reason": "model_missing",
+                "failed_run_written": false,
+                "invocation_ids": [
+                    "01a20953-6dc4-7083-8687-ff9ea9b32279"
+                ],
+                "run_error_messages": [],
+                "message_redacted": false,
+                "sl28": {
+                    "status": 200,
+                    "time_to_fail_ms": 9,
+                    "source": "bench/results/llm/2026-11-13/run.json"
+                }
+            },
+            "nl-search": {
+                "status": 200,
+                "client": {
+                    "kind": "json",
+                    "message": "Listings retrieved",
+                    "code": null
+                },
+                "answered": true,
+                "time_to_fail_ms": 478,
+                "answered_by_model": "qwen3:0.6b",
+                "fallback_from_model": "llm-bench-missing:0",
+                "fallback_reason": "model_missing",
+                "failed_run_written": false,
+                "invocation_ids": [
+                    "01a20953-732c-7069-9a25-5438d8395723"
+                ],
+                "run_error_messages": [],
+                "message_redacted": false,
+                "sl28": {
+                    "status": 503,
+                    "time_to_fail_ms": 32,
+                    "source": "bench/results/llm/2026-11-13/run.json"
+                }
+            },
+            "moderation": {
+                "status": 200,
+                "client": {
+                    "kind": "json",
+                    "message": "Listing moderated",
+                    "code": null
+                },
+                "answered": true,
+                "time_to_fail_ms": 707,
+                "answered_by_model": "qwen3:0.6b",
+                "fallback_from_model": "llm-bench-missing:0",
+                "fallback_reason": "model_missing",
+                "failed_run_written": false,
+                "invocation_ids": [
+                    "01a20953-7533-70b6-bf24-927ff76d9742"
+                ],
+                "run_error_messages": [],
+                "message_redacted": false,
+                "sl28": {
+                    "status": 503,
+                    "time_to_fail_ms": 28,
+                    "source": "bench/results/llm/2026-11-13/run.json"
+                }
+            },
+            "assistant": {
+                "status": 200,
+                "client": {
+                    "kind": "sse",
+                    "event": "none",
+                    "code": null,
+                    "message": null
+                },
+                "answered": true,
+                "time_to_fail_ms": 341,
+                "answered_by_model": "qwen3:0.6b",
+                "fallback_from_model": "llm-bench-missing:0",
+                "fallback_reason": "model_missing",
+                "failed_run_written": false,
+                "invocation_ids": [
+                    "01a20953-7815-7012-ba7b-af3969675a4a"
+                ],
+                "run_error_messages": [],
+                "message_redacted": false,
+                "sl28": {
+                    "status": 200,
+                    "time_to_fail_ms": 8,
+                    "source": "bench/results/llm/2026-11-13/run.json"
+                }
+            }
+        },
+        "timeout": {
+            "describe": {
+                "status": 200,
+                "client": {
+                    "kind": "sse",
+                    "event": "none",
+                    "code": null,
+                    "message": null
+                },
+                "answered": true,
+                "time_to_fail_ms": 1904,
+                "answered_by_model": "qwen3:0.6b",
+                "fallback_from_model": "qwen3.5:9b",
+                "fallback_reason": "timeout",
+                "failed_run_written": false,
+                "invocation_ids": [
+                    "01a20953-7d88-7118-8da9-cdaf80388735"
+                ],
+                "run_error_messages": [],
+                "message_redacted": false,
+                "sl28": {
+                    "status": 200,
+                    "time_to_fail_ms": 1031,
+                    "source": "bench/results/llm/2026-11-13/run.json"
+                }
+            },
+            "nl-search": {
+                "status": 503,
+                "client": {
+                    "kind": "json",
+                    "message": "Natural-language search is unavailable right now.",
+                    "code": null
+                },
+                "answered": false,
+                "time_to_fail_ms": 2037,
+                "answered_by_model": null,
+                "fallback_from_model": null,
+                "fallback_reason": null,
+                "failed_run_written": true,
+                "invocation_ids": [
+                    "61b8c4d0-df86-4d0c-b5b3-dc6210cc610a"
+                ],
+                "run_error_messages": [
+                    "Could not connect to AI provider [ollama]."
+                ],
+                "message_redacted": false,
+                "sl28": {
+                    "status": 503,
+                    "time_to_fail_ms": 1063,
+                    "source": "bench/results/llm/2026-11-13/run.json"
+                }
+            },
+            "moderation": {
+                "status": 503,
+                "client": {
+                    "kind": "json",
+                    "message": "The moderation model could not be reached.",
+                    "code": "moderation_unavailable"
+                },
+                "answered": false,
+                "time_to_fail_ms": 2151,
+                "answered_by_model": null,
+                "fallback_from_model": null,
+                "fallback_reason": null,
+                "failed_run_written": true,
+                "invocation_ids": [
+                    "32bbc7d2-a141-40cc-9e63-f2900906b93f"
+                ],
+                "run_error_messages": [
+                    "Could not connect to AI provider [ollama]."
+                ],
+                "message_redacted": false,
+                "sl28": {
+                    "status": 503,
+                    "time_to_fail_ms": 1024,
+                    "source": "bench/results/llm/2026-11-13/run.json"
+                }
+            },
+            "assistant": {
+                "status": 200,
+                "client": {
+                    "kind": "sse",
+                    "event": "none",
+                    "code": null,
+                    "message": null
+                },
+                "answered": true,
+                "time_to_fail_ms": 2052,
+                "answered_by_model": "qwen3:0.6b",
+                "fallback_from_model": "qwen3.5:9b",
+                "fallback_reason": "timeout",
+                "failed_run_written": false,
+                "invocation_ids": [
+                    "01a20953-95cc-72d6-a9a4-9126e0d47a25"
+                ],
+                "run_error_messages": [],
+                "message_redacted": false,
+                "sl28": {
+                    "status": 200,
+                    "time_to_fail_ms": 1021,
+                    "source": "bench/results/llm/2026-11-13/run.json"
+                }
+            }
+        }
+    },
+    "fallback_speed": {
+        "runs": 5,
+        "failed_runs": 0,
+        "cold_failed": false,
+        "errors": [],
+        "num_ctx": 8192,
+        "keep_alive": "5m",
+        "load_ms": 550,
+        "cold_ttft_ms": 595.9,
+        "ttft_ms": {
+            "median": 30.6,
+            "min": 29.5,
+            "max": 38.2
+        },
+        "prompt_eval_tokens_per_s": {
+            "median": 5230.3,
+            "min": 5055.5,
+            "max": 5397.1
+        },
+        "generation_tokens_per_s": {
+            "median": 273,
+            "min": 262,
+            "max": 280.4
+        },
+        "output_tokens": {
+            "median": 48,
+            "min": 38,
+            "max": 72
+        },
+        "size": 1348321935,
+        "size_vram": 1348321935
+    },
+    "busy": {
+        "1": {
+            "without_budget": {
+                "budget_ms": null,
+                "requests": 1,
+                "ttft_ms": {
+                    "p50": 144,
+                    "p95": 144
+                },
+                "fallback_share": 0,
+                "fallback_reasons": [],
+                "failed": 0,
+                "repeats": [
+                    {
+                        "ttft_ms": {
+                            "p50": 167,
+                            "p95": 167
+                        },
+                        "fallback_share": 0,
+                        "fallback_reasons": [],
+                        "failed": 0
+                    },
+                    {
+                        "ttft_ms": {
+                            "p50": 139,
+                            "p95": 139
+                        },
+                        "fallback_share": 0,
+                        "fallback_reasons": [],
+                        "failed": 0
+                    },
+                    {
+                        "ttft_ms": {
+                            "p50": 144,
+                            "p95": 144
+                        },
+                        "fallback_share": 0,
+                        "fallback_reasons": [],
+                        "failed": 0
+                    }
+                ]
+            },
+            "with_budget": {
+                "budget_ms": 2000,
+                "requests": 1,
+                "ttft_ms": {
+                    "p50": 119,
+                    "p95": 119
+                },
+                "fallback_share": 0,
+                "fallback_reasons": [],
+                "failed": 0,
+                "repeats": [
+                    {
+                        "ttft_ms": {
+                            "p50": 127,
+                            "p95": 127
+                        },
+                        "fallback_share": 0,
+                        "fallback_reasons": [],
+                        "failed": 0
+                    },
+                    {
+                        "ttft_ms": {
+                            "p50": 114,
+                            "p95": 114
+                        },
+                        "fallback_share": 0,
+                        "fallback_reasons": [],
+                        "failed": 0
+                    },
+                    {
+                        "ttft_ms": {
+                            "p50": 119,
+                            "p95": 119
+                        },
+                        "fallback_share": 0,
+                        "fallback_reasons": [],
+                        "failed": 0
+                    }
+                ]
+            }
+        },
+        "4": {
+            "without_budget": {
+                "budget_ms": null,
+                "requests": 4,
+                "ttft_ms": {
+                    "p50": 1911,
+                    "p95": 5027
+                },
+                "fallback_share": 0,
+                "fallback_reasons": [],
+                "failed": 0,
+                "repeats": [
+                    {
+                        "ttft_ms": {
+                            "p50": 2003,
+                            "p95": 5171
+                        },
+                        "fallback_share": 0,
+                        "fallback_reasons": [],
+                        "failed": 0
+                    },
+                    {
+                        "ttft_ms": {
+                            "p50": 1911,
+                            "p95": 4900
+                        },
+                        "fallback_share": 0,
+                        "fallback_reasons": [],
+                        "failed": 0
+                    },
+                    {
+                        "ttft_ms": {
+                            "p50": 1632,
+                            "p95": 5027
+                        },
+                        "fallback_share": 0,
+                        "fallback_reasons": [],
+                        "failed": 0
+                    }
+                ]
+            },
+            "with_budget": {
+                "budget_ms": 2000,
+                "requests": 4,
+                "ttft_ms": {
+                    "p50": 1878,
+                    "p95": 2912
+                },
+                "fallback_share": 0.5,
+                "fallback_reasons": {
+                    "busy": 6
+                },
+                "failed": 0,
+                "repeats": [
+                    {
+                        "ttft_ms": {
+                            "p50": 1672,
+                            "p95": 2726
+                        },
+                        "fallback_share": 0.5,
+                        "fallback_reasons": {
+                            "busy": 2
+                        },
+                        "failed": 0
+                    },
+                    {
+                        "ttft_ms": {
+                            "p50": 1878,
+                            "p95": 2912
+                        },
+                        "fallback_share": 0.5,
+                        "fallback_reasons": {
+                            "busy": 2
+                        },
+                        "failed": 0
+                    },
+                    {
+                        "ttft_ms": {
+                            "p50": 1882,
+                            "p95": 3341
+                        },
+                        "fallback_share": 0.5,
+                        "fallback_reasons": {
+                            "busy": 2
+                        },
+                        "failed": 0
+                    }
+                ]
+            }
+        },
+        "16": {
+            "without_budget": {
+                "budget_ms": null,
+                "requests": 16,
+                "ttft_ms": {
+                    "p50": 11769,
+                    "p95": 26002
+                },
+                "fallback_share": 0,
+                "fallback_reasons": [],
+                "failed": 0,
+                "repeats": [
+                    {
+                        "ttft_ms": {
+                            "p50": 11769,
+                            "p95": 26002
+                        },
+                        "fallback_share": 0,
+                        "fallback_reasons": [],
+                        "failed": 0
+                    },
+                    {
+                        "ttft_ms": {
+                            "p50": 11462,
+                            "p95": 25981
+                        },
+                        "fallback_share": 0,
+                        "fallback_reasons": [],
+                        "failed": 0
+                    },
+                    {
+                        "ttft_ms": {
+                            "p50": 13494,
+                            "p95": 27117
+                        },
+                        "fallback_share": 0,
+                        "fallback_reasons": [],
+                        "failed": 0
+                    }
+                ]
+            },
+            "with_budget": {
+                "budget_ms": 2000,
+                "requests": 16,
+                "ttft_ms": {
+                    "p50": 4982,
+                    "p95": 6609
+                },
+                "fallback_share": 0.875,
+                "fallback_reasons": {
+                    "busy": 42
+                },
+                "failed": 0,
+                "repeats": [
+                    {
+                        "ttft_ms": {
+                            "p50": 4949,
+                            "p95": 6217
+                        },
+                        "fallback_share": 0.875,
+                        "fallback_reasons": {
+                            "busy": 14
+                        },
+                        "failed": 0
+                    },
+                    {
+                        "ttft_ms": {
+                            "p50": 5580,
+                            "p95": 7240
+                        },
+                        "fallback_share": 0.875,
+                        "fallback_reasons": {
+                            "busy": 14
+                        },
+                        "failed": 0
+                    },
+                    {
+                        "ttft_ms": {
+                            "p50": 4982,
+                            "p95": 6609
+                        },
+                        "fallback_share": 0.875,
+                        "fallback_reasons": {
+                            "busy": 14
+                        },
+                        "failed": 0
+                    }
+                ]
+            }
+        }
+    },
+    "no_fault": {
+        "parallel": 1,
+        "budget_ms": null,
+        "ttft_ms": {
+            "p50": 144,
+            "p95": 144
+        },
+        "fallback_share": 0,
+        "failed": 0
+    },
+    "evals": {
+        "nl-search": {
+            "main": {
+                "json_valid": 1,
+                "accuracy": 0.95,
+                "accuracy_metric": "exact_match",
+                "source": "bench/results/nl-search/2026-11-09/run.json",
+                "date": "2026-11-09"
+            },
+            "fallback": {
+                "json_valid": 1,
+                "accuracy": 0.275,
+                "accuracy_metric": "exact_match"
+            }
+        },
+        "moderation": {
+            "main": {
+                "json_valid": 1,
+                "accuracy": 0.96,
+                "accuracy_metric": "accuracy_at_best_f1",
+                "source": "bench/results/moderation/2026-11-12/run.json",
+                "date": "2026-11-12"
+            },
+            "fallback": {
+                "json_valid": 1,
+                "accuracy": 0.68,
+                "accuracy_metric": "accuracy_at_best_f1"
+            }
+        }
+    }
+}

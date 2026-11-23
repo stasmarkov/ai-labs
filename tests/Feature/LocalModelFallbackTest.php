@@ -33,11 +33,11 @@ use Laravel\Ai\Exceptions\StreamErrorException;
 use Psr\Http\Message\RequestInterface;
 
 beforeEach(function (): void {
-    config(['ai.default' => 'ollama', 'ai.features.moderation.fallback_model' => 'qwen3:0.6b']);
+    config(['ai.default' => 'ollama', 'ai.features.nl-search.fallback_model' => 'qwen3:0.6b', 'ai.features.moderation.fallback_model' => 'qwen3:0.6b']);
 });
 
-it('AC-5 defaults the fallback to qwen3:0.6b for the four non-moderation local features', function (): void {
-    foreach (['describe', 'nl-search', 'docs-answer', 'assistant'] as $feature) {
+it('AC-5 defaults the fallback to qwen3:0.6b for the three streamed local features', function (): void {
+    foreach (['describe', 'docs-answer', 'assistant'] as $feature) {
         $policy = (new AiProviders)->fallbackPolicy($feature);
 
         expect($policy)->toBeInstanceOf(FallbackPolicy::class)
@@ -47,12 +47,35 @@ it('AC-5 defaults the fallback to qwen3:0.6b for the four non-moderation local f
     }
 });
 
-it('C-14 keeps the moderation fallback off by default until its eval and threshold exist', function (): void {
+it('C-14 keeps the nl-search and moderation fallbacks off by default after their evals fell more than 15 points', function (): void {
     $config = require base_path('config/ai.php');
 
-    expect($config['features']['moderation']['fallback_model'])->toBeNull()
+    expect($config['features']['nl-search']['fallback_model'])->toBeNull()
+        ->and($config['features']['moderation']['fallback_model'])->toBeNull()
         ->and(array_key_exists('fallback_after_ms', $config['features']['moderation']))->toBeFalse()
         ->and(array_key_exists('fallback_after_ms', $config['features']['nl-search']))->toBeFalse();
+});
+
+it('C-14 still lets the environment turn the nl-search and moderation fallbacks on', function (): void {
+    $names = ['AI_NL_SEARCH_FALLBACK_MODEL', 'AI_MODERATION_FALLBACK_MODEL'];
+    $saved = array_map(fn (string $name): array => [$_ENV[$name] ?? null, $_SERVER[$name] ?? null, getenv($name)], array_combine($names, $names));
+
+    try {
+        foreach ($names as $name) {
+            $_ENV[$name] = $_SERVER[$name] = 'qwen3:0.6b';
+            putenv($name.'=qwen3:0.6b');
+        }
+        $config = require config_path('ai.php');
+    } finally {
+        foreach ($saved as $name => [$env, $server, $process]) {
+            $_ENV[$name] = $env;
+            $_SERVER[$name] = $server;
+            putenv($process === false ? $name : $name.'='.$process);
+        }
+    }
+
+    expect($config['features']['nl-search']['fallback_model'])->toBe('qwen3:0.6b')
+        ->and($config['features']['moderation']['fallback_model'])->toBe('qwen3:0.6b');
 });
 
 it('AC-5 ignores a first-token budget on the non-streamed features', function (): void {

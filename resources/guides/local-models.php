@@ -46,9 +46,15 @@ foreach ($servers as $index => $server) {
 
 $fallbackFigures = [
     ['Fallback model, time to first token (ms)', 'fallback_speed.ttft_ms.median'],
-    ['Fallback, describe with 16 streams and the budget, time to first token p50 (ms)', 'busy.16.with_budget.ttft_ms.p50'],
-    ['Fallback, share of 16 simultaneous describes answered by the small model with the budget', 'busy.16.with_budget.fallback_share'],
-    ['Fallback, describe with the server unreachable (ms)', 'faults.unreachable.describe.time_to_fail_ms'],
+    ['Fallback, 16 parallel describes without the budget, time to first token p50 (ms)', 'busy.16.without_budget.ttft_ms.p50'],
+    ['Fallback, 16 parallel describes with the budget, time to first token p50 (ms)', 'busy.16.with_budget.ttft_ms.p50'],
+    ['Fallback, share of 16 parallel describes answered by the small model (0 to 1)', 'busy.16.with_budget.fallback_share'],
+    ['Fallback, describe with the model missing, answered after (ms)', 'faults.model_missing.describe.time_to_fail_ms'],
+    ['Fallback, describe with the server unreachable, failed after (ms)', 'faults.unreachable.describe.time_to_fail_ms'],
+    ['Fallback, search exact match, main model (0 to 1)', 'evals.nl-search.main.accuracy'],
+    ['Fallback, search exact match, small model (0 to 1)', 'evals.nl-search.fallback.accuracy'],
+    ['Fallback, moderation accuracy at best F1, main model (0 to 1)', 'evals.moderation.main.accuracy'],
+    ['Fallback, moderation accuracy at best F1, small model (0 to 1)', 'evals.moderation.fallback.accuracy'],
 ];
 
 foreach ($fallbackFigures as [$label, $path]) {
@@ -90,7 +96,7 @@ return [
         ],
         [
             'title' => 'A smaller model on the same server answers when the main one cannot',
-            'body' => "Each text feature has a `fallback_model` (default `qwen3:0.6b`, same Ollama; moderation is off until its eval exists) and, for streamed ones, an optional `fallback_after_ms`. On `unreachable`, `model_missing` (404), `server_error` (5xx) or `timeout` the request runs once on the fallback model; a client error is no reason. The run row names both models and the reason.\n\nA stream falls back only before its first content event. A first token later than `fallback_after_ms` drops the main stream: reason `busy`. If the fallback fails too, the visitor gets the masked error.\n\nIt is on only when the main provider is Ollama, so a cloud model never falls back to a local one, nor the reverse. Evals never fall back; a fallback answer stays out of the docs cache.",
+            'body' => "Each text feature has a `fallback_model` (default `qwen3:0.6b`, same Ollama; natural-language search and moderation are off: on their evals the small model fell more than 15 points below the main one) and, for streamed ones, an optional `fallback_after_ms`. On `unreachable`, `model_missing` (404), `server_error` (5xx) or `timeout` the request runs once on the fallback model; a client error is no reason. The run row names both models and the reason.\n\nA stream falls back only before its first content event. A first token later than `fallback_after_ms` drops the main stream: reason `busy`. If the fallback fails too, the visitor gets the masked error.\n\nIt is on only when the main provider is Ollama, so a cloud model never falls back to a local one, nor the reverse. Evals never fall back; a fallback answer stays out of the docs cache.",
             'event' => 'request_failed',
             'snippet' => ['App\Ai\FallbackPolicy::reasonFor', 'App\Ai\LocalFallback::stream', 'App\Ai\FallbackPolicy::enabled'],
         ],
@@ -124,7 +130,6 @@ return [
         [
             'title' => 'Turn the fallback on or off for one feature',
             'body' => "Set `AI_DESCRIBE_FALLBACK_MODEL` (or a sibling feature's) to a pulled model; empty turns it off. `AI_DESCRIBE_FALLBACK_AFTER_MS` (streamed only) sets the first-token budget.\n\n**Check:** with the main model stopped, a description still streams; its row shows both models and `unreachable`.",
-            'snippet' => 'config/ai.php#provider-ollama',
         ],
         [
             'title' => 'Measure the fallback on your machine',
@@ -165,7 +170,7 @@ return [
         [
             'name' => 'Limits of the small fallback model',
             'status' => 'guarded',
-            'note' => "1. The small model is weaker: the page keeps answering, at lower quality.\n2. Loading it can push the main model out of memory, so first answers after a fault are slow.\n3. With a budget, late requests go to the small model: load spreads, answers change.\n4. Both timing out costs the main timeout (or budget) plus the fallback's.",
+            'note' => "1. The small model is weaker: the page keeps answering, at lower quality (Numbers tab), so search and moderation keep it off.\n2. It runs on the same server: a stopped Ollama fails both.\n3. Loading it can push the main model out of memory, so first answers after a fault are slow.\n4. With a budget, late requests go to the small model: load spreads, answers change.\n5. Both timing out costs the main timeout (or budget) plus the fallback's.",
         ],
         [
             'name' => 'Why the site slows while a model answers',
@@ -217,6 +222,8 @@ return [
         ['point' => 'One at a time', 'detail' => 'A busy model queues requests, so the rest of the site can feel slower.', 'tab' => 'failures'],
         ['point' => 'Prompts that are too long', 'detail' => 'Some servers cut silently. Count tokens first.', 'tab' => 'failures'],
         ['point' => 'Quality gap', 'detail' => 'Small local models are weaker. Use them for tests and privacy, and compare before deciding.', 'tab' => 'support'],
+        ['point' => 'Fallback on the same server', 'detail' => 'It helps when the main model is missing or busy, not when Ollama is down: both models stop.', 'tab' => 'support'],
+        ['point' => 'Fallback quality', 'detail' => 'The small model answers worse; search and moderation keep it off by default after their evals.', 'tab' => 'support'],
     ],
     'elsewhere' => [
         ['domain' => 'Privacy-sensitive teams', 'problem' => 'Data must not leave the company.', 'how' => 'Serve an open model on your own hardware behind the same provider list.'],

@@ -567,12 +567,16 @@ test('AC-6 the guide ends with a closing summary', function (): void {
     expect($problems)->toBe([]);
 });
 
-test('AC-5 every number in the local models section is in its BENCHMARKS source', function (): void {
+test('AC-5 every number in the local models section is in its BENCHMARKS sources: the limits run and the fallback run', function (): void {
     $section = docsLinksGuideSections()['II-5. Local models and their limits'] ?? '';
-    $source = docsLinksSectionBySlug(docsLinksRead('BENCHMARKS.md'), 'local-models-and-limits-2026-11-13') ?? '';
+    $benchmarks = docsLinksRead('BENCHMARKS.md');
+    $limits = docsLinksSectionBySlug($benchmarks, 'local-models-and-limits-2026-11-13') ?? '';
+    $fallback = docsLinksSectionBySlug($benchmarks, 'local-model-fallback-2026-11-23') ?? '';
+    $source = $limits."\n".$fallback;
 
     expect($section)->not->toBe('')
-        ->and($source)->not->toBe('');
+        ->and($limits)->not->toBe('')
+        ->and($fallback)->not->toBe('');
 
     $numbers = docsLinksQuotedNumbers($section);
     expect(count($numbers))->toBeGreaterThanOrEqual(5);

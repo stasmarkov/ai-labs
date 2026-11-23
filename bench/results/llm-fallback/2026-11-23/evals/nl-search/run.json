@@ -1,0 +1,808 @@
+{
+    "metadata": {
+        "label": "run",
+        "generated_at": "2026-11-23T16:57:03+00:00",
+        "eval_set_version": "v1",
+        "queries": 40,
+        "models": [
+            "qwen3:0.6b"
+        ],
+        "provider": "ollama",
+        "prompt_version": "listing-filters@v1"
+    },
+    "models": [
+        {
+            "model": "qwen3:0.6b",
+            "queries": 40,
+            "exact_match": {
+                "count": 11,
+                "rate": 0.275
+            },
+            "field_accuracy": {
+                "make": 0.5,
+                "model": 0.65,
+                "city": 0.975,
+                "fuel": 1,
+                "min_year": 0.75,
+                "max_price_eur": 0.875
+            },
+            "unsupported_recall": {
+                "expected": 12,
+                "caught": 0,
+                "recall": 0
+            },
+            "validation_422": {
+                "count": 0,
+                "rate": 0
+            },
+            "refused": 0,
+            "failed": 0,
+            "latency_ms": {
+                "count": 40,
+                "median": 217,
+                "p95": 251
+            }
+        }
+    ],
+    "results": [
+        {
+            "id": "nl-01",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": true,
+            "wrong_fields": [],
+            "extracted": {
+                "make": "Audi",
+                "model": "A4",
+                "city": "Berlin",
+                "fuel": "petrol",
+                "min_year": 2016,
+                "max_price_eur": 15000
+            },
+            "unsupported": [],
+            "invocation_id": "01a20956-f3d8-7203-87f0-993dfb9e7fa9"
+        },
+        {
+            "id": "nl-02",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "min_year",
+                "max_price_eur"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Tesla Model 3",
+                "city": "Amsterdam",
+                "fuel": "electric",
+                "min_year": 2018,
+                "max_price_eur": 29999
+            },
+            "unsupported": [],
+            "invocation_id": "01a20956-f5ca-719b-bb8c-54d9c7a6775d"
+        },
+        {
+            "id": "nl-03",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "min_year"
+            ],
+            "extracted": {
+                "make": "Volkswagen",
+                "model": "Golf",
+                "city": "Hamburg",
+                "fuel": "diesel",
+                "min_year": 2018,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20956-f6e9-715e-b18b-b20e95250eb3"
+        },
+        {
+            "id": "nl-04",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "min_year"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Toyota",
+                "city": null,
+                "fuel": "hybrid",
+                "min_year": 2020,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20956-f7f7-7238-96b6-e290ef09d126"
+        },
+        {
+            "id": "nl-05",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Octavia",
+                "city": "Prague",
+                "fuel": null,
+                "min_year": 2015,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20956-f8ed-7318-97b1-a98909ac9e94"
+        },
+        {
+            "id": "nl-06",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Opel",
+                "city": "Dresden",
+                "fuel": "lpg",
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20956-f9d0-70b6-b2e5-b3ba52a73928"
+        },
+        {
+            "id": "nl-07",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": true,
+            "wrong_fields": [],
+            "extracted": {
+                "make": "Ford",
+                "model": "Focus",
+                "city": null,
+                "fuel": "petrol",
+                "min_year": null,
+                "max_price_eur": 8000
+            },
+            "unsupported": [],
+            "invocation_id": "01a20956-fabd-722b-bca1-8875a3b96403"
+        },
+        {
+            "id": "nl-08",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Civic",
+                "city": "Lyon",
+                "fuel": null,
+                "min_year": 2019,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20956-fbb9-7128-a3cd-ec661605948c"
+        },
+        {
+            "id": "nl-09",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "min_year"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Clio",
+                "city": null,
+                "fuel": null,
+                "min_year": 2017,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20956-fca2-7007-bbda-b2f1c9d85f47"
+        },
+        {
+            "id": "nl-10",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "min_year"
+            ],
+            "extracted": {
+                "make": "Volvo",
+                "model": "XC60",
+                "city": "Stuttgart",
+                "fuel": "diesel",
+                "min_year": 2015,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20956-fd75-7299-9618-cc446a8f2128"
+        },
+        {
+            "id": "nl-11",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": true,
+            "wrong_fields": [],
+            "extracted": {
+                "make": "Peugeot",
+                "model": "308",
+                "city": null,
+                "fuel": null,
+                "min_year": 2018,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20956-fe62-736a-ab08-143265453afb"
+        },
+        {
+            "id": "nl-12",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "min_year"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "C-Class",
+                "city": null,
+                "fuel": null,
+                "min_year": 2019,
+                "max_price_eur": 35000
+            },
+            "unsupported": [],
+            "invocation_id": "01a20956-ff47-72ac-bf81-3f45d366d171"
+        },
+        {
+            "id": "nl-13",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": true,
+            "wrong_fields": [],
+            "extracted": {
+                "make": "Hyundai",
+                "model": "Tucson",
+                "city": null,
+                "fuel": null,
+                "min_year": 2018,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-0034-7201-a17b-3fba4713617b"
+        },
+        {
+            "id": "nl-14",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Yaris",
+                "city": null,
+                "fuel": null,
+                "min_year": null,
+                "max_price_eur": 15000
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-0130-7224-99e6-8fb877b3cfe5"
+        },
+        {
+            "id": "nl-15",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "max_price_eur"
+            ],
+            "extracted": {
+                "make": "BMW",
+                "model": "3 Series",
+                "city": "Cologne",
+                "fuel": null,
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-020e-734a-9576-fcc7e9f7199a"
+        },
+        {
+            "id": "nl-16",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "max_price_eur"
+            ],
+            "extracted": {
+                "make": "Volkswagen",
+                "model": "Polo",
+                "city": null,
+                "fuel": null,
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-02dd-726c-9d58-aeea7eb9da53"
+        },
+        {
+            "id": "nl-17",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "model"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "electric",
+                "city": null,
+                "fuel": "electric",
+                "min_year": null,
+                "max_price_eur": 40000
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-03b1-70fb-bdcc-cc5b43ca5032"
+        },
+        {
+            "id": "nl-18",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "min_year"
+            ],
+            "extracted": {
+                "make": "Audi",
+                "model": "Q5",
+                "city": null,
+                "fuel": "diesel",
+                "min_year": 2018,
+                "max_price_eur": 22500
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-0498-701c-b886-ba2f798ead06"
+        },
+        {
+            "id": "nl-19",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": true,
+            "wrong_fields": [],
+            "extracted": {
+                "make": null,
+                "model": null,
+                "city": null,
+                "fuel": null,
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-0595-7156-8156-f2838719fd2f"
+        },
+        {
+            "id": "nl-20",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": true,
+            "wrong_fields": [],
+            "extracted": {
+                "make": null,
+                "model": null,
+                "city": null,
+                "fuel": null,
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-0773-7016-90b5-8efc1b2e2020"
+        },
+        {
+            "id": "nl-21",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": true,
+            "wrong_fields": [],
+            "extracted": {
+                "make": null,
+                "model": null,
+                "city": null,
+                "fuel": null,
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-083e-709f-8c2c-47061a952780"
+        },
+        {
+            "id": "nl-22",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": true,
+            "wrong_fields": [],
+            "extracted": {
+                "make": null,
+                "model": null,
+                "city": null,
+                "fuel": null,
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-08fe-7324-a951-3cf48d1e0145"
+        },
+        {
+            "id": "nl-23",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "BMW",
+                "city": "Lviv",
+                "fuel": null,
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-09b5-72d7-8586-c3ab3ee1cbef"
+        },
+        {
+            "id": "nl-24",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "min_year"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Skoda",
+                "city": "Krakow",
+                "fuel": "diesel",
+                "min_year": 2018,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-0a7f-72a2-b170-4e008073da33"
+        },
+        {
+            "id": "nl-25",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "model"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "electric",
+                "city": "Oslo",
+                "fuel": "electric",
+                "min_year": null,
+                "max_price_eur": 35000
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-0b64-736b-87b5-b6b95c676d56"
+        },
+        {
+            "id": "nl-26",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "model"
+            ],
+            "extracted": {
+                "make": "Toyota",
+                "model": "Toyota",
+                "city": "Barcelona",
+                "fuel": null,
+                "min_year": 2018,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-0c43-73c8-9a81-b51e464625f4"
+        },
+        {
+            "id": "nl-27",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": true,
+            "wrong_fields": [],
+            "extracted": {
+                "make": "Volkswagen",
+                "model": "Passat",
+                "city": "Berlin",
+                "fuel": null,
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-0d2c-7286-988f-d893e5fc285c"
+        },
+        {
+            "id": "nl-28",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "max_price_eur"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Audi",
+                "city": null,
+                "fuel": null,
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-0e18-70cb-9a67-f094ac84381e"
+        },
+        {
+            "id": "nl-29",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Opel",
+                "city": "Hannover",
+                "fuel": "diesel",
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-0f3e-738d-b8ed-807e4e520344"
+        },
+        {
+            "id": "nl-30",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": true,
+            "wrong_fields": [],
+            "extracted": {
+                "make": "BMW",
+                "model": "X3",
+                "city": null,
+                "fuel": null,
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-1035-714d-90b3-04810dae2908"
+        },
+        {
+            "id": "nl-31",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "min_year"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Volvo",
+                "city": "Vienna",
+                "fuel": null,
+                "min_year": 2016,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-110c-73f0-ab59-8299e74460b0"
+        },
+        {
+            "id": "nl-32",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "min_year"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Fiesta",
+                "city": null,
+                "fuel": null,
+                "min_year": 2015,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-11f4-7387-af6c-d57606a90c5e"
+        },
+        {
+            "id": "nl-33",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Tesla",
+                "city": null,
+                "fuel": null,
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-12ed-70bf-9193-b0da1c45dd92"
+        },
+        {
+            "id": "nl-34",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Mercedes-Benz E-Class",
+                "city": "Frankfurt",
+                "fuel": null,
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-13da-7240-bec4-31efcc97708d"
+        },
+        {
+            "id": "nl-35",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make",
+                "model",
+                "max_price_eur"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Honda",
+                "city": null,
+                "fuel": "petrol",
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-14d1-70b9-8aad-6b65027b96d3"
+        },
+        {
+            "id": "nl-36",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Fabia",
+                "city": null,
+                "fuel": null,
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-15b8-7298-8a9b-4dcd5cc4a180"
+        },
+        {
+            "id": "nl-37",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "208",
+                "city": "Paris",
+                "fuel": null,
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-16a5-72ef-a9ee-0f406422cdd1"
+        },
+        {
+            "id": "nl-38",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "make"
+            ],
+            "extracted": {
+                "make": null,
+                "model": "Captur",
+                "city": null,
+                "fuel": "lpg",
+                "min_year": null,
+                "max_price_eur": 11000
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-177f-707e-a097-df4e43f77263"
+        },
+        {
+            "id": "nl-39",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": true,
+            "wrong_fields": [],
+            "extracted": {
+                "make": "Toyota",
+                "model": "RAV4",
+                "city": "Madrid",
+                "fuel": "hybrid",
+                "min_year": 2019,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-187b-712a-b3f0-12403b1828cb"
+        },
+        {
+            "id": "nl-40",
+            "model": "qwen3:0.6b",
+            "status": "completed",
+            "exact": false,
+            "wrong_fields": [
+                "city"
+            ],
+            "extracted": {
+                "make": "Audi",
+                "model": "A6",
+                "city": null,
+                "fuel": "diesel",
+                "min_year": null,
+                "max_price_eur": null
+            },
+            "unsupported": [],
+            "invocation_id": "01a20957-1977-7341-b00f-7185d24e5c24"
+        }
+    ]
+}

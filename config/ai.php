@@ -79,8 +79,10 @@ return [
         'nl-search' => [
             'provider' => env('AI_NL_SEARCH_PROVIDER') ?: null,
             'model' => env('AI_NL_SEARCH_MODEL') ?: null,
-            // Smaller model on the same local provider that answers when the main model fails; an empty value turns it off.
-            'fallback_model' => env('AI_NL_SEARCH_FALLBACK_MODEL', 'qwen3:0.6b'),
+            // Smaller model on the same local provider that answers when the main model fails. Off by default under the
+            // quality rule (spec C-14): on the fallback eval in bench/results/llm-fallback/2026-11-23 its exact match is
+            // more than 15 points below the main model's. Set a model name to turn it on anyway.
+            'fallback_model' => env('AI_NL_SEARCH_FALLBACK_MODEL') ?: null,
         ],
         'docs-answer' => [
             'provider' => env('AI_DOCS_ANSWER_PROVIDER') ?: null,
@@ -105,9 +107,10 @@ return [
         'moderation' => [
             'provider' => env('AI_MODERATION_PROVIDER') ?: null,
             'model' => env('AI_MODERATION_MODEL') ?: null,
-            // Smaller model on the same local provider that answers when the main model fails. Off by default: the small
-            // model has no calibrated threshold in ai.moderation.thresholds and no committed eval, so turn it on only
-            // after both exist. There is no first-token budget here: a non-streamed call has no first token.
+            // Smaller model on the same local provider that answers when the main model fails. Off by default under the
+            // quality rule (spec C-14): on the fallback eval in bench/results/llm-fallback/2026-11-23 its accuracy at best
+            // F1 is more than 15 points below the main model's, and it has no calibrated threshold in
+            // ai.moderation.thresholds. There is no first-token budget here: a non-streamed call has no first token.
             'fallback_model' => env('AI_MODERATION_FALLBACK_MODEL') ?: null,
         ],
         'research' => [

@@ -1435,9 +1435,11 @@ The describe loop used qwen3.5:9b, ran through warm-up and all repeats, and comp
 
 I measured two local models the way a user feels them: time to first token, writing speed and what happens under load. A first run reported a first token in 46 ms; the number was wrong because the server cached the repeated prompt, and a unique start per request gave 286 ms for qwen3.5:9b and 429 ms for gemma4:12b, both writing about 52 tokens per second. Then I opened 16 streams at once: no stream failed, but the median one waited 31 seconds for its first byte and then wrote at full speed, because the server answers one request at a time. The answer to "how many users can it carry" is "one at a time, and the queue is the cost". The bigger surprise was the rest of the site: with only 4 describe streams open, search p95 on the worker servers went from 64 ms to 2.7 s, because the 4 streams held all 4 PHP workers, while classic FrankenPHP with more threads only slowed from 132 to 237 ms. I also had to correct two of my own readings: a per-stream rate that measured the queue, and a context check that said "not truncated" when the count was above the window.
 
-## Local model fallback (SL-61)
+## Local model fallback (2026-11-23)
 
-`ddev artisan llm:bench --only=fallback --models=<main>` measures the fallback to a smaller local model (`qwen3:0.6b` by default) and writes `bench/results/llm-fallback/<date>/run.json`. The run needs a quiet host: the file records the load average at the start and the end, and the guide numbers read the newest file by pointer. No run is committed yet, so the figures on `/ai/guides/local-models` show "not measured yet" and this section has no table.
+`ddev artisan llm:bench --only=fallback --models=qwen3.5:9b` (SL-61) measures the fallback to a smaller model in the same Ollama: main model `qwen3.5:9b`, fallback `qwen3:0.6b`, budget 2000 ms. Ollama 0.40.16 on the host, `num_ctx` 8192, FrankenPHP, 2026-11-23 (UTC). Results: [`bench/results/llm-fallback/2026-11-23/run.json`](bench/results/llm-fallback/2026-11-23/run.json), with the two eval runs on the small model under [`evals/`](bench/results/llm-fallback/2026-11-23/evals/). The guide numbers on `/ai/guides/local-models` read this file by pointer.
+
+Host load average (1, 5 and 15 minutes): 1.67 / 2.16 / 2.41 at the start, 4.24 / 3.3 / 2.79 at the end. The start is below the limit of 4 (`host_idle_at_start: true`); the rise at the end is the bench's own load (16 parallel streams and two evals).
 
 What the run measures, and the budget each part is read against:
 
@@ -1445,6 +1447,71 @@ What the run measures, and the budget each part is read against:
 - **Busy describes.** Describe streams at 1, 4 and 16 parallel (default budget 2000 ms), without and with the budget (1 warm-up, 3 repeats, the median): first-token p50 and p95, the share answered by the fallback and the failed count.
 - **No added latency.** NFR-2: describe first-token p50 at 1 parallel without a fault or a budget hit stays at or under 296 ms and its p95 within the SL-28 p95 plus the run's own spread, or the difference is explained.
 - **Quality.** The NL search and moderation evals on the small model, next to the main model's committed figures.
+
+The small model on its own (5 warm runs, median): load 550 ms, cold first token 595.9 ms, warm first token 30.6 ms, 273 tokens per second, 1.35 GB (1 348 321 935 bytes, all on the GPU).
+
+### Faults
+
+Every row ran with `fallback_model` = `qwen3:0.6b` on all four entry points and no budget. "Time" is the time to the answer, or to the failure when nothing answered; the SL-28 columns are the same row from `bench/results/llm/2026-11-13/run.json`.
+
+| Fault | Entry point | Status | Answered by | Reason | Time | SL-28 status | SL-28 time |
+|---|---|---|---|---|---|---|---|
+| Server unreachable | describe | 200, SSE `error` event | nobody | | 149 ms | 200 | 134 ms |
+| Server unreachable | natural-language search | 503 | nobody | | 28 ms | 503 | 28 ms |
+| Server unreachable | moderation | 503, `moderation_unavailable` | nobody | | 24 ms | 503 | 9 ms |
+| Server unreachable | assistant | 200, SSE `error` event | nobody | | 11 ms | 200 | 10 ms |
+| Model missing | describe | 200, stream | `qwen3:0.6b` | `model_missing` | 1351 ms | 200 | 9 ms |
+| Model missing | natural-language search | 200 | `qwen3:0.6b` | `model_missing` | 478 ms | 503 | 32 ms |
+| Model missing | moderation | 200 | `qwen3:0.6b` | `model_missing` | 707 ms | 503 | 28 ms |
+| Model missing | assistant | 200, stream | `qwen3:0.6b` | `model_missing` | 341 ms | 200 | 8 ms |
+| 1 s timeout | describe | 200, stream | `qwen3:0.6b` | `timeout` | 1904 ms | 200 | 1031 ms |
+| 1 s timeout | natural-language search | 503 | nobody | | 2037 ms | 503 | 1063 ms |
+| 1 s timeout | moderation | 503, `moderation_unavailable` | nobody | | 2151 ms | 503 | 1024 ms |
+| 1 s timeout | assistant | 200, stream | `qwen3:0.6b` | `timeout` | 2052 ms | 200 | 1021 ms |
+
+A failed row was written for every "nobody" row, with the masked message "Could not connect to AI provider [ollama]."; no row that answered wrote a failed row.
+
+### Busy describes
+
+Describe streams on `qwen3.5:9b`, 1 warm-up and 3 repeats per cell, the median of the repeats. "Answered by fallback" is the share of the requests in the cell; every fallback had the reason `busy`.
+
+| Parallel | Budget | First token p50 | First token p95 | p50 of the 3 repeats | Answered by fallback | Failed |
+|---|---|---|---|---|---|---|
+| 1 | none | 144 ms | 144 ms | 167, 139, 144 ms | 0 | 0 |
+| 1 | 2000 ms | 119 ms | 119 ms | 127, 114, 119 ms | 0 | 0 |
+| 4 | none | 1911 ms | 5027 ms | 2003, 1911, 1632 ms | 0 | 0 |
+| 4 | 2000 ms | 1878 ms | 2912 ms | 1672, 1878, 1882 ms | 0.5 (6 `busy`) | 0 |
+| 16 | none | 11769 ms | 26002 ms | 11769, 11462, 13494 ms | 0 | 0 |
+| 16 | 2000 ms | 4982 ms | 6609 ms | 4949, 5580, 4982 ms | 0.875 (42 `busy`) | 0 |
+
+### Evals
+
+The small model's eval runs next to the main model's committed figures (the source runs are named in `evals.<feature>.main.source`).
+
+| Feature | Accuracy figure | Main JSON-valid | Main accuracy | Main source | Fallback JSON-valid | Fallback accuracy | Gap |
+|---|---|---|---|---|---|---|---|
+| nl-search | exact match | 1 | 0.95 | 2026-11-09 | 1 | 0.275 | 67.5 points |
+| moderation | accuracy at best F1 | 1 | 0.96 | 2026-11-12 | 1 | 0.68 | 28 points |
+
+### What the numbers say
+
+- **The fallback helps when the main model is missing.** All four entry points answered from `qwen3:0.6b` in 341 to 1351 ms, where SL-28 failed them in 8 to 32 ms. NFR-1 holds: every fallback answer in the matrix (model missing and timeout) came in under 2 s plus the small model's cold first-token time (595.9 ms). Against its warm first-token time (30.6 ms) only the assistant on a timeout, at 2052 ms, is 21 ms over.
+- **It does not help when the server itself is down.** The fallback lives on the same Ollama, so with the server unreachable every row failed exactly as in SL-28 (11 to 149 ms, the same statuses and errors). A second model is not a second server.
+- **On a 1 s timeout it helps the streamed features only.** describe and the assistant answered from the small model after 1904 and 2052 ms (the main timeout plus the fallback). Natural-language search and moderation answered 503 after 2037 and 2151 ms, two timeouts in a row: a non-streamed call must return its whole JSON inside the 1 s timeout, a stream only has to start, and the small model did not finish in time.
+- **Under load the budget cuts the wait, at a large quality cost.** At 16 parallel the first-token p50 went from 11.8 s to 5.0 s (11769 to 4982 ms) and the p95 from 26.0 s to 6.6 s, with 0.875 of the requests answered by the small model; at 4 parallel the p50 barely moved (1911 to 1878 ms) and the p95 fell from 5027 to 2912 ms, with half the requests on the small model. No request failed in any cell. The small model is much weaker: 0.275 exact match on search against 0.95, and 0.68 against 0.96 on moderation, with valid JSON in every case. The budget trades answer quality for time.
+- **NFR-2 holds.** Without a fault and without a budget, the describe first-token p50 at 1 parallel is 144 ms (repeats 139 to 167 ms), under the 296 ms limit and below the SL-28 p50 of 196 ms, and the p95 of 144 ms is under the SL-28 p95 of 296 ms; with the 2000 ms budget nothing fell back at 1 parallel (119 ms).
+
+### The quality rule (C-14)
+
+A feature keeps the fallback on by default only if the small model's JSON-valid rate on its eval is at least 90 % and its accuracy is no more than 15 points below the main model's committed figure:
+
+- **nl-search:** 67.5 points below (0.275 against 0.95), so its default `fallback_model` is now off in `config/ai.php`; `AI_NL_SEARCH_FALLBACK_MODEL` still turns it on.
+- **moderation:** 28 points below (0.68 against 0.96), so it stays off (it was off already, also because the small model has no calibrated threshold); `AI_MODERATION_FALLBACK_MODEL` still turns it on.
+- **describe, docs-answer, assistant:** stay on. This run has no eval for them, so the rule cannot be applied; their fallback answers are text a person reads, not filters or labels the app acts on.
+
+### Interview story
+
+I gave the local models a safety net: the same request runs once on a 0.6 billion model in the same Ollama when the main model fails or is slow to start. The bench showed where that helps and where it does not. With the main model missing, all four entry points answered from the small model in 341 to 1351 ms instead of failing. With the server stopped nothing changed, because both models live on that server. Under 16 parallel describes a 2 s first-token budget cut the median wait from 11.8 to 5.0 seconds, but 0.875 of the answers then came from the small model, and on the search eval that model got 0.275 exact matches against 0.95. So I turned the search fallback off by default: a fast wrong filter is worse than a clear "try again".
 
 ## Metrics during slow I/O (2026-11-16)
 
