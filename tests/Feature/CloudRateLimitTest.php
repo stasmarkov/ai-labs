@@ -6,8 +6,10 @@ use App\Ai\ListingFilterAgent;
 use App\Models\AiRun;
 use App\Models\Dealer;
 use App\Models\Listing;
+use App\Providers\AiServiceProvider;
 use App\Services\PlaygroundRunner;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\RateLimiter;
 
 beforeEach(function (): void {
     Http::preventStrayRequests();
@@ -130,4 +132,40 @@ it('AC-7 limits other AI routes as before without building the playground runner
     $this->getJson('/api/listings/nl?q=b&provider=anthropic')->assertOk();
     $this->getJson('/api/listings/nl?q=c&provider=anthropic')->assertStatus(429);
     $this->getJson('/api/listings/nl?q=d')->assertOk();
+});
+
+it('a refused cloud request gives back what it reserved, so the budget is not burned by refusals', function (): void {
+    ListingFilterAgent::fake([nlEmptyFilter(), nlEmptyFilter(), nlEmptyFilter()]);
+
+    $this->getJson('/api/listings/nl?q=a&provider=anthropic')->assertOk();
+    $this->getJson('/api/listings/nl?q=b&provider=anthropic')->assertOk();
+    $this->getJson('/api/listings/nl?q=c&provider=anthropic')->assertStatus(429);
+    $this->getJson('/api/listings/nl?q=d&provider=anthropic')->assertStatus(429);
+
+    $key = 'cloud-ai:'.RateLimiter::limiter('cloud-ai')(request())->key;
+    expect(RateLimiter::attempts($key))->toBe(2)
+        ->and(RateLimiter::attempts('cloud-ai-global:'.RateLimiter::limiter('cloud-ai-global')(request())->key))->toBe(2);
+});
+
+it('counts a request before checking it, so concurrent requests cannot all pass a stale check', function (): void {
+    ListingFilterAgent::fake([nlEmptyFilter(), nlEmptyFilter(), nlEmptyFilter()]);
+
+    // Two other requests have already counted themselves, but this request's read of the count is stale (0), as when
+    // several requests read before any of them increments. Only the atomic increment's own result is trustworthy.
+    $limiter = new class(app('cache')->store()) extends Illuminate\Cache\RateLimiter
+    {
+        public function attempts($key): int
+        {
+            return 0;
+        }
+    };
+    app()->instance(Illuminate\Cache\RateLimiter::class, $limiter);
+    RateLimiter::clearResolvedInstance(Illuminate\Cache\RateLimiter::class);
+    (new AiServiceProvider(app()))->boot();
+
+    $key = 'cloud-ai:'.RateLimiter::limiter('cloud-ai')(request())->key;
+    RateLimiter::increment($key, 60, 2);
+
+    $this->getJson('/api/listings/nl?q=a&provider=anthropic')->assertStatus(429);
+    expect(AiRun::count())->toBe(0);
 });

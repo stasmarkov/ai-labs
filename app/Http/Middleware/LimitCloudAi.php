@@ -63,19 +63,7 @@ final class LimitCloudAi
         // A paid call must not be triggerable from another site (an <img> or link to a GET endpoint).
         RefuseCrossSiteRequests::assertSameSite($request);
 
-        foreach (['cloud-ai' => 'cloud-ai:', 'cloud-ai-global' => 'cloud-ai-global:'] as $name => $prefix) {
-            $limit = RateLimiter::limiter($name)($request);
-            $key = $prefix.$limit->key;
-
-            if (RateLimiter::attempts($key) + $weight > $limit->maxAttempts) {
-                throw new ThrottleRequestsException('Too Many Attempts.', null, ['Retry-After' => RateLimiter::availableIn($key)]);
-            }
-        }
-
-        foreach (['cloud-ai' => 'cloud-ai:', 'cloud-ai-global' => 'cloud-ai-global:'] as $name => $prefix) {
-            $limit = RateLimiter::limiter($name)($request);
-            RateLimiter::increment($prefix.$limit->key, $limit->decaySeconds, $weight);
-        }
+        $this->reserve($request, $weight);
 
         return $next($request);
     }
@@ -83,6 +71,32 @@ final class LimitCloudAi
     /**
      * @return list<PlaygroundTarget>
      */
+    /**
+     * Takes the weight from both budgets with one atomic increment each, then checks the new count, so concurrent requests
+     * cannot all pass a check made before any of them counted. A refused request gives back what it took.
+     *
+     * @throws ThrottleRequestsException when either budget would go over its limit
+     */
+    private function reserve(Request $request, int $weight): void
+    {
+        $taken = [];
+
+        foreach (['cloud-ai' => 'cloud-ai:', 'cloud-ai-global' => 'cloud-ai-global:'] as $name => $prefix) {
+            $limit = RateLimiter::limiter($name)($request);
+            $key = $prefix.$limit->key;
+            $count = RateLimiter::increment($key, $limit->decaySeconds, $weight);
+            $taken[$key] = $limit->decaySeconds;
+
+            if ($count > $limit->maxAttempts) {
+                foreach ($taken as $takenKey => $decaySeconds) {
+                    RateLimiter::decrement($takenKey, $decaySeconds, $weight);
+                }
+
+                throw new ThrottleRequestsException('Too Many Attempts.', null, ['Retry-After' => RateLimiter::availableIn($key)]);
+            }
+        }
+    }
+
     private function playgroundTargets(Request $request): array
     {
         $targets = [];
